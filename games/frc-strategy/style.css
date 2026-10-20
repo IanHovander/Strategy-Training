@@ -674,3 +674,17 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .st-picker:has(.st-casepick) .st-lesson-card { gap: 0.2rem; padding: 0.7rem 1.3rem 0.8rem; }
 .st-picker:has(.st-casepick) .st-lesson-name { font-size: 2.3rem; }
 .st-picker:has(.st-casepick) .st-lesson-meta { margin-top: 0.1rem; }
+
+/* Learn facilitator: a small projector introduction and private phone brief. */
+.st-mod-intro{max-width:900px;margin:auto}
+.st-mod-summary p{font-size:1.15rem;line-height:1.5;margin:.35rem 0}
+.st-mod-signup h2{font-size:2.7rem}
+.st-mod-tally{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:1.15rem;margin:.8rem 0}
+.st-mod-tally b{font-size:1.5rem;color:#9a0000}
+.st-mod-live{padding:.65rem 1rem;margin-bottom:1rem;background:#fff8e8;border:2px solid #292929;border-radius:.8rem;font-size:.95rem;font-weight:700}
+.st-mod-phone .st-mod-buttons{display:grid;gap:.7rem;margin:1.3rem 0}
+.st-mod-phone .st-mod-brief{text-align:left;margin:1rem 0}
+.st-mod-brief h2{font-size:2.4rem;margin:.5rem 0}
+.st-mod-brief li{margin:.6rem 0}
+.st-mod-focus{font-weight:700}
+.st-mod-phone .st-card p{color:#333}
