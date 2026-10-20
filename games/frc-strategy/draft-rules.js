@@ -6,7 +6,8 @@
 //            hidden from the other)
 //   select   alliance selection: the top two seeds captain Alliances 1 and 2 and pick serpentine (1, 2, 2, 1),
 //            45 s per first-round pick and 1:30 after that. The group captain makes the invitation.
-//   plan     each group assigns every robot to offense or to defend one opposing robot; the captain locks in
+//   plan     each group sets every robot to offense or to defend one opposing robot (and what to do if that robot
+//            is defending too); the captain locks in
 //   result   the match is played from the robots' true attributes; a tie is replayed
 //   final    after a two-match winner: the true attributes, and each match's win chance given the assignments
 //
@@ -36,7 +37,7 @@ export function start(ctx) {
   // Simulate this event's qualifications: ten matches per team, scouts' ratings, and a ranking from the results.
   const scouted = DRAFT.teams.map((t) => ({ id: t.id, ...scoutTeam(t, DRAFT, rand) }));
   const avg = (s) => s.scores.reduce((a, b) => a + b, 0) / s.scores.length;
-  const rankScore = new Map(scouted.map((s) => [s.id, avg(s) + 4 * (rand() - 0.5)])); // ranking points are noisy too
+  const rankScore = new Map(scouted.map((s) => [s.id, avg(s) + 1.2 * (rand() - 0.5)])); // ranking points are noisy too
   scouted.sort((a, b) => rankScore.get(b.id) - rankScore.get(a.id));
   const event = scouted.map((s, i) => ({ ...s, seed: i + 1 }));
   ctx.state.draft = {
@@ -171,20 +172,19 @@ function play(ctx) {
   if (s.phase !== 'plan') return;
   ctx.cancelTimer('phase');
   ctx.cancelTimer('allIn');
-  const [a, b] = draft.alliances.map((ids) => ids.map(team));
-  const [assignA, assignB] = draft.assign;
-  const odds = matchOdds(a, assignA, b, assignB);
-  const match = playMatch(a, assignA, b, assignB);
+  const sides = draft.alliances.map((ids, i) => ({ teams: ids.map(team), assign: draft.assign[i] }));
+  const odds = matchOdds(sides);
+  const match = playMatch(sides);
   const winner = match.scores[0] > match.scores[1] ? 0 : match.scores[1] > match.scores[0] ? 1 : null;
   if (winner !== null) draft.wins[winner]++;
   draft.results.push({
-    assign: draft.assign.map((x) => ({ ...x })),
+    assign: draft.assign.map((x) => JSON.parse(JSON.stringify(x))),
+    roles: match.roles, // who actually defended whom
     scores: match.scores,
-    points: match.points,
-    broken: match.broken,
+    cycles: match.cycles,
     winner,
     // each alliance's chance given these assignments: hidden until the series is over
-    odds: { win: [odds.a.win, odds.b.win], tie: odds.a.tie, mean: [odds.a.mean, odds.b.mean] },
+    odds: { win: odds.win, tie: odds.tie, mean: odds.mean },
   });
   s.phase = 'result';
   s.deadline = null;
@@ -237,16 +237,22 @@ export const actions = {
     invite(ctx, payload.teamId);
     return { ok: true };
   },
-  /** Anyone in the group: set a robot to offense or to defend one robot on the other alliance. */
+  /**
+   * Anyone in the group: set a robot to offense, or to defend a robot on the other alliance. `ifDefending` says
+   * what to do if that robot turns out to be defending: 'stay' on it, or switch to another of their robots.
+   */
   assign(ctx, player, payload) {
     if (ctx.state.phase !== 'plan') return err('Assignments are locked.');
     const i = groupOf(ctx, player.id);
     if (i < 0) return err('You’re not in a group.');
     const draft = d(ctx);
-    const { teamId, target } = payload ?? {};
+    const { teamId, target, ifDefending = 'stay' } = payload ?? {};
+    const theirs = draft.alliances[1 - i];
     if (!draft.alliances[i].includes(teamId)) return err('That robot isn’t on your alliance.');
-    if (target !== 'offense' && !draft.alliances[1 - i].includes(target)) return err('Defend a robot on the other alliance.');
-    draft.assign[i][teamId] = target;
+    if (target === 'offense') draft.assign[i][teamId] = 'offense';
+    else if (!theirs.includes(target)) return err('Defend a robot on the other alliance.');
+    else if (ifDefending !== 'stay' && (!theirs.includes(ifDefending) || ifDefending === target)) return err('Switch to a different robot of theirs.');
+    else draft.assign[i][teamId] = { target, ifDefending };
     draft.locked[i] = false; // a change unlocks until the captain locks again
     maybePlay(ctx);
     return { ok: true };

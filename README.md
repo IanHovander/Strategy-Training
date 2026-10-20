@@ -53,11 +53,15 @@ Every push to `main` then rebuilds and publishes the site.
 
 **Showdown.** The room splits at random into a Red group (Alliance 1) and a Blue group (Alliance 2), each with a
 student captain. The big screen can shuffle first.
-- **The event:** sixteen teams. Each game simulates their qualifications from each team's true (hidden) attributes:
-  ten match scores per team, shown as how many of the ten fell at 0, 1–9, 10–19, … 50+, and scouts' 1–10
-  ratings of each team's resilience to defense and defensive effectiveness (with scouting error). Teams are
-  seeded from those results, and seeds #1 and #2 captain the two alliances. Every team can break down, so every
-  team has a chance of scoring 0.
+- **The event:** sixteen teams. A robot does two things: it scores cycles, and it can defend. Each team has hidden
+  true attributes:
+  - a probability distribution for how many cycles (0–12) it completes in a match, always with some chance of 0;
+  - **susceptibility** to defense (0–100%);
+  - **defense** ability (0–100%).
+
+  Each game simulates qualifications: ten matches per team, shown as the % of matches with each cycle count, and
+  scouts' estimates of susceptibility and defense that land within ±20% of the true value. Teams are seeded from
+  those results, and seeds #1 and #2 captain the two alliances.
 - **Picklists (15 minutes):** each group builds one shared picklist on their phones, in the 2026-scout layout:
   Your Picklist (toggling with Do Not Pick) beside Available Teams. Drag to rank (hold briefly on touch), tap a
   team for its scouting. The other group and the big screen never see it.
@@ -65,12 +69,18 @@ student captain. The big screen can shuffle first.
   seconds for first-round picks and 1:30 after that. The group captain makes each invitation. If time runs out,
   the alliance gets the top available team on its picklist. As at an event, Alliance 1 may take Alliance 2's
   captain, and the next seed then captains Alliance 2.
-- **Best of three:** before each match the group sends each robot to offense or to defend a specific opposing
-  robot (anyone in the group can change it; the captain locks in). The match plays as soon as both alliances lock
-  in, drawn from the robots' true attributes. A defended robot keeps 1 − defense × (1 − resilience) of its
-  points; a defender scores nothing; a broken defender defends nobody. Ties are replayed.
-- **The reveal:** once an alliance wins two matches, the big screen shows every team's true attributes next to
-  what was scouted, and each match's win chance for both alliances given the assignments they chose.
+- **Best of three:** before each match the group sets each robot to offense or to defend one robot of theirs
+  (anyone in the group can change it; the captain locks in). Roles are static for the whole match. The match plays
+  as soon as both alliances lock in, drawn from the true attributes. An alliance's score is its total cycles; ties
+  are replayed.
+- **How defense works:** a defended robot loses **defender's ability × its susceptibility** of what it does. On
+  offense, each cycle succeeds with probability 1 − ability × susceptibility (a 60% defender on a 50%-susceptible
+  robot costs it 30% of its cycles). Two defenders on one robot both apply. If the robot you chose to defend is
+  defending too, you decide beforehand: stay on it (its defense ability drops by the same rule) or switch to another
+  robot. Phones show each choice's effect from the scouts' estimates.
+- **The reveal:** once an alliance wins two matches, the big screen shows every team's true cycle distribution,
+  susceptibility and defense next to what was scouted, and each match's win chance for both alliances given the
+  assignments they chose.
 
 ## Lessons: one source for both versions
 
@@ -82,7 +92,7 @@ there is nothing to keep in sync:
 | `lessons.js` | The list of lessons and their parts; how each question is described |
 | `lesson1-learn.js` | Lesson 1's case studies (Learn) |
 | `lesson1-test.js` | Lesson 1's investigations (Test) |
-| `lesson1-draft.js` | Lesson 1's Showdown teams: true attributes, timers and rules |
+| `lesson1-draft.js` | Lesson 1's Showdown teams (cycle distributions, susceptibility, defense), timers and rules |
 | `quiz.js` | How every question type is checked and scored |
 | `alliance.js`, `draft-rules.js`, `picklist.js` | The Showdown match model, rules and picklist |
 | `views.js`, `explorer.js` | Question screens and the Explore panel, shared by phones and the solo page |

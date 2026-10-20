@@ -462,18 +462,6 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .st-scout.compact { gap: 0.15rem; padding: 0.35rem 0.6rem 0.4rem; border-radius: 0.7rem; }
 .st-scout.compact .st-scout-head b { font-size: 1.3rem; }
 .st-scout.compact .st-scout-foot, .st-scout.compact .st-ratings { font-size: 0.7rem; }
-.st-qhist { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.2rem; height: 4.2rem; align-items: end; }
-.st-qhist.labeled { height: 5.2rem; }
-.st-qhist span { position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
-.st-qhist.labeled span { padding-bottom: 1.1rem; }
-.st-qhist i { display: block; min-height: 2px; border-radius: 0.2rem 0.2rem 0 0; background: var(--black); }
-.st-qhist span.zero i { background: var(--red-hi); }
-.st-qhist b { position: absolute; left: 0; right: 0; text-align: center; bottom: 1.15rem; transform: translateY(-1.1em); font-family: var(--display); font-weight: 400; font-size: 0.95rem; line-height: 1; }
-.st-qhist small { position: absolute; bottom: 0; left: -0.2rem; right: -0.2rem; text-align: center; font-size: 0.6rem; font-weight: 700; color: #666; white-space: nowrap; }
-.st-scout.compact .st-qhist.labeled { height: 3.4rem; }
-.st-scout.compact .st-qhist.labeled span { padding-bottom: 0.85rem; }
-.st-scout.compact .st-qhist b { bottom: 0.85rem; font-size: 0.75rem; }
-.st-scout.compact .st-qhist small { font-size: 0.5rem; }
 
 /* big screen */
 .drafting .st-body { justify-content: flex-start; gap: 0.6rem; }
@@ -500,10 +488,6 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .st-legend-line { font-size: 0.9rem; font-weight: 700; }
 .st-select { display: grid; grid-template-columns: 19rem 1fr; gap: 1.2rem; align-items: start; }
 .st-select aside { display: flex; flex-direction: column; gap: 0.8rem; }
-.st-select .st-scout.compact .st-qhist.labeled { height: 2.6rem; }
-.st-select .st-scout.compact .st-qhist small { display: none; }
-.st-select .st-scout.compact .st-qhist.labeled span { padding-bottom: 0; }
-.st-select .st-scout.compact .st-qhist b { bottom: 0; }
 .st-alliance-board { display: flex; flex-direction: column; gap: 0.7rem; }
 .st-alliance-col { display: flex; flex-direction: column; gap: 0.45rem; }
 .st-alliance-col h2 { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.35rem 0.9rem 0.2rem; border-radius: 0.5rem; color: var(--white); font-size: 1.9rem; }
@@ -587,3 +571,37 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .pl-sheet { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; max-height: 90vh; overflow: auto; padding: 1rem 1rem max(1rem, env(safe-area-inset-bottom)); border-top: 0.3rem solid var(--black); border-radius: 1.2rem 1.2rem 0 0; background: var(--red); }
 .pl-moves { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .pl-moves .btn { flex: 1 1 40%; }
+
+/* cycles and defense */
+.st-rulebox { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.7rem 0.9rem; border: var(--outline) solid var(--black); border-radius: 0.8rem; background: #fff7d6; color: var(--black); box-shadow: var(--drop); font-size: 0.95rem; line-height: 1.35; }
+.st-rulebox > b { font-family: var(--display); font-weight: 400; font-size: 1.4rem; line-height: 1; }
+.st-rulebox span b { color: var(--red-hi); }
+.st-host .st-rulebox { font-size: 1.1rem; }
+.st-host .st-rulebox > b { font-size: 1.7rem; }
+.st-seg button small { display: block; font-family: var(--font); font-size: 0.7rem; font-weight: 700; opacity: 0.75; }
+.st-seg.small button { font-size: 1rem; min-height: 2.4rem; }
+.st-if { font-size: 0.8rem; font-weight: 700; color: #555; }
+.st-side > small { font-weight: 700; color: #555; margin-top: -0.4rem; }
+.st-assign-list span { grid-template-columns: auto 1fr; }
+.st-assign-list em { text-align: right; }
+
+/* cycle histograms: bars from the bottom, each labeled (in %) on top, cycle counts underneath */
+.st-qhist { display: grid; grid-template-columns: repeat(13, 1fr); gap: 0.2rem; height: 4.4rem; padding-top: 1rem; align-items: end; }
+.st-qhist span { position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.st-qhist.labeled { height: 5.4rem; }
+.st-qhist.labeled span { padding-bottom: 1rem; }
+.st-qhist i { position: relative; display: block; min-height: 2px; border-radius: 0.2rem 0.2rem 0 0; background: var(--black); }
+.st-qhist span.zero i { background: var(--red-hi); }
+.st-qhist b { font-style: normal; position: absolute; bottom: 100%; left: -0.3rem; right: -0.3rem; padding-bottom: 0.1rem; text-align: center; font-family: var(--display); font-weight: 400; font-size: 0.85rem; line-height: 1; color: var(--black); }
+.st-qhist small { position: absolute; bottom: 0; left: -0.2rem; right: -0.2rem; text-align: center; font-size: 0.6rem; font-weight: 700; color: #666; white-space: nowrap; }
+.st-scout.compact .st-qhist.labeled { height: 3.9rem; padding-top: 0.8rem; }
+.st-scout.compact .st-qhist.labeled span { padding-bottom: 0.8rem; }
+.st-scout.compact .st-qhist b { font-size: 0.72rem; }
+.st-scout.compact .st-qhist small { font-size: 0.5rem; }
+.st-select .st-scout.compact .st-qhist.labeled { height: 2.9rem; }
+.st-select .st-scout.compact .st-qhist small { display: none; }
+.st-select .st-scout.compact .st-qhist.labeled span { padding-bottom: 0; }
+.st-qhist.truth { width: 9rem; height: 1.4rem; padding-top: 0; gap: 1px; }
+.st-qhist.truth b { display: none; }
+.st-qhist.truth i { background: #6b5a00; }
+.st-qhist.truth span.zero i { background: var(--red-hi); }

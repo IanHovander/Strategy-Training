@@ -8,7 +8,7 @@
 import { html } from '../../js/ui.js';
 import { average, scoutCard, teamName, allianceOf } from './draft-views.js';
 
-const SORTS = { seed: 'Seed', avg: 'Average', resilience: 'Resilience', defense: 'Defense' };
+const SORTS = { seed: 'Seed', avg: 'Avg cycles', susceptibility: 'Least susceptible', defense: 'Best defense' };
 
 /**
  * mount(container, { send, onInvite }) -> { update(view) }
@@ -207,7 +207,7 @@ export function mountPicklist(container, { send, canInvite, invite }) {
         <span class="pl-seed">#${s.seed}</span>
         <span class="pl-name">
           <b>${teamName(s.id)}</b>
-          <small>${on.alliance >= 0 ? `Alliance ${on.alliance + 1}` : `avg ${average(s).toFixed(1)} · R${s.resilience} D${s.defense}`}</small>
+          <small>${on.alliance >= 0 ? `Alliance ${on.alliance + 1}` : `avg ${average(s).toFixed(1)} · S${Math.round(100 * s.susceptibility)} D${Math.round(100 * s.defense)}`}</small>
         </span>
       </div>`;
   }
@@ -226,7 +226,7 @@ export function mountPicklist(container, { send, canInvite, invite }) {
 
   function sortedBank() {
     const listed = new Set([...lists.pick, ...lists.dnp]);
-    const key = { seed: (s) => s.seed, avg: (s) => -average(s), resilience: (s) => -s.resilience, defense: (s) => -s.defense }[sort];
+    const key = { seed: (s) => s.seed, avg: (s) => -average(s), susceptibility: (s) => s.susceptibility, defense: (s) => -s.defense }[sort];
     return view.event.filter((s) => !listed.has(s.id)).sort((a, b) => key(a) - key(b) || a.seed - b.seed).map((s) => s.id);
   }
 

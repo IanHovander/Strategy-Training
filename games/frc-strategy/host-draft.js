@@ -4,7 +4,7 @@ import { html } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
 import { DRAFT } from './lesson1-draft.js';
 import { nextButton } from './host-parts.js';
-import { GROUPS, assignmentList, groupBadge, scoutCard, scoutOf, teamName, truthRow } from './draft-views.js';
+import { GROUPS, groupBadge, pct, roleList, scoutCard, scoutOf, teamName, truthRow } from './draft-views.js';
 
 export function draftHead(v, lesson, part) {
   const label = {
@@ -79,7 +79,7 @@ function prep(v) {
       <span class="st-onclock">Qualifications are over. Seeds #1 and #2 captain the alliances. Build your picklist on your phone.</span>
     </div>
     <div class="st-pool">${v.event.map((s) => scoutCard(v, s, { compact: true }))}</div>
-    <p class="st-legend-line">Bars: how many of 10 qualification matches scored 0, 1–9, 10–19, … 50+. Ratings are scouts’ estimates.</p>`;
+    <p class="st-legend-line">Bars: % of 10 qualification matches with 0, 1, 2 … 12 cycles (red: 0, a breakdown). Susceptible and Defense are scouts’ estimates, within ±20% of the truth.</p>`;
 }
 
 /** Each alliance: captain and pick slots. */
@@ -132,7 +132,17 @@ function allianceCol(v, i) {
 function plan(v) {
   return html`
     <div class="st-matchup">${allianceCol(v, 0)}<span class="st-vs">vs</span>${allianceCol(v, 1)}</div>
-    <p class="st-instruct">On your phones: send each robot to offense or to defend one of theirs. The match plays when both captains lock in.</p>`;
+    ${defenseRule()}`;
+}
+
+/** How defense works, shown while alliances plan. */
+function defenseRule() {
+  return html`
+    <div class="st-rulebox">
+      <b>How defense works</b>
+      <span>A defended robot loses <b>defender’s ability × its susceptibility</b> of its cycles. Example: a 60% defender on a 50%-susceptible robot takes 30%, so each cycle succeeds 70% of the time.</span>
+      <span>Defend a robot that’s defending too, and you can stay on it (its defense weakens by the same rule) or switch to another robot. Decide before the match: robots don’t change roles mid-match.</span>
+    </div>`;
 }
 
 function side(v, r, i) {
@@ -140,7 +150,8 @@ function side(v, r, i) {
     <div class="st-side ${r.winner === i && 'won'} ${i === 0 ? 'red' : 'blue'}">
       ${groupBadge(i, `Alliance ${i + 1}`)}
       <span class="st-side-score">${r.scores[i]}</span>
-      ${assignmentList(r.assign[i], v.alliances[i], r.points, r.broken)}
+      <small>cycles</small>
+      ${roleList(v.alliances[i], r.roles, r.cycles)}
     </div>`;
 }
 
@@ -150,14 +161,13 @@ function result(v) {
   return html`
     <div class="st-title">
       <h1>${r.winner == null ? 'A Tie! Replay' : `Alliance ${r.winner + 1} Wins Match ${v.match + 1}!`}</h1>
-      <p>Series: Alliance 1 ${v.wins[0]} – ${v.wins[1]} Alliance 2${r.broken.length ? ` · broke down: ${r.broken.map(teamName).join(', ')}` : ''}</p>
+      <p>Series: Alliance 1 ${v.wins[0]} – ${v.wins[1]} Alliance 2</p>
     </div>
     <div class="st-match big">${side(v, r, 0)}<span class="st-vs">vs</span>${side(v, r, 1)}</div>
     <div class="st-actions">${nextButton(v, over ? 'The Reveal ▸' : `Plan Match ${v.match + 2} ▸`)}</div>`;
 }
 
 function final(v) {
-  const pct = (x) => `${Math.round(100 * x)}%`;
   return html`
     <div class="st-reveal-grid">
       <div>
@@ -172,7 +182,7 @@ function final(v) {
                 <b>Match ${m + 1}</b>
                 <span>${r.scores[0]}–${r.scores[1]}${r.winner == null ? ' (tie)' : ''}</span>
                 <span>A1 win chance <b>${pct(r.odds.win[0])}</b> · A2 <b>${pct(r.odds.win[1])}</b>${r.odds.tie > 0.005 ? ` · tie ${pct(r.odds.tie)}` : ''}</span>
-                <small>A1: ${defenseLine(r.assign[0])} · A2: ${defenseLine(r.assign[1])}</small>
+                <small>A1: ${defenseLine(r.roles, v.alliances[0])} · A2: ${defenseLine(r.roles, v.alliances[1])}</small>
               </div>`,
           )}
         </div>
@@ -181,7 +191,7 @@ function final(v) {
       <div class="st-truth">
         <h2>The Truth Behind the Scouting</h2>
         <table>
-          <thead><tr><th>Team</th><th>Avg: scouted → true</th><th>Spread</th><th>Breaks</th><th>Resilience</th><th>Defense</th></tr></thead>
+          <thead><tr><th>Team</th><th>Avg cycles: scouted → true</th><th>True cycle chances, 0–12</th><th>0 cycles</th><th>Susceptible</th><th>Defense</th></tr></thead>
           <tbody>${v.event.map((s) => truthRow(v, s.id))}</tbody>
         </table>
         <button class="btn btn-xl block" data-action="finish">Finish ▸</button>
@@ -189,7 +199,8 @@ function final(v) {
     </div>`;
 }
 
-function defenseLine(assign) {
-  const defenders = Object.entries(assign).filter(([, t]) => t !== 'offense');
-  return defenders.length ? defenders.map(([id, t]) => `${teamName(id)} on ${teamName(t)}`).join(', ') : 'all offense';
+function defenseLine(roles, ids) {
+  const defenders = ids.filter((id) => roles[id].role === 'defend');
+  if (!defenders.length) return 'all offense';
+  return defenders.map((id) => `${teamName(id)} ${roles[id].shadowing ? 'shadowed' : 'on'} ${teamName(roles[id].target)}`).join(', ');
 }

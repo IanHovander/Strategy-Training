@@ -2,15 +2,24 @@
 // the same event's teams, build picklists, run alliance selection like at an event (two alliances, serpentine),
 // then play a best of three. The match model is in alliance.js; the rules in draft-rules.js.
 //
-// Each team's TRUE attributes (hidden until the series ends):
-//   mean, spread   points it scores in a match when it works (normal-shaped: mean ± spread)
-//   broken         chance it breaks and scores 0 in a match. Every team has one.
-//   resilience     0–1: how much of its scoring it keeps when defended (1 = defense can't touch it)
-//   defense        0–1: how well it defends. A robot guarded by a defender keeps
-//                  1 − defense × (1 − resilience) of its points.
-//   note           what the reveal says about it
-// What players see is simulated each game from these: ten qualification matches drawn from the true
-// distribution, and scouts' 1–10 estimates of resilience and defense (with scouting error).
+// A robot does two things: it scores cycles, and it can defend. Each team's TRUE attributes (hidden until the
+// series ends):
+//   cycles          the probability of completing 0, 1, 2, … 12 cycles in a match (always some chance of 0: any
+//                   robot can break). Built from a typical count, a spread, and a breakdown chance.
+//   susceptibility  0–1: how much defense slows it down
+//   defense         0–1: how good it is at defending
+//   note            what the reveal says about it
+// What players see is simulated each game: ten qualification matches drawn from the cycle distribution, and
+// scouts' estimates of susceptibility and defense, each within ±20% of the true value.
+
+export const MAX_CYCLES = 12;
+
+/** A cycle distribution: [P(0 cycles), P(1), …, P(12)] from a typical count, a spread and a breakdown chance. */
+function cycles(typical, spread, broken) {
+  const weights = Array.from({ length: MAX_CYCLES + 1 }, (_, n) => (n === 0 ? 0 : Math.exp(-((n - typical) ** 2) / (2 * spread ** 2))));
+  const total = weights.reduce((a, b) => a + b, 0);
+  return weights.map((w, n) => (n === 0 ? broken : ((1 - broken) * w) / total));
+}
 
 export const DRAFT = {
   prepSeconds: 15 * 60, // discussion and picklists before selection
@@ -21,36 +30,36 @@ export const DRAFT = {
   planSeconds: 180, // a backstop: matches play as soon as both alliances lock in
   maxMatches: 5, // ties are replayed, up to this many matches
   qualMatches: 10,
-  ratingError: 1.2, // scouts' error on the 1–10 resilience and defense ratings (standard deviation)
+  scoutError: 0.2, // scouts' estimates land within ±20% of the true value
   rules: [
-    'Each match, every robot either plays offense or defends one robot on the other alliance.',
-    'A defender scores nothing. A defended robot keeps 1 − (defense × (1 − resilience)) of its points: strong defense hurts a fragile robot and barely touches a resilient one.',
-    'Two defenders on one robot both apply.',
-    'Any robot can break in any match and score 0, defenders included (a broken defender defends nobody).',
-    'An alliance’s score is the total of its robots. Best of three; a tie is replayed.',
+    'Each robot plays offense (scoring cycles) or defense, the whole match. Robots don’t change roles mid-match.',
+    'A defender scores nothing and guards one robot of your choice for the whole match.',
+    'Defense takes away (defender’s ability × target’s susceptibility). A 60% defender on a 50%-susceptible robot costs it 30% of its cycles: each cycle succeeds 70% of the time.',
+    'If the robot you chose is defending too, you decide beforehand: stay on it, which weakens its defense by the same rule, or switch to another robot.',
+    'Two defenders on one robot both apply. An alliance’s score is its total cycles. Best of three; a tie is replayed.',
   ],
   teams: [
-    { id: 'apex', name: 'Apex', mean: 38, spread: 6, broken: 0.04, resilience: 0.7, defense: 0.3, note: 'The real deal: high scoring, consistent, hard to defend.' },
-    { id: 'metronome', name: 'Metronome', mean: 30, spread: 3, broken: 0.02, resilience: 0.6, defense: 0.2, note: 'Almost exactly 30 every time.' },
-    { id: 'boom', name: 'Boom', mean: 34, spread: 14, broken: 0.08, resilience: 0.4, defense: 0.2, note: 'A high average with a huge spread: 50 one match, 15 the next.' },
-    { id: 'glass', name: 'Glass Cannon', mean: 41, spread: 7, broken: 0.25, resilience: 0.3, defense: 0.1, note: 'The best scorer when it runs, but it breaks one match in four.' },
-    { id: 'brick', name: 'Brick', mean: 14, spread: 5, broken: 0.03, resilience: 0.8, defense: 0.85, note: 'A low scorer and the best defender at the event.' },
-    { id: 'wall', name: 'Wall', mean: 20, spread: 5, broken: 0.03, resilience: 0.7, defense: 0.6, note: 'A decent scorer and a solid defender.' },
-    { id: 'tank', name: 'Tank', mean: 27, spread: 5, broken: 0.04, resilience: 0.95, defense: 0.4, note: 'Defense can’t touch it.' },
-    { id: 'spark', name: 'Spark', mean: 22, spread: 10, broken: 0.1, resilience: 0.4, defense: 0.2, note: 'Streaky: its qualification numbers depend a lot on luck.' },
-    { id: 'eddie', name: 'Steady Eddie', mean: 24, spread: 3, broken: 0.02, resilience: 0.5, defense: 0.3, note: 'Reliable middle of the pack.' },
-    { id: 'gambler', name: 'Gambler', mean: 26, spread: 16, broken: 0.06, resilience: 0.5, defense: 0.2, note: 'Anything from 0 to 55.' },
-    { id: 'turtle', name: 'Turtle', mean: 18, spread: 3, broken: 0.01, resilience: 0.9, defense: 0.3, note: 'Slow, but nothing stops it.' },
-    { id: 'feather', name: 'Feather', mean: 33, spread: 5, broken: 0.05, resilience: 0.1, defense: 0.1, note: 'Scores a lot, folds under any defense.' },
-    { id: 'pest', name: 'Pest', mean: 21, spread: 6, broken: 0.05, resilience: 0.6, defense: 0.55, note: 'Scores a little, defends well.' },
-    { id: 'ghost', name: 'Ghost', mean: 31, spread: 6, broken: 0.3, resilience: 0.5, defense: 0.2, note: 'Good when it shows up. It breaks almost one match in three.' },
-    { id: 'rookie', name: 'Rookie', mean: 12, spread: 6, broken: 0.1, resilience: 0.4, defense: 0.25, note: 'First-year team, still finding its feet.' },
-    { id: 'middler', name: 'Middler', mean: 23, spread: 7, broken: 0.05, resilience: 0.5, defense: 0.35, note: 'Average at everything.' },
+    { id: 'apex', name: 'Apex', cycles: cycles(9, 1.2, 0.04), susceptibility: 0.3, defense: 0.3, note: 'The real deal: lots of cycles, consistent, hard to slow down.' },
+    { id: 'metronome', name: 'Metronome', cycles: cycles(7, 0.6, 0.02), susceptibility: 0.4, defense: 0.2, note: 'Seven cycles, almost every match.' },
+    { id: 'boom', name: 'Boom', cycles: cycles(7.5, 3, 0.08), susceptibility: 0.6, defense: 0.2, note: 'A high average with a huge spread: 11 one match, 4 the next.' },
+    { id: 'glass', name: 'Glass Cannon', cycles: cycles(9.5, 1.5, 0.25), susceptibility: 0.7, defense: 0.1, note: 'The most cycles when it runs, but it breaks one match in four.' },
+    { id: 'brick', name: 'Brick', cycles: cycles(3, 1, 0.03), susceptibility: 0.2, defense: 0.85, note: 'Few cycles, and the best defender at the event.' },
+    { id: 'wall', name: 'Wall', cycles: cycles(4.5, 1, 0.03), susceptibility: 0.3, defense: 0.6, note: 'A few cycles and a solid defender.' },
+    { id: 'tank', name: 'Tank', cycles: cycles(6, 1, 0.04), susceptibility: 0.05, defense: 0.4, note: 'Defense barely touches it.' },
+    { id: 'spark', name: 'Spark', cycles: cycles(5, 2.2, 0.1), susceptibility: 0.6, defense: 0.2, note: 'Streaky: its qualification numbers depend a lot on luck.' },
+    { id: 'eddie', name: 'Steady Eddie', cycles: cycles(5.5, 0.7, 0.02), susceptibility: 0.5, defense: 0.3, note: 'Reliable middle of the pack.' },
+    { id: 'gambler', name: 'Gambler', cycles: cycles(6, 3.5, 0.06), susceptibility: 0.5, defense: 0.2, note: 'Anything from 0 to 12 cycles.' },
+    { id: 'turtle', name: 'Turtle', cycles: cycles(4, 0.7, 0.01), susceptibility: 0.1, defense: 0.3, note: 'Slow, but nothing stops it.' },
+    { id: 'feather', name: 'Feather', cycles: cycles(7.5, 1, 0.05), susceptibility: 0.9, defense: 0.1, note: 'Lots of cycles, but it folds under any defense.' },
+    { id: 'pest', name: 'Pest', cycles: cycles(4.5, 1.3, 0.05), susceptibility: 0.4, defense: 0.55, note: 'A few cycles and a good defender.' },
+    { id: 'ghost', name: 'Ghost', cycles: cycles(7, 1.3, 0.3), susceptibility: 0.5, defense: 0.2, note: 'Good when it shows up. It breaks almost one match in three.' },
+    { id: 'rookie', name: 'Rookie', cycles: cycles(2.5, 1.3, 0.1), susceptibility: 0.6, defense: 0.25, note: 'First-year team, still finding its feet.' },
+    { id: 'middler', name: 'Middler', cycles: cycles(5, 1.5, 0.05), susceptibility: 0.5, defense: 0.35, note: 'Average at everything.' },
   ],
   lessons: [
     'Ten matches is a small sample: some teams’ qualification numbers were luckier (or unluckier) than the robot.',
-    'Every robot can break. A one-in-four breakdown chance usually costs you a match in a best of three.',
-    'Defense pays only against a robot that scores a lot and folds under pressure. Against a resilient robot you give away your own points.',
-    'Consistency matters most in a short series: a steady 30 often beats a wild 34.',
+    'Every robot can break. A one-in-four chance of a 0 usually costs you a match in a best of three.',
+    'Defense pays when (your defender’s ability × their robot’s susceptibility × that robot’s cycles) beats the cycles your defender gives up.',
+    'Consistency matters most in a short series: a steady 7 often beats a wild 7.5.',
   ],
 };
