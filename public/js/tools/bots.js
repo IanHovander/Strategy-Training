@@ -72,11 +72,27 @@ function play(bot) {
       for (const [t, p] of actions) bot.socket.emit('action', { type: t, payload: p });
     }, 800 + Math.random() * 2500);
   };
-  // Strategy Training: answer each question (any type) and, when asked, say how sure; in the Showdown, build the
-  // picklist, invite and lock in.
+  // Strategy Training: answer each question (any type) and, when asked, say how sure; in Learn's Strategy Room,
+  // make each call and sometimes ask a question (a bot picked as moderator just moves the room along); in the
+  // Showdown, build the picklist, invite and lock in.
   if (bot.game === 'frc-strategy') {
-    Promise.all([strategy, quiz]).then(([{ lessonById, partById }, { CONFIDENCE, asksConfidence }]) => {
+    Promise.all([strategy, quiz, roomCases]).then(([{ lessonById, partById }, { CONFIDENCE, asksConfidence }, { minConfidence, optionsAt }]) => {
       const part = partById(lessonById(v.lessonId), v.partId);
+      if (part.kind === 'room' && v.phase !== 'pick') {
+        if (v.phase === 'intro' && v.choice == null) later('volunteer', { yes: false });
+        if (v.isModerator) {
+          const waiting = v.inbox?.find((q) => !q.answer);
+          later('next', { from: v.step }, [...(waiting ? [['reply', { id: waiting.id, type: 'spoken' }]] : []), ['next', { from: v.step }]]);
+        } else if (v.phase === 'call' && !v.mine) {
+          const options = optionsAt(part.cases[v.caseIndex], v.round);
+          const low = minConfidence(options.length);
+          later('call', { pick: pick(options).id, confidence: low + 5 * Math.floor(Math.random() * ((100 - low) / 5 + 1)) });
+        } else if (v.phase === 'discuss' && v.questionsOpen && bot.mulled !== v.step) {
+          bot.mulled = v.step; // decide once per discussion whether to ask
+          if (Math.random() < 0.3) later('ask', { text: pick(QUESTIONS) });
+        }
+        return;
+      }
       if (v.phase === 'question' && v.answer == null) {
         const q = part.questions[v.q];
         const answer = ['answer', { answer: randomAnswer(q) }];
@@ -100,6 +116,8 @@ function play(bot) {
 // Strategy Training's lessons, so bots can give a valid answer to any question.
 const strategy = import('../../games/frc-strategy/lessons.js');
 const quiz = import('../../games/frc-strategy/quiz.js');
+const roomCases = import('../../games/frc-strategy/lesson1-room.js');
+const QUESTIONS = ['Where did that number come from?', 'Was that against defense?', 'How many matches is that based on?', 'What if they change their plan?'];
 
 function randomAnswer(q) {
   if (q.type === 'number') {

@@ -12,10 +12,13 @@ tunnel), and `npm start` (Node, same Wi-Fi only).
   - `server/` is the laptop server.
   - `public/js/tools/` has the test bots and the network check.
 - **Keep game work inside `games/<id>/`.** Core, net and server code are shared.
-- **Strategy Training** is `games/frc-strategy/`. Lessons are listed in `lessons.js`; each has Learn
-  (`lesson1-learn.js`), Test (`lesson1-test.js`) and Showdown (`lesson1-draft.js`, rules in
-  `draft-rules.js`) parts. The solo page (`public/lessons.html`) renders the same files, so change content
-  there, never in the page.
+- **Strategy Training** is `games/frc-strategy/`. Lessons are listed in `lessons.js`; each has Learn, Test
+  (`lesson1-test.js`) and Showdown (`lesson1-draft.js`, rules in `draft-rules.js`) parts. The solo page
+  (`public/lessons.html`) renders the same files, so change content there, never in the page.
+  - Learn in the team game is the Strategy Room: cases in `lesson1-room.js`, rules in `room-rules.js`.
+  - The moderator's private brief is in `lesson1-room-brief.js`. Import it only from `room-rules.js`: anything
+    `player.js` or `host.js` imports reaches every phone or the projector.
+  - Learn on the solo page is the scored case studies in `lesson1-learn.js` (the Learn part's `solo`).
 - **Commands:**
   - `npm test`: must say ALL PASSED.
   - `npm run dev`: laptop server, restarts on change.

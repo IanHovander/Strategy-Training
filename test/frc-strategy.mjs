@@ -4,6 +4,9 @@
 import { spawn } from 'node:child_process';
 import { io } from 'socket.io-client';
 import { LESSONS, partById } from '../games/frc-strategy/lessons.js';
+import { ROOM, lastRound, minConfidence, optionsAt } from '../games/frc-strategy/lesson1-room.js';
+import { BRIEFS } from '../games/frc-strategy/lesson1-room-brief.js';
+import { readFileSync } from 'node:fs';
 import { asksConfidence, bestPoints, calibration, cleanAnswer, scoreAnswer, tally, typeOf } from '../games/frc-strategy/quiz.js';
 import { abilityAt, attemptTime, clock, cycleCounts, cycleDist, defenderBreak, matchOdds, playMatch, resolve, scoutTeam, successAt } from '../games/frc-strategy/alliance.js';
 import { mean } from '../games/frc-strategy/prob.js';
@@ -36,7 +39,8 @@ const best = (q) =>
 
 try {
   const risk = LESSONS[0];
-  const learn = partById(risk, 'learn');
+  const room = partById(risk, 'learn'); // the team game's Learn: the Strategy Room
+  const learn = room.solo; // the solo page's Learn: scored case studies
   const test = partById(risk, 'test');
   const { draft } = partById(risk, 'draft');
   const T = (id) => draft.teams.find((t) => t.id === id);
@@ -59,6 +63,29 @@ try {
       }
     }
   }
+  // --- the Strategy Room's cases and briefs ---
+  check(room.kind === 'room' && room.cases === ROOM && learn.kind === 'quiz' && learn.id === 'learn', 'team Learn is the Strategy Room; the solo page keeps the scored cases as its Learn');
+  check(ROOM.length === BRIEFS.length && ROOM.length === 5, 'five Strategy Room cases, each with a moderator brief');
+  for (const [i, c] of ROOM.entries()) {
+    const calls = Array.from({ length: lastRound(c) + 1 }, (_, r) => optionsAt(c, r));
+    const ok =
+      c.title && c.short && c.prompt && c.setup && c.blind && c.intel.length >= 1 && c.nudges.length >= 1 &&
+      calls.every((list) => list.length >= 2 && list.length <= 3 && new Set(list.map((o) => o.id)).size === list.length && list.every((o) => o.label && o.detail));
+    const b = BRIEFS[i];
+    const briefOk = b.framing && b.truth.length && b.records.length && b.investigations.length && b.records.every((x) => x.id && x.title && x.text) && b.investigations.every((x) => x.id && x.title && x.effort && x.result);
+    check(ok && briefOk, `Strategy Room ${i + 1} (${c.title}): every call has 2-3 plans, and the brief has records and investigations`);
+  }
+  check(minConfidence(2) === 50 && minConfidence(3) === 35, 'the lowest confidence is an even split between the plans');
+  // The brief must never reach a phone or the projector: no screen code may import it.
+  const imports = (file, seen = new Set()) => {
+    if (seen.has(file)) return seen;
+    seen.add(file);
+    for (const [, dep] of readFileSync(new globalThis.URL(`../games/frc-strategy/${file}`, import.meta.url), 'utf8').matchAll(/from '\.\/([\w-]+\.js)'/g)) imports(dep, seen);
+    return seen;
+  };
+  const screens = new Set([...imports('player.js'), ...imports('host.js')]);
+  check(!screens.has('lesson1-room-brief.js') && !screens.has('room-rules.js') && screens.has('player-room.js') && screens.has('host-room.js'), 'the screens never load the moderator brief');
+
   check(learn.questions.some((q) => typeOf(q) === 'number') && learn.questions.some((q) => typeOf(q) === 'multi'), 'Learn mixes estimates, picks and pick-all-that-matter');
   check(learn.questions.filter((q) => q.lastInCase).length === learn.cases.length, 'every Learn case has a last step');
   const prepared = new Set(learn.cases.flatMap((c) => c.prepares ?? []));
@@ -180,7 +207,7 @@ try {
   const solo = await fetch(`${URL}/lessons.html`);
   const soloText = await solo.text();
   check(solo.ok && ['lessons.js', 'explorer.js', 'views.js', 'quiz.js'].every((f) => soloText.includes(`./games/frc-strategy/${f}`)), 'solo page loads the shared lessons, scoring, views and explorer');
-  for (const f of ['explorer.js', 'views.js', 'quiz.js', 'prob.js', 'lesson1-learn.js', 'lesson1-draft.js', 'alliance.js', 'draft-views.js', 'player-draft.js', 'host-draft.js', 'picklist.js']) {
+  for (const f of ['explorer.js', 'views.js', 'quiz.js', 'prob.js', 'lesson1-learn.js', 'lesson1-room.js', 'player-room.js', 'host-room.js', 'lesson1-draft.js', 'alliance.js', 'draft-views.js', 'player-draft.js', 'host-draft.js', 'picklist.js']) {
     check((await fetch(`${URL}/games/frc-strategy/${f}`)).ok, `games/frc-strategy/${f} is served`);
   }
 
@@ -246,77 +273,120 @@ try {
   await wait(200);
   check(host.room.screen === 'lobby' && /P1 topped Risk & Consistency Test/.test(host.room.lastResult ?? ''), 'finish goes back to the lobby with the winner');
 
-  // --- Learn: estimates, pick-all-that-matter, leaderboard per case ---
-  host.socket.emit('lobby', { cmd: 'start' });
-  await wait(200);
-  await act(players[0], 'next', { from: 'pick:0' });
-  await wait(100);
-  check(view(host).phase === 'question' && view(host).partId === 'learn', 'the leader starts Learn');
-  const first = learn.questions[0];
-  await act(players[0], 'answer', { answer: first.number.value });
-  await act(players[1], 'answer', { answer: first.number.value + 7 });
-  await wait(3400);
-  check(view(host).phase === 'reveal' && view(players[0]).gained === 100 && view(players[1]).gained === 20, 'Learn: estimates score by closeness');
-  check(view(host).tally.median != null && view(host).tally.counts.reduce((a, b) => a + b, 0) === 2, 'Learn: the room’s estimates become a histogram');
-  hostAct(host, 'next', { from: 'reveal:0' });
-  await wait(100);
-  check(view(host).phase === 'question' && view(host).q === 1, 'Learn: mid-case, the next step follows the reveal directly');
-  for (let q = 1; !learn.questions[q - 1].lastInCase; q++) {
-    if (typeOf(learn.questions[q]) === 'multi') {
-      await act(players[0], 'answer', { answer: best(learn.questions[q]) });
-      await act(players[1], 'answer', { answer: [] });
-    }
-    hostAct(host, 'next', { from: `question:${q}` });
-    await wait(60);
-    if (learn.questions[q].lastInCase) {
-      hostAct(host, 'next', { from: `reveal:${q}` });
-      await wait(60);
-      check(view(host).phase === 'scores', 'Learn: leaderboard after the last step of a case');
-      check(view(players[0]).score === 100 + 120 && view(players[1]).score === 20, 'Learn: pick-all-that-matter scores every right pick');
-      break;
-    }
-    hostAct(host, 'next', { from: `reveal:${q}` });
-    await wait(60);
-  }
-  host.socket.emit('lobby', { cmd: 'end' });
+  // --- Learn: the Strategy Room ---
+  // Phones get at most ~15 updates a second, so wait for each screen to catch up instead of a fixed time.
+  const until = async (cond, ms = 3000) => {
+    for (const end = Date.now() + ms; Date.now() < end; await wait(25)) if (cond()) return true;
+    return cond();
+  };
+  const secret = 'Hidden real-world Safe model'; // a line from case 1's brief
+  const P5 = client('player');
   await wait(150);
+  await P5.socket.timeout(3000).emitWithAck('join', { name: 'P5' });
+  host.socket.emit('lobby', { cmd: 'start' });
+  await until(() => view(host)?.phase === 'pick');
+  await act(players[0], 'next', { from: 'pick:0' });
+  check(await until(() => view(host).phase === 'intro' && view(host).partId === 'learn' && view(host).players.every((p) => !p.done)), 'the leader starts Learn: the intro asks who wants to moderate');
+  const roomStep = () => view(host).step;
+  await act(players[1], 'next', { from: roomStep() });
+  await wait(100);
+  check(view(host).phase === 'intro', 'a non-leader phone can’t skip the volunteers');
+  await act(players[0], 'volunteer', { yes: false });
+  await act(players[1], 'volunteer', { yes: false });
+  await act(P5, 'volunteer', { yes: true });
+  check(await until(() => view(host).players.filter((p) => p.done).length === 3) && view(host).phase === 'intro', 'everyone has answered: a moment to change their mind');
+  check(await until(() => view(host).phase === 'call' && view(P5)?.isModerator && view(players[0]).isModerator === false, 4000) && view(host).moderator?.name === 'P5', 'the only volunteer moderates');
+  check(await until(() => JSON.stringify(view(P5)).includes(secret)) && view(P5).brief.records.length === BRIEFS[0].records.length, 'the moderator’s phone gets the case’s brief');
+  const leaks = () => [host, players[0], players[1]].some((c) => JSON.stringify(view(c)).includes(secret) || 'brief' in view(c));
+  check(!leaks(), 'nobody else sees the brief, not even the big screen');
+  check((await act(P5, 'call', { pick: 'safe', confidence: 80 }))?.error, 'the moderator doesn’t make a call');
+  check((await act(players[0], 'call', { pick: 'nope', confidence: 80 }))?.error && (await act(players[0], 'call', { pick: 'safe', confidence: 42 }))?.error, 'a call needs one of the plans and a confidence on the slider');
+  await act(players[0], 'call', { pick: 'aggressive', confidence: 80, why: '  the upside   matters ', doubt: 'No robot always scores 8' });
+  check(await until(() => view(host).answered === 1) && view(host).players.length === 2 && JSON.stringify(view(host)).indexOf('aggressive') === -1, 'the big screen counts calls (not the moderator) without showing them');
+  check(await until(() => view(players[0]).mine?.pick === 'aggressive') && view(players[0]).mine.why === 'the upside matters' && view(players[1]).mine === null, 'a phone sees only its own call');
+  check((await act(players[0], 'ask', { text: 'Were the 7s defended?' }))?.error, 'no questions on the warm-up’s first call');
+  await act(players[0], 'next', { from: roomStep() });
+  hostAct(host, 'next', { from: roomStep() });
+  await wait(150);
+  check(view(host).phase === 'call', 'only the moderator moves the case along');
+  /** The moderator moves on, and the big screen catches up. */
+  const advance = async (mod) => {
+    const from = roomStep();
+    await act(mod, 'next', { from });
+    return until(() => roomStep() !== from);
+  };
+  await advance(P5);
+  const r0 = view(host);
+  check(r0.phase === 'discuss' && r0.roster.length === 1 && r0.roster[0].pick === 'aggressive' && r0.roster[0].doubt === 'No robot always scores 8' && JSON.stringify(r0.counts) === '[0,1]', 'the room is shown: every call, with its confidence and reason');
+  await advance(P5);
+  check(view(host).phase === 'intel' && view(host).round === 0, 'then new intel');
+  await advance(P5);
+  check(view(host).phase === 'call' && view(host).round === 1 && (await until(() => view(players[0]).prev?.pick === 'aggressive')) && view(players[0]).mine === null, 'everyone calls it again, starting from their last call');
+  await act(players[0], 'call', { pick: 'safe', confidence: 60 });
+  await act(players[1], 'call', { pick: 'safe', confidence: 90 });
+  await advance(P5);
+  const was = view(host).roster.find((e) => e.name === 'P1');
+  check(was?.was?.pick === 'aggressive' && was.was.confidence === 80 && view(host).roster.find((e) => e.name === 'P2').was === null, 'the big screen shows who changed their call');
+  // questions: anyone but the moderator, as many as they like, never with a name
+  check((await act(P5, 'ask', { text: 'Can I ask?' }))?.error, 'the moderator answers questions, not asks them');
+  for (const text of ['Were the 7s defended?', 'How many matches?', 'What does the footage show?', 'Was practice defended?']) await act(players[0], 'ask', { text, why: 'could flip it' });
+  check((await act(players[1], 'ask', { text: '   ' }))?.error, 'an empty question is refused');
+  check(await until(() => view(host).questions.length === 4), 'questions reach the big screen');
+  const qs = view(host).questions;
+  check(qs[0].text === 'Was practice defended?' && qs.every((q) => !('by' in q) && !('own' in q)) && JSON.stringify(qs).indexOf('P1') === -1, 'questions show on the big screen, newest first, without who asked');
+  check(await until(() => view(players[0]).asked === 4 && view(players[1]).questions.length === 4) && view(players[0]).questions.every((q) => q.own) && view(players[1]).questions.every((q) => !q.own), 'your phone marks your own questions');
+  check(await until(() => view(P5).inbox.length === 4) && view(P5).waiting === 4 && view(P5).inbox.every((q) => !('by' in q)), 'the moderator’s inbox has every question, without names');
+  const [q4, q3, q2, q1] = view(P5).inbox.map((q) => q.id);
+  await act(players[1], 'hear', { id: q1 });
+  await act(P5, 'hear', { id: q1 });
+  check(await until(() => view(host).questions.find((q) => q.id === q1).hear === 1 && view(players[1]).questions.find((q) => q.id === q1).heard), '"I want to hear this too" counts, but not from the moderator');
+  check((await act(players[0], 'reply', { id: q1, type: 'unknown' }))?.error, 'only the moderator answers');
+  check((await act(P5, 'reply', { id: q1, type: 'answer', text: ' ' }))?.error, 'an answer needs words');
+  await act(P5, 'reply', { id: q1, type: 'record', record: 'a-five' });
+  check((await act(P5, 'reply', { id: q1, type: 'unknown' }))?.error, 'a question is answered once');
+  await act(P5, 'reply', { id: q2, type: 'investigation', investigation: 'a-opponent' });
+  check((await act(P5, 'reply', { id: q3, type: 'investigation', investigation: 'a-opponent' }))?.error, 'an investigation runs once');
+  await act(P5, 'reply', { id: q3, type: 'investigation', investigation: 'a-tests' });
+  const noCredit = await act(P5, 'reply', { id: q4, type: 'investigation', investigation: 'a-defense' });
+  check(noCredit?.error && (await until(() => view(P5).credits === 0)), 'investigations cost effort credits, two per case');
+  await act(P5, 'reply', { id: q4, type: 'answer', text: 'All of our practice runs were undefended.' });
+  check(await until(() => view(host).learned?.length === 3 && view(P5).waiting === 0), 'answers reach the room');
+  const answered = view(host).questions.find((q) => q.id === q1).answer;
+  check(answered?.type === 'record' && answered.text.startsWith('Five-match scouting card'), 'answers show with the question, and in the case file');
+  check(!leaks(), 'answers share only what the moderator chose');
+  for (const c of [host, players[0], P5]) check(JSON.stringify(view(c)).length < 16000, `${c === host ? 'hostView' : 'playerView'} is small (${JSON.stringify(view(c)).length} bytes)`);
+  // the moderator's phone drops: the leader picks someone else
+  P5.socket.disconnect();
+  check(await until(() => view(host).moderator?.connected === false && view(players[0]).canRepick) && !view(players[1]).canRepick, 'when the moderator drops, the leader can pick a new one');
+  await act(players[0], 'repick');
+  check(await until(() => [players[0], players[1]].some((c) => view(c).isModerator) && view(host).moderator?.connected), 'the leader picks a new moderator');
+  const mod = [players[0], players[1]].find((c) => view(c).isModerator);
+  check(await until(() => JSON.stringify(view(mod)).includes(secret)), 'the new moderator gets the brief');
+  for (let k = 0; k < 20 && view(host).phase !== 'wrap'; k++) await advance(mod);
+  check(view(host).phase === 'wrap' && view(host).moves.length === lastRound(ROOM[0]) + 1 && view(host).stats.questions === 4, 'the wrap-up shows how the room moved, call by call');
+  await advance(mod);
+  check(view(host).phase === 'call' && view(host).at === 2 && view(host).caseIndex === 1 && (await until(() => view(mod).credits === 2 && view(mod).inbox.length === 0)), 'the next case starts fresh: no questions, full credits');
+  host.socket.emit('lobby', { cmd: 'end' });
+  await until(() => host.room.screen === 'lobby');
 
-  // --- Learn: the leader runs two cases; picks ask how sure you are ---
+  // --- Learn: the leader runs two cases; nobody volunteers ---
   host.socket.emit('lobby', { cmd: 'start' });
-  await wait(200);
-  await act(players[1], 'cases', { cases: [3] });
-  await wait(60);
-  check(view(host).cases === null, 'a non-leader phone cannot choose cases');
-  await act(players[0], 'cases', { cases: [11, 3, 3, 99] });
-  await wait(60);
-  check(JSON.stringify(view(host).cases) === '[3,11]', 'the leader chooses cases (checked and sorted)');
+  await until(() => view(host)?.phase === 'pick');
+  await act(players[0], 'cases', { cases: [3, 1, 99] });
   await act(players[0], 'next', { from: 'pick:0' });
-  await wait(100);
-  const run = learn.questions.flatMap((q, i) => ([3, 11].includes(q.caseIndex) ? [i] : []));
-  check(view(host).q === run[0] && view(host).at === 1 && view(host).of === run.length && !view(host).last, 'Learn starts at the first chosen case');
-  const rated = learn.questions[run[0]];
-  check(asksConfidence(rated), 'the first chosen step asks how sure you are');
-  await act(players[0], 'answer', { answer: best(rated) });
-  await act(players[1], 'answer', { answer: rated.choices.findIndex((c) => c.points === 0) });
-  await wait(60);
-  check(view(host).answered === 0 && view(host).players.every((p) => !p.done), 'an answer isn’t done until it’s rated');
-  check((await act(players[0], 'sure', { level: 42 }))?.error, 'a rating must be one of the levels');
-  await act(players[0], 'sure', { level: 90 });
-  await act(players[1], 'sure', { level: 90 });
-  await wait(3400);
-  check(view(host).phase === 'reveal', 'reveals once everyone has answered and rated');
-  check(JSON.stringify(view(host).tally.calibration) === '[{"level":90,"n":2,"right":1}]', 'the reveal shows how the room’s confidence held up');
-  check(view(players[1]).sure === 90 && view(players[1]).tally.calibration.length === 1, 'a phone sees its own rating and the room’s');
-  const seen = [view(host).q];
-  for (let k = 0; k < 40 && view(host).phase !== 'final'; k++) {
-    hostAct(host, 'next', { from: view(host).step });
-    await wait(50);
-    if (view(host).phase === 'question') seen.push(view(host).q);
+  check(await until(() => view(host).phase === 'intro') && view(host).of === 2 && view(host).caseIndex === 1, 'Learn runs the leader’s chosen cases');
+  hostAct(host, 'next', { from: view(host).step });
+  check(
+    (await until(() => view(host).phase === 'call' && [players[0], players[1]].filter((c) => view(c).isModerator).length === 1)),
+    'nobody volunteered: the big screen moves on and someone is picked at random',
+  );
+  const runner = [players[0], players[1]].find((c) => view(c).isModerator);
+  for (let k = 0; k < 60 && host.room.screen === 'game'; k++) {
+    const from = roomStep();
+    await act(runner, 'next', { from });
+    await until(() => host.room.screen !== 'game' || roomStep() !== from);
   }
-  check(JSON.stringify(seen) === JSON.stringify(run), 'Learn runs only the chosen cases, in order');
-  check(view(host).phase === 'final' && view(host).history.filter(Boolean).length === run.length, 'the final report covers the chosen cases');
-  host.socket.emit('lobby', { cmd: 'end' });
-  await wait(150);
+  check(host.room.screen === 'lobby' && /The Strategy Room: 2 cases/.test(host.room.lastResult ?? ''), 'after the last case, back to the lobby');
 
   // --- the Showdown ---
   const p4 = client('player');

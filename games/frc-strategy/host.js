@@ -1,5 +1,5 @@
-// Big screen for Strategy Training: the lesson picker, then Learn and Test (each question, how the room answered,
-// the leaderboard). the Showdown's screens are in host-draft.js.
+// Big screen for Strategy Training: the lesson picker, then the Test (each question, how the room answered, the
+// leaderboard). Learn's Strategy Room is in host-room.js and the Showdown's screens are in host-draft.js.
 import { html, raw } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
 import { LESSONS, SHAPES, lessonById, partById } from './lessons.js';
@@ -7,6 +7,7 @@ import { asksConfidence, bestPoints, formatNumber, numberBins, typeOf } from './
 import { caseEvidence, preparesLine, preparesText } from './views.js';
 import { board, nextButton, podium, status } from './host-parts.js';
 import { draftBody, draftHead } from './host-draft.js';
+import { roomBody, roomHead } from './host-room.js';
 
 export default function (root) {
   let shown = null;
@@ -19,10 +20,12 @@ export default function (root) {
       const lesson = lessonById(v.lessonId);
       const part = partById(lesson, v.partId);
       const isDraft = part.kind === 'draft';
+      const isRoom = part.kind === 'room' && v.phase !== 'pick';
+      const many = (v.players?.length ?? v.roster?.length ?? 0) > 12;
       root.innerHTML = html`
-        <div class="st-host ${fresh && 'fresh'} ${v.players.length > 12 && 'many'} ${isDraft && v.phase !== 'pick' && 'drafting'}">
-          ${v.phase !== 'pick' && (isDraft ? draftHead(v, lesson, part) : head(v, lesson, part))}
-          <div class="st-body">${v.phase === 'pick' ? pick(v) : isDraft ? draftBody(v, lesson, part) : body(v, lesson, part)}</div>
+        <div class="st-host ${fresh && 'fresh'} ${many && 'many'} ${isDraft && v.phase !== 'pick' && 'drafting'} ${isRoom && 'rooming'}">
+          ${v.phase !== 'pick' && (isDraft ? draftHead(v, lesson, part) : isRoom ? roomHead(v, lesson, part) : head(v, lesson, part))}
+          <div class="st-body">${v.phase === 'pick' ? pick(v) : isDraft ? draftBody(v, lesson, part) : isRoom ? roomBody(v, lesson, part) : body(v, lesson, part)}</div>
         </div>`;
     },
   };
@@ -72,7 +75,7 @@ function pick(v) {
                     <span class="st-lesson-num">Part ${i + 1}</span>
                     <span class="st-lesson-name">${p.title}</span>
                     <span class="st-lesson-tag">${p.blurb}</span>
-                    <span class="st-lesson-meta">${p.kind === 'draft' ? `${p.draft.teams.length} teams · two alliances` : `${p.questions.length} questions`}</span>
+                    <span class="st-lesson-meta">${{ draft: () => `${p.draft.teams.length} teams · two alliances`, room: () => `${p.cases.length} cases · a student moderator` }[p.kind]?.() ?? `${p.questions.length} questions`}</span>
                   </button>`,
               )}
             </div>
@@ -97,19 +100,20 @@ function caseChooser(v) {
   const all = part.cases.map((_, i) => i);
   const on = v.cases ?? all;
   const toggle = (i) => (on.includes(i) ? on.filter((c) => c !== i) : [...on, i]);
-  const steps = part.questions.filter((q) => on.includes(q.caseIndex)).length;
+  // Learn's room cases take about ten minutes of discussion each; quiz-style cases about 2.5 per step.
+  const steps = part.questions?.filter((q) => on.includes(q.caseIndex)).length;
   return html`
     <div class="st-casepick">
       <div class="st-casepick-head">
         <b>Cases to run</b>
-        <span>${on.length} of ${part.cases.length} · ${steps} steps · about ${Math.round(steps * 2.5)} min</span>
+        <span>${on.length} of ${part.cases.length} · ${part.questions ? `${steps} steps · about ${Math.round(steps * 2.5)} min` : `about ${on.length * 10} min`}</span>
         <button class="btn btn-sm ${!v.cases && 'secondary'}" data-action="cases" data-payload="${JSON.stringify({ cases: all })}">All</button>
       </div>
       <div class="st-casegrid">
         ${part.cases.map(
           (c, i) => html`
             <button class="${on.includes(i) && 'on'}" data-action="cases" data-payload="${JSON.stringify({ cases: toggle(i) })}" aria-pressed="${on.includes(i)}">
-              <b>${i + 1}</b><span>${c.title}</span><small>${preparesText(c.prepares)}</small>
+              <b>${i + 1}</b><span>${c.title}</span><small>${c.prepares ? preparesText(c.prepares) : c.tag}</small>
             </button>`,
         )}
       </div>

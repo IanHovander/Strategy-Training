@@ -1,15 +1,18 @@
 // Strategy Training: the room works through a lesson together.
 //
 // The leader (big screen or the leader's phone) picks a lesson and a part:
-//   Learn and Test (kind 'quiz'): everyone answers each question on their phone; the big screen shows how the room
-//     answered and the points each answer earned. Phases: question -> reveal -> (scores) -> ... -> final.
-//     Learn shows the leaderboard after each case, Test after every question. Learn's picks also ask how sure you
-//     are (no points); the reveal shows how the room's confidence held up. The leader can run a few of Learn's cases.
+//   Learn (kind 'room'): the Strategy Room. The room argues out match-day calls with a student moderator, no
+//     points. Its rules are in room-rules.js. The leader can run a few of its cases.
+//   Test (kind 'quiz'): everyone answers each question on their phone; the big screen shows how the room
+//     answered and the points each answer earned. Phases: question -> reveal -> scores -> ... -> final.
+//     A quiz part can also be case studies (leaderboard 'case', picks that ask how sure you are, cases the
+//     leader can choose), like the solo page's Learn.
 //   Showdown (kind 'draft'): two groups build picklists, run alliance selection and play a best of three.
 //     Its rules are in draft-rules.js.
 import { LESSONS, lessonById, partById } from './lessons.js';
 import { CONFIDENCE, asksConfidence, bestPoints, calibration, cleanAnswer, isBest, scoreAnswer, tally } from './quiz.js';
 import * as draft from './draft-rules.js';
+import * as room from './room-rules.js';
 
 const ANSWER_SECONDS = 120;
 const EXTRA_SECONDS = 30;
@@ -38,16 +41,19 @@ export default {
       best: {}, // playerId -> how many best answers
       history: [], // per question: { counts, answered, median, bestShare, calibration }
       draft: null, // the Showdown (draft-rules.js)
+      room: null, // Learn's Strategy Room (room-rules.js)
     };
   },
 
   onJoin(ctx, player) {
     ctx.state.scores[player.id] ??= 0;
     if (isDraft(ctx.state)) draft.onJoin(ctx, player);
+    else if (inRoom(ctx.state)) room.onJoin(ctx);
   },
 
   onDisconnect(ctx) {
     if (isDraft(ctx.state)) draft.onDisconnect(ctx);
+    else if (inRoom(ctx.state)) room.onDisconnect(ctx);
     else maybeReveal(ctx);
   },
 
@@ -76,7 +82,8 @@ export default {
       if (player.isVip) pickCases(ctx, payload);
     },
     next(ctx, player, payload) {
-      if (player.isVip) next(ctx, payload?.from);
+      if (inRoom(ctx.state)) room.next(ctx, player, payload?.from); // the moderator moves the case along
+      else if (player.isVip) next(ctx, payload?.from);
     },
     finish(ctx, player) {
       if (player.isVip) finish(ctx);
@@ -85,6 +92,13 @@ export default {
     ...Object.fromEntries(
       Object.entries(draft.actions).map(([name, fn]) => [name, (ctx, player, payload) => (isDraft(ctx.state) ? fn(ctx, player, payload) : undefined)]),
     ),
+    // the Strategy Room: volunteer, call, ask, hear, reply
+    ...Object.fromEntries(
+      Object.entries(room.actions).map(([name, fn]) => [name, (ctx, player, payload) => (inRoom(ctx.state) ? fn(ctx, player, payload) : undefined)]),
+    ),
+    repick(ctx, player) {
+      if (inRoom(ctx.state)) room.repick(ctx, player);
+    },
   },
 
   // Buttons on the big screen.
@@ -93,7 +107,11 @@ export default {
       pick(ctx, payload);
     },
     next(ctx, payload) {
-      next(ctx, payload?.from);
+      if (inRoom(ctx.state)) room.next(ctx, null, payload?.from); // only the intro: pick the moderator now
+      else next(ctx, payload?.from);
+    },
+    repick(ctx) {
+      if (inRoom(ctx.state)) room.repick(ctx, null);
     },
     cases(ctx, payload) {
       pickCases(ctx, payload);
@@ -130,6 +148,7 @@ export default {
     }));
     if (s.phase === 'pick') return { ...base, players, cases: s.cases };
     if (isDraft(s)) return draft.hostView(ctx, { ...base, players });
+    if (isRoom(s)) return room.hostView(ctx, base);
     const revealed = s.phase !== 'question';
     return {
       ...base,
@@ -159,6 +178,7 @@ export default {
     };
     if (s.phase === 'pick') return { ...base, cases: s.cases };
     if (isDraft(s)) return draft.playerView(ctx, me, base);
+    if (isRoom(s)) return room.playerView(ctx, me, base);
     const revealed = s.phase === 'reveal' || s.phase === 'scores';
     return {
       ...base,
@@ -178,6 +198,9 @@ export default {
 const lesson = (s) => lessonById(s.lessonId);
 const part = (s) => partById(lesson(s), s.partId);
 const isDraft = (s) => part(s)?.kind === 'draft';
+const isRoom = (s) => part(s)?.kind === 'room';
+/** Learn's Strategy Room is running (past the picker). */
+const inRoom = (s) => isRoom(s) && s.phase !== 'pick' && s.room != null;
 const question = (s) => part(s).questions[s.q];
 /** The questions this run covers, by index: all of them, or Learn's chosen cases. */
 const runOrder = (s) =>
@@ -192,7 +215,8 @@ const nextQ = (s) => runOrder(s).find((i) => i > s.q);
 /** A player is done with a question once they've answered, and said how sure they are if it asks. */
 const isDone = (s, id) => id in s.answers && (!asksConfidence(question(s)) || id in s.sure);
 /** Which screen we're on, so a double-tapped "next" (big screen and leader at once) only moves once. */
-const stepKey = (s) => `${s.phase}:${isDraft(s) ? (s.phase === 'select' ? s.draft.pick : s.draft?.match ?? 0) : s.q}`;
+const stepKey = (s) =>
+  inRoom(s) ? room.stepKey({ state: s }) : `${s.phase}:${isDraft(s) ? (s.phase === 'select' ? s.draft.pick : s.draft?.match ?? 0) : s.q}`;
 
 function pick(ctx, payload) {
   const s = ctx.state;
@@ -215,7 +239,11 @@ function pickCases(ctx, payload) {
 function next(ctx, from) {
   const s = ctx.state;
   if (from !== stepKey(s)) return;
-  if (s.phase === 'pick') return isDraft(s) ? (resetScores(ctx), draft.start(ctx)) : startQuiz(ctx);
+  if (s.phase === 'pick') {
+    if (isDraft(s)) return resetScores(ctx), draft.start(ctx);
+    if (isRoom(s)) return room.start(ctx, s.cases ?? part(s).cases.map((_, i) => i));
+    return startQuiz(ctx);
+  }
   if (isDraft(s)) return draft.next(ctx);
   if (s.phase === 'question') return reveal(ctx);
   if (s.phase === 'reveal') {

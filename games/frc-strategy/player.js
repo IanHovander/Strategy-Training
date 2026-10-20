@@ -1,11 +1,13 @@
-// Phone for Strategy Training. Learn and Test: the case file, the question and its answer controls; after the
-// reveal, your result, how the room answered, the lesson and the "explore" panel. Showdown: player-draft.js.
+// Phone for Strategy Training. The Test: the question and its answer controls; after the reveal, your result, how
+// the room answered, the lesson and the "explore" panel. Learn's Strategy Room: player-room.js. Showdown:
+// player-draft.js.
 import { html } from '../../js/ui.js';
 import { LESSONS, lessonById, partById } from './lessons.js';
 import { asksConfidence, cleanAnswer, typeOf } from './quiz.js';
 import { answerInputs, answerReview, calibrationView, caseFile, confidenceInputs, modelCard, promptCard, resultBanner, wireNumber } from './views.js';
 import { mountExplorer } from './explorer.js';
 import { draftPhone } from './player-draft.js';
+import { roomPhone } from './player-room.js';
 
 export default function (root, api) {
   let view = null;
@@ -19,6 +21,7 @@ export default function (root, api) {
   const main = root.querySelector('.st-main');
   const explore = root.querySelector('.st-explore');
   const draft = draftPhone(main, api);
+  const room = roomPhone(main, api);
 
   const current = () => {
     const part = partById(lessonById(view.lessonId), view.partId);
@@ -78,6 +81,11 @@ export default function (root, api) {
     if (part?.kind === 'draft' && v.phase !== 'pick') {
       setExplore(null);
       draft.update(v, part);
+      return;
+    }
+    if (part?.kind === 'room' && v.phase !== 'pick') {
+      setExplore(null);
+      room.update(v, part);
       return;
     }
     main.innerHTML = html`${phase(v, part, q)}`;

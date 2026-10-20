@@ -144,7 +144,9 @@ import { mountExplorer } from './games/frc-strategy/explorer.js';
 
 const $ = (id) => document.getElementById(id);
 const lesson = lessonById(new URLSearchParams(location.search).get('lesson')) ?? LESSONS[0];
-const solo = lesson.parts.filter((p) => p.kind === 'quiz'); // the Showdown needs a team
+// The Showdown and Learn's Strategy Room need a team; Learn's `solo` version is its scored case studies.
+const soloPart = (p) => (p.kind === 'quiz' ? p : p.solo ?? null);
+const solo = lesson.parts.map(soloPart).filter(Boolean);
 const KEY = 'frc-strategy-solo-v2';
 let pending = null; // the answer being edited before it's locked in
 let pendingSure = null; // how sure you are, for Learn's picks
@@ -209,7 +211,7 @@ function showHome() {
   const resume = solo.find((p) => nextOpen(p) >= 0);
   $('start').textContent = !resume ? 'See Your Results ▸' : done(learn) ? `Continue: ${resume.title} ▸` : 'Start Part 1: Learn ▸';
   $('start').href = resume ? `#${resume.id}-${nextOpen(resume) + 1}` : `#${solo.at(-1).id}-done`;
-  $('parts').innerHTML = html`${lesson.parts.map((p, n) => (p.kind === 'quiz' ? partCard(p, n) : teamCard(p, n)))}`;
+  $('parts').innerHTML = html`${lesson.parts.map((p, n) => (soloPart(p) ? partCard(soloPart(p), n) : teamCard(p, n)))}`;
 }
 
 function dot(part, i, label) {
@@ -358,7 +360,8 @@ function showDone(part) {
   // How well your confidence matched your results, over every rated answer.
   const rated = part.questions.flatMap((q, i) => (i in answers && i in sureOf(part) ? [{ sure: sureOf(part)[i], right: isBest(q, answers[i]) }] : []));
   const calib = rated.length ? calibration(rated) : null;
-  const after = lesson.parts[lesson.parts.indexOf(part) + 1];
+  const at = lesson.parts.findIndex((p) => soloPart(p) === part);
+  const after = lesson.parts[at + 1] && (soloPart(lesson.parts[at + 1]) ?? lesson.parts[at + 1]);
   $('lesson-label').textContent = `Strategy Lab / ${part.title}`;
   $('lesson-progress').textContent = `${done(part)} / ${part.questions.length}`;
   $('main').innerHTML = html`
@@ -381,7 +384,7 @@ function showDone(part) {
       <div class="buttons">
         ${after &&
         (after.kind === 'quiz'
-          ? html`<a class="btn primary" href="#${after.id}-1">On to Part ${lesson.parts.indexOf(after) + 1}: ${after.title} ▸</a>`
+          ? html`<a class="btn primary" href="#${after.id}-1">On to Part ${at + 2}: ${after.title} ▸</a>`
           : html`<a class="btn primary" href="host.html">Play ${after.title} with Your Team ▸</a>`)}
         <button type="button" class="btn" data-reset>Start ${part.title} Over</button>
       </div>

@@ -2,7 +2,9 @@
 // both read from here, so editing a question once changes both.
 //
 // A lesson has three parts, played in order:
-//   learn     case studies (lesson1-learn.js): exact answers first, then more details and unknowns each step
+//   learn     team game: the Strategy Room (lesson1-room.js), match-day calls the room argues out with a student
+//             moderator (room-rules.js). The solo page can't run a discussion, so its Learn is the part's `solo`:
+//             scored case studies (lesson1-learn.js), exact answers first, then more details and unknowns each step
 //   test      one question per investigation (lesson1-test.js)
 //   draft     the Showdown (lesson1-draft.js): two groups pick alliances and play a best of three; team game only
 //
@@ -24,6 +26,7 @@
 //                        results) or { title, stats: [[label, value], …] }, plus an optional note
 // Each Learn step also gets its case's title, setup and everything revealed so far (see `fromCases`).
 import { LEARN } from './lesson1-learn.js';
+import { ROOM } from './lesson1-room.js';
 import { TEST } from './lesson1-test.js';
 import { DRAFT } from './lesson1-draft.js';
 
@@ -65,12 +68,19 @@ export const LESSONS = [
     parts: [
       {
         id: 'learn',
-        kind: 'quiz',
+        kind: 'room',
         title: 'Learn',
-        blurb: 'Case studies that build up to the Test. Each starts with an exact answer, then adds evidence and unknowns to weigh, rate your confidence in, and argue out.',
-        leaderboard: 'case', // after each case, not every step
-        cases: LEARN,
-        questions: fromCases(LEARN),
+        blurb: 'The Strategy Room: five match-day calls. Make the call, argue it out, ask the moderator anything. No answer key.',
+        cases: ROOM,
+        solo: {
+          id: 'learn',
+          kind: 'quiz',
+          title: 'Learn',
+          blurb: 'Case studies that build up to the Test. Each starts with an exact answer, then adds evidence and unknowns to weigh, rate your confidence in, and argue out.',
+          leaderboard: 'case', // after each case, not every step
+          cases: LEARN,
+          questions: fromCases(LEARN),
+        },
       },
       {
         id: 'test',
