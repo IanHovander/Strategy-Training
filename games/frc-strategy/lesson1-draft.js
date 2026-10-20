@@ -15,7 +15,7 @@
 export const MAX_CYCLES = 12;
 
 /** A cycle distribution: [P(0 cycles), P(1), …, P(12)] from a typical count, a spread and a breakdown chance. */
-function cycles(typical, spread, broken) {
+export function cycles(typical, spread, broken) {
   const weights = Array.from({ length: MAX_CYCLES + 1 }, (_, n) => (n === 0 ? 0 : Math.exp(-((n - typical) ** 2) / (2 * spread ** 2))));
   const total = weights.reduce((a, b) => a + b, 0);
   return weights.map((w, n) => (n === 0 ? broken : ((1 - broken) * w) / total));

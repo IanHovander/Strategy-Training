@@ -2,14 +2,15 @@
 // reveal, your result, how the room answered, the lesson and the "explore" panel. Showdown: player-draft.js.
 import { html } from '../../js/ui.js';
 import { LESSONS, lessonById, partById } from './lessons.js';
-import { cleanAnswer, typeOf } from './quiz.js';
-import { answerInputs, answerReview, caseFile, modelCard, promptCard, resultBanner, wireNumber } from './views.js';
+import { asksConfidence, cleanAnswer, typeOf } from './quiz.js';
+import { answerInputs, answerReview, calibrationView, caseFile, confidenceInputs, modelCard, promptCard, resultBanner, wireNumber } from './views.js';
 import { mountExplorer } from './explorer.js';
 import { draftPhone } from './player-draft.js';
 
 export default function (root, api) {
   let view = null;
   let pending = null; // the answer being edited here: a tapped choice, multi picks or the slider value
+  let sure = null; // how sure you said you are, shown at once while it's sent
   let hintOpen = false;
   let error = '';
   let exploreKey = null; // the explorer lives outside the redraws, so sliders and simulations survive view updates
@@ -41,6 +42,14 @@ export default function (root, api) {
     if (e.target.closest('[data-hint]')) {
       hintOpen = true;
       return draw();
+    }
+    const level = e.target.closest('[data-sure]');
+    if (level) {
+      sure = Number(level.dataset.sure);
+      api.vibrate(10);
+      draw();
+      api.send('sure', { level: sure });
+      return;
     }
     const choice = e.target.closest('[data-choice]');
     if (choice) {
@@ -121,14 +130,31 @@ export default function (root, api) {
               )}
             </div>`,
         )}
+        ${caseChooser(v, part)}
         ${next(v, 'Start ▸')}
+      </div>`;
+  }
+
+  /** Learn: the leader can run some of the cases. Each toggle sends the whole new list. */
+  function caseChooser(v, part) {
+    if (!part?.cases) return null;
+    const on = v.cases ?? part.cases.map((_, i) => i);
+    const toggle = (i) => (on.includes(i) ? on.filter((c) => c !== i) : [...on, i]);
+    return html`
+      <div class="st-picks">
+        <span class="st-picks-title">Cases: ${on.length} of ${part.cases.length}</span>
+        <div class="st-seg wrap small">
+          ${part.cases.map(
+            (c, i) => html`<button type="button" class="${on.includes(i) && 'on'}" data-action="cases" data-payload="${JSON.stringify({ cases: toggle(i) })}">${i + 1}. ${c.title}</button>`,
+          )}
+        </div>
       </div>`;
   }
 
   function header(v, part) {
     return html`
       <div class="st-top">
-        <span>${part.title} ${v.q + 1} / ${part.questions.length}</span>
+        <span>${part.title} ${v.at} / ${v.of}</span>
         <span class="st-top-score">${v.score} pts</span>
         ${v.deadline && html`<span class="timer" data-deadline="${v.deadline}"></span>`}
       </div>`;
@@ -140,19 +166,22 @@ export default function (root, api) {
       ${caseFile(q)}
       ${promptCard(q, q.caseTitle != null ? q.section : `Investigation ${v.q + 1} · ${q.section}`)}
       ${answerInputs(q, pending, v.answer, { hintOpen })}
+      ${confidenceInputs(q, sure ?? v.sure)}
+      ${asksConfidence(q) && v.answer != null && (sure ?? v.sure) == null && html`<p class="st-hint">Answer in. Now: how sure are you?</p>`}
       ${error && html`<p class="form-error">${error}</p>`}
       ${v.isVip && next(v, 'Reveal Now ▸', 'secondary')}`;
   }
 
   function result(v, part, q) {
-    const last = v.q + 1 >= part.questions.length;
+    const last = v.last;
     const toScores = part.leaderboard !== 'case' || q.lastInCase || last;
     const label = v.phase === 'reveal' ? (toScores ? 'Leaderboard ▸' : 'Next Step ▸') : last ? 'Final Results ▸' : 'Next ▸';
     return html`
       ${header(v, part)}
-      ${resultBanner(q, v.answer, html`<p>Score <b>${v.score}</b> · Rank <b>#${v.rank}</b> of ${v.of}</p>`)}
+      ${resultBanner(q, v.answer, html`<p>Score <b>${v.score}</b> · Rank <b>#${v.rank}</b> of ${v.players}</p>`, v.sure)}
       ${v.isVip && next(v, label)}
       ${answerReview(q, v.answer, v.tally)}
+      ${calibrationView(v.tally?.calibration, v.sure)}
       ${modelCard(q)}`;
   }
 
@@ -162,7 +191,7 @@ export default function (root, api) {
       <div class="st-result best">
         <h1>${v.rank === 1 ? 'You Won! 🏆' : `${part.title} Complete!`}</h1>
         <span class="st-gained">#${v.rank}</span>
-        <p>of ${v.of} · <b>${v.score}</b> points</p>
+        <p>of ${v.players} · <b>${v.score}</b> points</p>
         <p>Best answers: <b>${v.best}</b> of ${v.asked}</p>
       </div>
       <div class="st-card">
@@ -179,6 +208,7 @@ export default function (root, api) {
       if (next.step !== view?.step) {
         error = '';
         pending = null;
+        sure = null;
         hintOpen = false;
       }
       view = next;

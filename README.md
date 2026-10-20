@@ -2,9 +2,11 @@
 
 Strategy training for FRC teams. Each lesson has three parts, played in order:
 
-1. **Learn** (team or solo): case studies. Each starts with an exact answer and adds a detail at every step:
-   estimate probabilities with a slider, pick the details that matter (red herrings cost points), and make the call.
-   The last cases are mostly unknowns to spot and argue about. Every reveal ends with a discussion prompt.
+1. **Learn** (team or solo): thirteen case studies that get you ready for the Test and the Showdown. Each starts
+   with an exact answer and adds evidence at every step: a misleading first result, then ten matches, then
+   thousands of simulated ones; links between robots; opponents who adapt; scouting error. You estimate with a
+   slider, pick the details that matter (red herrings cost points), make the call, and say how sure you are. Every
+   reveal ends with a discussion prompt. Each case is tagged with the Test investigations it prepares for.
 2. **Test** (team or solo): one scored question per investigation.
 3. **Showdown** (team): the room splits at random into two groups. Each builds a picklist, runs alliance selection
    like at an event, and plays the other group's alliance in a best of three.
@@ -45,11 +47,20 @@ Every push to `main` then rebuilds and publishes the site.
   discussion.
 - Learn questions come in three kinds: a **number** to estimate with a slider (points for getting close), **pick
   every detail that matters** (red herrings cost points), and a **decision**. The big screen keeps the case file on
-  the left, with each step's new details highlighted.
+  the left: the setup, then each step's new details and **exhibits** (match results, simulation results),
+  highlighted when new.
+- On Learn's picks, everyone also rates **how sure** they are (50, 70, 90 or 99%). It earns no points; the reveal
+  shows how each confidence level held up ("90% sure: 3 of 5 right"), which is the point of the discussion.
+- All of Learn takes about two hours, so the big screen (or the leader's phone) chooses which cases to run before
+  starting. Each case card says which Test investigations it prepares for.
 - The reveal shows how the room answered (a histogram for estimates), the points each answer was worth, what the
   model says, and a question to discuss. Phones also get an **Explore the Model** panel with sliders and match
   simulations.
 - The leaderboard comes after each case in Learn, and after every question in the Test.
+
+**Trying it on one device.** Press **Test Phone** on the big screen to open a phone in a panel on the same page,
+and join from there. (Two separate tabs don't work on a phone: the browser pauses the hidden tab, and the hidden
+tab is the host.)
 
 **Showdown.** The room splits at random into a Red group (Alliance 1) and a Blue group (Alliance 2), each with a
 student captain. The big screen can shuffle first.
@@ -93,12 +104,12 @@ there is nothing to keep in sync:
 | File | What it holds |
 |---|---|
 | `lessons.js` | The list of lessons and their parts; how each question is described |
-| `lesson1-learn.js` | Lesson 1's case studies (Learn) |
+| `lesson1-learn.js` | Lesson 1's case studies (Learn): setups, steps, facts and exhibits, and what each prepares for |
 | `lesson1-test.js` | Lesson 1's investigations (Test) |
 | `lesson1-draft.js` | Lesson 1's Showdown teams (cycle distributions, susceptibility, defense), timers and rules |
-| `quiz.js` | How every question type is checked and scored |
+| `quiz.js` | How every question type is checked and scored, and confidence ratings |
 | `alliance.js`, `draft-rules.js`, `picklist.js` | The Showdown match model, rules and picklist |
-| `views.js`, `explorer.js` | Question screens and the Explore panel, shared by phones and the solo page |
+| `views.js`, `explorer.js` | Question screens (case files, exhibits, confidence) and the Explore panel, shared by phones and the solo page |
 
 Edit a question once and both versions change. Add a lesson to the `LESSONS` list and it appears in the team
 picker, and solo at `lessons.html?lesson=<id>`.

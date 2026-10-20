@@ -3,7 +3,8 @@
 import { html, raw } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
 import { LESSONS, SHAPES, lessonById, partById } from './lessons.js';
-import { bestPoints, formatNumber, numberBins, typeOf } from './quiz.js';
+import { asksConfidence, bestPoints, formatNumber, numberBins, typeOf } from './quiz.js';
+import { caseEvidence, preparesLine, preparesText } from './views.js';
 import { board, nextButton, podium, status } from './host-parts.js';
 import { draftBody, draftHead } from './host-draft.js';
 
@@ -32,11 +33,11 @@ function head(v, lesson, part) {
   return html`
     <header class="st-head">
       <span class="st-lesson">Lesson ${lesson.number} · ${part.title}: <b>${lesson.title}</b></span>
-      ${v.phase !== 'final' && html`<span class="st-step">${q.caseTitle != null ? `Case ${q.caseIndex + 1}: ${q.caseTitle}` : `Question ${v.q + 1} / ${part.questions.length}`}</span>`}
+      ${v.phase !== 'final' && html`<span class="st-step">${q.caseTitle != null ? `Case ${q.caseIndex + 1}: ${q.caseTitle}` : `Question ${v.at} / ${v.of}`}</span>`}
       <span class="spacer"></span>
       ${v.phase === 'question' &&
       html`
-        <span class="st-answered"><b>${v.answered}</b> / ${v.players.length} answered</span>
+        <span class="st-answered"><b>${v.answered}</b> / ${v.players.length} ${asksConfidence(q) ? 'done' : 'answered'}</span>
         <span class="timer timer-lg" data-deadline="${v.deadline}"></span>
         <button class="btn btn-sm secondary" data-action="more">+30s</button>
         ${nextButton(v, 'Reveal ▸', 'btn-sm secondary')}`}
@@ -77,6 +78,7 @@ function pick(v) {
             </div>
           </div>`,
       )}
+      ${caseChooser(v)}
       <div class="st-pick-foot">
         <div class="player-chips st-roster">
           ${v.players.map(
@@ -88,16 +90,41 @@ function pick(v) {
     </div>`;
 }
 
+/** Learn: which cases to run. Each toggle sends the whole new list; an empty or full list means all. */
+function caseChooser(v) {
+  const part = partById(lessonById(v.lessonId), v.partId);
+  if (!part?.cases) return null;
+  const all = part.cases.map((_, i) => i);
+  const on = v.cases ?? all;
+  const toggle = (i) => (on.includes(i) ? on.filter((c) => c !== i) : [...on, i]);
+  const steps = part.questions.filter((q) => on.includes(q.caseIndex)).length;
+  return html`
+    <div class="st-casepick">
+      <div class="st-casepick-head">
+        <b>Cases to run</b>
+        <span>${on.length} of ${part.cases.length} · ${steps} steps · about ${Math.round(steps * 2.5)} min</span>
+        <button class="btn btn-sm ${!v.cases && 'secondary'}" data-action="cases" data-payload="${JSON.stringify({ cases: all })}">All</button>
+      </div>
+      <div class="st-casegrid">
+        ${part.cases.map(
+          (c, i) => html`
+            <button class="${on.includes(i) && 'on'}" data-action="cases" data-payload="${JSON.stringify({ cases: toggle(i) })}" aria-pressed="${on.includes(i)}">
+              <b>${i + 1}</b><span>${c.title}</span><small>${preparesText(c.prepares)}</small>
+            </button>`,
+        )}
+      </div>
+    </div>`;
+}
+
 // ---------- a question ----------
 
 function caseFile(q) {
   return html`
     <aside class="st-casefile">
-      <span class="st-case-label">Case File</span>
+      <span class="st-case-label">Case File${preparesLine(q) && ` · ${preparesLine(q)}`}</span>
       <h2>${q.caseTitle}</h2>
       <p>${raw(q.setup)}</p>
-      ${q.facts.length > 0 &&
-      html`<ul>${q.facts.map((f) => html`<li class="${f.isNew && 'new'}">${f.isNew && html`<b class="st-new">New</b> `}${raw(f.text)}</li>`)}</ul>`}
+      ${caseEvidence(q)}
     </aside>`;
 }
 
@@ -123,6 +150,7 @@ function inputs(q) {
   }
   return html`
     ${type === 'multi' && html`<p class="st-instruct">Pick <b>every</b> one that matters. Red herrings cost points.</p>`}
+    ${asksConfidence(q) && html`<p class="st-instruct">Then rate how sure you are on your phone.</p>`}
     <div class="st-choices ${q.choices.length > 4 && 'five'}">
       ${q.choices.map(
         (c, i) => html`
@@ -150,14 +178,13 @@ function ask(v, part, q) {
 
 function reveal(v, part, q) {
   const t = v.tally ?? { counts: [], answered: 0, median: null };
-  const last = v.q + 1 >= part.questions.length;
-  const toScores = part.leaderboard !== 'case' || q.lastInCase || last;
+  const toScores = part.leaderboard !== 'case' || q.lastInCase || v.last;
   return html`
     <div class="st-reveal">
       <div class="st-reveal-main">
         ${prompt(q, v)}
         ${typeOf(q) === 'number' ? histogram(q, t) : bars(q, t)}
-        <p class="st-foot">${t.answered} of ${v.players.length} answered</p>
+        <p class="st-foot">${t.answered} of ${v.players.length} answered${calibrationLine(t.calibration)}</p>
       </div>
       <aside class="st-model">
         <h2>What the Model Says</h2>
@@ -167,6 +194,14 @@ function reveal(v, part, q) {
         ${nextButton(v, toScores ? 'Leaderboard ▸' : 'Next Step ▸')}
       </aside>
     </div>`;
+}
+
+/** How the room's confidence held up, in one line: " · Confidence: 90% sure → 3 of 4 right · …". */
+function calibrationLine(rows) {
+  if (!rows?.length) return null;
+  return html`<span class="st-calib-line"> · Confidence: ${rows.map(
+    (r) => html`<span class="${r.right / r.n < r.level / 100 - 0.2 && 'over'}">${r.level}% sure → <b>${r.right} of ${r.n}</b> right</span>`,
+  )}</span>`;
 }
 
 function bars(q, t) {
@@ -215,9 +250,9 @@ function histogram(q, t) {
 // ---------- leaderboard ----------
 
 function scores(v, part) {
-  const last = v.q + 1 >= part.questions.length;
+  const last = v.last;
   const q = part.questions[v.q];
-  const sub = q.caseTitle != null ? `After case ${q.caseIndex + 1} of ${part.cases.length}: ${q.caseTitle}` : `After question ${v.q + 1} of ${part.questions.length}`;
+  const sub = q.caseTitle != null ? `After case ${q.caseIndex + 1}: ${q.caseTitle}` : `After question ${v.at} of ${v.of}`;
   return html`
     <div class="st-board-wrap">
       <div class="st-title"><h1>Leaderboard</h1><p>${sub}</p></div>
@@ -231,11 +266,13 @@ function scores(v, part) {
 function final(v, lesson, part) {
   // Learn reports each case (the average across its steps); Test reports each question.
   const rows = part.cases
-    ? part.cases.map((c, ci) => {
-        const steps = part.questions.map((q, i) => [q, v.history?.[i]]).filter(([q, h]) => q.caseIndex === ci && h?.answered);
-        return { label: c.title, share: steps.length ? steps.reduce((s, [, h]) => s + h.bestShare, 0) / steps.length : null };
+    ? part.cases.flatMap((c, ci) => {
+        const run = part.questions.map((q, i) => [q, v.history?.[i]]).filter(([q, h]) => q.caseIndex === ci && h);
+        const steps = run.filter(([, h]) => h.answered);
+        if (!run.length) return []; // a case the room skipped
+        return [{ label: `${ci + 1}. ${c.title}`, share: steps.length ? steps.reduce((s, [, h]) => s + h.bestShare, 0) / steps.length : null }];
       })
-    : part.questions.map((q, i) => ({ label: q.title, share: v.history?.[i]?.answered ? v.history[i].bestShare : null }));
+    : part.questions.map((q, i) => ({ label: `${i + 1}. ${q.title}`, share: v.history?.[i]?.answered ? v.history[i].bestShare : null }));
   return html`
     <div class="st-final">
       <div class="st-final-main">
@@ -245,9 +282,9 @@ function final(v, lesson, part) {
       <aside class="st-report ${rows.length > 8 && 'long'}">
         <h2>How the Room Did</h2>
         ${rows.map(
-          (r, i) => html`
+          (r) => html`
             <div class="st-report-row ${r.share != null && r.share < 0.5 && 'hard'}">
-              <span class="st-report-q">${i + 1}. ${r.label}</span>
+              <span class="st-report-q">${r.label}</span>
               <span class="st-bar-track"><span class="st-bar-fill" style="width:${(100 * (r.share ?? 0)).toFixed(1)}%"></span></span>
               <b>${r.share == null ? '–' : `${Math.round(100 * r.share)}%`}</b>
             </div>`,

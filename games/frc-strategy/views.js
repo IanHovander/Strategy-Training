@@ -4,19 +4,94 @@
 //   [data-submit]       multi / number: send the current selection
 //   [data-number]       the number slider; [data-nudge="±step"] nudges it; [data-number-out] shows its value
 //   [data-hint]         shows the hint
+//   [data-sure="70"]    how sure you are (Learn's picks)
 import { html, raw } from '../../js/ui.js';
 import { SHAPES } from './lessons.js';
-import { bestPoints, describeAnswer, formatNumber, numberBins, scoreAnswer, typeOf } from './quiz.js';
+import { CONFIDENCE, asksConfidence, bestPoints, describeAnswer, formatNumber, numberBins, scoreAnswer, typeOf } from './quiz.js';
 
-/** The case so far: its setup, then every fact revealed up to this step (new ones highlighted). */
+const NEW = html`<b class="st-new">New</b> `;
+
+/** What a case gets you ready for: "Test 5 · 6", "Test 11 + Showdown". `list` holds Test numbers and 'Showdown'. */
+export function preparesText(list = []) {
+  const tests = list.filter((x) => typeof x === 'number');
+  return [tests.length && `Test ${tests.join(' · ')}`, ...list.filter((x) => typeof x === 'string')].filter(Boolean).join(' + ');
+}
+
+/** "Prepares for Test 5 · 6". */
+export const preparesLine = (q) => (q.prepares?.length ? `Prepares for ${preparesText(q.prepares)}` : '');
+
+/**
+ * One piece of evidence in a case file: match results (a chip per match, colored by who won, and the tally)
+ * or a row of numbers.
+ */
+export function exhibitView(e) {
+  let body = null;
+  if (e.matches) {
+    const [a, b] = e.sides;
+    const won = e.matches.filter(([x, y]) => x > y).length;
+    const tied = e.matches.filter(([x, y]) => x === y).length;
+    body = html`
+      <div class="st-matches">
+        ${e.matches.map(([x, y]) => html`<span class="${x > y ? 'w' : x < y ? 'l' : 't'}">${x}–${y}</span>`)}
+      </div>
+      <small>${a}–${b} · ${a} won <b>${won}</b>${tied > 0 && html`, tied <b>${tied}</b>`}, lost <b>${e.matches.length - won - tied}</b></small>`;
+  } else if (e.stats) {
+    body = html`<div class="st-exstats">${e.stats.map(([label, value]) => html`<span><small>${label}</small><b>${value}</b></span>`)}</div>`;
+  }
+  return html`
+    <div class="st-exhibit ${e.isNew && 'new'}">
+      <span class="st-exhibit-title">${e.isNew && NEW}${e.title}</span>
+      ${body}
+      ${e.note && html`<small>${raw(e.note)}</small>`}
+    </div>`;
+}
+
+/** The facts and exhibits revealed so far in a case (new ones highlighted). */
+export function caseEvidence(q) {
+  return html`
+    ${q.facts.length > 0 && html`<ul>${q.facts.map((f) => html`<li class="${f.isNew && 'new'}">${f.isNew && NEW}${raw(f.text)}</li>`)}</ul>`}
+    ${q.exhibits?.map(exhibitView)}`;
+}
+
+/** The case so far: its setup, then every fact and exhibit revealed up to this step. */
 export function caseFile(q) {
   if (q.caseTitle == null) return null;
   return html`
     <div class="st-case">
       <span class="st-case-label">Case file: ${q.caseTitle}</span>
       <p>${raw(q.setup)}</p>
-      ${q.facts.length > 0 &&
-      html`<ul>${q.facts.map((f) => html`<li class="${f.isNew && 'new'}">${f.isNew && html`<b class="st-new">New</b> `}${raw(f.text)}</li>`)}</ul>`}
+      ${caseEvidence(q)}
+      ${q.firstInCase && preparesLine(q) && html`<span class="st-prepares">${preparesLine(q)}</span>`}
+    </div>`;
+}
+
+/** "How sure are you?" Learn's picks ask it; it earns no points. `sure` is the level chosen so far. */
+export function confidenceInputs(q, sure) {
+  if (!asksConfidence(q)) return null;
+  return html`
+    <div class="st-sure">
+      <span>How sure are you? <small>No points: just be honest.</small></span>
+      <div class="st-seg">
+        ${CONFIDENCE.map((c) => html`<button type="button" class="${sure === c && 'on'}" data-sure="${c}" aria-pressed="${sure === c}">${c}%</button>`)}
+      </div>
+    </div>`;
+}
+
+/**
+ * How the room's confidence held up: at each level, how many were right. Well calibrated means about 90% of the
+ * "90% sure" answers were right.
+ */
+export function calibrationView(rows, mine = null) {
+  if (!rows?.length) return null;
+  return html`
+    <div class="st-calib">
+      <span class="st-calib-title">Confidence check</span>
+      ${rows.map(
+        (r) => html`
+          <span class="${mine === r.level && 'mine'} ${r.right / r.n < r.level / 100 - 0.2 && 'over'}">
+            <small>${r.level}% sure</small><b>${r.right} / ${r.n}</b><small>right</small>
+          </span>`,
+      )}
     </div>`;
 }
 
@@ -85,7 +160,7 @@ export function answerInputs(q, current, sent, { hintOpen = false } = {}) {
 }
 
 /** The headline after the reveal: how your answer scored. */
-export function resultBanner(q, answer, extra = null) {
+export function resultBanner(q, answer, extra = null, sure = null) {
   const gained = scoreAnswer(q, answer);
   const top = bestPoints(q);
   const headline = answer == null ? 'No Answer This Time' : gained === top ? 'Best Answer! 🎉' : gained > 0 ? 'Partly Right' : 'Not This Time';
@@ -94,6 +169,7 @@ export function resultBanner(q, answer, extra = null) {
       <h1>${headline}</h1>
       <span class="st-gained">+${gained}</span>
       <p>Your answer: <b>${describeAnswer(q, answer)}</b>${typeOf(q) === 'number' && html` · Answer: <b>${formatNumber(q, q.number.value)}</b>`}</p>
+      ${sure != null && html`<p>You were <b>${sure}%</b> sure.${gained === top ? '' : sure >= 90 ? ' Worth asking what made you so sure.' : ''}</p>`}
       ${extra}
     </div>`;
 }
