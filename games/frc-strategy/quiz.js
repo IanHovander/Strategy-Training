@@ -80,3 +80,20 @@ export function describeAnswer(q, answer) {
   if (type === 'multi') return answer.length ? answer.map((i) => i + 1).join(', ') : 'None of them';
   return q.choices[answer]?.text ?? '?';
 }
+
+/** How sure you are of an answer, rated alongside Learn's picks. It earns no points: it's for calibration. */
+export const CONFIDENCE = [50, 70, 90, 99];
+
+/** Learn's picks ask how sure you are. Estimates don't: their closeness tiers already show how far off you were. */
+export const asksConfidence = (q) => q.caseTitle != null && typeOf(q) !== 'number';
+
+/**
+ * How well confidence matched results: per level, how many answers were rated it and how many of those earned
+ * full points. `entries` = [{ sure, right }]. Levels nobody used are left out.
+ */
+export function calibration(entries) {
+  return CONFIDENCE.map((level) => {
+    const at = entries.filter((e) => e.sure === level);
+    return { level, n: at.length, right: at.filter((e) => e.right).length };
+  }).filter((c) => c.n > 0);
+}

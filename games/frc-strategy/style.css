@@ -610,3 +610,67 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .st-matchup .st-alliance-col { gap: 0.35rem; }
 .st-host .st-rulebox { font-size: 1rem; gap: 0.2rem; padding: 0.55rem 0.9rem; }
 .st-host .st-rulebox > b { font-size: 1.5rem; }
+
+/* ---------- Learn: evidence, confidence, choosing cases ---------- */
+
+/* exhibits in a case file: match results as chips (W black, L red, T grey), or a row of numbers */
+.st-exhibit { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.5rem 0.6rem; border: 2px dashed #b8a24a; border-radius: 0.6rem; background: rgba(255, 255, 255, 0.6); }
+.st-exhibit.new { border-style: solid; border-color: var(--black); background: var(--white); }
+.st-exhibit-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #6b5a00; }
+.st-exhibit > small { font-size: 0.85rem; line-height: 1.35; color: #333; }
+.st-exhibit > small b { color: var(--black) !important; }
+.st-matches { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.st-matches span { padding: 0.2rem 0.4rem 0.05rem; border-radius: 0.35rem; font-family: var(--display); font-size: 1.05rem; line-height: 1; background: var(--black); color: var(--white); }
+.st-matches span.l { background: var(--red-hi); }
+.st-matches span.t { background: #8a8a8a; }
+.st-exstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: 0.3rem; }
+.st-exstats span { display: flex; flex-direction: column; padding: 0.25rem 0.45rem 0.15rem; border: 2px solid var(--black); border-radius: 0.45rem; background: #f6f6f6; }
+.st-exstats small { font-size: 0.68rem; font-weight: 700; line-height: 1.15; color: #555; }
+.st-exstats b { font-family: var(--display); font-size: 1.35rem; font-weight: 400; line-height: 1; color: var(--black) !important; }
+.st-prepares { align-self: flex-start; padding: 0.15rem 0.5rem 0.05rem; border-radius: 0.35rem; background: var(--black); color: var(--white); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* how sure are you, and how the room's confidence held up */
+.st-sure { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.6rem 0.7rem; border: var(--outline) solid var(--black); border-radius: 0.8rem; background: var(--white); color: var(--black); }
+.st-sure > span { font-family: var(--display); font-size: 1.35rem; line-height: 1; }
+.st-sure > span small { display: block; margin-top: 0.15rem; font-family: var(--font); font-size: 0.75rem; font-weight: 700; color: #555; }
+.st-sure .st-seg button { min-height: 2.6rem; font-size: 1.35rem; }
+.st-calib { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.4rem; color: var(--black); }
+.st-calib-title { flex-basis: 100%; font-family: var(--display); font-size: 1.2rem; line-height: 1; color: inherit; }
+.st-calib > span:not(.st-calib-title) { display: flex; flex-direction: column; align-items: center; min-width: 4.6rem; padding: 0.3rem 0.5rem 0.2rem; border: var(--outline) solid var(--black); border-radius: 0.6rem; background: var(--white); }
+.st-calib small { font-size: 0.7rem; font-weight: 700; color: #555; }
+.st-calib b { font-family: var(--display); font-size: 1.5rem; font-weight: 400; line-height: 1; }
+.st-calib .over b { color: var(--red-hi); }
+.st-calib .mine { box-shadow: inset 0 -0.3rem 0 var(--red-hi); }
+.st-host .st-calib { margin-top: 0.2rem; }
+.st-host .st-calib-title { flex-basis: auto; align-self: center; margin-right: 0.4rem; font-size: 1.5rem; }
+
+/* the big screen's case picker */
+.st-casepick { display: flex; flex-direction: column; gap: 0.6rem; width: min(82rem, 100%); padding: 0.8rem 1rem; border: var(--outline) solid var(--black); border-radius: 0.9rem; background: #fff7d6; color: var(--black); box-shadow: var(--drop); }
+.st-casepick-head { display: flex; align-items: center; gap: 1rem; }
+.st-casepick-head b { font-family: var(--display); font-size: 1.8rem; font-weight: 400; line-height: 1; }
+.st-casepick-head span { flex: 1; font-weight: 700; color: #6b5a00; }
+.st-casegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: 0.4rem; }
+.st-casegrid button { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 0.45rem; padding: 0.3rem 0.6rem 0.25rem 0.35rem; border: 2px solid var(--black); border-radius: 0.55rem; background: rgba(255, 255, 255, 0.55); color: #666; font: inherit; text-align: left; cursor: pointer; }
+.st-casegrid button b { grid-row: span 2; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; padding-top: 0.1em; border-radius: 50%; border: 2px solid currentColor; font-family: var(--display); font-size: 1.15rem; font-weight: 400; }
+.st-casegrid button span { font-family: var(--display); font-size: 1.15rem; line-height: 1; padding-top: 0.08em; }
+.st-casegrid button small { font-size: 0.7rem; font-weight: 700; }
+.st-casegrid button.on { background: var(--white); color: var(--black); box-shadow: 0.15rem 0.2rem 0 var(--black); }
+.st-casegrid button.on b { background: var(--black); color: var(--white); border-color: var(--black); }
+.st-calib-line > span + span::before { content: " · "; }
+.st-calib-line .over b { color: var(--white); background: var(--red-hi); padding: 0 0.3em; border-radius: 0.3em; }
+.st-head .st-lesson, .st-head .st-step, .st-head .st-answered { white-space: nowrap; }
+/* on the big screen, earlier exhibits shrink to their title and summary so the case file fits */
+.st-casefile .st-exhibit:not(.new) { padding: 0.3rem 0.5rem; gap: 0.15rem; }
+.st-casefile .st-exhibit:not(.new) .st-matches { display: none; }
+.st-casefile .st-exhibit:not(.new) .st-exstats { display: flex; flex-wrap: wrap; gap: 0.1rem 0.7rem; }
+.st-casefile .st-exhibit:not(.new) .st-exstats span { flex-direction: row; align-items: baseline; gap: 0.3rem; padding: 0; border: 0; background: none; }
+.st-casefile .st-exhibit:not(.new) .st-exstats b { font-size: 1rem; }
+.st-casefile .st-exstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* the Learn picker: shorter part cards so the case list fits under them */
+.st-picker:has(.st-casepick) .st-lesson-tag { display: none; }
+.st-picker:has(.st-casepick) { gap: 0.9rem; }
+.st-picker:has(.st-casepick) .st-title h1 { font-size: 3rem; }
+.st-picker:has(.st-casepick) .st-lesson-block { gap: 0.7rem; }
+.st-picker:has(.st-casepick) .st-lesson-card { gap: 0.2rem; padding: 0.7rem 1.3rem 0.8rem; }
+.st-picker:has(.st-casepick) .st-lesson-name { font-size: 2.3rem; }
+.st-picker:has(.st-casepick) .st-lesson-meta { margin-top: 0.1rem; }

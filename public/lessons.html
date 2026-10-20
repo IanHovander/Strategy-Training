@@ -138,8 +138,8 @@ p{margin:.6rem 0}
 // (your results). Older #lesson-N links open the Test. With more lessons, ?lesson=<id> picks one.
 import { html } from './js/ui.js';
 import { LESSONS, lessonById, partById } from './games/frc-strategy/lessons.js';
-import { bestPoints, cleanAnswer, describeAnswer, scoreAnswer, typeOf } from './games/frc-strategy/quiz.js';
-import { answerInputs, answerReview, caseFile, modelCard, promptCard, resultBanner, wireNumber } from './games/frc-strategy/views.js';
+import { asksConfidence, bestPoints, calibration, cleanAnswer, describeAnswer, isBest, scoreAnswer, typeOf } from './games/frc-strategy/quiz.js';
+import { answerInputs, answerReview, calibrationView, caseFile, confidenceInputs, modelCard, preparesText, promptCard, resultBanner, wireNumber } from './games/frc-strategy/views.js';
 import { mountExplorer } from './games/frc-strategy/explorer.js';
 
 const $ = (id) => document.getElementById(id);
@@ -147,9 +147,10 @@ const lesson = lessonById(new URLSearchParams(location.search).get('lesson')) ??
 const solo = lesson.parts.filter((p) => p.kind === 'quiz'); // the Showdown needs a team
 const KEY = 'frc-strategy-solo-v2';
 let pending = null; // the answer being edited before it's locked in
+let pendingSure = null; // how sure you are, for Learn's picks
 let hintOpen = false;
 
-// Your answers, kept in this browser: { [lessonId]: { [partId]: { [question index]: answer } } }
+// Your answers, kept in this browser: { [lessonId]: { [partId]: { [question index]: answer }, sure: { [partId]: … } } }
 function load() {
   try {
     return JSON.parse(localStorage.getItem(KEY) || '{}')[lesson.id] ?? {};
@@ -159,6 +160,7 @@ function load() {
 }
 const saved = load();
 const answersOf = (part) => (saved[part.id] ??= {});
+const sureOf = (part) => ((saved.sure ??= {})[part.id] ??= {});
 function save() {
   try {
     const all = JSON.parse(localStorage.getItem(KEY) || '{}');
@@ -191,6 +193,7 @@ function route() {
   $('home-screen').hidden = !!inPart;
   $('lesson-screen').hidden = !inPart;
   pending = null;
+  pendingSure = null;
   hintOpen = false;
   if (!inPart) showHome();
   else if (m[2] === 'done') showDone(part);
@@ -220,7 +223,7 @@ function partCard(part, n) {
   const rows = part.cases
     ? part.cases.map((c, ci) => ({
         title: c.title,
-        sub: `Case ${ci + 1}`,
+        sub: `Case ${ci + 1}${c.prepares?.length ? ` · for ${preparesText(c.prepares)}` : ''}`,
         steps: part.questions.map((q, i) => [q, i]).filter(([q]) => q.caseIndex === ci),
       }))
     : [{ title: 'Investigations', sub: `${part.questions.length} questions`, steps: part.questions.map((q, i) => [q, i]) }];
@@ -275,7 +278,7 @@ function showQuestion(part, i) {
     ${promptCard(q, label)}
     ${locked
       ? html`
-        ${resultBanner(q, answer, html`<p>${part.title} score <b>${score(part)}</b> of ${maxScore(part)}</p>`)}
+        ${resultBanner(q, answer, html`<p>${part.title} score <b>${score(part)}</b> of ${maxScore(part)}</p>`, sureOf(part)[i] ?? null)}
         ${answerReview(q, answer)}
         ${modelCard(q)}
         ${q.explore && html`<div id="explore"></div>`}
@@ -285,7 +288,9 @@ function showQuestion(part, i) {
         </div>`
       : html`
         ${answerInputs(q, pending, null, { hintOpen })}
-        ${typeOf(q) === 'choice' && html`<button type="button" class="btn btn-xl block" data-submit ${pending == null && 'disabled'}>Lock In &amp; Reveal</button>`}`}`;
+        ${confidenceInputs(q, pendingSure)}
+        ${typeOf(q) === 'choice' && html`<button type="button" class="btn btn-xl block" data-submit ${(pending == null || (asksConfidence(q) && pendingSure == null)) && 'disabled'}>Lock In &amp; Reveal</button>`}
+        ${asksConfidence(q) && pendingSure == null && html`<p class="st-hint">Say how sure you are before you lock in.</p>`}`}`;
   if (locked && q.explore) mountExplorer($('explore'), q.explore);
   if (!locked && typeOf(q) === 'number') wireNumber($('main'), q, (v) => (pending = v));
 }
@@ -296,6 +301,7 @@ $('main').addEventListener('click', (e) => {
   if (!part) return;
   if (e.target.closest('[data-reset]')) {
     saved[part.id] = {};
+    if (saved.sure) saved.sure[part.id] = {};
     save();
     location.hash = `${part.id}-1`;
     return;
@@ -305,13 +311,20 @@ $('main').addEventListener('click', (e) => {
   const q = part.questions[i];
   if (e.target.closest('[data-retry]')) {
     delete answersOf(part)[i];
+    delete sureOf(part)[i];
     save();
     pending = null;
+    pendingSure = null;
     return showQuestion(part, i);
   }
   if (i in answersOf(part)) return;
   if (e.target.closest('[data-hint]')) {
     hintOpen = true;
+    return showQuestion(part, i);
+  }
+  const level = e.target.closest('[data-sure]');
+  if (level) {
+    pendingSure = Number(level.dataset.sure);
     return showQuestion(part, i);
   }
   const choice = e.target.closest('[data-choice]');
@@ -327,10 +340,12 @@ $('main').addEventListener('click', (e) => {
   if (e.target.closest('[data-submit]')) {
     const fallback = typeOf(q) === 'number' ? (q.number.min + q.number.max) / 2 : typeOf(q) === 'multi' ? [] : null;
     const answer = cleanAnswer(q, pending ?? fallback);
-    if (answer == null) return;
+    if (answer == null || (asksConfidence(q) && pendingSure == null)) return;
     answersOf(part)[i] = answer;
+    if (asksConfidence(q)) sureOf(part)[i] = pendingSure;
     save();
     pending = null;
+    pendingSure = null;
     showQuestion(part, i);
   }
 });
@@ -340,6 +355,9 @@ $('main').addEventListener('click', (e) => {
 function showDone(part) {
   const answers = answersOf(part);
   const full = part.questions.filter((q, i) => i in answers && scoreAnswer(q, answers[i]) === bestPoints(q)).length;
+  // How well your confidence matched your results, over every rated answer.
+  const rated = part.questions.flatMap((q, i) => (i in answers && i in sureOf(part) ? [{ sure: sureOf(part)[i], right: isBest(q, answers[i]) }] : []));
+  const calib = rated.length ? calibration(rated) : null;
   const after = lesson.parts[lesson.parts.indexOf(part) + 1];
   $('lesson-label').textContent = `Strategy Lab / ${part.title}`;
   $('lesson-progress').textContent = `${done(part)} / ${part.questions.length}`;
@@ -348,6 +366,7 @@ function showDone(part) {
       <div class="kicker">${part.title} complete</div>
       <h2>${lesson.title}</h2>
       <p><span class="score-big">${score(part)}</span> of ${maxScore(part)} points · ${full} of ${part.questions.length} full marks</p>
+      ${calib && html`${calibrationView(calib)}<p>Well calibrated means about 9 in 10 of your “90% sure” answers were right. Far fewer? Slow down when you feel certain.</p>`}
       <div class="report">
         ${part.questions.map((q, i) => {
           const a = answers[i];

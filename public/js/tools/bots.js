@@ -72,11 +72,16 @@ function play(bot) {
       for (const [t, p] of actions) bot.socket.emit('action', { type: t, payload: p });
     }, 800 + Math.random() * 2500);
   };
-  // Strategy Training: answer each question (any type); in the Showdown, build the picklist, invite and lock in.
+  // Strategy Training: answer each question (any type) and, when asked, say how sure; in the Showdown, build the
+  // picklist, invite and lock in.
   if (bot.game === 'frc-strategy') {
-    strategy.then(({ lessonById, partById }) => {
+    Promise.all([strategy, quiz]).then(([{ lessonById, partById }, { CONFIDENCE, asksConfidence }]) => {
       const part = partById(lessonById(v.lessonId), v.partId);
-      if (v.phase === 'question' && v.answer == null) later('answer', { answer: randomAnswer(part.questions[v.q]) });
+      if (v.phase === 'question' && v.answer == null) {
+        const q = part.questions[v.q];
+        const answer = ['answer', { answer: randomAnswer(q) }];
+        later('answer', null, asksConfidence(q) ? [answer, ['sure', { level: pick(CONFIDENCE) }]] : [answer]);
+      }
       if (part.kind !== 'draft') return;
       const taken = v.alliances.flat();
       const open = v.event.map((s) => s.id).filter((id) => !taken.includes(id));
@@ -94,6 +99,7 @@ function play(bot) {
 
 // Strategy Training's lessons, so bots can give a valid answer to any question.
 const strategy = import('../../games/frc-strategy/lessons.js');
+const quiz = import('../../games/frc-strategy/quiz.js');
 
 function randomAnswer(q) {
   if (q.type === 'number') {

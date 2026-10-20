@@ -4,7 +4,7 @@
 import { spawn } from 'node:child_process';
 import { io } from 'socket.io-client';
 import { LESSONS, partById } from '../games/frc-strategy/lessons.js';
-import { bestPoints, cleanAnswer, scoreAnswer, tally, typeOf } from '../games/frc-strategy/quiz.js';
+import { asksConfidence, bestPoints, calibration, cleanAnswer, scoreAnswer, tally, typeOf } from '../games/frc-strategy/quiz.js';
 import { abilityAt, attemptTime, clock, cycleCounts, cycleDist, defenderBreak, matchOdds, playMatch, resolve, scoutTeam, successAt } from '../games/frc-strategy/alliance.js';
 import { mean } from '../games/frc-strategy/prob.js';
 
@@ -61,6 +61,19 @@ try {
   }
   check(learn.questions.some((q) => typeOf(q) === 'number') && learn.questions.some((q) => typeOf(q) === 'multi'), 'Learn mixes estimates, picks and pick-all-that-matter');
   check(learn.questions.filter((q) => q.lastInCase).length === learn.cases.length, 'every Learn case has a last step');
+  const prepared = new Set(learn.cases.flatMap((c) => c.prepares ?? []));
+  check(learn.cases.every((c) => c.prepares?.length) && test.questions.every((_, i) => prepared.has(i + 1)) && prepared.has('Showdown'), 'every Test investigation, and the Showdown, has a Learn case that prepares for it');
+  const exhibitAt = learn.questions.findIndex((q) => q.exhibits.some((e) => e.isNew));
+  const carried = learn.questions[exhibitAt + 1];
+  check(
+    exhibitAt >= 0 && !learn.questions[exhibitAt].lastInCase && carried.exhibits.length >= 1 && !carried.exhibits[0].isNew && learn.questions.every((q) => !q.firstInCase || q.exhibits.every((e) => e.isNew)),
+    'exhibits stay in the case file for the rest of the case, and start fresh in the next',
+  );
+  check(learn.questions.every((q) => asksConfidence(q) === (typeOf(q) !== 'number')) && test.questions.every((q) => !asksConfidence(q)), 'Learn’s picks ask how sure you are; estimates and the Test don’t');
+  check(
+    JSON.stringify(calibration([{ sure: 90, right: true }, { sure: 90, right: false }, { sure: 50, right: true }])) === '[{"level":50,"n":1,"right":1},{"level":90,"n":2,"right":1}]',
+    'calibration counts right answers at each confidence level',
+  );
 
   // Scoring rules
   const num = learn.questions.find((q) => typeOf(q) === 'number' && q.number.value === 42.5);
@@ -265,6 +278,43 @@ try {
     hostAct(host, 'next', { from: `reveal:${q}` });
     await wait(60);
   }
+  host.socket.emit('lobby', { cmd: 'end' });
+  await wait(150);
+
+  // --- Learn: the leader runs two cases; picks ask how sure you are ---
+  host.socket.emit('lobby', { cmd: 'start' });
+  await wait(200);
+  await act(players[1], 'cases', { cases: [3] });
+  await wait(60);
+  check(view(host).cases === null, 'a non-leader phone cannot choose cases');
+  await act(players[0], 'cases', { cases: [11, 3, 3, 99] });
+  await wait(60);
+  check(JSON.stringify(view(host).cases) === '[3,11]', 'the leader chooses cases (checked and sorted)');
+  await act(players[0], 'next', { from: 'pick:0' });
+  await wait(100);
+  const run = learn.questions.flatMap((q, i) => ([3, 11].includes(q.caseIndex) ? [i] : []));
+  check(view(host).q === run[0] && view(host).at === 1 && view(host).of === run.length && !view(host).last, 'Learn starts at the first chosen case');
+  const rated = learn.questions[run[0]];
+  check(asksConfidence(rated), 'the first chosen step asks how sure you are');
+  await act(players[0], 'answer', { answer: best(rated) });
+  await act(players[1], 'answer', { answer: rated.choices.findIndex((c) => c.points === 0) });
+  await wait(60);
+  check(view(host).answered === 0 && view(host).players.every((p) => !p.done), 'an answer isn’t done until it’s rated');
+  check((await act(players[0], 'sure', { level: 42 }))?.error, 'a rating must be one of the levels');
+  await act(players[0], 'sure', { level: 90 });
+  await act(players[1], 'sure', { level: 90 });
+  await wait(3400);
+  check(view(host).phase === 'reveal', 'reveals once everyone has answered and rated');
+  check(JSON.stringify(view(host).tally.calibration) === '[{"level":90,"n":2,"right":1}]', 'the reveal shows how the room’s confidence held up');
+  check(view(players[1]).sure === 90 && view(players[1]).tally.calibration.length === 1, 'a phone sees its own rating and the room’s');
+  const seen = [view(host).q];
+  for (let k = 0; k < 40 && view(host).phase !== 'final'; k++) {
+    hostAct(host, 'next', { from: view(host).step });
+    await wait(50);
+    if (view(host).phase === 'question') seen.push(view(host).q);
+  }
+  check(JSON.stringify(seen) === JSON.stringify(run), 'Learn runs only the chosen cases, in order');
+  check(view(host).phase === 'final' && view(host).history.filter(Boolean).length === run.length, 'the final report covers the chosen cases');
   host.socket.emit('lobby', { cmd: 'end' });
   await wait(150);
 

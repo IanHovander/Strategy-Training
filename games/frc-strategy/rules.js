@@ -3,11 +3,12 @@
 // The leader (big screen or the leader's phone) picks a lesson and a part:
 //   Learn and Test (kind 'quiz'): everyone answers each question on their phone; the big screen shows how the room
 //     answered and the points each answer earned. Phases: question -> reveal -> (scores) -> ... -> final.
-//     Learn shows the leaderboard after each case, Test after every question.
+//     Learn shows the leaderboard after each case, Test after every question. Learn's picks also ask how sure you
+//     are (no points); the reveal shows how the room's confidence held up. The leader can run a few of Learn's cases.
 //   Showdown (kind 'draft'): two groups build picklists, run alliance selection and play a best of three.
 //     Its rules are in draft-rules.js.
 import { LESSONS, lessonById, partById } from './lessons.js';
-import { bestPoints, cleanAnswer, isBest, scoreAnswer, tally } from './quiz.js';
+import { CONFIDENCE, asksConfidence, bestPoints, calibration, cleanAnswer, isBest, scoreAnswer, tally } from './quiz.js';
 import * as draft from './draft-rules.js';
 
 const ANSWER_SECONDS = 120;
@@ -31,9 +32,11 @@ export default {
       before: {}, // ranks before it, to show who moved up
       // quiz
       q: 0,
+      cases: null, // Learn: the case numbers to run (null = all)
       answers: {}, // playerId -> answer, for the current question
+      sure: {}, // playerId -> how sure they are (Learn's picks)
       best: {}, // playerId -> how many best answers
-      history: [], // per question: { counts, answered, median, bestShare }
+      history: [], // per question: { counts, answered, median, bestShare, calibration }
       draft: null, // the Showdown (draft-rules.js)
     };
   },
@@ -61,6 +64,17 @@ export default {
       maybeReveal(ctx);
       return { ok: true };
     },
+    sure(ctx, player, payload) {
+      const s = ctx.state;
+      if (s.phase !== 'question' || !asksConfidence(question(s))) return;
+      if (!CONFIDENCE.includes(payload?.level)) return { error: 'Pick one of the levels.' };
+      s.sure[player.id] = payload.level;
+      maybeReveal(ctx);
+      return { ok: true };
+    },
+    cases(ctx, player, payload) {
+      if (player.isVip) pickCases(ctx, payload);
+    },
     next(ctx, player, payload) {
       if (player.isVip) next(ctx, payload?.from);
     },
@@ -80,6 +94,9 @@ export default {
     },
     next(ctx, payload) {
       next(ctx, payload?.from);
+    },
+    cases(ctx, payload) {
+      pickCases(ctx, payload);
     },
     shuffle(ctx) {
       if (isDraft(ctx.state)) draft.hostActions.shuffle(ctx);
@@ -109,16 +126,17 @@ export default {
       gained: s.gained[p.id] ?? null,
       rank: ranks[p.id],
       before: s.before[p.id] ?? null,
-      done: s.phase === 'question' ? p.id in s.answers : null,
+      done: s.phase === 'question' ? isDone(s, p.id) : null,
     }));
-    if (s.phase === 'pick') return { ...base, players };
+    if (s.phase === 'pick') return { ...base, players, cases: s.cases };
     if (isDraft(s)) return draft.hostView(ctx, { ...base, players });
     const revealed = s.phase !== 'question';
     return {
       ...base,
       q: s.q,
+      ...progress(s),
       players,
-      answered: s.phase === 'question' ? ctx.players.filter((p) => p.id in s.answers).length : null,
+      answered: s.phase === 'question' ? ctx.players.filter((p) => isDone(s, p.id)).length : null,
       tally: revealed ? s.history[s.q] ?? null : null,
       history: s.phase === 'final' ? s.history.map(({ bestShare, answered }) => ({ bestShare, answered })) : null,
     };
@@ -136,19 +154,21 @@ export default {
       isVip: me.isVip,
       score: s.scores[me.id] ?? 0,
       rank: ranks[me.id] ?? null,
-      of: ctx.players.length,
+      players: ctx.players.length,
       gained: s.gained[me.id] ?? null,
     };
-    if (s.phase === 'pick') return base;
+    if (s.phase === 'pick') return { ...base, cases: s.cases };
     if (isDraft(s)) return draft.playerView(ctx, me, base);
     const revealed = s.phase === 'reveal' || s.phase === 'scores';
     return {
       ...base,
       q: s.q,
+      ...progress(s),
       answer: s.answers[me.id] ?? null,
+      sure: s.sure[me.id] ?? null,
       tally: revealed ? s.history[s.q] ?? null : null,
       best: s.best[me.id] ?? 0,
-      asked: s.phase === 'final' ? s.history.length : s.q + (revealed ? 1 : 0),
+      asked: s.phase === 'final' ? s.history.filter(Boolean).length : progress(s).at - (revealed ? 0 : 1),
     };
   },
 };
@@ -159,6 +179,18 @@ const lesson = (s) => lessonById(s.lessonId);
 const part = (s) => partById(lesson(s), s.partId);
 const isDraft = (s) => part(s)?.kind === 'draft';
 const question = (s) => part(s).questions[s.q];
+/** The questions this run covers, by index: all of them, or Learn's chosen cases. */
+const runOrder = (s) =>
+  part(s).questions.flatMap((q, i) => (s.cases && q.caseIndex != null && !s.cases.includes(q.caseIndex) ? [] : [i]));
+/** Where the run is: question `at` of `of`, and whether it's the last. */
+function progress(s) {
+  const order = runOrder(s);
+  const at = order.indexOf(s.q) + 1;
+  return { at, of: order.length, last: at === order.length };
+}
+const nextQ = (s) => runOrder(s).find((i) => i > s.q);
+/** A player is done with a question once they've answered, and said how sure they are if it asks. */
+const isDone = (s, id) => id in s.answers && (!asksConfidence(question(s)) || id in s.sure);
 /** Which screen we're on, so a double-tapped "next" (big screen and leader at once) only moves once. */
 const stepKey = (s) => `${s.phase}:${isDraft(s) ? (s.phase === 'select' ? s.draft.pick : s.draft?.match ?? 0) : s.q}`;
 
@@ -171,6 +203,15 @@ function pick(ctx, payload) {
   s.partId = p.id;
 }
 
+/** Learn: run only some cases. `cases` is a list of case numbers (0-based); anything else means all of them. */
+function pickCases(ctx, payload) {
+  const s = ctx.state;
+  if (s.phase !== 'pick' || !part(s)?.cases) return;
+  const count = part(s).cases.length;
+  const list = Array.isArray(payload?.cases) ? [...new Set(payload.cases)].filter((i) => Number.isInteger(i) && i >= 0 && i < count) : [];
+  s.cases = list.length && list.length < count ? list.sort((a, b) => a - b) : null;
+}
+
 function next(ctx, from) {
   const s = ctx.state;
   if (from !== stepKey(s)) return;
@@ -179,11 +220,10 @@ function next(ctx, from) {
   if (s.phase === 'question') return reveal(ctx);
   if (s.phase === 'reveal') {
     const q = question(s);
-    const last = s.q + 1 >= part(s).questions.length;
-    if (part(s).leaderboard === 'case' && !q.lastInCase && !last) return ask(ctx, s.q + 1);
+    if (part(s).leaderboard === 'case' && !q.lastInCase && nextQ(s) != null) return ask(ctx, nextQ(s));
     s.phase = 'scores';
   } else if (s.phase === 'scores') {
-    if (s.q + 1 < part(s).questions.length) ask(ctx, s.q + 1);
+    if (nextQ(s) != null) ask(ctx, nextQ(s));
     else s.phase = 'final';
   }
 }
@@ -202,10 +242,9 @@ function reveal(ctx) {
 function maybeReveal(ctx) {
   const s = ctx.state;
   if (s.phase !== 'question') return;
-  const done = (id) => id in s.answers;
   const allIn = () => {
     const online = ctx.players.filter((p) => p.connected);
-    return online.length > 0 && online.every((p) => done(p.id));
+    return online.length > 0 && online.every((p) => isDone(s, p.id));
   };
   if (!allIn()) return ctx.cancelTimer('allIn');
   ctx.timer('allIn', ALL_IN_MS, () => allIn() && reveal(ctx));
@@ -237,13 +276,15 @@ function rankMap(ctx) {
 // ---------- Learn and Test ----------
 
 function startQuiz(ctx) {
+  const s = ctx.state;
+  if (!part(s).cases) s.cases = null;
   resetScores(ctx);
-  ask(ctx, 0);
+  ask(ctx, runOrder(s)[0]);
 }
 
 function ask(ctx, q) {
   const s = ctx.state;
-  Object.assign(s, { phase: 'question', q, answers: {}, deadline: Date.now() + ANSWER_SECONDS * 1000 });
+  Object.assign(s, { phase: 'question', q, answers: {}, sure: {}, deadline: Date.now() + ANSWER_SECONDS * 1000 });
   ctx.cancelTimer('allIn');
   ctx.timer('phase', ANSWER_SECONDS * 1000, () => reveal(ctx));
 }
@@ -256,10 +297,12 @@ function revealAnswers(ctx) {
   s.before = rankMap(ctx);
   s.gained = {};
   const given = [];
+  const rated = [];
   let bestCount = 0;
   for (const [id, answer] of Object.entries(s.answers)) {
     if (!ctx.player(id)) continue;
     given.push(answer);
+    if (id in s.sure) rated.push({ sure: s.sure[id], right: isBest(q, answer) });
     s.gained[id] = scoreAnswer(q, answer);
     s.scores[id] = (s.scores[id] ?? 0) + s.gained[id];
     if (isBest(q, answer)) {
@@ -268,7 +311,13 @@ function revealAnswers(ctx) {
     }
   }
   const t = tally(q, given);
-  s.history[s.q] = { ...t, players: ctx.players.length, bestShare: t.answered ? bestCount / t.answered : 0, top: bestPoints(q) };
+  s.history[s.q] = {
+    ...t,
+    players: ctx.players.length,
+    bestShare: t.answered ? bestCount / t.answered : 0,
+    top: bestPoints(q),
+    calibration: asksConfidence(q) ? calibration(rated) : null,
+  };
   s.phase = 'reveal';
   s.deadline = null;
 }

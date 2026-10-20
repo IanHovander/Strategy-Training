@@ -17,28 +17,38 @@
 //   takeaway, explain    the lesson, shown at the reveal
 //   discuss              optional prompt for the group to talk through after the reveal
 //   explore              optional sliders/toggles and a model(values) to play with after the reveal
-// Learn steps also get the case they belong to (see `fromCases`).
+// Learn cases and steps (lesson1-learn.js) also have:
+//   case: title, setup, prepares (the Test investigations it gets you ready for), steps
+//   step: facts          new details added to the case file at this step
+//         exhibit        evidence added to the case file: { title, sides: [a, b], matches: [[a, b], …] } (match
+//                        results) or { title, stats: [[label, value], …] }, plus an optional note
+// Each Learn step also gets its case's title, setup and everything revealed so far (see `fromCases`).
 import { LEARN } from './lesson1-learn.js';
 import { TEST } from './lesson1-test.js';
 import { DRAFT } from './lesson1-draft.js';
 
 /**
  * Lay out a part's cases as one list of questions. Each question learns its case's title and setup, its
- * place in the case, and every fact revealed so far (`isNew` for the ones this step adds).
+ * place in the case, and every fact and exhibit revealed so far (`isNew` for the ones this step adds).
  */
 function fromCases(cases) {
   return cases.flatMap((c, caseIndex) => {
     const facts = [];
+    const exhibits = [];
     return c.steps.map((step, i) => {
-      for (const f of facts) f.isNew = false;
+      for (const f of [...facts, ...exhibits]) f.isNew = false;
       facts.push(...(step.facts ?? []).map((text) => ({ text, isNew: true })));
+      if (step.exhibit) exhibits.push({ ...step.exhibit, isNew: true });
       return {
         ...step,
         section: `Case ${caseIndex + 1} · Step ${i + 1} of ${c.steps.length}`,
         caseIndex,
         caseTitle: c.title,
         setup: c.setup,
+        prepares: c.prepares ?? [],
         facts: facts.map((f) => ({ ...f })),
+        exhibits: exhibits.map((e) => ({ ...e })),
+        firstInCase: i === 0,
         lastInCase: i === c.steps.length - 1,
       };
     });
@@ -57,7 +67,7 @@ export const LESSONS = [
         id: 'learn',
         kind: 'quiz',
         title: 'Learn',
-        blurb: 'Six case studies. Each starts with an exact answer and adds a detail at every step, until you’re spotting unknowns and arguing them out.',
+        blurb: 'Case studies that build up to the Test. Each starts with an exact answer, then adds evidence and unknowns to weigh, rate your confidence in, and argue out.',
         leaderboard: 'case', // after each case, not every step
         cases: LEARN,
         questions: fromCases(LEARN),
