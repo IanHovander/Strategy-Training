@@ -765,17 +765,17 @@ export const LEARN = [
       {
         type: 'multi',
         title: 'How Sure Are You?',
-        facts: ['Scouted numbers are only within <b>±20%</b> of the truth. Pest’s 60% could really be 48% to 72%; Feather’s 90% could be 72% to 100%.'],
+        facts: ['Scouts’ defense numbers usually miss by about <b>15 points</b>, and sometimes by 35. Pest’s 60% could easily really be 45%, and Feather’s 90% could be 75%.'],
         prompt: 'Pick every detail that could flip the call to “stay on offense”.',
         choices: [
-          { text: 'Pest’s real defense is 48% and Feather’s susceptibility 72%', points: 25, result: '7 × 0.48 × 0.72 = 2.4, less than 3' },
+          { text: 'Pest’s real defense is 45% and Feather’s susceptibility 75%', points: 25, result: '7 × 0.45 × 0.75 = 2.4, less than 3' },
           { text: 'Pest really scores 4 cycles on offense, not 3', points: 25, result: 'Defending costs more' },
           { text: 'Feather has an off match and tries only 5 cycles', points: 25, result: 'Less to take away: 5 × 0.54 = 2.7' },
           { text: 'Defenders break down a bit more often', points: 25, result: 'A broken defender takes nothing after it breaks' },
           { text: 'Titan is the top-ranked robot at the event', points: -25, result: 'Rank doesn’t change who defense hurts' },
         ],
         takeaway: 'A 0.8-cycle edge sits inside the scouting error. Know which way each error would push it.',
-        explain: 'At the low ends of the ranges, Pest takes only 2.4 cycles from Feather and offense wins. With an edge this thin, ask which estimate you trust least, and whether you can check it.',
+        explain: 'If both estimates are a typical 15 points too high, Pest takes only 2.4 cycles from Feather and offense wins. With an edge this thin, ask which estimate you trust least, and whether you can check it.',
         discuss: 'In the Showdown, which robots would you defend? Which numbers would you want your scouts to pin down first?',
       },
     ],
@@ -832,16 +832,16 @@ export const LEARN = [
       {
         type: 'choice',
         title: 'How Wrong Can Scouting Be?',
-        facts: ['Crate’s 80% defense is a scouting estimate, ±20%: really somewhere from 64% to 96%.'],
+        facts: ['Crate’s 80% defense is a scouting estimate. Scouts usually miss by about 15 points (so 65% to 95%), and sometimes by 35 (as low as 45%).'],
         prompt: 'Does the call to defend Titan still hold?',
         choices: [
-          { text: 'Yes: defending stays better unless Crate’s defense is below about 35%', points: 100, result: 'At 64% it still wins about 53%' },
-          { text: 'No: at 64% all offense is better', points: 0, result: 'At 64%, defending wins about 53% vs 25%' },
+          { text: 'Yes: defending stays better unless Crate’s defense is below about 35%', points: 100, result: 'Even at 45% it wins about 34%' },
+          { text: 'No: a 35-point miss would flip it', points: 0, result: 'At 45%, defending still wins about 34% vs 25%' },
           { text: 'Only if Crate’s defense is really 80%', points: 0, result: 'The edge is much wider than that' },
           { text: 'Can’t tell without playing more matches', points: 25, result: 'The model can tell you now' },
         ],
         takeaway: 'A strong call survives its worst-case numbers. Check that before the match, not after a loss.',
-        explain: 'Defending wins about 53% at 64% defense and 80% at 96%, against 25% for all offense. It only stops paying near 35%: far outside the scouting range.',
+        explain: 'Defending wins about 54% at 65% defense and 79% at 95%, against 25% for all offense. Even a rare 35-point miss (45%) still leaves it ahead, at 34%. It only stops paying near 35%.',
         discuss: 'Which of your Showdown decisions would flip within the scouting error? Those are the ones to argue about.',
         explore: {
           controls: [

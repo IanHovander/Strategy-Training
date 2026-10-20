@@ -10,10 +10,18 @@
 import { LESSONS, lessonById, partById } from './lessons.js';
 import { CONFIDENCE, asksConfidence, bestPoints, calibration, cleanAnswer, isBest, scoreAnswer, tally } from './quiz.js';
 import * as draft from './draft-rules.js';
+import { addTime, configureClock, restoreClock, settleClock, startClock, stopClock } from './clock.js';
 
 const ANSWER_SECONDS = 120;
 const EXTRA_SECONDS = 30;
 const ALL_IN_MS = 3000; // once everyone has answered, a moment to change their mind before the reveal
+const TIMED = ['question', 'prep', 'select', 'plan'];
+
+// The clock stops while nobody is connected (and, in the Showdown, while a group that has to act is all away).
+configureClock({
+  waiting: (ctx) => TIMED.includes(ctx.state.phase) && (isDraft(ctx.state) ? draft.waiting(ctx) : !ctx.players.some((p) => p.connected)),
+  timeUp: (ctx) => (isDraft(ctx.state) ? draft.next(ctx) : reveal(ctx)),
+});
 
 export default {
   name: 'Strategy Training',
@@ -27,6 +35,7 @@ export default {
       lessonId: LESSONS[0].id,
       partId: LESSONS[0].parts[0].id,
       deadline: null,
+      paused: null, // ms left on a stopped clock (clock.js)
       scores: {},
       gained: {}, // points from the last reveal / round
       before: {}, // ranks before it, to show who moved up
@@ -44,11 +53,21 @@ export default {
   onJoin(ctx, player) {
     ctx.state.scores[player.id] ??= 0;
     if (isDraft(ctx.state)) draft.onJoin(ctx, player);
+    settleClock(ctx);
+  },
+
+  onReconnect(ctx) {
+    settleClock(ctx);
   },
 
   onDisconnect(ctx) {
-    if (isDraft(ctx.state)) draft.onDisconnect(ctx);
-    else maybeReveal(ctx);
+    if (!isDraft(ctx.state)) maybeReveal(ctx);
+    settleClock(ctx);
+  },
+
+  /** The big screen reloaded and got the game back from its save: nobody is connected yet, so the clock waits. */
+  onRestore(ctx, { savedAt }) {
+    restoreClock(ctx, savedAt);
   },
 
   actions: {
@@ -102,10 +121,7 @@ export default {
       if (isDraft(ctx.state)) draft.hostActions.shuffle(ctx);
     },
     more(ctx) {
-      const s = ctx.state;
-      if (s.phase !== 'question' && s.phase !== 'plan' && s.phase !== 'prep' && s.phase !== 'select') return;
-      s.deadline = Math.max(s.deadline, Date.now()) + EXTRA_SECONDS * 1000;
-      ctx.timer('phase', s.deadline - Date.now(), () => (isDraft(s) ? draft.next(ctx) : reveal(ctx)));
+      if (TIMED.includes(ctx.state.phase)) addTime(ctx, EXTRA_SECONDS);
     },
     finish(ctx) {
       finish(ctx);
@@ -115,7 +131,7 @@ export default {
   // The big screen sees counts only after the reveal, and never who picked what before it.
   hostView(ctx) {
     const s = ctx.state;
-    const base = { phase: s.phase, step: stepKey(s), lessonId: s.lessonId, partId: s.partId, deadline: s.deadline };
+    const base = { phase: s.phase, step: stepKey(s), lessonId: s.lessonId, partId: s.partId, deadline: s.deadline, paused: s.paused != null };
     const ranks = rankMap(ctx);
     const players = ctx.players.map((p) => ({
       id: p.id,
@@ -151,6 +167,7 @@ export default {
       lessonId: s.lessonId,
       partId: s.partId,
       deadline: s.deadline,
+      paused: s.paused != null,
       isVip: me.isVip,
       score: s.scores[me.id] ?? 0,
       rank: ranks[me.id] ?? null,
@@ -284,9 +301,9 @@ function startQuiz(ctx) {
 
 function ask(ctx, q) {
   const s = ctx.state;
-  Object.assign(s, { phase: 'question', q, answers: {}, sure: {}, deadline: Date.now() + ANSWER_SECONDS * 1000 });
+  Object.assign(s, { phase: 'question', q, answers: {}, sure: {} });
   ctx.cancelTimer('allIn');
-  ctx.timer('phase', ANSWER_SECONDS * 1000, () => reveal(ctx));
+  startClock(ctx, ANSWER_SECONDS);
 }
 
 function revealAnswers(ctx) {
@@ -319,5 +336,5 @@ function revealAnswers(ctx) {
     calibration: asksConfidence(q) ? calibration(rated) : null,
   };
   s.phase = 'reveal';
-  s.deadline = null;
+  stopClock(ctx);
 }

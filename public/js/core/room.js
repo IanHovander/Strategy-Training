@@ -24,7 +24,7 @@ const BIG_MESSAGE = 15_000; // WebRTC can't carry messages over 16 KB, so warn w
  * Messages from browsers:
  *   'join'   {name, token}          a phone joins with a name (token: from an earlier visit, if any)
  *   'action' {type, payload}        a phone (or the big screen) does something in the game
- *   'lobby'  {cmd, ...}             select / start / restart / end / kick
+ *   'lobby'  {cmd, ...}             select / start / restart / end / kick / resume (the game that last stopped)
  *   'clock'                         asks for the server's time (keeps countdowns in sync)
  * Messages to browsers (each only when it changed):
  *   'room'   {...}                  what everyone shares: players, games, which screen
@@ -55,6 +55,80 @@ export class Room {
     this.lastSyncAt = 0;
     this.vip = undefined; // cached vipId(); undefined = work it out again
     this.warnedBig = false;
+    this.previous = null; // the game that last stopped (Back to Lobby, Restart, or finished): { name, endedAt, game }
+    this.onSave = null; // (json) => keep it somewhere; called whenever the room changes (see snapshot())
+    this.lastSaved = null;
+  }
+
+  // ---------- saving and restoring ----------
+
+  /**
+   * Everything needed to carry on after the host restarts (the big screen's tab reloaded): the players with the
+   * tokens that get their phones their seats back, the lobby, and the game's state. Timers can't be saved; a game's
+   * onRestore(ctx, { savedAt }) hook starts them again.
+   */
+  snapshot() {
+    const g = this.game;
+    return {
+      v: 1,
+      savedAt: Date.now(),
+      players: [...this.players.values()].map(({ id, token, name, color }) => ({ id, token, name, color })),
+      screen: this.screen,
+      selectedGameId: this.selectedGameId,
+      gameCount: this.gameCount,
+      lastResult: this.lastResult,
+      game: g ? saveGame(g) : null,
+      previous: this.previous,
+    };
+  }
+
+  /** Pick up from a snapshot(). Everyone starts disconnected; phones reconnect with their tokens. */
+  restore(snap) {
+    if (snap?.v !== 1 || !Array.isArray(snap.players)) return false;
+    for (const p of snap.players) this.players.set(p.id, { ...p, connected: false, socketId: null });
+    if (this.games.has(snap.selectedGameId)) this.selectedGameId = snap.selectedGameId;
+    this.gameCount = snap.gameCount ?? 0;
+    this.lastResult = snap.lastResult ?? null;
+    this.previous = snap.previous?.game && this.games.has(snap.previous.game.id) ? snap.previous : null;
+    if (snap.screen === 'game' && snap.game) this.resumeGame(snap.game, snap.savedAt);
+    this.vip = undefined;
+    this.scheduleSync();
+    return true;
+  }
+
+  /**
+   * Bring back a saved game (see saveGame) as the game being played. Its players keep their seats; anyone connected
+   * who wasn't in it joins the way a latecomer would. `savedAt`: when it was saved, for the game's clocks.
+   */
+  resumeGame(saved, savedAt) {
+    const info = this.games.get(saved.id);
+    if (!info) return false;
+    this.stopGame(false);
+    const g = new GameSession(this, info, saved.participants.filter((id) => this.players.has(id)), saved.number);
+    g.state = saved.state;
+    this.game = g;
+    this.screen = 'game';
+    this.lastResult = null;
+    g.call('onRestore', { savedAt });
+    for (const p of this.connectedPlayers()) {
+      if (g.participants.has(p.id)) g.call('onReconnect', this.publicPlayer(p.id));
+      else if (typeof info.def.onJoin === 'function') {
+        g.participants.add(p.id);
+        if (g.call('onJoin', this.publicPlayer(p.id)) === false) g.participants.delete(p.id);
+      }
+    }
+    this.scheduleSync();
+    return true;
+  }
+
+  /** Hand the snapshot to onSave when something changed (or always, with `force`: the page is going away). */
+  save(force = false) {
+    if (!this.onSave) return;
+    const { savedAt, ...rest } = this.snapshot();
+    const json = JSON.stringify(rest);
+    if (json === this.lastSaved && !force) return;
+    this.lastSaved = json;
+    this.onSave(JSON.stringify({ ...rest, savedAt }));
   }
 
   setJoin(join) {
@@ -230,6 +304,14 @@ export class Room {
       case 'kick':
         if (isHost && this.screen === 'lobby') this.kick(msg.playerId);
         break;
+      case 'resume':
+        // Pressed Back to Lobby (or Restart) by mistake? Carry on with that game.
+        if (this.screen === 'lobby' && this.previous) {
+          const { game, endedAt } = this.previous;
+          this.previous = null;
+          this.resumeGame(game, endedAt);
+        }
+        break;
     }
     this.scheduleSync();
   }
@@ -255,7 +337,7 @@ export class Room {
         if (initial !== undefined) g.state = initial;
       } catch (err) {
         console.error(`\n[${info.id}] Error in setup:\n`, err);
-        this.stopGame();
+        this.stopGame(false); // nothing worth resuming
         this.screen = 'lobby';
         this.lastResult = `${info.name} crashed while starting. The error is in the server window (or the browser console).`;
       }
@@ -272,8 +354,12 @@ export class Room {
     this.scheduleSync();
   }
 
-  stopGame() {
-    this.game?.dispose();
+  /** Stop the game being played, keeping it as `previous` so it can be resumed (unless `keep` is false). */
+  stopGame(keep = true) {
+    const g = this.game;
+    if (!g) return;
+    if (keep) this.previous = { name: g.info.name, endedAt: Date.now(), game: saveGame(g) };
+    g.dispose();
     this.game = null;
   }
 
@@ -311,6 +397,7 @@ export class Room {
     this.syncTimer = null;
     this.lastSyncAt = Date.now();
     guard('sync', () => this.sync());
+    guard('save', () => this.save());
   }
 
   meta() {
@@ -326,6 +413,7 @@ export class Room {
       selectedGameId: this.selectedGameId,
       startProblem: selected ? this.startProblem(selected) : 'No games found in the games folder',
       game: this.game ? { id: this.game.id, name: this.game.info.name, session: this.game.number } : null,
+      previous: this.previous ? { name: this.previous.name, endedAt: this.previous.endedAt } : null,
       lastResult: this.lastResult,
     };
   }
@@ -503,6 +591,11 @@ class GameSession {
     for (const handle of this.timers.values()) clearTimeout(handle);
     this.timers.clear();
   }
+}
+
+/** A game as plain data, for saving and resuming. */
+function saveGame(g) {
+  return { id: g.id, number: g.number, participants: [...g.participants], state: JSON.parse(JSON.stringify(g.state)) };
 }
 
 /** Random hex string. Works in Node and in any browser page (crypto.randomUUID needs https). */

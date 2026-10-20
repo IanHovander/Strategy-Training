@@ -58,6 +58,14 @@ Every push to `main` then rebuilds and publishes the site.
   simulations.
 - The leaderboard comes after each case in Learn, and after every question in the Test.
 
+**If someone drops out.** Nobody loses progress. The leader passes to the next connected player (and a Showdown
+group's captain to the next connected member). Clocks stop while the room is waiting: nobody connected, or the
+Showdown group whose turn it is has nobody connected. They pick up where they left off when someone is back. If the
+big screen's page reloads (phones often reload a tab that's been in the background), the game comes back where it
+was and phones rejoin in their seats. The save lives in the big screen's browser (on the laptop server, in a
+`.room-<port>.local.json` file) and lasts 12 hours. Pressed **Back to Lobby** or **Restart** by mistake? The lobby
+has a **Resume** button for the game that last stopped.
+
 **Trying it on one device.** Press **Test Phone** on the big screen to open a phone in a panel on the same page,
 and join from there. (Two separate tabs don't work on a phone: the browser pauses the hidden tab, and the hidden
 tab is the host.)
@@ -71,7 +79,8 @@ student captain. The big screen can shuffle first.
   - **defense** ability (0–100%).
 
   Each game simulates qualifications: ten matches per team, shown as the % of matches with each cycle count, and
-  scouts' estimates of susceptibility and defense that land within ±20% of the true value. Teams are seeded from
+  scouts' estimates of susceptibility and defense: the truth plus a bell-curve error, typically about 15 points and
+  sometimes 35 or more. Teams are seeded from
   those results, and seeds #1 and #2 captain the two alliances.
 - **Picklists (15 minutes):** each group builds one shared picklist on their phones, in the 2026-scout layout:
   Your Picklist (toggling with Do Not Pick) beside Available Teams. Drag to rank (hold briefly on touch), tap a
@@ -278,6 +287,7 @@ export default {
   onJoin(ctx, player) {},        // someone joined mid-game. Return false to make them wait for the next game.
   onDisconnect(ctx, player) {},  // a phone dropped (locked screen, bad signal...)
   onReconnect(ctx, player) {},   // ...and came back. They keep their seat automatically.
+  onRestore(ctx, { savedAt }) {}, // the host restarted and the game came back from its save: restart timers
 };
 ```
 

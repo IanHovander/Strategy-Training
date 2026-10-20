@@ -44,6 +44,7 @@ export function draftPhone(main, api) {
       <div class="st-top">
         ${v.group >= 0 && groupBadge(v.group, `${GROUPS[v.group]} · A${v.group + 1}`)}
         <span>${label}</span>
+        ${v.paused && html`<span class="st-paused" title="The clock waits while a group has nobody here">⏸ Paused</span>`}
         ${v.deadline && html`<span class="timer" data-deadline="${v.deadline}"></span>`}
       </div>`;
   }
@@ -108,7 +109,7 @@ export function draftPhone(main, api) {
         ${header(v, `Match ${v.match + 1} · A1 ${v.wins[0]}–${v.wins[1]} A2`)}
         <div class="st-rulebox">
           <b>How defense works</b>
-          <span>A defended robot loses <b>defender’s ability × its susceptibility</b> of its cycles: a 60% defender on a 50%-susceptible robot takes 30%. The numbers on the buttons use your scouts’ estimates (±20%).</span>
+          <span>A defended robot loses <b>defender’s ability × its susceptibility</b> of its cycles: a 60% defender on a 50%-susceptible robot takes 30%. The numbers on the buttons use your scouts’ estimates, which are usually off by about 15 points and sometimes by 35.</span>
           <span>If the robot you defend is defending too, stay on it (its defense weakens by the same rule) or switch to another robot. Roles don’t change mid-match.</span>
           <span>A defender breaks down with its usual chance of 0 cycles <b>+5%</b>, at a random moment: it defends the cycles before that and not the ones after.</span>
         </div>

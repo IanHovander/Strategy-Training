@@ -156,6 +156,7 @@ export default function (root, api) {
       <div class="st-top">
         <span>${part.title} ${v.at} / ${v.of}</span>
         <span class="st-top-score">${v.score} pts</span>
+        ${v.paused && html`<span class="st-paused">⏸ Paused</span>`}
         ${v.deadline && html`<span class="timer" data-deadline="${v.deadline}"></span>`}
       </div>`;
   }

@@ -10,7 +10,7 @@
 //   defense         0–1: how good it is at defending
 //   note            what the reveal says about it
 // What players see is simulated each game: ten qualification matches drawn from the cycle distribution, and
-// scouts' estimates of susceptibility and defense, each within ±20% of the true value.
+// scouts' estimates of susceptibility and defense: usually within about 15 points of the truth, sometimes 35 off.
 
 export const MAX_CYCLES = 12;
 
@@ -30,7 +30,9 @@ export const DRAFT = {
   planSeconds: 180, // a backstop: matches play as soon as both alliances lock in
   maxMatches: 5, // ties are replayed, up to this many matches
   qualMatches: 10,
-  scoutError: 0.2, // scouts' estimates land within ±20% of the true value
+  // Scouts' estimates of susceptibility and defense: the truth plus a bell-curve error. A typical miss is about
+  // 15 points; about 1 in 20 is off by 35 or more (never more than 45).
+  scoutError: { sd: 0.18, cap: 0.45 },
   defenderBreakExtra: 0.05, // a defender breaks with its usual chance of 0 cycles, plus this
   rules: [
     'Each robot plays offense (scoring cycles) or defense, the whole match. Robots don’t change roles mid-match.',
@@ -41,22 +43,22 @@ export const DRAFT = {
     'Two defenders on one robot both apply. An alliance’s score is its total cycles. Best of three; a tie is replayed.',
   ],
   teams: [
-    { id: 'apex', name: 'Apex', cycles: cycles(9, 1.2, 0.04), susceptibility: 0.3, defense: 0.3, note: 'The real deal: lots of cycles, consistent, hard to slow down.' },
-    { id: 'metronome', name: 'Metronome', cycles: cycles(7, 0.6, 0.02), susceptibility: 0.4, defense: 0.2, note: 'Seven cycles, almost every match.' },
-    { id: 'boom', name: 'Boom', cycles: cycles(7.5, 3, 0.08), susceptibility: 0.6, defense: 0.2, note: 'A high average with a huge spread: 11 one match, 4 the next.' },
-    { id: 'glass', name: 'Glass Cannon', cycles: cycles(9.5, 1.5, 0.25), susceptibility: 0.7, defense: 0.1, note: 'The most cycles when it runs, but it breaks one match in four.' },
-    { id: 'brick', name: 'Brick', cycles: cycles(3, 1, 0.03), susceptibility: 0.2, defense: 0.85, note: 'Few cycles, and the best defender at the event.' },
-    { id: 'wall', name: 'Wall', cycles: cycles(4.5, 1, 0.03), susceptibility: 0.3, defense: 0.6, note: 'A few cycles and a solid defender.' },
-    { id: 'tank', name: 'Tank', cycles: cycles(6, 1, 0.04), susceptibility: 0.05, defense: 0.4, note: 'Defense barely touches it.' },
-    { id: 'spark', name: 'Spark', cycles: cycles(5, 2.2, 0.1), susceptibility: 0.6, defense: 0.2, note: 'Streaky: its qualification numbers depend a lot on luck.' },
-    { id: 'eddie', name: 'Steady Eddie', cycles: cycles(5.5, 0.7, 0.02), susceptibility: 0.5, defense: 0.3, note: 'Reliable middle of the pack.' },
-    { id: 'gambler', name: 'Gambler', cycles: cycles(6, 3.5, 0.06), susceptibility: 0.5, defense: 0.2, note: 'Anything from 0 to 12 cycles.' },
-    { id: 'turtle', name: 'Turtle', cycles: cycles(4, 0.7, 0.01), susceptibility: 0.1, defense: 0.3, note: 'Slow, but nothing stops it.' },
-    { id: 'feather', name: 'Feather', cycles: cycles(7.5, 1, 0.05), susceptibility: 0.9, defense: 0.1, note: 'Lots of cycles, but it folds under any defense.' },
-    { id: 'pest', name: 'Pest', cycles: cycles(4.5, 1.3, 0.05), susceptibility: 0.4, defense: 0.55, note: 'A few cycles and a good defender.' },
-    { id: 'ghost', name: 'Ghost', cycles: cycles(7, 1.3, 0.3), susceptibility: 0.5, defense: 0.2, note: 'Good when it shows up. It breaks almost one match in three.' },
-    { id: 'rookie', name: 'Rookie', cycles: cycles(2.5, 1.3, 0.1), susceptibility: 0.6, defense: 0.25, note: 'First-year team, still finding its feet.' },
-    { id: 'middler', name: 'Middler', cycles: cycles(5, 1.5, 0.05), susceptibility: 0.5, defense: 0.35, note: 'Average at everything.' },
+    { id: 'apex', name: 'Apex', cycles: cycles(9, 2, 0.04), susceptibility: 0.3, defense: 0.3, note: 'The real deal: lots of cycles, and hard to slow down.' },
+    { id: 'metronome', name: 'Metronome', cycles: cycles(7, 1.3, 0.02), susceptibility: 0.4, defense: 0.2, note: 'The most consistent robot here: seven cycles, give or take one.' },
+    { id: 'boom', name: 'Boom', cycles: cycles(7.5, 3.6, 0.08), susceptibility: 0.6, defense: 0.2, note: 'A high average with a huge spread: 11 one match, 4 the next.' },
+    { id: 'glass', name: 'Glass Cannon', cycles: cycles(9.5, 2.3, 0.25), susceptibility: 0.7, defense: 0.1, note: 'The most cycles when it runs, but it breaks one match in four.' },
+    { id: 'brick', name: 'Brick', cycles: cycles(3, 1.6, 0.03), susceptibility: 0.2, defense: 0.85, note: 'Few cycles, and the best defender at the event.' },
+    { id: 'wall', name: 'Wall', cycles: cycles(4.5, 1.8, 0.03), susceptibility: 0.3, defense: 0.6, note: 'A few cycles and a solid defender.' },
+    { id: 'tank', name: 'Tank', cycles: cycles(6, 1.9, 0.04), susceptibility: 0.05, defense: 0.4, note: 'Defense barely touches it.' },
+    { id: 'spark', name: 'Spark', cycles: cycles(5, 2.9, 0.1), susceptibility: 0.6, defense: 0.2, note: 'Streaky: its qualification numbers depend a lot on luck.' },
+    { id: 'eddie', name: 'Steady Eddie', cycles: cycles(5.5, 1.5, 0.02), susceptibility: 0.5, defense: 0.3, note: 'Middle of the pack, and fairly reliable.' },
+    { id: 'gambler', name: 'Gambler', cycles: cycles(6, 4.2, 0.06), susceptibility: 0.5, defense: 0.2, note: 'Anything from 0 to 12 cycles.' },
+    { id: 'turtle', name: 'Turtle', cycles: cycles(4, 1.4, 0.01), susceptibility: 0.1, defense: 0.3, note: 'Slow, but nothing stops it.' },
+    { id: 'feather', name: 'Feather', cycles: cycles(7.5, 1.9, 0.05), susceptibility: 0.9, defense: 0.1, note: 'Lots of cycles, but it folds under any defense.' },
+    { id: 'pest', name: 'Pest', cycles: cycles(4.5, 2, 0.05), susceptibility: 0.4, defense: 0.55, note: 'A few cycles and a good defender.' },
+    { id: 'ghost', name: 'Ghost', cycles: cycles(7, 2, 0.3), susceptibility: 0.5, defense: 0.2, note: 'Good when it shows up. It breaks almost one match in three.' },
+    { id: 'rookie', name: 'Rookie', cycles: cycles(2.5, 1.8, 0.1), susceptibility: 0.6, defense: 0.25, note: 'First-year team, still finding its feet.' },
+    { id: 'middler', name: 'Middler', cycles: cycles(5, 2.2, 0.05), susceptibility: 0.5, defense: 0.35, note: 'Average at everything.' },
   ],
   lessons: [
     'Ten matches is a small sample: some teams’ qualification numbers were luckier (or unluckier) than the robot.',

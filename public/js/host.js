@@ -69,6 +69,7 @@ onState(socket, (next) => {
 });
 
 $('start').addEventListener('click', () => lobby('start'));
+$('resume').addEventListener('click', () => lobby('resume'));
 $('games').addEventListener('click', (e) => {
   const card = e.target.closest('[data-game]');
   if (card) lobby('select', { gameId: card.dataset.game });
@@ -79,7 +80,7 @@ $('players').addEventListener('click', (e) => {
 });
 for (const btn of document.querySelectorAll('[data-lobby]')) {
   btn.addEventListener('click', () => {
-    const question = btn.dataset.lobby === 'end' ? 'End this game and go back to the lobby?' : 'Start this game over?';
+    const question = btn.dataset.lobby === 'end' ? 'End this game and go back to the lobby? (You can resume it from there.)' : 'Start this game over? (You can resume this one from the lobby.)';
     if (confirm(question)) lobby(btn.dataset.lobby);
   });
 }
@@ -186,6 +187,12 @@ function renderLobby(room) {
   )}`;
 
   $('start').disabled = !!room.startProblem;
+  // The game that last stopped (Back to Lobby, Restart, or it finished) can be picked up again.
+  $('resume').hidden = !room.previous;
+  if (room.previous) {
+    const at = new Date(room.previous.endedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    $('resume').textContent = `Resume ${room.previous.name} (stopped ${at})`;
+  }
   $('start-problem').textContent = room.startProblem ?? '';
   $('last-result').hidden = !room.lastResult;
   $('last-result').textContent = room.lastResult ?? '';

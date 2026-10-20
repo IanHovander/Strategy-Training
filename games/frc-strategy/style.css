@@ -674,3 +674,6 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .st-picker:has(.st-casepick) .st-lesson-card { gap: 0.2rem; padding: 0.7rem 1.3rem 0.8rem; }
 .st-picker:has(.st-casepick) .st-lesson-name { font-size: 2.3rem; }
 .st-picker:has(.st-casepick) .st-lesson-meta { margin-top: 0.1rem; }
+/* a stopped clock: the room is waiting for someone to come back */
+.st-paused { padding: 0.35rem 0.8rem 0.2rem; border-radius: 0.5rem; background: var(--white); color: var(--black); border: var(--outline) solid var(--black); font-family: var(--display); font-size: 1.4rem; line-height: 1; white-space: nowrap; }
+.st-top .st-paused { font-size: 1.1rem; padding: 0.25rem 0.5rem 0.1rem; }

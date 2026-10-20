@@ -38,7 +38,7 @@ function head(v, lesson, part) {
       ${v.phase === 'question' &&
       html`
         <span class="st-answered"><b>${v.answered}</b> / ${v.players.length} ${asksConfidence(q) ? 'done' : 'answered'}</span>
-        <span class="timer timer-lg" data-deadline="${v.deadline}"></span>
+        ${v.paused ? html`<span class="st-paused">⏸ Waiting for players</span>` : html`<span class="timer timer-lg" data-deadline="${v.deadline}"></span>`}
         <button class="btn btn-sm secondary" data-action="more">+30s</button>
         ${nextButton(v, 'Reveal ▸', 'btn-sm secondary')}`}
     </header>`;

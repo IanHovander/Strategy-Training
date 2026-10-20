@@ -45,7 +45,7 @@ export const histogram = (s, opts) => cycleBars(cycleCounts(s.scores, MAX_CYCLES
 
 /** The scouts' defense estimates. */
 export const ratings = (s) =>
-  html`<span class="st-ratings"><span title="How much defense slows it down (scouted, ±20%)">Susceptible <b>${pct(s.susceptibility)}</b></span><span title="How good it is at defending (scouted, ±20%)">Defense <b>${pct(s.defense)}</b></span></span>`;
+  html`<span class="st-ratings"><span title="How much defense slows it down (scouted: usually within about 15 points)">Susceptible <b>${pct(s.susceptibility)}</b></span><span title="How good it is at defending (scouted: usually within about 15 points)">Defense <b>${pct(s.defense)}</b></span></span>`;
 
 /** A team's scouting card: seed, name, cycle histogram, average, defense estimates. `extra` goes at the bottom. */
 export function scoutCard(v, s, { extra = null, compact = false, plain = false } = {}) {

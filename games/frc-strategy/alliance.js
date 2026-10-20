@@ -148,13 +148,20 @@ export function clock(u) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** A bell-curve error: normally distributed with this standard deviation, cut off at `cap` either way. */
+function bellError(sd, cap, rand) {
+  const z = Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand()); // Box–Muller
+  return Math.max(-cap, Math.min(cap, sd * z));
+}
+
 /**
  * What the scouts saw: `qualMatches` cycle counts drawn from the true distribution (undefended), and estimates of
- * susceptibility and defense within ±scoutError of the true value (a share of it, up or down at random).
+ * susceptibility and defense: the true value plus a bell-curve error in percentage points (standard deviation
+ * `scoutError.sd`, never more than `scoutError.cap`), kept between 0 and 100%.
  */
 export function scoutTeam(team, { qualMatches, scoutError }, rand = Math.random) {
   const scores = Array.from({ length: qualMatches }, () => sample(cycleDist(team), rand));
-  const estimate = (v) => Math.min(1, Math.max(0, v * (1 + scoutError * (2 * rand() - 1))));
+  const estimate = (v) => Math.min(1, Math.max(0, v + bellError(scoutError.sd, scoutError.cap, rand)));
   return { scores, susceptibility: estimate(team.susceptibility), defense: estimate(team.defense) };
 }
 
