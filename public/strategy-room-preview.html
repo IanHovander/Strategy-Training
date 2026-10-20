@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#9a1119">
-<title>Strategy Room — Learn Mockup</title>
+<title>Strategy Room — Guided Learn Mockup</title>
 <style>
 :root{--red:#b41421;--red-deep:#8f0e19;--black:#191b23;--muted:#59606f;--cream:#f5f3ed;--white:#fff;--line:#dbd9d3;--mint:#adeddc;--mint-text:#076c60;--gold:#ffe7ab;--gold-deep:#ad6e0e;--shadow:0 7px 0 rgba(25,27,35,.12);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--black)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#efece4;color:var(--black)}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #51a9c8;outline-offset:3px}a{color:inherit}p{line-height:1.5}h1,h2,h3,h4{margin:0;letter-spacing:-.04em}h1{font-size:clamp(26px,3.7vw,48px);line-height:1.05}h2{font-size:clamp(22px,2.4vw,33px);line-height:1.13}h3{font-size:19px}small{font-size:12px}button,.tag{touch-action:manipulation}textarea{resize:vertical;min-height:64px}input[type=range]{accent-color:var(--red);width:100%;height:30px;cursor:grab;touch-action:pan-x}input[type=range]:active{cursor:grabbing}.eyebrow{font-size:11px;font-weight:850;letter-spacing:.13em;text-transform:uppercase}.muted{color:var(--muted)}.minor{font-size:12px;color:var(--muted)}.safe{color:var(--mint-text)}.strong{font-weight:800}.nowrap{white-space:nowrap}
@@ -24,6 +24,25 @@
 @media(max-width:1180px){.workspace{grid-template-columns:minmax(0,1fr) 335px}.roster{grid-template-columns:1fr 1fr}.hostinner{padding:15px}.options-row{grid-template-columns:1fr 1fr}.phone-inner{max-height:80vh}}
 @media(max-width:940px){.workspace{grid-template-columns:minmax(0,1fr)}.workspace[data-view=both]{grid-template-columns:minmax(0,1fr)}.phone{position:static;max-width:480px}.framecap{margin-top:5px}.hostsurface{min-height:0}.phone-inner{max-height:none;min-height:450px}.pagehead .version{display:none}}
 @media(max-width:640px){.topbar{padding:10px 13px}.topright a{display:none}.brand{font-size:12px}.pagehead{margin-bottom:14px}.pagehead p{font-size:12px}.shell{padding:15px 12px 33px}.toolbar{padding:10px}.case-select{min-width:100%}.toolbar-right{width:100%;justify-content:space-between}.seg{flex:1;justify-content:space-around}.seg button{padding:7px 9px}.stepper{gap:1px}.step{font-size:0;min-width:35px;padding:10px 6px}.step:before{width:9px;height:9px;margin:0}.step.active{font-size:10px;min-width:85px}.step.active:before{margin-right:5px}.hosthead{padding:15px}.hosthead h2{font-size:27px}.hostinner{padding:12px}.panel{padding:12px}.scenario{padding:12px}.options-row{grid-template-columns:1fr}.roster{grid-template-columns:1fr}.phone{padding:7px;border-radius:26px}.phone-inner{border-radius:19px}.bottomline{margin-top:17px}}
+/* First-case onboarding: start with the rules, then grow into scouting and debate. */
+.radio-button .option-detail{display:block;color:var(--muted);font-size:11px;font-weight:500;line-height:1.5;margin-top:4px;max-width:280px}
+.training-note{background:#ebf4fa;border:1px solid #b9d4df;color:#174454;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.45;margin:0 0 12px}
+.training-note strong{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;margin-bottom:3px;color:#1d6c82}
+.coach-note{background:#f0f8f5;border:1px solid #b7d9c7;border-radius:11px;padding:14px;margin:12px 0;font-size:13px;line-height:1.5;color:#225245}
+.coach-note strong{display:block;font-size:12px;letter-spacing:.04em;margin-bottom:5px}
+.warmup-next{background:#27313d;border-radius:13px;padding:16px;color:#fff}
+.warmup-next .eyebrow{color:#c4e3e2}
+.warmup-next h3{margin:7px 0;font-size:17px}
+.warmup-next p{font-size:13px;line-height:1.45;color:#d5e0e9;margin:0 0 13px}
+.prompt-starters{display:grid;gap:7px;margin:9px 0 15px}
+.prompt-starters button{background:white;border:1px solid #cad5d0;color:#265b51;border-radius:9px;text-align:left;font-weight:750;font-size:12px;padding:11px}
+.prompt-starters button:hover,.prompt-starters button:focus-visible{background:#ecf8f2;border-color:#5da88e}
+.flag-details{border:1px dashed #b7b5aa;border-radius:9px;padding:10px 12px;margin:12px 0;background:#f8f6ed}
+.flag-details summary{font-size:12px;font-weight:850;cursor:pointer;list-style:revert}
+.flag-details p{font-size:12px;color:#61605a;margin:7px 0}
+.flag-details textarea{width:100%;background:#fff;border:1px solid #cac7bf;border-radius:8px;color:var(--black);padding:10px;font-size:12px}
+.person .doubt{color:#815d24;background:#fff8e7;border-left:3px solid #d7ac64;border-radius:4px;padding:7px;margin-top:7px;font-size:11px}
+@media(max-width:600px){.warmup-next,.coach-note{padding:12px}}
 </style>
 </head>
 <body>
@@ -38,27 +57,28 @@
 <script>
 const CASES = [
   {
-    title:'Robot A vs. B', short:'Robot A vs. B', tag:'The first call', prompt:'What’s the call?',
-    setup:'Robot A has two ways to score. Robot B puts up 9 cycles, every match. More cycles wins. Ties are not wins.',
-    options:[{id:'safe',label:'Safe',detail:'8 cycles. Every single time.'},{id:'aggressive',label:'Aggressive',detail:'11 cycles (70%) or 4 cycles (30%).'}],
+    title:'Robot A vs. B', short:'Robot A vs. B', tag:'Start here · warm-up', prompt:'What’s the call?',
+    setup:'A vs. B. No defense or penalties in this quick drill. B scores 9 cycles. More cycles wins; ties do not.',
+    options:[{id:'safe',label:'Safe',detail:'8 cycles every time, in this drill.'},{id:'aggressive',label:'Aggressive',detail:'11 cycles (70%) or 4 cycles (30%).'}],
     intel:[
-      'Scouting update: B scores 7 cycles in 60% of matches and 9 in the other 40%.',
-      'More film came in. New estimate for B: 7 cycles (80%), 9 cycles (20%).',
-      'That 70% aggressive success rate? Just 7 successes in 10 attempts. Safe has worked every time we’ve tried it.'
+      'Our first real scouting notes arrive: in FIVE observed matches, B scored 7 cycles three times and 9 cycles twice. Those are observations, not promised future odds.',
+      'Scouts watched five more matches. B scored 7 in all five. That makes eight 7-cycle matches and two 9-cycle matches out of ten observed.',
+      'One more reality check: Aggressive’s 70% came from seven good runs out of ten. Safe’s “always 8” came from just three runs, all scoring 8. Neither has been tested against match defense.'
     ],
     scout:[
-      {id:'sample',q:'How many runs gave us that 70%?',answer:'Ten observed aggressive attempts: seven hit the high result.',votes:4,who:'Jordan'},
-      {id:'opps',q:'Were B’s games against similar opponents?',answer:'We haven’t adjusted the opponent numbers for strength of schedule.',votes:3,who:'Casey'},
-      {id:'tie',q:'What happens if we tie?',answer:'A tie does not count as a win in this case.',votes:1,who:'Sam'},
-      {id:'floor',q:'Does aggressive always get at least 4 cycles?',answer:'The brief assumes 4 cycles on the bad outcome. We have no breakdown model yet.',votes:2,who:'Taylor'}
+      {id:'sample',q:'Where did our 70% aggressive estimate come from?',answer:'Seven high scores in ten practice attempts. The attempts were undefended.',votes:4,who:'Jordan'},
+      {id:'opps',q:'How many B matches are behind this scout sheet?',answer:'After the first update we have five observed matches (three 7s, two 9s). After the next update: ten.',votes:3,who:'Casey'},
+      {id:'tie',q:'Does a tie help us?',answer:'In this drill, ties do not count as wins. Real event incentives can be different.',votes:1,who:'Sam'},
+      {id:'floor',q:'Is Safe really guaranteed, or Aggressive always at least 4?',answer:'Those were opening assumptions for the drill. In practice, Safe scored 8 in three tests and Aggressive scored either 4 or 11 in ten tests. No breakdown data.',votes:2,who:'Taylor'},
+      {id:'defense',q:'Have we tried these strategies under defense?',answer:'No. All the tests behind these estimates were without defense.',votes:3,who:'Riley'}
     ],
     challenges:[
       'What if the 70% number came from a tiny sample?',
       'We’re treating one score for B like it’s set in stone.'
     ],
     outs:['What would make our confidence in 70% stronger?','Which fact would actually flip your plan?'],
-    nudges:['Who thinks the other strategy is getting overlooked?','Is everyone making the same assumption about B?','What would you have to learn to change your call?'],
-    blind:'What if the aggressive result isn’t really just two possible scores?'
+    nudges:['Which possible score actually beats 9? No tricks yet.','Would you trust five matches as much as fifty?','What would you verify before treating a practice rate as a guarantee?'],
+    blind:'Does our opening practice drill tell us what happens against real defense?'
   },
   {
     title:'Two-Shot Auto',short:'Two-Shot Auto',tag:'Linked luck',prompt:'Which auto are we running?',
@@ -168,7 +188,7 @@ let view='both',state,toastHandle;
 function seededNum(seed){let v=(Math.imul(seed+43277, 1664525)+1013904223)>>>0;v^=v>>>16;v=Math.imul(v,0x45d9f3b)>>>0;return ((v^(v>>>16))>>>0)/4294967296}
 function current(){return CASES[state.caseIndex]}
 function choices(){const c=current();const switched=c.optionsAfter?.[state.round-1];return switched||c.options}
-function resetCase(i=state?.caseIndex??0){state={caseIndex:i,phase:'call',round:0,pick:null,confidence:75,why:'',calls:[],snapshots:[],questions:[],answers:{},evidenceChoice:{},scoutingLeft:2,votes:{},challenges:[],challengeText:'',challengeTarget:'',replies:{},replyDraft:'',spotlight:null,kudos:{},marked:[],currentQuestion:'',questionWhy:'',switchPoint:''};$('casePicker').value=String(i);render();scrollTop()}
+function resetCase(i=state?.caseIndex??0){state={caseIndex:i,phase:'call',round:0,pick:null,confidence:75,why:'',doubt:'',calls:[],snapshots:[],questions:[],answers:{},evidenceChoice:{},scoutingLeft:2,votes:{},challenges:[],challengeText:'',challengeTarget:'',replies:{},replyDraft:'',spotlight:null,kudos:{},marked:[],currentQuestion:'',questionWhy:'',switchPoint:''};$('casePicker').value=String(i);render();scrollTop()}
 function scrollTop(){window.scrollTo({top:0,behavior:'instant'})}
 function notify(t){const x=$('toast');x.textContent=t;x.classList.add('visible');clearTimeout(toastHandle);toastHandle=setTimeout(()=>x.classList.remove('visible'),2800)}
 function mine(){return state.calls[state.round]}
@@ -176,20 +196,20 @@ function generation(){const opts=choices(),n=opts.length;return OTHER_NAMES.map(
   const t=seededNum(i*17+state.caseIndex*109+state.round*397), ci=Math.min(n-1,Math.floor(t*n));
   return {name:who,pick:opts[ci].id,confidence:55+5*Math.floor(seededNum(i*61+state.round*97+state.caseIndex*31)*9),why:SAMPLE_REASONS[(i+state.round*2+state.caseIndex)%SAMPLE_REASONS.length]};
 })}
-function repliesNow(){const m=mine();const others=generation();if(m)others.push({name:'Alex',pick:m.pick,confidence:m.confidence,why:m.why});return others}
+function repliesNow(){const m=mine();const others=generation();if(m)others.push({name:'Alex',pick:m.pick,confidence:m.confidence,why:m.why,doubt:m.doubt});return others}
 function snap(){return state.snapshots[state.round]||repliesNow()}
-function sampleQuestions(){const c=current();const rotation=state.round%c.scout.length;return [c.scout[rotation],c.scout[(rotation+1)%c.scout.length],c.scout[(rotation+2)%c.scout.length]].map((q,i)=>({...q,id:`${state.round}-seed-${q.id}`,round:state.round,own:false,votes:Math.max(1,q.votes-i)}))}
+function sampleQuestions(){const c=current();const rotation=state.round%c.scout.length;const cards=state.caseIndex===0&&state.round===1?[c.scout[1],c.scout[3]]:[c.scout[rotation],c.scout[(rotation+1)%c.scout.length],c.scout[(rotation+2)%c.scout.length]];return cards.map((q,i)=>({...q,id:`${state.round}-seed-${q.id}`,round:state.round,own:false,votes:Math.max(1,q.votes-i)}))}
 function questions(){return [...sampleQuestions(),...state.questions.filter(q=>q.round===state.round)]}
 function challenges(){const c=current();const original=c.challenges.map((t,i)=>({id:`${state.round}-seed-ch-${i}`,round:state.round,text:t,who:["Jordan","Casey"][i],target:i===0?'The first plan':'The other plan',own:false}));return [...original,...state.challenges.filter(ch=>ch.round===state.round)]}
-function topSteps(){const labels=['Make the call','Show the room','Ask scouting','Challenge','New intel'];const phases=['call','discuss','scout','challenge','intel'];const at=phases.indexOf(state.phase);$('stepper').innerHTML=labels.map((x,i)=>`<div class="step ${state.phase==='wrap'?'done':i===at?'active':i<at?'done':''}">${x}</div>`).join('')}
+function topSteps(){const first=state.caseIndex===0;let labels=['Make the call','See the room','Ask scouting','Challenge','New intel'],phases=['call','discuss','scout','challenge','intel'];if(first&&state.round===0){labels=['Make the call','Talk it through','New intel'];phases=['call','discuss','intel']}else if(first&&state.round===1){labels=['Make the call','Discuss','Ask scouting','New intel'];phases=['call','discuss','scout','intel']}else if(first&&state.round>=current().intel.length){labels=['Final call','Discuss','Wrap up'];phases=['call','discuss','wrap']}const at=phases.indexOf(state.phase);$('stepper').innerHTML=labels.map((x,i)=>`<div class="step ${state.phase==='wrap'?'done':i===at?'active':i<at?'done':''}">${x}</div>`).join('')}
 function caseFacts(){const c=current();const present=c.intel.slice(0,state.round);if(state.phase==='intel'&&c.intel[state.round])present.push(c.intel[state.round]);const learned=[...new Set(Object.values(state.answers).filter(a=>a.id!=='unknown').map(a=>a.text))];return present.map((t,i)=>`<div class="intel-note"><strong>New intel ${i+1}</strong>${esc(t)}</div>`).join('')+(learned.length?`<div class="intel-note" style="border-left-color:#469c86;background:#f2faf6"><strong>From the scouting desk</strong>${learned.map(esc).join('<hr style="border:0;border-top:1px solid #dae6dd">')}</div>`:'')}
-function scenario(){const c=current();const opts=choices();return `<div class="scenario"><div class="scenario-top"><span class="eyebrow" style="color:#8c1520">THE CASE FILE</span><span class="roundchip">CALL ${state.round+1}</span></div><p class="summary">${esc(c.setup)}</p><div class="options-row">${opts.map(o=>`<div class="option-info"><strong>${esc(o.label)}</strong><span>${esc(o.detail)}</span></div>`).join('')}</div>${state.round||state.phase==='intel'||Object.keys(state.answers).length?`<div class="intel-list">${caseFacts()}</div>`:''}</div>`}
+function scenario(){const c=current();const opts=choices();const intro=state.caseIndex!==0?'':state.round===0?'<div class="training-note"><strong>Warm-up · made-up odds, on purpose</strong>For this call, treat the numbers as the rules. We’ll bring in messy scouting data next. Spot something that feels off? Flag it.</div>':'<div class="training-note"><strong>Now we’re using scouting</strong>The new numbers are observations from a small sample, not guaranteed probabilities. This is where questions start to matter.</div>';return `<div class="scenario"><div class="scenario-top"><span class="eyebrow" style="color:#8c1520">THE CASE FILE</span><span class="roundchip">CALL ${state.round+1}</span></div>${intro}<p class="summary">${esc(state.caseIndex===0&&state.round>0?'Same two plans for A, but now we are looking at scouting instead of fixed practice assumptions. B’s observed scores appear below. More cycles wins; a tie is not a win.':c.setup)}</p><div class="options-row">${opts.map(o=>`<div class="option-info"><strong>${esc(o.label)}</strong><span>${esc(o.detail)}</span></div>`).join('')}</div>${state.round||state.phase==='intel'||Object.keys(state.answers).length?`<div class="intel-list">${caseFacts()}</div>`:''}</div>`}
 function hosthead(){const c=current();return `<div class="hosthead"><div class="eyebrow">CASE ${state.caseIndex+1} / 5 · ${esc(c.tag)}</div><h2>${esc(c.title)}</h2><p>${esc(c.prompt)} &nbsp;·&nbsp; Round ${state.round+1}</p></div>`}
 function moderator(actionLabel,action,description,disabled=false,other=''){
   const hints={
     call:'Give everyone space to decide alone. Don’t show votes until the room is ready.',
-    discuss:'Ask a student on each side to explain their thinking. Don’t announce a winner.',
-    scout:'The room has TWO scouting reveals for this case. Pick questions worth spending them on. “We don’t know” is a valid response.',
+    discuss:state.caseIndex===0&&state.round===1?'The toy-model warm-up is over. Before offering prompts ask: Which number on the scout sheet would you check first, and why?':'Ask a student on each side to explain their thinking. Don’t announce a winner.',
+    scout:state.caseIndex===0&&state.round===1?'First time asking scouting: help students phrase a specific question. Let them say why it matters. If nobody knows, that’s an honest answer.':'The room has TWO scouting reveals for this case. Pick questions worth spending them on. “We don’t know” is a valid response.',
     challenge:'Spotlight a challenge, let someone respond, then ask what they would actually do.',
     intel:'Let the new fact land. Don’t interpret it—send everyone back to make the call.',
     wrap:'Celebrate strong questions and thoughtful updates. No official answer is shown.'
@@ -200,16 +220,19 @@ function renderHost(){const c=current();let h=hosthead()+`<div class="hostinner"
   switch(state.phase){
     case 'call':{
       const m=mine();h+=`<section><div class="sectionrow"><h3>${state.round===0?'Make the call.':'Still the same call?'}</h3><span class="pill ${m?'green':''}">${m?'9 / 9 in the demo':'8 / 9 in the demo'}</span></div><p class="subtitle">Everyone decides on their own phone first. No peeking at the room.</p><div class="prompt-card"><b>${esc(c.prompt)}</b><p style="margin:6px 0 0;color:#765d3d;font-size:12px">Choose a plan, say how sure you are, and give your reason if you want.</p></div></section>`;
-      h+=moderator('Show the room','show-room','Ready to hear the arguments?',!m);break;
+      h+=state.caseIndex===0&&state.round===0?`<div class="warmup-next"><div class="eyebrow">Warm-up · just one decision</div><h3>Get everyone’s first call.</h3><p>Don’t challenge the stats yet. Hear who thinks each plan can beat 9, then show the group’s votes.</p><button class="btn red" data-action="show-room" ${!m?'disabled':''}>See where we landed →</button></div>`:moderator('Show the room','show-room','Ready to hear the arguments?',!m);break;
     }
     case 'discuss':{
-      h+=`<section><div class="sectionrow"><h3>Here’s where we stand.</h3><span class="pill green">9 / 9 answered</span></div>${votesBoard()}${roster()}<div class="discussion-cue"><strong>Get the debate going</strong>${esc(c.nudges[state.round%c.nudges.length])}</div></section>`;
-      h+=moderator('Open scouting','open-scout','What do we still need to know?',false);break;
+      h+=`<section><div class="sectionrow"><h3>Here’s where we stand.</h3><span class="pill green">9 / 9 answered</span></div>${votesBoard()}${roster()}<div class="discussion-cue"><strong>${state.caseIndex===0&&state.round===0?'Just talk through the scores':'Get the debate going'}</strong>${esc(c.nudges[state.round%c.nudges.length])}</div></section>`;
+      if(state.caseIndex===0&&state.round===0)h+=`<div class="warmup-next"><div class="eyebrow">Warm-up complete · now it gets real</div><h3>Nice. Here comes the actual scouting.</h3><p>No research task yet. Let them compare their calls, then introduce one new piece of evidence.</p><button class="btn red" data-action="drop-intel">Show the scout sheet →</button></div>`;
+      else if(state.caseIndex===0&&state.round===1){h+=`<div class="coach-note"><strong>🎙 The moderator joins now</strong>Before giving any question examples, ask the room: “What’s one number you’d want to check before trusting this plan?” Let students try, then open the scouting desk.</div>`;h+=moderator('Open the scouting desk','open-scout','Time for your first scouting question.');}
+      else if(state.caseIndex===0&&state.round>=c.intel.length)h+=moderator('Wrap the case','wrap','One final debate, then look at how opinions shifted.');
+      else h+=moderator('Open scouting','open-scout','What do we still need to know?',false);break;
     }
     case 'scout':{
-      const q=questions();h+=`<section><div class="sectionrow"><h3>Which question is worth it?</h3><span class="pill orange">${state.scoutingLeft} scouting ${state.scoutingLeft===1?'request':'requests'} left</span></div><p class="subtitle">Everyone can suggest a question. The room votes on what matters. The moderator chooses what to check.</p>`;
+      const q=questions();h+=`<section><div class="sectionrow"><h3>Which question is worth it?</h3><span class="pill orange">${state.scoutingLeft} scouting ${state.scoutingLeft===1?'request':'requests'} left</span></div><p class="subtitle">Everyone can suggest a question. The room votes on what matters. The moderator chooses what to check.</p>${state.caseIndex===0&&state.round===1?'<div class="coach-note"><strong>First scouting round</strong>We’re not asking students to doubt everything. Ask them to pick one specific claim they want to verify and tell us why it might affect the call. Start with their own ideas; starter prompts are available on phones if needed.</div>':''}`;
       h+=q.map(quest=>{const answered=state.answers[quest.id];const chosen=state.evidenceChoice[quest.id]??(quest.own?'unknown':(current().scout.find(x=>quest.id.endsWith(x.id))?.id??'unknown'));return `<div class="question-card"><div class="qtop"><div><div class="qname">${esc(quest.who)} asked · ${esc(quest.votes+(state.votes[state.round]===quest.id?1:0))} votes</div><p>${esc(quest.q)}</p>${quest.why?`<div class="why">Why: ${esc(quest.why)}</div>`:''}${quest.switchPoint?`<div class="why">Would flip if: ${esc(quest.switchPoint)}</div>`:''}</div>${quest.own?'<span class="little-tag you">YOU</span>':''}</div>${answered?`<div class="fact-result ${answered.id==='unknown'?'no-answer':''}"><strong>${answered.id==='unknown'?'SCOUTING DOESN’T KNOW':'SCOUTING REPORT'}</strong>${esc(answered.text)}</div>`:`<div class="qactions"><select data-assign-evidence="${esc(quest.id)}" aria-label="Select verified scouting answer for ${esc(quest.q)}"><option value="unknown" ${chosen==='unknown'?'selected':''}>We don’t know</option>${c.scout.map(card=>`<option value="${card.id}" ${chosen===card.id?'selected':''}>${esc(card.q)}</option>`).join('')}</select><button class="btn small dark" data-action="answer-scout" data-id="${esc(quest.id)}" ${state.scoutingLeft===0?'disabled':''}>Ask scouting</button></div>`}</div>`}).join('')+`</section>`;
-      h+=moderator('Take it to debate','open-challenge','What did we learn? What’s still shaky?',false);break;
+      h+=state.caseIndex===0&&state.round===1?moderator('Get the next update','drop-intel','First scouting trip complete. Save challenges for the next round.'):moderator('Take it to debate','open-challenge','What did we learn? What’s still shaky?',false);break;
     }
     case 'challenge':{
       h+=`<section><div class="sectionrow"><h3>Find the weak spot.</h3><span class="pill">One challenge each</span></div><p class="subtitle">Not “I disagree.” A real assumption, a counterexample, or a question that could flip the plan.</p>`;
@@ -230,16 +253,16 @@ function renderHost(){const c=current();let h=hosthead()+`<div class="hostinner"
   $('host').innerHTML=h+'</div>';
 }
 function votesBoard(){const rs=snap(),opts=choices();return `${opts.map((o,i)=>{const count=rs.filter(r=>r.pick===o.id).length;return `<div class="voteRow"><strong>${esc(o.label)}</strong><div class="voteTrack"><div class="voteFill ${i===1?'secondary':''}" style="width:${(count/rs.length*100).toFixed(1)}%"></div></div><b>${Math.round(count/rs.length*100)}%</b></div>`}).join('')}<div class="minor" style="margin-top:5px">Average confidence ${Math.round(rs.reduce((s,r)=>s+r.confidence,0)/rs.length)}% · confidence is NOT chance of winning.</div>`}
-function roster(){return `<div class="roster">${snap().map(r=>{const opt=choices().find(o=>o.id===r.pick);return `<div class="person ${r.name==='Alex'?'mine':''}"><div class="name"><span class="initial">${esc(r.name[0])}</span>${esc(r.name)}</div><div class="decision"><b>${esc(opt?.label||r.pick)}</b> · ${r.confidence}% sure</div>${r.why?`<div class="why">“${esc(r.why)}”</div>`:''}</div>`}).join('')}</div>`}
+function roster(){return `<div class="roster">${snap().map(r=>{const opt=choices().find(o=>o.id===r.pick);return `<div class="person ${r.name==='Alex'?'mine':''}"><div class="name"><span class="initial">${esc(r.name[0])}</span>${esc(r.name)}</div><div class="decision"><b>${esc(opt?.label||r.pick)}</b> · ${r.confidence}% sure</div>${r.why?`<div class="why">“${esc(r.why)}”</div>`:''}${r.doubt?`<div class="doubt">⚑ ${esc(r.doubt)}</div>`:''}</div>`}).join('')}</div>`}
 function wrapBoard(){const s=state.snapshots;let entries=s.map((snapshot,i)=>{const optForRound=i===state.round?choices():(current().optionsAfter?.[i-1]||current().options);return {round:i,parts:optForRound.map(opt=>({label:opt.label,count:snapshot.filter(x=>x.pick===opt.id).length})),my:state.calls[i]};});return `<div class="timeline">${entries.map(entry=>`<div class="timelineEntry"><div class="mini">CALL ${entry.round+1}</div><strong>${entry.parts.map(p=>`${p.label} ${p.count}/9`).join(' · ')}</strong><p>Alex: ${esc(entry.my?.pick||'—')} · ${entry.my?.confidence??'—'}% sure</p></div>`).join('')}</div><div class="statbar" style="margin-top:13px"><div class="metric"><strong>${s.length}</strong><span>times the room voted</span></div><div class="metric"><strong>${Object.keys(state.answers).length}</strong><span>scouting answers</span></div><div class="metric"><strong>${Object.keys(state.kudos).length}</strong><span>good catches</span></div></div><p class="subtitle" style="margin:12px 0 0">No correct call is revealed. Revisit the case in Test if you want the math.</p>`}
 function phoneStage(){const c=current();const m=mine();let inner=`<div class="eyebrow">CASE ${state.caseIndex+1} / 5 · ROUND ${state.round+1}</div>`;
   if(state.phase==='call'){
-    inner+=`<h2>${state.round?'Still the same call?':esc(c.prompt)}</h2><p class="muted">${state.round?'New evidence, fresh decision.':'Make your call before you see anyone else’s.'}</p><div class="case-tiny">${esc(c.setup)}</div>${state.round?`<div class="prompt-card" style="margin:12px 0"><div class="eyebrow">New intel so far</div>${c.intel.slice(0,state.round).map(t=>`<p>${esc(t)}</p>`).join('')}</div>`:''}`;
+    inner+=`<h2>${state.round?'Still the same call?':esc(c.prompt)}</h2><p class="muted">${state.round?'New evidence, fresh decision.':state.caseIndex===0?'Start simple: use the numbers here. The messy scouting comes next.':'Make your call before you see anyone else’s.'}</p><div class="case-tiny">${esc(state.caseIndex===0&&state.round>0?'Same two plans for A. Now we are using actual scouting observations about B (see below).':c.setup)}</div>${state.round?`<div class="prompt-card" style="margin:12px 0"><div class="eyebrow">New intel so far</div>${c.intel.slice(0,state.round).map(t=>`<p>${esc(t)}</p>`).join('')}</div>`:''}`;
     if(m){
       const name=choices().find(o=>o.id===m.pick)?.label||m.pick;
-      inner+=`<div class="success-card"><strong>✓ Locked in</strong>${esc(name)} · ${m.confidence}% confident${m.why?`<div style="margin-top:7px">“${esc(m.why)}”</div>`:''}</div><p class="form-note">You can edit until the moderator shows the room.</p><button class="btn cream full" style="margin-top:12px" data-action="edit-call">Change my call</button>`;
+      inner+=`<div class="success-card"><strong>✓ Locked in</strong>${esc(name)} · ${m.confidence}% confident${m.why?`<div style="margin-top:7px">“${esc(m.why)}”</div>`:''}${m.doubt?`<div style="margin-top:7px">⚑ ${esc(m.doubt)}</div>`:''}</div><p class="form-note">You can edit until the moderator shows the room.</p><button class="btn cream full" style="margin-top:12px" data-action="edit-call">Change my call</button>`;
     }else{
-      inner+=`<div class="phone-options" role="group" aria-label="Choose a strategy">${choices().map(o=>`<button class="radio-button ${state.pick===o.id?'selected':''}" data-action="select-plan" data-id="${o.id}" aria-pressed="${state.pick===o.id}"><span>${esc(o.label)}</span><span class="radio-dot"></span></button>`).join('')}</div><div class="form-row"><div class="rangeheads"><label for="confidence">Confidence</label><span id="confidenceValue">${state.confidence}%</span></div><input type="range" id="confidence" data-confidence min="${choices().length===3?35:50}" max="100" step="5" value="${state.confidence}" aria-label="Confidence in chosen strategy"><div class="range-ends"><span>${choices().length===3?'35%':'50%'} · It’s a toss-up</span><span>100% · Certain</span></div><p class="form-note">How sure are you this is the <b>best call</b>? Not your chance of winning.</p></div><div class="form-row"><label for="why">Why? <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="why" data-text="why" maxlength="300" placeholder="One sentence is plenty.">${esc(state.why)}</textarea></div><button class="btn red full" data-action="submit-call" ${!state.pick?'disabled':''}>Lock it in →</button>`;
+      inner+=`<div class="phone-options" role="group" aria-label="Choose a strategy">${choices().map(o=>`<button class="radio-button ${state.pick===o.id?'selected':''}" data-action="select-plan" data-id="${o.id}" aria-pressed="${state.pick===o.id}"><div><span>${esc(o.label)}</span><small class="option-detail">${esc(o.detail)}</small></div><span class="radio-dot"></span></button>`).join('')}</div><div class="form-row"><div class="rangeheads"><label for="confidence">Confidence</label><span id="confidenceValue">${state.confidence}%</span></div><input type="range" id="confidence" data-confidence min="${choices().length===3?35:50}" max="100" step="5" value="${state.confidence}" aria-label="Confidence in chosen strategy"><div class="range-ends"><span>${choices().length===3?'35%':'50%'} · It’s a toss-up</span><span>100% · Certain</span></div><p class="form-note">How sure are you this is the <b>best call</b>? Not your chance of winning.</p></div><div class="form-row"><label for="why">Why? <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="why" data-text="why" maxlength="300" placeholder="One sentence is plenty.">${esc(state.why)}</textarea></div>${state.caseIndex===0&&state.round===0?`<details class="flag-details"><summary>Something about this setup feels off?</summary><p>Fair! This is just a starter model. Flag the assumption you don’t buy; it’ll show up in the discussion after everyone votes.</p><textarea data-text="doubt" maxlength="280" placeholder="I’m not sure a robot could always…">${esc(state.doubt||'')}</textarea></details>`:''}<button class="btn red full" data-action="submit-call" ${!state.pick?'disabled':''}>Lock it in →</button>`;
     }
   }
   if(state.phase==='discuss'){
@@ -247,9 +270,9 @@ function phoneStage(){const c=current();const m=mine();let inner=`<div class="ey
   }
   if(state.phase==='scout'){
     const submitted=state.questions.some(q=>q.round===state.round);
-    inner+=`<h2>What do we need to know?</h2><p>Everyone gets to ask. But the <b>room only gets ${state.scoutingLeft} more ${state.scoutingLeft===1?'request':'requests'}</b>.</p>`;
+      inner+=`<h2>${state.caseIndex===0&&state.round===1?'Your first scouting question.':'What do we need to know?'}</h2><p>${state.caseIndex===0&&state.round===1?'You’ve made two calls. Now pick ONE thing you want to check. There’s no magic question — and “we don’t know” is allowed.':'Everyone gets to ask. But the room only gets '+state.scoutingLeft+' more '+(state.scoutingLeft===1?'request':'requests')+'.'}</p>`;
     if(!submitted){
-      inner+=`<div class="form-row"><label for="askText">Ask scouting</label><textarea maxlength="280" id="askText" data-text="currentQuestion" placeholder="What do we need to find out?">${esc(state.currentQuestion)}</textarea></div><div class="form-row"><label for="questionWhy">Why might it matter? <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="questionWhy" data-text="questionWhy" maxlength="240" placeholder="How could this change our call?">${esc(state.questionWhy)}</textarea></div><div class="form-row"><label for="switchPoint">What would flip your call? <span class="muted" style="font-weight:500">(optional)</span></label><input type="text" id="switchPoint" data-text="switchPoint" maxlength="170" placeholder="I'd switch if…" value="${esc(state.switchPoint)}"></div><button class="btn red full" data-action="submit-question" ${state.currentQuestion.trim()?'':'disabled'}>Send the question →</button>`;
+      inner+=`${state.caseIndex===0&&state.round===1?`<div class="coach-note"><strong>Need an idea? Try one of these.</strong>Start with the source of a number, something that could go wrong, or what might flip the plan. Make the question your own.</div><div class="prompt-starters"><button type="button" data-action="try-prompt" data-question="How many matches is the scouting based on?">Where did that number come from?</button><button type="button" data-action="try-prompt" data-question="Does the safe plan always get 8 cycles in real matches?">Is anything actually guaranteed?</button><button type="button" data-action="try-prompt" data-question="Have we tested the aggressive plan against defense?">What could make the plan fail?</button></div>`:''}<div class="form-row"><label for="askText">Ask scouting</label><textarea maxlength="280" id="askText" data-text="currentQuestion" placeholder="What’s one thing you’d check?">${esc(state.currentQuestion)}</textarea></div><div class="form-row"><label for="questionWhy">Why might it matter? <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="questionWhy" data-text="questionWhy" maxlength="240" placeholder="How could this change our call?">${esc(state.questionWhy)}</textarea></div><div class="form-row"><label for="switchPoint">What would flip your call? <span class="muted" style="font-weight:500">(optional)</span></label><input type="text" id="switchPoint" data-text="switchPoint" maxlength="170" placeholder="I'd switch if…" value="${esc(state.switchPoint)}"></div><button class="btn red full" data-action="submit-question" ${state.currentQuestion.trim()?'':'disabled'}>Send the question →</button>`;
     }else{
       const own=state.questions.find(q=>q.round===state.round);
       inner+=`<div class="success-card"><strong>✓ Question sent</strong>${esc(own.q)}</div>`;
@@ -288,7 +311,7 @@ function action(act,el){
     case 'select-plan':state.pick=el.dataset.id;renderPhone();break;
     case 'submit-call':{
       if(!state.pick||!choices().some(o=>o.id===state.pick))return;
-      state.calls[state.round]={pick:state.pick,confidence:state.confidence,why:short(state.why)};
+      state.calls[state.round]={pick:state.pick,confidence:state.confidence,why:short(state.why),doubt:short(state.doubt)};
       render();notify('Call locked. The room can open it when everyone is ready.');break;
     }
     case 'edit-call':delete state.calls[state.round];render();break;
@@ -297,6 +320,7 @@ function action(act,el){
       state.snapshots[state.round]=repliesNow();state.phase='discuss';render();scrollTop();break;
     }
     case 'open-scout':state.phase='scout';render();scrollTop();break;
+    case 'try-prompt':state.currentQuestion=el.dataset.question||'';if($('askText')){$('askText').value=state.currentQuestion;$('askText').focus();}if(document.querySelector('[data-action="submit-question"]'))document.querySelector('[data-action="submit-question"]').disabled=!state.currentQuestion.trim();break;
     case 'submit-question':{
       if(!state.currentQuestion.trim())return;
       if(state.questions.some(q=>q.round===state.round))return;
@@ -330,7 +354,7 @@ function action(act,el){
     case 'advance-round':{
       const prev=mine();state.round++;
       state.phase='call';state.pick=choices().find(o=>o.id===prev?.pick)?prev?.pick:null;
-      state.confidence=prev?.confidence??70;state.why='';state.spotlight=null;state.replyDraft='';state.currentQuestion='';state.questionWhy='';state.switchPoint='';state.challengeTarget='';state.challengeText='';
+      state.confidence=prev?.confidence??70;state.why='';state.doubt='';state.spotlight=null;state.replyDraft='';state.currentQuestion='';state.questionWhy='';state.switchPoint='';state.challengeTarget='';state.challengeText='';
       render();scrollTop();break;
     }
     case 'wrap':state.phase='wrap';render();scrollTop();break;
