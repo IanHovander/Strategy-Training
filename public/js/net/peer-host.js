@@ -7,6 +7,8 @@ import { getRelay } from './relay.js';
 
 const CODE_LETTERS = 'ABCDEFGHJKMNPQRSTUVWXYZ'; // no I, L or O: too easy to misread
 const SAVED = 'gamenight.host'; // { code, token }: lets a refreshed tab get the same room code back
+const ROOM_SAVED = 'gamenight.room'; // the room and its game (Room.snapshot), so a reloaded tab carries on
+const ROOM_KEEP_MS = 12 * 3600_000; // an older save is from another day: start fresh
 const SILENT_MS = 8000; // phones say something every 2 s; this long without a word means they're gone
 const RECLAIM_MS = 90_000; // how long to wait for our old code after a refresh before taking a new one
 
@@ -23,6 +25,15 @@ export async function hostInBrowser({ onStatus }) {
   const [Peer, qrcode, games] = await Promise.all([loadPeerJS(), loadQrCode(), loadGames()]);
   const relay = getRelay();
   const room = new Room(games);
+  // Phones' browsers (and sometimes computers') reload a tab that's been in the background. Carry on where we were.
+  restoreRoom(room);
+  room.onSave = (json) => {
+    try {
+      localStorage.setItem(ROOM_SAVED, json);
+    } catch {}
+  };
+  addEventListener('pagehide', () => room.save(true));
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && room.save(true));
   const phones = new Set(); // RoomConn for each connected phone
 
   // The big screen itself: connected a moment later, once host.js is listening.
@@ -181,6 +192,15 @@ function newCode() {
 
 function newToken() {
   return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(36)).join('');
+}
+
+function restoreRoom(room) {
+  try {
+    const snap = JSON.parse(localStorage.getItem(ROOM_SAVED));
+    if (snap && Date.now() - snap.savedAt < ROOM_KEEP_MS) room.restore(snap);
+  } catch (err) {
+    console.warn('[host] could not restore the saved room', err);
+  }
 }
 
 function readSaved() {

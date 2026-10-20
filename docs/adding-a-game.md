@@ -170,6 +170,8 @@ export default {
   onJoin(ctx, player) {},       // optional: someone joined mid-game (return false = they wait for the next game)
   onDisconnect(ctx, player) {}, // optional: a phone dropped; don't let the game wait for them forever
   onReconnect(ctx, player) {},  // optional: it came back (it keeps its seat automatically)
+  onRestore(ctx, { savedAt }) {}, // optional: the host restarted and got the game back from its save. ctx.state is
+                                  // as it was; timers are not, so start any you need (nobody is connected yet)
 };
 ```
 

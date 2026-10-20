@@ -21,6 +21,7 @@ const { values: opts } = parseArgs({
     url: { type: 'string' }, // the address phones should use (e.g. a tunnel); shown as the QR code
     open: { type: 'boolean' }, // open the big screen in the browser
     online: { type: 'boolean' }, // start a free Cloudflare tunnel so phones can join over the internet
+    fresh: { type: 'boolean' }, // don't pick up the saved game (the tests use this)
   },
   strict: false,
 });
@@ -64,6 +65,28 @@ const io = new Server(httpServer, {
   perMessageDeflate: { threshold: 512 },
 });
 const room = new Room(games);
+
+// Keep the room on disk, so a restart (npm run dev restarts on every edit) carries on with the same game and seats.
+const SAVE_FILE = path.join(ROOT, `.room-${PORT}.local.json`);
+const SAVE_KEEP_MS = 12 * 3600_000;
+if (!opts.fresh) {
+  try {
+    const snap = JSON.parse(fs.readFileSync(SAVE_FILE, 'utf8'));
+    if (Date.now() - snap.savedAt < SAVE_KEEP_MS && room.restore(snap) && room.screen === 'game') {
+      console.log(`  Picked up the game in progress (${room.game.info.name}). Back to Lobby on the big screen starts fresh.`);
+    }
+  } catch {}
+  let latest = null;
+  let timer = null;
+  room.onSave = (json) => {
+    latest = json;
+    // At most a few writes a second: the latest save wins.
+    timer ??= setTimeout(() => {
+      timer = null;
+      fs.writeFile(SAVE_FILE, latest, () => {});
+    }, 250);
+  };
+}
 
 io.on('connection', (socket) => {
   const auth = socket.handshake.auth ?? {};

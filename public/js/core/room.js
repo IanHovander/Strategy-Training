@@ -55,6 +55,59 @@ export class Room {
     this.lastSyncAt = 0;
     this.vip = undefined; // cached vipId(); undefined = work it out again
     this.warnedBig = false;
+    this.onSave = null; // (json) => keep it somewhere; called whenever the room changes (see snapshot())
+    this.lastSaved = null;
+  }
+
+  // ---------- saving and restoring ----------
+
+  /**
+   * Everything needed to carry on after the host restarts (the big screen's tab reloaded): the players with the
+   * tokens that get their phones their seats back, the lobby, and the game's state. Timers can't be saved; a game's
+   * onRestore(ctx, { savedAt }) hook starts them again.
+   */
+  snapshot() {
+    const g = this.game;
+    return {
+      v: 1,
+      savedAt: Date.now(),
+      players: [...this.players.values()].map(({ id, token, name, color }) => ({ id, token, name, color })),
+      screen: this.screen,
+      selectedGameId: this.selectedGameId,
+      gameCount: this.gameCount,
+      lastResult: this.lastResult,
+      game: g ? { id: g.id, number: g.number, participants: [...g.participants], state: g.state } : null,
+    };
+  }
+
+  /** Pick up from a snapshot(). Everyone starts disconnected; phones reconnect with their tokens. */
+  restore(snap) {
+    if (snap?.v !== 1 || !Array.isArray(snap.players)) return false;
+    for (const p of snap.players) this.players.set(p.id, { ...p, connected: false, socketId: null });
+    if (this.games.has(snap.selectedGameId)) this.selectedGameId = snap.selectedGameId;
+    this.gameCount = snap.gameCount ?? 0;
+    this.lastResult = snap.lastResult ?? null;
+    const info = snap.game && this.games.get(snap.game.id);
+    if (snap.screen === 'game' && info) {
+      const g = new GameSession(this, info, snap.game.participants, snap.game.number);
+      g.state = snap.game.state;
+      this.game = g;
+      this.screen = 'game';
+      g.call('onRestore', { savedAt: snap.savedAt });
+    }
+    this.vip = undefined;
+    this.scheduleSync();
+    return true;
+  }
+
+  /** Hand the snapshot to onSave when something changed (or always, with `force`: the page is going away). */
+  save(force = false) {
+    if (!this.onSave) return;
+    const { savedAt, ...rest } = this.snapshot();
+    const json = JSON.stringify(rest);
+    if (json === this.lastSaved && !force) return;
+    this.lastSaved = json;
+    this.onSave(JSON.stringify({ ...rest, savedAt }));
   }
 
   setJoin(join) {
@@ -311,6 +364,7 @@ export class Room {
     this.syncTimer = null;
     this.lastSyncAt = Date.now();
     guard('sync', () => this.sync());
+    guard('save', () => this.save());
   }
 
   meta() {

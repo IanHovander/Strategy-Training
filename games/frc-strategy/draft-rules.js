@@ -14,6 +14,7 @@
 // State lives in ctx.state.draft.
 import { DRAFT } from './lesson1-draft.js';
 import { matchOdds, playMatch, scoutTeam } from './alliance.js';
+import { startClock, stopClock } from './clock.js';
 
 export const GROUPS = ['Red', 'Blue'];
 const ALL_IN_MS = 2500;
@@ -22,6 +23,10 @@ const d = (ctx) => ctx.state.draft;
 const team = (id) => DRAFT.teams.find((t) => t.id === id) ?? null;
 const groupOf = (ctx, playerId) => d(ctx)?.groups.findIndex((g) => g.members.includes(playerId)) ?? -1;
 const online = (ctx, i) => d(ctx).groups[i].members.some((id) => ctx.player(id)?.connected);
+/** A group with no members at all (say, when one person tries the Showdown alone): the room acts for it. */
+const empty = (ctx, i) => d(ctx).groups[i].members.length === 0;
+/** A group with members, none of them connected right now: the room waits for them. */
+const away = (ctx, i) => !empty(ctx, i) && !online(ctx, i);
 const picked = (ctx) => d(ctx).alliances.flat();
 const turn = (ctx) => DRAFT.order[d(ctx).pick];
 
@@ -56,7 +61,7 @@ export function start(ctx) {
   };
   deal(ctx);
   ctx.state.phase = 'teams';
-  ctx.state.deadline = null;
+  stopClock(ctx);
 }
 
 /** Split the connected players at random into two groups, as even as possible, with random captains. */
@@ -76,11 +81,19 @@ export function onJoin(ctx, player) {
   g.captainId ??= player.id;
 }
 
-/** Nobody left in a group: don't make the room wait for it. */
-export function onDisconnect(ctx) {
+/**
+ * Whether the clock should stand still: nobody is connected, or the group that has to act is all away (it picks
+ * next, or hasn't locked in its match plan). Captains hand over to whoever in the group is connected, so a group
+ * only waits when all of it is gone. The big screen can still move things on.
+ */
+export function waiting(ctx) {
   const s = ctx.state;
-  if (s.phase === 'select' && !online(ctx, turn(ctx))) ctx.timer('allIn', ALL_IN_MS, () => autoPick(ctx));
-  if (s.phase === 'plan') maybePlay(ctx);
+  const draft = d(ctx);
+  if (!draft) return false;
+  if (!ctx.players.some((p) => p.connected)) return true;
+  if (s.phase === 'select') return away(ctx, turn(ctx));
+  if (s.phase === 'plan') return draft.groups.some((_, i) => away(ctx, i) && !draft.locked[i]);
+  return false;
 }
 
 // ---------- moving between phases ----------
@@ -95,21 +108,16 @@ export function next(ctx) {
   if (s.phase === 'result') return seriesOver(ctx) ? finish(ctx) : plan(ctx, d(ctx).match + 1);
 }
 
-function setTimer(ctx, seconds) {
-  ctx.state.deadline = Date.now() + seconds * 1000;
-  ctx.timer('phase', seconds * 1000, () => next(ctx));
-}
-
 function prep(ctx) {
   ctx.state.phase = 'prep';
-  setTimer(ctx, DRAFT.prepSeconds);
+  startClock(ctx, DRAFT.prepSeconds);
 }
 
 function startPick(ctx) {
   ctx.state.phase = 'select';
   ctx.cancelTimer('allIn');
-  setTimer(ctx, DRAFT.pickSeconds[d(ctx).pick]);
-  if (!online(ctx, turn(ctx))) ctx.timer('allIn', ALL_IN_MS, () => autoPick(ctx));
+  startClock(ctx, DRAFT.pickSeconds[d(ctx).pick]);
+  if (empty(ctx, turn(ctx))) ctx.timer('allIn', ALL_IN_MS, () => autoPick(ctx));
 }
 
 /** Time ran out: the top available team on the group's picklist, or else the best seed it hasn't ruled out. */
@@ -153,15 +161,15 @@ function plan(ctx, m) {
   Object.assign(d(ctx), { match: m, locked: [false, false] });
   ctx.state.phase = 'plan';
   ctx.cancelTimer('allIn');
-  setTimer(ctx, DRAFT.planSeconds);
+  startClock(ctx, DRAFT.planSeconds);
   maybePlay(ctx);
 }
 
-/** Both alliances are locked in (a group with nobody connected counts as locked): play after a short pause. */
+/** Both alliances are locked in (a group with no members counts as locked): play after a short pause. */
 function maybePlay(ctx) {
   const draft = d(ctx);
   if (ctx.state.phase !== 'plan') return;
-  const ready = () => draft.locked.every((locked, i) => locked || !online(ctx, i));
+  const ready = () => draft.locked.every((locked, i) => locked || empty(ctx, i));
   if (!ready()) return ctx.cancelTimer('allIn');
   ctx.timer('allIn', ALL_IN_MS, () => ready() && play(ctx));
 }
@@ -170,7 +178,7 @@ function play(ctx) {
   const s = ctx.state;
   const draft = d(ctx);
   if (s.phase !== 'plan') return;
-  ctx.cancelTimer('phase');
+  stopClock(ctx);
   ctx.cancelTimer('allIn');
   const sides = draft.alliances.map((ids, i) => ({ teams: ids.map(team), assign: draft.assign[i] }));
   const odds = matchOdds(sides, { defenderExtra: DRAFT.defenderBreakExtra });
@@ -190,7 +198,6 @@ function play(ctx) {
     odds: { win: odds.win, tie: odds.tie, mean: odds.mean, runs: odds.runs },
   });
   s.phase = 'result';
-  s.deadline = null;
 }
 
 const seriesOver = (ctx) => d(ctx).wins.some((w) => w >= 2) || d(ctx).results.length >= DRAFT.maxMatches;
@@ -200,7 +207,7 @@ function finish(ctx) {
   const [r, b] = draft.wins;
   draft.champion = r > b ? 0 : b > r ? 1 : null;
   ctx.state.phase = 'final';
-  ctx.state.deadline = null;
+  stopClock(ctx);
 }
 
 export function summary(ctx) {

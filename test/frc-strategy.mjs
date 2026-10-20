@@ -10,7 +10,7 @@ import { mean } from '../games/frc-strategy/prob.js';
 
 const PORT = 3198;
 const URL = `http://localhost:${PORT}`;
-const server = spawn(process.execPath, ['server/index.js', '--port', String(PORT)], { stdio: ['ignore', 'pipe', 'inherit'] });
+const server = spawn(process.execPath, ['server/index.js', '--port', String(PORT), '--fresh'], { stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((ok) => server.stdout.on('data', (d) => String(d).includes('Press Ctrl+C') && ok()));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 let failures = 0;

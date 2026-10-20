@@ -23,6 +23,7 @@ export function draftHead(v, lesson, part) {
       <span class="st-step">${label}</span>
       ${(v.phase === 'plan' || v.phase === 'result' || v.phase === 'final') && html`<span class="st-series">${groupBadge(0, `A1 ${v.wins[0]}`)} ${groupBadge(1, `A2 ${v.wins[1]}`)}</span>`}
       <span class="spacer"></span>
+      ${timed && v.paused && html`<span class="st-paused">⏸ Waiting for players</span>`}
       ${timed && v.deadline && html`<span class="timer timer-lg ${v.phase === 'prep' && 'wide'}" data-deadline="${v.deadline}"></span>`}
       ${timed && html`<button class="btn btn-sm secondary" data-action="more">+30s</button>`}
       ${v.phase === 'prep' && nextButton(v, 'Start Selection ▸', 'btn-sm secondary')}

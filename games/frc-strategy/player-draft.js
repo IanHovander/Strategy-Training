@@ -44,6 +44,7 @@ export function draftPhone(main, api) {
       <div class="st-top">
         ${v.group >= 0 && groupBadge(v.group, `${GROUPS[v.group]} · A${v.group + 1}`)}
         <span>${label}</span>
+        ${v.paused && html`<span class="st-paused" title="The clock waits while a group has nobody here">⏸ Paused</span>`}
         ${v.deadline && html`<span class="timer" data-deadline="${v.deadline}"></span>`}
       </div>`;
   }

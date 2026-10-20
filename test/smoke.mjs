@@ -16,7 +16,7 @@ const check = (cond, msg) => {
 
 if (!URL) {
   URL = `http://localhost:${PORT}`;
-  server = spawn(process.execPath, ['server/index.js', '--port', String(PORT)], { stdio: ['ignore', 'pipe', 'inherit'] });
+  server = spawn(process.execPath, ['server/index.js', '--port', String(PORT), '--fresh'], { stdio: ['ignore', 'pipe', 'inherit'] });
   await new Promise((resolve, reject) => {
     server.stdout.on('data', (d) => String(d).includes('Press Ctrl+C') && resolve());
     server.on('exit', (code) => reject(new Error(`server exited (${code})`)));
