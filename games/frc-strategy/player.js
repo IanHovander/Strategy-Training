@@ -1,5 +1,5 @@
 // Phone for Strategy Training. Learn and Test: the case file, the question and its answer controls; after the
-// reveal, your result, how the room answered, the lesson and the "explore" panel. Alliance Selection: player-draft.js.
+// reveal, your result, how the room answered, the lesson and the "explore" panel. Showdown: player-draft.js.
 import { html } from '../../js/ui.js';
 import { LESSONS, lessonById, partById } from './lessons.js';
 import { cleanAnswer, typeOf } from './quiz.js';
@@ -108,7 +108,7 @@ export default function (root, api) {
     return html`
       <div class="st-wait">
         <h1>You're the Leader</h1>
-        <p>Pick what everyone will do, then start. Go in order: Learn, Test, then Alliance Selection.</p>
+        <p>Pick what everyone will do, then start. Go in order: Learn, Test, then the Showdown.</p>
         ${LESSONS.map(
           (l) => html`
             <div class="st-picks">

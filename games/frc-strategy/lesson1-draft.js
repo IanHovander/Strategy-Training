@@ -1,182 +1,56 @@
-// Lesson 1, Part 3: Alliance Selection. The room splits into two teams. Each studies a pool of robots, drafts an
-// alliance of three, then plays the other team in a best of three. The match model is in alliance.js.
+// Lesson 1, Part 3: the Showdown. The room splits into two groups, each running one alliance. Both groups study
+// the same event's teams, build picklists, run alliance selection like at an event (two alliances, serpentine),
+// then play a best of three. The match model is in alliance.js; the rules in draft-rules.js.
 //
-// Each robot has:
-//   name, role          shown on its card
-//   start               the plan it starts each series on: what its scouting report suggests
-//   scout               the scouting report players see: { matches, lines: [[label, value]], note }
-//   cycle, power, climb, defense, dead   its TRUE abilities, which the model uses (see alliance.js)
-//   truth               revealed at the end: how the scouting compared with the truth
-// Most reports are honest. A few small samples flatter their robot, on purpose.
-
-const weak = { cycle: 0.06, power: 0.15 };
-const medium = { cycle: 0.12, power: 0.3 };
-const strong = { cycle: 0.2, power: 0.5 };
+// Each team's TRUE attributes (hidden until the series ends):
+//   mean, spread   points it scores in a match when it works (normal-shaped: mean ± spread)
+//   broken         chance it breaks and scores 0 in a match. Every team has one.
+//   resilience     0–1: how much of its scoring it keeps when defended (1 = defense can't touch it)
+//   defense        0–1: how well it defends. A robot guarded by a defender keeps
+//                  1 − defense × (1 − resilience) of its points.
+//   note           what the reveal says about it
+// What players see is simulated each game from these: ten qualification matches drawn from the true
+// distribution, and scouts' 1–10 estimates of resilience and defense (with scouting error).
 
 export const DRAFT = {
-  field: { cycleValue: 3, crowd: 0.08, climbCapacity: 2 },
+  prepSeconds: 15 * 60, // discussion and picklists before selection
+  // Alliance selection timers, as at an FRC event: 45 s for a first-round pick, 1:30 after that.
+  pickSeconds: [45, 45, 90, 90],
+  // Serpentine with two alliances: Alliance 1, Alliance 2, then Alliance 2, Alliance 1.
+  order: [0, 1, 1, 0],
+  planSeconds: 180, // a backstop: matches play as soon as both alliances lock in
+  maxMatches: 5, // ties are replayed, up to this many matches
+  qualMatches: 10,
+  ratingError: 1.2, // scouts' error on the 1–10 resilience and defense ratings (standard deviation)
   rules: [
-    'Cycles score 3 points each. A climber cycles half the match, then climbs.',
-    'Two robots on the same scoring plan (Cycle or Power Shot) get in each other’s way: each loses 8 points of success.',
-    'Only two robots per alliance fit on the climb.',
-    'A defender guards the other alliance’s most dangerous scorer.',
-    'A robot that breaks down scores nothing that match.',
+    'Each match, every robot either plays offense or defends one robot on the other alliance.',
+    'A defender scores nothing. A defended robot keeps 1 − (defense × (1 − resilience)) of its points: strong defense hurts a fragile robot and barely touches a resilient one.',
+    'Two defenders on one robot both apply.',
+    'Any robot can break in any match and score 0, defenders included (a broken defender defends nobody).',
+    'An alliance’s score is the total of its robots. Best of three; a tie is replayed.',
   ],
-  // Serpentine, like FRC alliance selection: the team that picks second gets two in a row.
-  order: [0, 1, 1, 0, 0, 1],
-  robots: [
-    {
-      id: 'ace',
-      start: 'power',
-      name: 'Ace',
-      role: 'Does everything',
-      scout: { matches: 12, lines: [['Cycles', 'avg 20 (16–24)'], ['Power Shot', '24 of 36 · 14 pts'], ['Climb', '10 of 12 · 15 pts'], ['Defense', 'weak'], ['Broke down', '0 of 12']] },
-      cycle: { n: 8, p: 0.85 },
-      power: { n: 3, p: 0.65, value: 14 },
-      climb: { p: 0.85, value: 15 },
-      defense: weak,
-      dead: 0.04,
-      truth: 'As scouted. Even Ace breaks down about one match in 25.',
-    },
-    {
-      id: 'metronome',
-      start: 'climb',
-      name: 'Metronome',
-      role: 'Never misses a beat',
-      scout: { matches: 12, lines: [['Cycles', 'avg 22 (20–24)'], ['Climb', '12 of 12 · 12 pts'], ['Defense', 'weak'], ['Broke down', '0 of 12']] },
-      cycle: { n: 8, p: 0.92 },
-      climb: { p: 0.95, value: 12 },
-      defense: weak,
-      dead: 0.01,
-      truth: 'As steady as it looked: 92% cycles, 95% climb.',
-    },
-    {
-      id: 'boomer',
-      start: 'power',
-      name: 'Boomer',
-      role: 'Big shots, rough cycles',
-      scout: { matches: 10, lines: [['Cycles', 'avg 12 (6–18)'], ['Power Shot', '18 of 30 · 14 pts'], ['Climb', 'none'], ['Defense', 'weak'], ['Broke down', '1 of 10']] },
-      cycle: { n: 6, p: 0.7 },
-      power: { n: 3, p: 0.6, value: 14 },
-      defense: weak,
-      dead: 0.08,
-      truth: 'Honest numbers: 60% Power Shots, and a breakdown about one match in 12.',
-    },
-    {
-      id: 'comet',
-      start: 'power',
-      name: 'Comet',
-      role: 'Hot start',
-      scout: { matches: 3, lines: [['Cycles', 'avg 17'], ['Power Shot', '8 of 9 · 14 pts'], ['Climb', 'none'], ['Defense', 'weak'], ['Broke down', '0 of 3']], note: 'Only 3 matches scouted, all unguarded.' },
-      cycle: { n: 8, p: 0.7 },
-      power: { n: 3, p: 0.55, value: 14 },
-      defense: weak,
-      dead: 0.1,
-      truth: 'Its real Power Shot rate is 55%, not 89%: three unguarded matches told you very little. It also breaks down one match in 10.',
-    },
-    {
-      id: 'ghost',
-      start: 'power',
-      name: 'Ghost',
-      role: 'Brilliant, when it shows up',
-      scout: { matches: 8, lines: [['Cycles', 'avg 21 when running'], ['Power Shot', '12 of 18 · 14 pts'], ['Climb', '4 of 6 · 15 pts'], ['Defense', 'weak'], ['Broke down', '2 of 8']] },
-      cycle: { n: 8, p: 0.88 },
-      power: { n: 3, p: 0.65, value: 14 },
-      climb: { p: 0.7, value: 15 },
-      defense: weak,
-      dead: 0.25,
-      truth: 'It really does break down one match in four. Over a best of three, that’s a 58% chance it dies at least once.',
-    },
-    {
-      id: 'brick',
-      start: 'climb',
-      name: 'Brick',
-      role: 'Shut-down defender',
-      scout: { matches: 11, lines: [['Cycles', 'avg 14 (10–18)'], ['Climb', '9 of 11 · 12 pts'], ['Defense', 'strong: shooters it guarded fell from 60% to 10%'], ['Broke down', '0 of 11']] },
-      cycle: { n: 8, p: 0.6 },
-      climb: { p: 0.8, value: 12 },
-      defense: strong,
-      dead: 0.02,
-      truth: 'Strong defense, as advertised: it cuts a Power Shot robot’s rate by 50 points and a Cycler’s by 20.',
-    },
-    {
-      id: 'tortoise',
-      start: 'climb',
-      name: 'Tortoise',
-      role: 'Slow and sure',
-      scout: { matches: 12, lines: [['Cycles', 'avg 17 (16–18)'], ['Climb', '12 of 12 · 20 pts'], ['Defense', 'weak'], ['Broke down', '0 of 12']] },
-      cycle: { n: 6, p: 0.95 },
-      climb: { p: 0.95, value: 20 },
-      defense: weak,
-      dead: 0.01,
-      truth: 'Exactly as scouted: the most reliable 20 points on the field. Climbing, it averages 27.',
-    },
-    {
-      id: 'spark',
-      start: 'cycle',
-      name: 'Spark',
-      role: 'Rookie on a roll',
-      scout: { matches: 4, lines: [['Cycles', 'avg 22 (20–24)'], ['Climb', '3 of 4 · 12 pts'], ['Defense', 'weak'], ['Broke down', '0 of 4']], note: 'Rookie team. All 4 matches were on day one, against light defense.' },
-      cycle: { n: 8, p: 0.65 },
-      climb: { p: 0.6, value: 12 },
-      defense: weak,
-      dead: 0.06,
-      truth: 'Day one flattered it. Its real cycle rate is 65% (avg 15), and it climbs 60% of the time.',
-    },
-    {
-      id: 'wall',
-      start: 'cycle',
-      name: 'Wall',
-      role: 'Solid defender',
-      scout: { matches: 9, lines: [['Cycles', 'avg 17 (13–20)'], ['Climb', 'none'], ['Defense', 'medium: guarded shooters fell from 60% to 30%'], ['Broke down', '0 of 9']] },
-      cycle: { n: 8, p: 0.7 },
-      defense: medium,
-      dead: 0.03,
-      truth: 'As scouted: medium defense, cutting a guarded shooter by 30 points.',
-    },
-    {
-      id: 'flash',
-      start: 'power',
-      name: 'Flash',
-      role: 'All or nothing',
-      scout: { matches: 10, lines: [['Cycles', 'avg 8'], ['Power Shot', '22 of 40 · 4 tries a match · 14 pts'], ['Climb', 'none'], ['Defense', 'weak'], ['Broke down', '1 of 10']], note: 'Its matches ranged from 0 to 56 points.' },
-      cycle: { n: 4, p: 0.7 },
-      power: { n: 4, p: 0.55, value: 14 },
-      defense: weak,
-      dead: 0.06,
-      truth: 'The highest average on the field (29 on Power Shots), and the widest spread.',
-    },
-    {
-      id: 'anchor',
-      start: 'climb',
-      name: 'Anchor',
-      role: 'Dependable all-rounder',
-      scout: { matches: 10, lines: [['Cycles', 'avg 19 (16–22)'], ['Climb', '9 of 10 · 15 pts'], ['Defense', 'medium'], ['Broke down', '0 of 10']] },
-      cycle: { n: 8, p: 0.8 },
-      climb: { p: 0.85, value: 15 },
-      defense: medium,
-      dead: 0.03,
-      truth: 'As scouted: steady scoring, a good climb, and decent defense.',
-    },
-    {
-      id: 'lucky',
-      start: 'climb',
-      name: 'Lucky',
-      role: 'Climbs for 20',
-      scout: { matches: 5, lines: [['Cycles', 'avg 18'], ['Power Shot', '8 of 15 · 14 pts'], ['Climb', '4 of 5 · 20 pts'], ['Defense', 'weak'], ['Broke down', '0 of 5']] },
-      cycle: { n: 8, p: 0.75 },
-      power: { n: 3, p: 0.5, value: 14 },
-      climb: { p: 0.5, value: 20 },
-      defense: weak,
-      dead: 0.05,
-      truth: 'The climb is really 50%: 4 of 5 was a lucky streak.',
-    },
+  teams: [
+    { id: 'apex', name: 'Apex', mean: 38, spread: 6, broken: 0.04, resilience: 0.7, defense: 0.3, note: 'The real deal: high scoring, consistent, hard to defend.' },
+    { id: 'metronome', name: 'Metronome', mean: 30, spread: 3, broken: 0.02, resilience: 0.6, defense: 0.2, note: 'Almost exactly 30 every time.' },
+    { id: 'boom', name: 'Boom', mean: 34, spread: 14, broken: 0.08, resilience: 0.4, defense: 0.2, note: 'A high average with a huge spread: 50 one match, 15 the next.' },
+    { id: 'glass', name: 'Glass Cannon', mean: 41, spread: 7, broken: 0.25, resilience: 0.3, defense: 0.1, note: 'The best scorer when it runs, but it breaks one match in four.' },
+    { id: 'brick', name: 'Brick', mean: 14, spread: 5, broken: 0.03, resilience: 0.8, defense: 0.85, note: 'A low scorer and the best defender at the event.' },
+    { id: 'wall', name: 'Wall', mean: 20, spread: 5, broken: 0.03, resilience: 0.7, defense: 0.6, note: 'A decent scorer and a solid defender.' },
+    { id: 'tank', name: 'Tank', mean: 27, spread: 5, broken: 0.04, resilience: 0.95, defense: 0.4, note: 'Defense can’t touch it.' },
+    { id: 'spark', name: 'Spark', mean: 22, spread: 10, broken: 0.1, resilience: 0.4, defense: 0.2, note: 'Streaky: its qualification numbers depend a lot on luck.' },
+    { id: 'eddie', name: 'Steady Eddie', mean: 24, spread: 3, broken: 0.02, resilience: 0.5, defense: 0.3, note: 'Reliable middle of the pack.' },
+    { id: 'gambler', name: 'Gambler', mean: 26, spread: 16, broken: 0.06, resilience: 0.5, defense: 0.2, note: 'Anything from 0 to 55.' },
+    { id: 'turtle', name: 'Turtle', mean: 18, spread: 3, broken: 0.01, resilience: 0.9, defense: 0.3, note: 'Slow, but nothing stops it.' },
+    { id: 'feather', name: 'Feather', mean: 33, spread: 5, broken: 0.05, resilience: 0.1, defense: 0.1, note: 'Scores a lot, folds under any defense.' },
+    { id: 'pest', name: 'Pest', mean: 21, spread: 6, broken: 0.05, resilience: 0.6, defense: 0.55, note: 'Scores a little, defends well.' },
+    { id: 'ghost', name: 'Ghost', mean: 31, spread: 6, broken: 0.3, resilience: 0.5, defense: 0.2, note: 'Good when it shows up. It breaks almost one match in three.' },
+    { id: 'rookie', name: 'Rookie', mean: 12, spread: 6, broken: 0.1, resilience: 0.4, defense: 0.25, note: 'First-year team, still finding its feet.' },
+    { id: 'middler', name: 'Middler', mean: 23, spread: 7, broken: 0.05, resilience: 0.5, defense: 0.35, note: 'Average at everything.' },
   ],
-  // Shown at the end, after the truth about each robot.
   lessons: [
-    'Three matches scouted is barely scouted. Small samples flatter (and sometimes bury) robots.',
-    'A breakdown chance compounds: a robot that dies 1 match in 4 probably dies once in a best of three.',
-    'Picks work together: two climbers fill the climb, two shooters crowd each other, and a defender is only worth it against shooters.',
-    'In a short series, consistency is worth more than a higher average.',
+    'Ten matches is a small sample: some teams’ qualification numbers were luckier (or unluckier) than the robot.',
+    'Every robot can break. A one-in-four breakdown chance usually costs you a match in a best of three.',
+    'Defense pays only against a robot that scores a lot and folds under pressure. Against a resilient robot you give away your own points.',
+    'Consistency matters most in a short series: a steady 30 often beats a wild 34.',
   ],
 };

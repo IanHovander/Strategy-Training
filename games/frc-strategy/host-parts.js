@@ -1,4 +1,4 @@
-// Big-screen pieces shared by Learn/Test (host.js) and Alliance Selection (host-draft.js).
+// Big-screen pieces shared by Learn/Test (host.js) and the Showdown (host-draft.js).
 import { html } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
 

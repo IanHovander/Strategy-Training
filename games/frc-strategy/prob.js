@@ -6,8 +6,8 @@ const sum = (a, b, test) => a.reduce((s, [v, p]) => s + p * b.reduce((t, [w, q])
 export const winChance = (a, b) => sum(a, b, (v, w) => v > w);
 export const tieChance = (a, b) => sum(a, b, (v, w) => v === w);
 
-export function sample(d) {
-  let r = Math.random();
+export function sample(d, rand = Math.random) {
+  let r = rand();
   for (const [v, p] of d) {
     r -= p;
     if (r < 0) return v;

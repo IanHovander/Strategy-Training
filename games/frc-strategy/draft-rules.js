@@ -1,171 +1,168 @@
-// Alliance Selection: the rules for Part 3 (rules.js hands over to these when the part's kind is 'draft').
+// The Showdown: the rules for Part 3 (rules.js hands over to these when the part's kind is 'draft').
 //
-// The room splits into two teams, each with a captain. Phases:
+// The room splits at random into two groups. Each runs one alliance and has a student captain.
 //   teams    the split (the big screen or leader can shuffle)
-//   scout    everyone studies the robot pool and stars the robots they want (only their team sees the stars)
-//   draft    serpentine picks; the captain picks, teammates advise, the other team guesses the pick
-//   plan     the captain sets each robot's plan, teammates suggest, everyone predicts the other side's defenders
-//   result   the match plays; best of three
-//   final    the series winner, and what the scouting hid
+//   prep     15 minutes to study the event's teams and build the group's picklist (shared within the group,
+//            hidden from the other)
+//   select   alliance selection: the top two seeds captain Alliances 1 and 2 and pick serpentine (1, 2, 2, 1),
+//            45 s per first-round pick and 1:30 after that. The group captain makes the invitation.
+//   plan     each group assigns every robot to offense or to defend one opposing robot; the captain locks in
+//   result   the match is played from the robots' true attributes; a tie is replayed
+//   final    after a two-match winner: the true attributes, and each match's win chance given the assignments
 //
-// State lives in ctx.state.draft; scores in ctx.state.scores like every part.
+// State lives in ctx.state.draft.
 import { DRAFT } from './lesson1-draft.js';
-import { matchOdds, playMatch, robotPlans } from './alliance.js';
+import { matchOdds, playMatch, scoutTeam } from './alliance.js';
 
-const SCOUT_SECONDS = 180;
-const PICK_SECONDS = 60;
-const PLAN_SECONDS = 120;
-const ALL_IN_MS = 3000;
-const GOOD_CALL = 20; // a correct guess of their pick, a correct defender count
-const MATCH_POINTS = 60; // × your alliance's win chance: points follow the decision more than the dice
-const MATCH_WIN = 30;
-const SERIES_WIN = 60;
-const MAX_MATCHES = 5; // ties don't count, so a series could run long
+export const GROUPS = ['Red', 'Blue'];
+const ALL_IN_MS = 2500;
 
-export const TEAMS = [
-  { id: 'red', name: 'Red' },
-  { id: 'blue', name: 'Blue' },
-];
-
-const robot = (id) => DRAFT.robots.find((r) => r.id === id) ?? null;
 const d = (ctx) => ctx.state.draft;
+const team = (id) => DRAFT.teams.find((t) => t.id === id) ?? null;
+const groupOf = (ctx, playerId) => d(ctx)?.groups.findIndex((g) => g.members.includes(playerId)) ?? -1;
+const online = (ctx, i) => d(ctx).groups[i].members.some((id) => ctx.player(id)?.connected);
+const picked = (ctx) => d(ctx).alliances.flat();
+const turn = (ctx) => DRAFT.order[d(ctx).pick];
 
-/** Who's on which team: index 0 (Red), 1 (Blue), or -1. */
-const teamIndex = (ctx, playerId) => d(ctx)?.teams.findIndex((t) => t.members.includes(playerId)) ?? -1;
-
-/** The captain: the chosen one while connected, otherwise the first connected teammate. */
+/** The group's captain: the chosen one while connected, otherwise the first connected member. */
 export function captainOf(ctx, i) {
-  const team = d(ctx).teams[i];
-  const online = (id) => ctx.player(id)?.connected;
-  if (online(team.captainId)) return team.captainId;
-  return team.members.find(online) ?? team.captainId;
+  const g = d(ctx).groups[i];
+  if (ctx.player(g.captainId)?.connected) return g.captainId;
+  return g.members.find((id) => ctx.player(id)?.connected) ?? g.captainId;
 }
 
-/** Which team picks now (draft phase). */
-const turn = (ctx) => (d(ctx).first + DRAFT.order[d(ctx).pick]) % 2;
-const alliance = (ctx, i) => d(ctx).picks.filter((p) => p.team === i).map((p) => p.robotId);
-
 export function start(ctx) {
+  const rand = Math.random;
+  // Simulate this event's qualifications: ten matches per team, scouts' ratings, and a ranking from the results.
+  const scouted = DRAFT.teams.map((t) => ({ id: t.id, ...scoutTeam(t, DRAFT, rand) }));
+  const avg = (s) => s.scores.reduce((a, b) => a + b, 0) / s.scores.length;
+  const rankScore = new Map(scouted.map((s) => [s.id, avg(s) + 4 * (rand() - 0.5)])); // ranking points are noisy too
+  scouted.sort((a, b) => rankScore.get(b.id) - rankScore.get(a.id));
+  const event = scouted.map((s, i) => ({ ...s, seed: i + 1 }));
   ctx.state.draft = {
-    teams: [],
-    first: Math.random() < 0.5 ? 0 : 1, // the coin flip for first pick
-    stars: {}, // playerId -> [robotId]: advice, seen only by their team
+    groups: [],
+    event,
+    picklists: [{ pick: [], dnp: [] }, { pick: [], dnp: [] }],
+    alliances: [[event[0].id], [event[1].id]], // the top two seeds captain the alliances
     pick: 0,
-    picks: [], // [{ team, robotId, auto }]
-    guesses: {}, // playerId -> robotId, for the current pick (the other team guesses)
-    match: 0,
-    lineups: [{}, {}], // per team: robotId -> plan, for the current match
+    lastPick: null,
+    assign: [{}, {}],
     locked: [false, false],
-    suggestions: {}, // playerId -> { robotId: plan }
-    predictions: {}, // playerId -> how many defenders the other side will play
-    results: [], // per match
+    match: 0,
+    results: [],
     wins: [0, 0],
+    champion: null,
   };
   deal(ctx);
   ctx.state.phase = 'teams';
+  ctx.state.deadline = null;
 }
 
-/** Split the connected players into two teams, as even as possible, and choose captains at random. */
+/** Split the connected players at random into two groups, as even as possible, with random captains. */
 function deal(ctx) {
   const ids = ctx.shuffle(ctx.players.filter((p) => p.connected).map((p) => p.id));
-  d(ctx).teams = TEAMS.map((t, i) => {
+  d(ctx).groups = GROUPS.map((name, i) => {
     const members = ids.filter((_, k) => k % 2 === i);
-    return { ...t, members, captainId: members[0] ?? null };
+    return { name, members, captainId: members[0] ?? null };
   });
 }
 
-/** A late arrival joins the smaller team (and captains it if it was empty). */
 export function onJoin(ctx, player) {
   const draft = d(ctx);
-  if (!draft || teamIndex(ctx, player.id) >= 0) return;
-  const team = draft.teams[0].members.length <= draft.teams[1].members.length ? draft.teams[0] : draft.teams[1];
-  team.members.push(player.id);
-  team.captainId ??= player.id;
+  if (!draft || groupOf(ctx, player.id) >= 0) return;
+  const g = draft.groups[0].members.length <= draft.groups[1].members.length ? draft.groups[0] : draft.groups[1];
+  g.members.push(player.id);
+  g.captainId ??= player.id;
 }
 
-/** A captain who dropped hands over to a teammate; don't wait on a team with nobody left. */
+/** Nobody left in a group: don't make the room wait for it. */
 export function onDisconnect(ctx) {
-  if (d(ctx) && ctx.state.phase === 'plan') maybePlay(ctx);
+  const s = ctx.state;
+  if (s.phase === 'select' && !online(ctx, turn(ctx))) ctx.timer('allIn', ALL_IN_MS, () => autoPick(ctx));
+  if (s.phase === 'plan') maybePlay(ctx);
 }
 
 // ---------- moving between phases ----------
 
+/** The big screen's (or leader's) next button, and every phase timer running out. */
 export function next(ctx) {
   const s = ctx.state;
-  if (s.phase === 'teams') return scout(ctx);
-  if (s.phase === 'scout') return startPick(ctx);
-  if (s.phase === 'draft') return autoPick(ctx);
+  if (s.phase === 'teams') return prep(ctx);
+  if (s.phase === 'prep') return startPick(ctx);
+  if (s.phase === 'select') return autoPick(ctx);
   if (s.phase === 'plan') return play(ctx);
-  if (s.phase === 'result') {
-    const done = d(ctx).wins.some((w) => w >= 2) || d(ctx).match + 1 >= MAX_MATCHES;
-    if (done) return finishSeries(ctx);
-    return plan(ctx, d(ctx).match + 1);
-  }
+  if (s.phase === 'result') return seriesOver(ctx) ? finish(ctx) : plan(ctx, d(ctx).match + 1);
 }
 
-function scout(ctx) {
-  ctx.state.phase = 'scout';
-  ctx.state.deadline = Date.now() + SCOUT_SECONDS * 1000;
-  ctx.timer('phase', SCOUT_SECONDS * 1000, () => startPick(ctx));
+function setTimer(ctx, seconds) {
+  ctx.state.deadline = Date.now() + seconds * 1000;
+  ctx.timer('phase', seconds * 1000, () => next(ctx));
+}
+
+function prep(ctx) {
+  ctx.state.phase = 'prep';
+  setTimer(ctx, DRAFT.prepSeconds);
 }
 
 function startPick(ctx) {
-  const s = ctx.state;
-  s.phase = 'draft';
-  d(ctx).guesses = {};
-  s.deadline = Date.now() + PICK_SECONDS * 1000;
-  ctx.timer('phase', PICK_SECONDS * 1000, () => autoPick(ctx));
+  ctx.state.phase = 'select';
+  ctx.cancelTimer('allIn');
+  setTimer(ctx, DRAFT.pickSeconds[d(ctx).pick]);
+  if (!online(ctx, turn(ctx))) ctx.timer('allIn', ALL_IN_MS, () => autoPick(ctx));
 }
 
-/** Time's up (or the big screen moved on): the team's most-starred robot, else the best one left. */
+/** Time ran out: the top available team on the group's picklist, or else the best seed it hasn't ruled out. */
 function autoPick(ctx) {
-  const i = turn(ctx);
-  const left = DRAFT.robots.filter((r) => !d(ctx).picks.some((p) => p.robotId === r.id));
-  const stars = (r) => d(ctx).teams[i].members.filter((id) => d(ctx).stars[id]?.includes(r.id)).length;
-  const choice = [...left].sort((a, b) => stars(b) - stars(a) || left.indexOf(a) - left.indexOf(b))[0];
-  takePick(ctx, choice.id, true);
-}
-
-function takePick(ctx, robotId, auto = false) {
+  if (ctx.state.phase !== 'select') return;
   const draft = d(ctx);
   const i = turn(ctx);
-  draft.picks.push({ team: i, robotId, auto });
-  // the other team's good guesses
-  for (const id of draft.teams[1 - i].members) {
-    if (draft.guesses[id] === robotId) {
-      ctx.state.scores[id] = (ctx.state.scores[id] ?? 0) + GOOD_CALL;
-      draft.calls = { ...(draft.calls ?? {}), [id]: (draft.calls?.[id] ?? 0) + 1 };
-    }
+  const available = draft.event.filter((t) => canPick(ctx, i, t.id)).map((t) => t.id);
+  const list = draft.picklists[i];
+  const choice = list.pick.find((id) => available.includes(id)) ?? available.find((id) => !list.dnp.includes(id)) ?? available[0];
+  invite(ctx, choice, true);
+}
+
+/**
+ * Can alliance i pick this team now? Not if it's already on an alliance, except that Alliance 1's first pick may
+ * take Alliance 2's captain (as at an event; the next seed then captains Alliance 2).
+ */
+function canPick(ctx, i, teamId) {
+  const draft = d(ctx);
+  if (!team(teamId)) return false;
+  if (!picked(ctx).includes(teamId)) return true;
+  return i === 0 && draft.pick === 0 && teamId === draft.alliances[1][0];
+}
+
+function invite(ctx, teamId, auto = false) {
+  const draft = d(ctx);
+  const i = turn(ctx);
+  draft.alliances[i].push(teamId);
+  if (i === 0 && draft.pick === 0 && teamId === draft.alliances[1][0]) {
+    // Alliance 2's captain joined Alliance 1: the best remaining seed captains Alliance 2.
+    draft.alliances[1] = [draft.event.find((t) => !draft.alliances[0].includes(t.id)).id];
   }
-  draft.lastGuess = { pick: draft.pick, robotId, right: draft.teams[1 - i].members.filter((id) => draft.guesses[id] === robotId).length, guessed: Object.keys(draft.guesses).length };
+  draft.lastPick = { alliance: i, teamId, auto };
   draft.pick++;
   if (draft.pick < DRAFT.order.length) return startPick(ctx);
-  // the draft is done: every robot starts on the plan its scouting suggests (never its true best: that's for players to find)
-  draft.lineups = [0, 1].map((t) => Object.fromEntries(alliance(ctx, t).map((id) => [id, robot(id).start])));
+  draft.assign = draft.alliances.map((ids) => Object.fromEntries(ids.map((id) => [id, 'offense'])));
   plan(ctx, 0);
 }
 
 function plan(ctx, m) {
-  const s = ctx.state;
-  const draft = d(ctx);
-  Object.assign(draft, { match: m, locked: [false, false], suggestions: {}, predictions: {} });
-  s.phase = 'plan';
-  s.deadline = Date.now() + PLAN_SECONDS * 1000;
+  Object.assign(d(ctx), { match: m, locked: [false, false] });
+  ctx.state.phase = 'plan';
   ctx.cancelTimer('allIn');
-  ctx.timer('phase', PLAN_SECONDS * 1000, () => play(ctx));
+  setTimer(ctx, DRAFT.planSeconds);
+  maybePlay(ctx);
 }
 
-/** Both captains have locked their lineups: play after a short pause. */
+/** Both alliances are locked in (a group with nobody connected counts as locked): play after a short pause. */
 function maybePlay(ctx) {
   const draft = d(ctx);
   if (ctx.state.phase !== 'plan') return;
-  const ready = draft.locked.every((locked, i) => locked || !draft.teams[i].members.some((id) => ctx.player(id)?.connected));
-  if (!ready) return ctx.cancelTimer('allIn');
-  ctx.timer('allIn', ALL_IN_MS, () => maybeStillReady(ctx));
-}
-function maybeStillReady(ctx) {
-  const draft = d(ctx);
-  if (draft.locked.every((locked, i) => locked || !draft.teams[i].members.some((id) => ctx.player(id)?.connected))) play(ctx);
+  const ready = () => draft.locked.every((locked, i) => locked || !online(ctx, i));
+  if (!ready()) return ctx.cancelTimer('allIn');
+  ctx.timer('allIn', ALL_IN_MS, () => ready() && play(ctx));
 }
 
 function play(ctx) {
@@ -174,53 +171,39 @@ function play(ctx) {
   if (s.phase !== 'plan') return;
   ctx.cancelTimer('phase');
   ctx.cancelTimer('allIn');
-  const side = (i) => {
-    const ids = alliance(ctx, i);
-    return { robots: ids.map(robot), plans: ids.map((id) => draft.lineups[i][id]) };
-  };
-  const odds = matchOdds(DRAFT.field, side(0), side(1));
-  const scores = playMatch(odds);
-  const winner = scores[0] > scores[1] ? 0 : scores[1] > scores[0] ? 1 : null;
+  const [a, b] = draft.alliances.map((ids) => ids.map(team));
+  const [assignA, assignB] = draft.assign;
+  const odds = matchOdds(a, assignA, b, assignB);
+  const match = playMatch(a, assignA, b, assignB);
+  const winner = match.scores[0] > match.scores[1] ? 0 : match.scores[1] > match.scores[0] ? 1 : null;
   if (winner !== null) draft.wins[winner]++;
-  s.before = rankMap(ctx);
-  s.gained = {};
-  const chances = [odds.a.win + odds.a.tie / 2, odds.b.win + odds.b.tie / 2];
-  const defenders = [0, 1].map((i) => Object.values(draft.lineups[i]).filter((p) => p === 'defend').length);
-  draft.teams.forEach((team, i) => {
-    for (const id of team.members) {
-      const predicted = draft.predictions[id] === defenders[1 - i];
-      if (predicted) draft.calls = { ...(draft.calls ?? {}), [id]: (draft.calls?.[id] ?? 0) + 1 };
-      const gained = Math.round(MATCH_POINTS * chances[i]) + (winner === i ? MATCH_WIN : winner === null ? MATCH_WIN / 2 : 0) + (predicted ? GOOD_CALL : 0);
-      s.gained[id] = gained;
-      s.scores[id] = (s.scores[id] ?? 0) + gained;
-    }
-  });
   draft.results.push({
-    lineups: [0, 1].map((i) => alliance(ctx, i).map((id) => ({ robotId: id, plan: draft.lineups[i][id] }))),
-    chances,
-    means: [odds.a.mean, odds.b.mean],
-    scores,
+    assign: draft.assign.map((x) => ({ ...x })),
+    scores: match.scores,
+    points: match.points,
+    broken: match.broken,
     winner,
-    defenders,
+    // each alliance's chance given these assignments: hidden until the series is over
+    odds: { win: [odds.a.win, odds.b.win], tie: odds.a.tie, mean: [odds.a.mean, odds.b.mean] },
   });
   s.phase = 'result';
   s.deadline = null;
 }
 
-function finishSeries(ctx) {
+const seriesOver = (ctx) => d(ctx).wins.some((w) => w >= 2) || d(ctx).results.length >= DRAFT.maxMatches;
+
+function finish(ctx) {
   const draft = d(ctx);
   const [r, b] = draft.wins;
-  const champ = r > b ? 0 : b > r ? 1 : null;
-  if (champ !== null) for (const id of draft.teams[champ].members) ctx.state.scores[id] = (ctx.state.scores[id] ?? 0) + SERIES_WIN;
-  draft.champion = champ;
+  draft.champion = r > b ? 0 : b > r ? 1 : null;
   ctx.state.phase = 'final';
   ctx.state.deadline = null;
 }
 
 export function summary(ctx) {
   const draft = d(ctx);
-  if (draft.champion == null) return `Alliance Selection ended in a draw, ${draft.wins.join('–')}`;
-  return `${TEAMS[draft.champion].name} won Alliance Selection, ${Math.max(...draft.wins)}–${Math.min(...draft.wins)}`;
+  if (draft.champion == null) return `the Showdown ended level, ${draft.wins.join('–')}`;
+  return `${GROUPS[draft.champion]} (Alliance ${draft.champion + 1}) won the Showdown, ${Math.max(...draft.wins)}–${Math.min(...draft.wins)}`;
 }
 
 // ---------- actions from phones ----------
@@ -228,67 +211,52 @@ export function summary(ctx) {
 const err = (error) => ({ error });
 
 export const actions = {
-  /** Advice: star a robot (anyone, while scouting or drafting). Only your team sees stars. */
-  star(ctx, player, payload) {
+  /** Move a team on your group's picklist: into 'pick' or 'dnp' at an index, or back to 'bank'. */
+  picklist(ctx, player, payload) {
     const s = ctx.state;
-    if (s.phase !== 'scout' && s.phase !== 'draft') return err('Scouting is over.');
-    if (!robot(payload?.robotId)) return err('Pick a robot.');
-    const mine = new Set(d(ctx).stars[player.id] ?? []);
-    mine.has(payload.robotId) ? mine.delete(payload.robotId) : mine.add(payload.robotId);
-    d(ctx).stars[player.id] = [...mine];
-    return { ok: true };
-  },
-  /** The captain's pick, on their team's turn. */
-  draftPick(ctx, player, payload) {
-    if (ctx.state.phase !== 'draft') return err('It’s not draft time.');
-    const i = turn(ctx);
-    if (captainOf(ctx, i) !== player.id) return err('Only the picking team’s captain can pick.');
-    const r = robot(payload?.robotId);
-    if (!r || d(ctx).picks.some((p) => p.robotId === r.id)) return err('That robot is taken.');
-    takePick(ctx, r.id);
-    return { ok: true };
-  },
-  /** The other team guesses the pick. */
-  guess(ctx, player, payload) {
-    if (ctx.state.phase !== 'draft') return err('It’s not draft time.');
-    const mine = teamIndex(ctx, player.id);
-    if (mine < 0 || mine === turn(ctx)) return err('Guess while the other team picks.');
-    const r = robot(payload?.robotId);
-    if (!r || d(ctx).picks.some((p) => p.robotId === r.id)) return err('That robot is taken.');
-    d(ctx).guesses[player.id] = r.id;
-    return { ok: true };
-  },
-  /** The captain sets one robot's plan; a teammate's tap is a suggestion. */
-  lineup(ctx, player, payload) {
-    if (ctx.state.phase !== 'plan') return err('Lineups are locked.');
-    const i = teamIndex(ctx, player.id);
-    if (i < 0) return err('You’re not on a team.');
-    const id = payload?.robotId;
-    const r = robot(id);
-    if (!r || !alliance(ctx, i).includes(id) || !robotPlans(r).includes(payload?.plan)) return err('That robot can’t run that plan.');
-    if (captainOf(ctx, i) === player.id) {
-      d(ctx).lineups[i][id] = payload.plan;
-      d(ctx).locked[i] = false; // a change unlocks until the captain locks again
-      maybePlay(ctx);
-    } else {
-      d(ctx).suggestions[player.id] = { ...(d(ctx).suggestions[player.id] ?? {}), [id]: payload.plan };
+    if (s.phase !== 'prep' && s.phase !== 'select') return err('Picklists are closed.');
+    const i = groupOf(ctx, player.id);
+    if (i < 0) return err('You’re not in a group yet.');
+    const { teamId, list, index } = payload ?? {};
+    if (!team(teamId) || !['pick', 'dnp', 'bank'].includes(list)) return err('Move a team to a list.');
+    const lists = d(ctx).picklists[i];
+    lists.pick = lists.pick.filter((id) => id !== teamId);
+    lists.dnp = lists.dnp.filter((id) => id !== teamId);
+    if (list !== 'bank') {
+      const at = Number.isInteger(index) ? Math.max(0, Math.min(index, lists[list].length)) : lists[list].length;
+      lists[list].splice(at, 0, teamId);
     }
     return { ok: true };
   },
-  lock(ctx, player) {
-    if (ctx.state.phase !== 'plan') return err('Lineups are locked.');
-    const i = teamIndex(ctx, player.id);
-    if (i < 0 || captainOf(ctx, i) !== player.id) return err('Only the captain locks the lineup.');
-    d(ctx).locked[i] = !d(ctx).locked[i];
+  /** The captain's invitation, on their alliance's turn. */
+  invite(ctx, player, payload) {
+    if (ctx.state.phase !== 'select') return err('Alliance selection isn’t running.');
+    const i = turn(ctx);
+    if (captainOf(ctx, i) !== player.id) return err('Only the captain of the alliance on the clock can invite.');
+    if (!canPick(ctx, i, payload?.teamId)) return err('That team is already on an alliance.');
+    invite(ctx, payload.teamId);
+    return { ok: true };
+  },
+  /** Anyone in the group: set a robot to offense or to defend one robot on the other alliance. */
+  assign(ctx, player, payload) {
+    if (ctx.state.phase !== 'plan') return err('Assignments are locked.');
+    const i = groupOf(ctx, player.id);
+    if (i < 0) return err('You’re not in a group.');
+    const draft = d(ctx);
+    const { teamId, target } = payload ?? {};
+    if (!draft.alliances[i].includes(teamId)) return err('That robot isn’t on your alliance.');
+    if (target !== 'offense' && !draft.alliances[1 - i].includes(target)) return err('Defend a robot on the other alliance.');
+    draft.assign[i][teamId] = target;
+    draft.locked[i] = false; // a change unlocks until the captain locks again
     maybePlay(ctx);
     return { ok: true };
   },
-  /** Everyone: how many defenders will the other side play? */
-  predict(ctx, player, payload) {
-    if (ctx.state.phase !== 'plan') return err('Predictions are closed.');
-    const n = payload?.defenders;
-    if (!Number.isInteger(n) || n < 0 || n > 3) return err('Pick 0 to 3.');
-    d(ctx).predictions[player.id] = n;
+  lock(ctx, player) {
+    if (ctx.state.phase !== 'plan') return err('Assignments are locked.');
+    const i = groupOf(ctx, player.id);
+    if (i < 0 || captainOf(ctx, i) !== player.id) return err('Only the captain locks in.');
+    d(ctx).locked[i] = !d(ctx).locked[i];
+    maybePlay(ctx);
     return { ok: true };
   },
   shuffle(ctx, player) {
@@ -304,72 +272,44 @@ export const hostActions = {
 
 // ---------- views ----------
 
-function rankMap(ctx) {
-  const list = ctx.players.map((p) => ({ id: p.id, score: ctx.state.scores[p.id] ?? 0 })).sort((a, b) => b.score - a.score);
-  const ranks = {};
-  list.forEach((p, i) => (ranks[p.id] = i > 0 && p.score === list[i - 1].score ? ranks[list[i - 1].id] : i + 1));
-  return ranks;
-}
-
-/** What everyone may see: no stars, guesses, suggestions or lineups before the match plays. */
-export function hostView(ctx, base) {
+function shared(ctx, base) {
   const draft = d(ctx);
   const s = ctx.state;
+  const reveal = s.phase === 'final';
   return {
     ...base,
-    match: draft.match,
-    teams: draft.teams.map((t, i) => ({ id: t.id, name: t.name, members: t.members, captainId: captainOf(ctx, i), wins: draft.wins[i] })),
-    first: draft.first,
+    groups: draft.groups.map((g, i) => ({ name: g.name, members: g.members, captainId: captainOf(ctx, i) })),
+    event: draft.event,
+    alliances: draft.alliances,
     pick: draft.pick,
-    turn: s.phase === 'draft' ? turn(ctx) : null,
-    picks: draft.picks,
-    guessed: s.phase === 'draft' ? Object.keys(draft.guesses).length : null,
-    lastGuess: draft.lastGuess ?? null,
-    locked: s.phase === 'plan' ? draft.locked : null,
-    predicted: s.phase === 'plan' ? Object.keys(draft.predictions).length : null,
-    results: draft.results,
-    champion: s.phase === 'final' ? draft.champion ?? null : undefined,
+    turn: s.phase === 'select' ? turn(ctx) : null,
+    lastPick: draft.lastPick,
+    match: draft.match,
+    locked: draft.locked,
+    wins: draft.wins,
+    // a played match's assignments and scores are public; its win chances wait for the reveal
+    results: draft.results.map((r) => (reveal ? r : { ...r, odds: null })),
+    champion: reveal ? draft.champion : null,
+    reveal,
   };
 }
 
-/** One phone: everything public, plus its own team's stars, suggestions and lineup. */
+/** The big screen: everything public. Never a picklist, and never assignments before the match plays. */
+export function hostView(ctx, base) {
+  return shared(ctx, base);
+}
+
+/** One phone: everything public, plus its own group's picklist and assignments. */
 export function playerView(ctx, me, base) {
   const draft = d(ctx);
-  const s = ctx.state;
-  const i = teamIndex(ctx, me.id);
-  const mates = i >= 0 ? draft.teams[i].members : [];
-  const teamStars = {};
-  for (const id of mates) for (const r of draft.stars[id] ?? []) teamStars[r] = (teamStars[r] ?? 0) + 1;
-  const suggested = {};
-  for (const id of mates) for (const [r, plan] of Object.entries(draft.suggestions[id] ?? {})) {
-    suggested[r] ??= {};
-    suggested[r][plan] = (suggested[r][plan] ?? 0) + 1;
-  }
+  const i = groupOf(ctx, me.id);
   return {
-    ...base,
-    team: i,
-    captain: i >= 0 ? captainOf(ctx, i) === me.id : false,
+    ...shared(ctx, base),
+    group: i,
+    captain: i >= 0 && captainOf(ctx, i) === me.id,
     captainName: i >= 0 ? ctx.player(captainOf(ctx, i))?.name ?? '?' : null,
-    mates: mates.map((id) => ctx.player(id)?.name ?? '?'),
-    teamSizes: draft.teams.map((t) => t.members.length),
-    first: draft.first,
-    pick: draft.pick,
-    turn: s.phase === 'draft' ? turn(ctx) : null,
-    picks: draft.picks,
-    myStars: draft.stars[me.id] ?? [],
-    teamStars,
-    myGuess: s.phase === 'draft' ? draft.guesses[me.id] ?? null : null,
-    lastGuess: draft.lastGuess ?? null,
-    match: draft.match,
-    wins: draft.wins,
-    lineup: i >= 0 ? draft.lineups[i] : null,
-    locked: i >= 0 ? draft.locked[i] : false,
-    suggested,
-    mySuggest: draft.suggestions[me.id] ?? {},
-    myPredict: draft.predictions[me.id] ?? null,
-    result: s.phase === 'result' || s.phase === 'final' ? draft.results.at(-1) ?? null : null,
-    results: s.phase === 'final' ? draft.results : null,
-    champion: s.phase === 'final' ? draft.champion ?? null : undefined,
-    calls: draft.calls?.[me.id] ?? 0,
+    mates: i >= 0 ? draft.groups[i].members.map((id) => ctx.player(id)?.name ?? '?') : [],
+    picklist: i >= 0 ? draft.picklists[i] : null,
+    assign: i >= 0 && ctx.state.phase === 'plan' ? draft.assign[i] : null,
   };
 }

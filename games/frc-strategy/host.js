@@ -1,5 +1,5 @@
 // Big screen for Strategy Training: the lesson picker, then Learn and Test (each question, how the room answered,
-// the leaderboard). Alliance Selection's screens are in host-draft.js.
+// the leaderboard). the Showdown's screens are in host-draft.js.
 import { html, raw } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
 import { LESSONS, SHAPES, lessonById, partById } from './lessons.js';
@@ -58,7 +58,7 @@ function pick(v) {
     <div class="st-picker">
       <div class="st-title">
         <h1>Strategy Training</h1>
-        <p>Pick what everyone will do. Go in order: Learn, then Test, then Alliance Selection.</p>
+        <p>Pick what everyone will do. Go in order: Learn, then Test, then the Showdown.</p>
       </div>
       ${LESSONS.map(
         (l) => html`
@@ -71,7 +71,7 @@ function pick(v) {
                     <span class="st-lesson-num">Part ${i + 1}</span>
                     <span class="st-lesson-name">${p.title}</span>
                     <span class="st-lesson-tag">${p.blurb}</span>
-                    <span class="st-lesson-meta">${p.kind === 'draft' ? `${p.draft.robots.length} robots · two teams` : `${p.questions.length} questions`}</span>
+                    <span class="st-lesson-meta">${p.kind === 'draft' ? `${p.draft.teams.length} teams · two alliances` : `${p.questions.length} questions`}</span>
                   </button>`,
               )}
             </div>

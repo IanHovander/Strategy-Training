@@ -72,21 +72,17 @@ function play(bot) {
       for (const [t, p] of actions) bot.socket.emit('action', { type: t, payload: p });
     }, 800 + Math.random() * 2500);
   };
-  // Strategy Training: answer each question (any type); in Alliance Selection, star, pick or guess, and predict.
+  // Strategy Training: answer each question (any type); in the Showdown, build the picklist, invite and lock in.
   if (bot.game === 'frc-strategy') {
     strategy.then(({ lessonById, partById }) => {
       const part = partById(lessonById(v.lessonId), v.partId);
       if (v.phase === 'question' && v.answer == null) later('answer', { answer: randomAnswer(part.questions[v.q]) });
       if (part.kind !== 'draft') return;
-      const left = part.draft.robots.filter((r) => !v.picks.some((p) => p.robotId === r.id)).map((r) => r.id);
-      if (v.phase === 'scout' && !v.myStars.length) later('star', { robotId: pick(left) });
-      if (v.phase === 'draft' && v.turn === v.team && v.captain) later('draftPick', { robotId: pick(left) });
-      if (v.phase === 'draft' && v.turn !== v.team && !v.myGuess) later('guess', { robotId: pick(left) });
-      if (v.phase === 'plan' && v.myPredict == null) {
-        const actions = [['predict', { defenders: Math.floor(Math.random() * 2) }]];
-        if (v.captain && !v.locked) actions.push(['lock', {}]);
-        later('predict', null, actions);
-      }
+      const taken = v.alliances.flat();
+      const open = v.event.map((s) => s.id).filter((id) => !taken.includes(id));
+      if (v.phase === 'prep' && v.picklist && v.picklist.pick.length < 3) later('picklist', { teamId: pick(open), list: 'pick' });
+      if (v.phase === 'select' && v.turn === v.group && v.captain) later('invite', { teamId: pick(open) });
+      if (v.phase === 'plan' && v.captain && !v.locked[v.group]) later('lock', {});
     });
     return;
   }

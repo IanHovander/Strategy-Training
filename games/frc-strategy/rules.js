@@ -4,7 +4,7 @@
 //   Learn and Test (kind 'quiz'): everyone answers each question on their phone; the big screen shows how the room
 //     answered and the points each answer earned. Phases: question -> reveal -> (scores) -> ... -> final.
 //     Learn shows the leaderboard after each case, Test after every question.
-//   Alliance Selection (kind 'draft'): two teams scout a robot pool, draft alliances and play a best of three.
+//   Showdown (kind 'draft'): two groups build picklists, run alliance selection and play a best of three.
 //     Its rules are in draft-rules.js.
 import { LESSONS, lessonById, partById } from './lessons.js';
 import { bestPoints, cleanAnswer, isBest, scoreAnswer, tally } from './quiz.js';
@@ -34,7 +34,7 @@ export default {
       answers: {}, // playerId -> answer, for the current question
       best: {}, // playerId -> how many best answers
       history: [], // per question: { counts, answered, median, bestShare }
-      draft: null, // Alliance Selection (draft-rules.js)
+      draft: null, // the Showdown (draft-rules.js)
     };
   },
 
@@ -67,7 +67,7 @@ export default {
     finish(ctx, player) {
       if (player.isVip) finish(ctx);
     },
-    // Alliance Selection: star, draftPick, guess, lineup, lock, predict, shuffle
+    // the Showdown: picklist, invite, assign, lock, shuffle
     ...Object.fromEntries(
       Object.entries(draft.actions).map(([name, fn]) => [name, (ctx, player, payload) => (isDraft(ctx.state) ? fn(ctx, player, payload) : undefined)]),
     ),
@@ -86,7 +86,7 @@ export default {
     },
     more(ctx) {
       const s = ctx.state;
-      if (s.phase !== 'question' && s.phase !== 'plan' && s.phase !== 'scout') return;
+      if (s.phase !== 'question' && s.phase !== 'plan' && s.phase !== 'prep' && s.phase !== 'select') return;
       s.deadline = Math.max(s.deadline, Date.now()) + EXTRA_SECONDS * 1000;
       ctx.timer('phase', s.deadline - Date.now(), () => (isDraft(s) ? draft.next(ctx) : reveal(ctx)));
     },
@@ -160,7 +160,7 @@ const part = (s) => partById(lesson(s), s.partId);
 const isDraft = (s) => part(s)?.kind === 'draft';
 const question = (s) => part(s).questions[s.q];
 /** Which screen we're on, so a double-tapped "next" (big screen and leader at once) only moves once. */
-const stepKey = (s) => `${s.phase}:${isDraft(s) ? (s.phase === 'draft' ? s.draft.pick : s.draft?.match ?? 0) : s.q}`;
+const stepKey = (s) => `${s.phase}:${isDraft(s) ? (s.phase === 'select' ? s.draft.pick : s.draft?.match ?? 0) : s.q}`;
 
 function pick(ctx, payload) {
   const s = ctx.state;
