@@ -2,7 +2,7 @@
 // room code with the PeerJS introduction server, and phones connect to it over WebRTC.
 import { loadGames } from '../core/games.js';
 import { Room } from '../core/room.js';
-import { linkType, loadPeerJS, loadQrCode, localPair, peerOptions, PROTOCOL, RoomConn, roomPeerId } from './common.js';
+import { linkType, loadPeerJS, loadQrCode, localPair, peerOptions, portChannel, PROTOCOL, RoomConn, roomPeerId } from './common.js';
 import { getRelay } from './relay.js';
 
 const CODE_LETTERS = 'ABCDEFGHJKMNPQRSTUVWXYZ'; // no I, L or O: too easy to misread
@@ -145,6 +145,14 @@ export async function hostInBrowser({ onStatus }) {
     }
   }, 2000);
   setInterval(() => phones.forEach(checkLink), 5000);
+
+  // The Test Phone (a phone page inside this one) joins through the browser instead of the internet, so it works
+  // even where the introduction server or WebRTC is blocked. It passes its room code and one end of a MessageChannel.
+  window.gamenightLocalPhone = (roomCode, port) => {
+    if (roomCode !== code) return false;
+    acceptPhone(portChannel(port));
+    return true;
+  };
 
   keepScreenOn();
   start();
