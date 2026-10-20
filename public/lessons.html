@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#9a0000">
 <title>FRC Strategy Lab</title>
 <link rel="icon" type="image/png" href="img/favicon.png">
-<!-- The questions, points and explorers come from the same file the team game uses: games/frc-strategy/lessons.js.
+<!-- The questions, points, screens and explorers come from games/frc-strategy/, the same files the team game uses.
      The explorer's look is the game's stylesheet too, so the two always match. -->
 <link rel="stylesheet" href="games/frc-strategy/style.css">
 <style>
@@ -31,7 +31,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;line-height:.95;letter-spaci
 p{margin:.6rem 0}
 .wrap{max-width:1180px;margin:auto;padding:1.6rem 1.6rem 2.4rem}
 
-/* home: logo, hero, the investigations */
+/* home: logo and hero */
 .brand{display:flex;justify-content:center}
 .logo{font-family:var(--display);font-size:2.4rem;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:var(--white);display:inline-flex;align-items:center;gap:.5rem}
 .logo i{width:1.4em;height:1.66em;transform:translateY(-.07em);background:var(--white);-webkit-mask:url("img/panther.png") center/contain no-repeat;mask:url("img/panther.png") center/contain no-repeat}
@@ -44,18 +44,7 @@ p{margin:.6rem 0}
 .script-warning{max-width:730px;margin:16px auto;padding:16px 20px;background:var(--white);color:var(--black);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:var(--drop)}
 .kicker{display:inline-block;width:fit-content;padding:.35rem .8rem .15rem;background:var(--black);color:var(--white);font-family:var(--display);font-size:1.35rem;line-height:1;letter-spacing:.04em;rotate:-2deg;box-shadow:.25rem .3rem 0 rgba(0,0,0,.35)}
 .hero .kicker{font-size:1.6rem;background:var(--white);color:var(--red-hi);border:var(--outline) solid var(--black);border-radius:.5rem;box-shadow:.25rem .3rem 0 var(--black)}
-.nav,.card{background:var(--white);color:var(--ink);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:var(--drop)}
-.home-nav{max-width:850px;margin:0 auto 2.4rem;padding:1rem;rotate:-.4deg}
-.nav-heading{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;font-family:var(--display);font-size:1.9rem;line-height:1;padding:.3rem .4rem .8rem}
-.nav-heading span{font-family:var(--font);font-size:.85rem;font-weight:700;color:var(--red-hi)}
-.nav-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
-.nav-links button{display:flex;align-items:center;gap:.7rem;min-height:4rem;text-align:left;background:var(--white);color:var(--ink);border:var(--outline) solid var(--black);border-radius:.8rem;padding:.5rem .8rem .4rem;font-family:var(--display);font-size:1.45rem;line-height:1.05;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s}
-.nav-links button:hover,.nav-links button:focus-visible{rotate:-1deg}
-.nav-links button.done{background:var(--black);color:var(--white)}
-.nav-links button small{display:block;font-family:var(--font);font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--muted)}
-.nav-links button.done small{color:var(--grey)}
-.nav-links .st-shape{width:2.2rem;height:2.2rem;font-size:1.4rem}
-.nav-links button.done .st-shape{background:var(--red-hi)}
+.card{background:var(--white);color:var(--ink);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:var(--drop)}
 
 /* the focused lesson view */
 .lesson-topbar{max-width:850px;margin:0 auto 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem}
@@ -63,68 +52,57 @@ p{margin:.6rem 0}
 .lesson-top-label{font-family:var(--display);font-size:1.3rem;line-height:1;letter-spacing:.04em;text-transform:uppercase}
 .lesson-progress{padding:.3rem .7rem .1rem;border-radius:.5rem;background:var(--black);font-family:var(--display);font-size:1.5rem;line-height:1;white-space:nowrap}
 .lesson-main{max-width:850px;margin:0 auto;display:flex;flex-direction:column;gap:1.4rem}
-.card{padding:1.6rem 1.8rem 1.8rem}
-.card h2{font-size:3.4rem;margin:.9rem 0 .2rem}
+
+.card{padding:1.4rem 1.6rem 1.6rem}
+.card h2{font-size:3rem;margin:.6rem 0 .2rem}
 .card > p{color:var(--muted)}
-.section{display:block;margin-top:.9rem;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red-hi)}
-.prompt{margin:1.1rem 0;padding:1rem 1.2rem;background:#f1f1f1;border:var(--outline) solid var(--black);border-left-width:.6rem;border-left-color:var(--red-hi);border-radius:.7rem;font-size:1.1rem;color:var(--black)}
-.prompt b{color:var(--red-hi)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem}
-.option{position:relative;display:flex;align-items:flex-start;gap:.8rem;background:var(--white);color:var(--black);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:.25rem .3rem 0 var(--black);text-align:left;padding:.9rem 1.1rem;transition:transform .08s,box-shadow .08s,rotate .15s}
-.option:not(:disabled):hover{rotate:-1deg}
-.option:not(:disabled):active{transform:translate(.15rem,.2rem);box-shadow:0 0 0 var(--black)}
-.option:disabled{cursor:default}
-.option strong{display:block;font-family:var(--display);font-weight:400;font-size:1.9rem;line-height:1.05;padding-top:.1em}
-.option small{display:block;margin-top:.2rem;font-size:.85rem;font-weight:700;color:var(--muted)}
-.option.selected{background:var(--black);color:var(--white);rotate:-1deg}
-.option.selected small{color:var(--grey)}
-.option.selected .st-shape{background:var(--red-hi)}
-.option .pts{margin-left:auto;padding:.2rem .5rem .05rem;border-radius:.4rem;background:#e6e6e6;color:var(--black);font-family:var(--display);font-size:1.5rem;line-height:1}
-.option.best .pts{background:var(--red-hi);color:var(--white)}
-.option.best{outline:.3rem solid var(--white);outline-offset:-.6rem}
-.option.best small::before{content:"✓ Best answer · ";color:var(--red-hi)}
-.option.selected.best small::before{color:var(--white)}
-.result{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;margin-top:1.4rem}
-.result h3{font-size:2.4rem;color:var(--black)}
-.result .gained{padding:.25rem .7rem .05rem;border-radius:.6rem;background:var(--black);color:var(--white);font-family:var(--display);font-size:2.4rem;line-height:1;rotate:-3deg}
-.result.best .gained{background:var(--red-hi)}
-.result span:last-child{font-weight:700;color:var(--muted)}
 
 /* buttons: chunky pills that squash when pressed */
-.buttons{display:flex;flex-wrap:wrap;gap:.8rem;margin:1.3rem 0 .4rem}
-.btn{border:var(--outline) solid var(--black);border-radius:999px;background:var(--white);color:var(--red-hi);padding:.38em 1.3em .22em;font-family:var(--display);font-size:1.6rem;line-height:1;letter-spacing:.02em;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s;touch-action:manipulation;text-decoration:none;display:inline-block}
+.buttons{display:flex;flex-wrap:wrap;gap:.8rem;margin:.4rem 0}
+.btn{border:var(--outline) solid var(--black);border-radius:999px;background:var(--white);color:var(--red-hi);padding:.38em 1.3em .22em;font-family:var(--display);font-size:1.6rem;line-height:1;letter-spacing:.02em;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s;touch-action:manipulation;text-decoration:none;display:inline-block;cursor:pointer}
 .btn:hover:not(:disabled){rotate:-1.5deg}
 .btn:active:not(:disabled){transform:translate(.15rem,.2rem);box-shadow:0 0 0 var(--black)}
 .btn.primary{background:var(--red-hi);color:var(--white)}
 .btn.secondary{background:var(--black);color:var(--white)}
 .btn.btn-sm{font-size:1.35rem;padding:.3em .8em .12em}
+.btn.btn-xl{font-size:2.1rem;padding:.42em 1.5em .3em;box-shadow:.35rem .42rem 0 var(--black)}
+.btn.block{display:block;width:100%;text-align:center}
 .btn:disabled{background:#d4d4d4;color:#8a8a8a;box-shadow:.2rem .25rem 0 rgba(0,0,0,.4);cursor:not-allowed}
 
-/* what the model says: a black sticker */
-.reveal{margin:1.4rem 0 0;padding:1rem 1.3rem;background:var(--black);color:var(--white);border-radius:.9rem;rotate:-.5deg;box-shadow:.3rem .35rem 0 rgba(0,0,0,.35)}
-.reveal h3{font-size:1.5rem;color:var(--grey)}
-.reveal .takeaway{font-family:var(--display);font-size:2rem;line-height:1.05;margin:.4rem 0}
-.reveal p{color:var(--white)}
-.st-ctl input[type="range"]{width:100%;accent-color:var(--red-hi)}
+/* home: the three parts */
+.parts{max-width:850px;margin:0 auto 2.4rem;display:flex;flex-direction:column;gap:1.8rem}
+.part-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.4rem 1rem;margin-bottom:.4rem}
+.part-head h2{font-size:2.6rem;color:var(--black)}
+.part-head span{font-size:.85rem;font-weight:700;color:var(--red-hi)}
+.part-blurb{color:var(--muted);margin:0 0 .9rem}
+.case-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.4rem .8rem;padding:.55rem 0 .45rem;border-top:2px solid #e6e6e6}
+.case-row b{font-family:var(--display);font-size:1.6rem;font-weight:400;line-height:1;color:var(--black)}
+.case-row b small{display:block;font-family:var(--font);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.dots{display:flex;flex-wrap:wrap;gap:.35rem}
+.dots button{display:inline-grid;place-items:center;width:2.4rem;height:2.4rem;padding:0;border:var(--outline) solid var(--black);border-radius:50%;background:var(--white);color:var(--black);font-family:var(--display);font-size:1.3rem;line-height:1}
+.dots button.done{background:var(--black);color:var(--white)}
+.dots button.full{background:var(--red-hi);color:var(--white)}
+.team-card{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
+.team-card p{margin:0;color:var(--muted)}
 
-/* the end */
-.report{display:flex;flex-direction:column;gap:.4rem;margin:1rem 0}
-.report-row{text-decoration:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.45rem 0 .35rem;border-top:2px solid #e6e6e6;font-family:var(--display);font-size:1.5rem;line-height:1;color:var(--black);background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+/* results */
+.report{display:flex;flex-direction:column;gap:.2rem;margin:1rem 0}
+.report-row{text-decoration:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.45rem 0 .35rem;border-top:2px solid #e6e6e6;font-family:var(--display);font-size:1.45rem;line-height:1;color:var(--black)}
 .report-row b{font-weight:400;color:var(--red-hi)}
 .score-big{font-family:var(--display);font-size:4rem;line-height:1;color:var(--red-hi)}
 .footer{font-size:.8rem;color:rgba(255,255,255,.85);margin:1.6rem 0;text-align:center}
+.lesson-main .st-result h1{font-size:3rem}
+.lesson-main .st-model{display:flex;flex-direction:column;gap:.5rem;padding:1rem 1.2rem 1.1rem;border:var(--outline) solid var(--black)}
 
 @media(max-width:780px){
 .wrap{padding:1rem .9rem 2rem}
 .hero{margin:1rem auto 1.6rem}
 .btn.hero-start{font-size:1.9rem}
-.home-nav{rotate:0deg;padding:.8rem}
-.nav-links button{font-size:1.2rem;gap:.5rem;padding:.45rem .55rem .35rem}
-.nav-links .st-shape{width:1.8rem;height:1.8rem;font-size:1.15rem}
 .lesson-top-label{display:none}
-.grid{grid-template-columns:1fr}
-.card{padding:1.2rem 1.1rem 1.3rem}
-.card h2{font-size:2.6rem}
+.card{padding:1.1rem 1rem 1.2rem}
+.card h2{font-size:2.4rem}
+.part-head h2{font-size:2.2rem}
+.case-row{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -135,20 +113,17 @@ p{margin:.6rem 0}
     <header class="hero">
       <div class="kicker" id="lesson-kicker"></div>
       <h1 id="lesson-tagline"></h1>
-      <p>Make predictions. Run matches. Discover the hidden assumptions.</p>
+      <p>Work the cases. Take the test. Then take on your team.</p>
       <div class="hero-actions">
-        <button class="btn primary hero-start" type="button" id="start"></button>
+        <a class="btn primary hero-start" id="start" href="#learn-1"></a>
         <a class="btn team" href="host.html">Play as a Team ▸</a>
       </div>
     </header>
-    <nav class="nav home-nav" aria-label="Choose an investigation">
-      <div class="nav-heading">Investigations <span id="progress"></span></div>
-      <div class="nav-links" id="nav"></div>
-    </nav>
+    <div class="parts" id="parts"></div>
   </div>
   <div id="lesson-screen" hidden>
     <header class="lesson-topbar">
-      <a class="btn back-button" href="#home" aria-label="Return to all investigations">← All Investigations</a>
+      <a class="btn back-button" href="#home" aria-label="Back to the lesson">← Lesson</a>
       <span class="lesson-top-label" id="lesson-label"></span>
       <span class="lesson-progress" id="lesson-progress"></span>
     </header>
@@ -158,187 +133,238 @@ p{margin:.6rem 0}
   <div class="footer">Abstract teaching simulations, not any particular FRC game. Ties are tracked separately.</div>
 </div>
 <script type="module">
-// Everything on this page comes from games/frc-strategy/lessons.js, the same lessons the team game plays.
-// Links: lessons.html (home), lessons.html#lesson-3 (investigation 3), lessons.html#done (your results).
-// With more lessons, ?lesson=<id> picks one; the first lesson is the default.
-import { html, raw } from './js/ui.js';
-import { LESSONS, SHAPES, bestPoints, lessonById } from './games/frc-strategy/lessons.js';
+// Everything on this page comes from games/frc-strategy/, the same lessons, scoring and screens the team game uses.
+// Links: lessons.html (home), #learn-3 (Learn step 3), #test-3 (Test investigation 3), #learn-done / #test-done
+// (your results). Older #lesson-N links open the Test. With more lessons, ?lesson=<id> picks one.
+import { html } from './js/ui.js';
+import { LESSONS, lessonById, partById } from './games/frc-strategy/lessons.js';
+import { bestPoints, cleanAnswer, describeAnswer, scoreAnswer, typeOf } from './games/frc-strategy/quiz.js';
+import { answerInputs, answerReview, caseFile, modelCard, promptCard, resultBanner, wireNumber } from './games/frc-strategy/views.js';
 import { mountExplorer } from './games/frc-strategy/explorer.js';
 
 const $ = (id) => document.getElementById(id);
 const lesson = lessonById(new URLSearchParams(location.search).get('lesson')) ?? LESSONS[0];
-const questions = lesson.questions;
-const KEY = 'frc-strategy-solo';
-let picked = null; // the answer chosen but not yet locked in
+const solo = lesson.parts.filter((p) => p.kind === 'quiz'); // the Showdown needs a team
+const KEY = 'frc-strategy-solo-v2';
+let pending = null; // the answer being edited before it's locked in
+let hintOpen = false;
 
-// Your answers, kept in this browser: { [lessonId]: { [question index]: answer index } }
-function loadAnswers() {
+// Your answers, kept in this browser: { [lessonId]: { [partId]: { [question index]: answer } } }
+function load() {
   try {
     return JSON.parse(localStorage.getItem(KEY) || '{}')[lesson.id] ?? {};
   } catch {
     return {};
   }
 }
-let answers = loadAnswers();
-function saveAnswers() {
+const saved = load();
+const answersOf = (part) => (saved[part.id] ??= {});
+function save() {
   try {
     const all = JSON.parse(localStorage.getItem(KEY) || '{}');
-    all[lesson.id] = answers;
+    all[lesson.id] = saved;
     localStorage.setItem(KEY, JSON.stringify(all));
   } catch {
     // Storage may be disabled (private window, embedded preview); the lesson still works.
   }
 }
 
-const score = () => Object.entries(answers).reduce((s, [q, a]) => s + (questions[q]?.choices[a]?.points ?? 0), 0);
-const maxScore = () => questions.reduce((s, q) => s + bestPoints(q), 0);
-const doneCount = () => questions.filter((_, i) => i in answers).length;
+const score = (part) => Object.entries(answersOf(part)).reduce((s, [i, a]) => s + (part.questions[i] ? scoreAnswer(part.questions[i], a) : 0), 0);
+const maxScore = (part) => part.questions.reduce((s, q) => s + bestPoints(q), 0);
+const done = (part) => part.questions.filter((_, i) => i in answersOf(part)).length;
+const nextOpen = (part) => part.questions.findIndex((_, i) => !(i in answersOf(part)));
 
 document.title = `${lesson.title} · FRC Strategy Lab`;
 $('lesson-kicker').textContent = `Lesson ${lesson.number} · ${lesson.title}`;
 $('lesson-tagline').textContent = lesson.tagline;
-$('lesson-label').textContent = `Strategy Lab / ${lesson.title}`;
-$('start').textContent = doneCount() ? 'Continue ▸' : `Start Lesson ${lesson.number} ▸`;
-$('start').addEventListener('click', () => {
-  const next = questions.findIndex((_, i) => !(i in answers));
-  location.hash = next < 0 ? 'done' : `lesson-${next + 1}`;
-});
 
-// ---------- routing: #lesson-N is investigation N, #done the results, anything else home ----------
+// ---------- routing ----------
 
 function route() {
-  const m = /^#lesson-(\d{1,2})$/.exec(location.hash);
-  const i = m ? Number(m[1]) - 1 : -1;
-  const inLesson = (i >= 0 && i < questions.length) || location.hash === '#done';
-  $('home-screen').hidden = inLesson;
-  $('lesson-screen').hidden = !inLesson;
-  picked = null;
-  if (location.hash === '#done') showDone();
-  else if (inLesson) showQuestion(i);
-  else showHome();
+  const legacy = /^#lesson-(\d{1,2})$/.exec(location.hash);
+  if (legacy) return location.replace(`#test-${legacy[1]}`);
+  if (location.hash === '#done') return location.replace('#test-done');
+  const m = /^#(\w+)-(\d{1,2}|done)$/.exec(location.hash);
+  const part = m && solo.find((p) => p.id === m[1]);
+  const i = part && m[2] !== 'done' ? Number(m[2]) - 1 : -1;
+  const inPart = part && (m[2] === 'done' || (i >= 0 && i < part.questions.length));
+  $('home-screen').hidden = !!inPart;
+  $('lesson-screen').hidden = !inPart;
+  pending = null;
+  hintOpen = false;
+  if (!inPart) showHome();
+  else if (m[2] === 'done') showDone(part);
+  else showQuestion(part, i);
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 addEventListener('hashchange', route);
 
+// ---------- home ----------
+
 function showHome() {
-  $('start').textContent = doneCount() >= questions.length ? 'See Your Results ▸' : doneCount() ? 'Continue ▸' : `Start Lesson ${lesson.number} ▸`;
-  $('progress').textContent = doneCount() ? `${doneCount()} / ${questions.length} done · ${score()} pts` : '';
-  $('nav').innerHTML = html`${questions.map(
-    (q, i) => html`
-      <button type="button" class="${i in answers && 'done'}" data-go="${i + 1}">
-        <span class="st-shape">${i in answers ? '✓' : i + 1}</span>
-        <span>${q.title}<small>${q.section}</small></span>
-      </button>`,
-  )}`;
+  const learn = solo[0];
+  const resume = solo.find((p) => nextOpen(p) >= 0);
+  $('start').textContent = !resume ? 'See Your Results ▸' : done(learn) ? `Continue: ${resume.title} ▸` : 'Start Part 1: Learn ▸';
+  $('start').href = resume ? `#${resume.id}-${nextOpen(resume) + 1}` : `#${solo.at(-1).id}-done`;
+  $('parts').innerHTML = html`${lesson.parts.map((p, n) => (p.kind === 'quiz' ? partCard(p, n) : teamCard(p, n)))}`;
 }
-$('nav').addEventListener('click', (e) => {
+
+function dot(part, i, label) {
+  const a = answersOf(part)[i];
+  const q = part.questions[i];
+  const state = a == null ? '' : scoreAnswer(q, a) === bestPoints(q) ? 'full' : 'done';
+  return html`<button type="button" class="${state}" data-go="${part.id}-${i + 1}" title="${q.title}">${label}</button>`;
+}
+
+function partCard(part, n) {
+  const rows = part.cases
+    ? part.cases.map((c, ci) => ({
+        title: c.title,
+        sub: `Case ${ci + 1}`,
+        steps: part.questions.map((q, i) => [q, i]).filter(([q]) => q.caseIndex === ci),
+      }))
+    : [{ title: 'Investigations', sub: `${part.questions.length} questions`, steps: part.questions.map((q, i) => [q, i]) }];
+  return html`
+    <section class="card">
+      <div class="part-head">
+        <h2>Part ${n + 1}: ${part.title}</h2>
+        <span>${done(part) ? `${done(part)} / ${part.questions.length} done · ${score(part)} / ${maxScore(part)} pts` : `${part.questions.length} questions`}</span>
+      </div>
+      <p class="part-blurb">${part.blurb}</p>
+      ${rows.map(
+        (r) => html`
+          <div class="case-row">
+            <b><small>${r.sub}</small>${r.title}</b>
+            <div class="dots">${r.steps.map(([, i], k) => dot(part, i, part.cases ? k + 1 : i + 1))}</div>
+          </div>`,
+      )}
+      <div class="buttons">
+        <a class="btn primary" href="#${part.id}-${nextOpen(part) < 0 ? 'done' : nextOpen(part) + 1}">${nextOpen(part) < 0 ? 'Your Results ▸' : done(part) ? 'Continue ▸' : `Start ${part.title} ▸`}</a>
+      </div>
+    </section>`;
+}
+
+function teamCard(part, n) {
+  return html`
+    <section class="card team-card">
+      <div>
+        <div class="part-head"><h2>Part ${n + 1}: ${part.title}</h2></div>
+        <p>${part.blurb}</p>
+      </div>
+      <a class="btn secondary" href="host.html">Open the Big Screen ▸</a>
+    </section>`;
+}
+
+$('parts').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-go]');
-  if (btn) location.hash = `lesson-${btn.dataset.go}`;
+  if (btn) location.hash = btn.dataset.go;
 });
 
-// ---------- one investigation ----------
+// ---------- one question ----------
 
-function showQuestion(i) {
-  const q = questions[i];
-  const chosen = answers[i];
-  const locked = chosen != null;
-  const top = bestPoints(q);
-  const mine = locked ? chosen : picked;
-  const last = i + 1 >= questions.length;
-  $('lesson-progress').textContent = `${i + 1} / ${questions.length}`;
+function showQuestion(part, i) {
+  const q = part.questions[i];
+  const answer = answersOf(part)[i];
+  const locked = answer != null;
+  const last = i + 1 >= part.questions.length;
+  const label = q.caseTitle != null ? q.section : `Investigation ${i + 1} · ${q.section}`;
+  $('lesson-label').textContent = `Strategy Lab / ${part.title}`;
+  $('lesson-progress').textContent = `${i + 1} / ${part.questions.length}`;
   $('main').innerHTML = html`
-    <section class="card">
-      <div class="kicker">Investigation ${i + 1} / ${questions.length}</div>
-      <span class="section">${q.section}</span>
-      <h2>${q.title}</h2>
-      <div class="prompt">${raw(q.prompt)}</div>
-      <div class="grid">
-        ${q.choices.map(
-          (c, k) => html`
-            <button type="button" class="option ${mine === k && 'selected'} ${locked && c.points === top && 'best'}" data-choice="${k}" ${locked && 'disabled'}>
-              <span class="st-shape">${SHAPES[k]}</span>
-              <span><strong>${c.text}</strong>${locked && html`<small>${c.result}</small>`}</span>
-              ${locked && html`<span class="pts">+${c.points}</span>`}
-            </button>`,
-        )}
-      </div>
-      ${locked
-        ? html`
-          <div class="result ${q.choices[chosen].points === top && 'best'}">
-            <span class="gained">+${q.choices[chosen].points}</span>
-            <h3>${q.choices[chosen].points === top ? 'Best Answer!' : q.choices[chosen].points > 0 ? 'Partly Right' : 'Not This Time'}</h3>
-            <span>Score ${score()} / ${maxScore()}</span>
-          </div>
-          <div class="reveal">
-            <h3>What the Model Says</h3>
-            <p class="takeaway">${q.takeaway}</p>
-            <p>${q.explain}</p>
-          </div>`
-        : html`
-          <div class="buttons">
-            <button type="button" class="btn primary" id="lock" ${mine == null && 'disabled'}>Lock Prediction &amp; Reveal</button>
-          </div>`}
-    </section>
-    ${locked && html`<div id="explore"></div>`}
-    ${locked &&
-    html`
-      <div class="buttons">
-        <a class="btn primary" href="#${last ? 'done' : `lesson-${i + 2}`}">${last ? 'Finish Lesson ▸' : 'Next Investigation ▸'}</a>
-        <button type="button" class="btn" id="retry">Try Again</button>
-      </div>`}`;
+    ${caseFile(q)}
+    ${promptCard(q, label)}
+    ${locked
+      ? html`
+        ${resultBanner(q, answer, html`<p>${part.title} score <b>${score(part)}</b> of ${maxScore(part)}</p>`)}
+        ${answerReview(q, answer)}
+        ${modelCard(q)}
+        ${q.explore && html`<div id="explore"></div>`}
+        <div class="buttons">
+          <a class="btn primary" href="#${part.id}-${last ? 'done' : i + 2}">${last ? `Finish ${part.title} ▸` : q.lastInCase ? 'Next Case ▸' : 'Next ▸'}</a>
+          <button type="button" class="btn" data-retry>Try Again</button>
+        </div>`
+      : html`
+        ${answerInputs(q, pending, null, { hintOpen })}
+        ${typeOf(q) === 'choice' && html`<button type="button" class="btn btn-xl block" data-submit ${pending == null && 'disabled'}>Lock In &amp; Reveal</button>`}`}`;
   if (locked && q.explore) mountExplorer($('explore'), q.explore);
+  if (!locked && typeOf(q) === 'number') wireNumber($('main'), q, (v) => (pending = v));
 }
 
 $('main').addEventListener('click', (e) => {
-  if (e.target.closest('#reset')) {
-    answers = {};
-    saveAnswers();
-    location.hash = 'lesson-1';
+  const m = /^#(\w+)-(\d{1,2}|done)$/.exec(location.hash);
+  const part = m && solo.find((p) => p.id === m[1]);
+  if (!part) return;
+  if (e.target.closest('[data-reset]')) {
+    saved[part.id] = {};
+    save();
+    location.hash = `${part.id}-1`;
     return;
   }
-  const m = /^#lesson-(\d{1,2})$/.exec(location.hash);
-  if (!m) return;
-  const i = Number(m[1]) - 1;
+  if (m[2] === 'done') return;
+  const i = Number(m[2]) - 1;
+  const q = part.questions[i];
+  if (e.target.closest('[data-retry]')) {
+    delete answersOf(part)[i];
+    save();
+    pending = null;
+    return showQuestion(part, i);
+  }
+  if (i in answersOf(part)) return;
+  if (e.target.closest('[data-hint]')) {
+    hintOpen = true;
+    return showQuestion(part, i);
+  }
   const choice = e.target.closest('[data-choice]');
-  if (choice && !(i in answers)) {
-    picked = Number(choice.dataset.choice);
-    showQuestion(i);
-  } else if (e.target.closest('#lock') && picked != null) {
-    answers[i] = picked;
-    saveAnswers();
-    showQuestion(i);
-  } else if (e.target.closest('#retry')) {
-    delete answers[i];
-    saveAnswers();
-    picked = null;
-    showQuestion(i);
+  if (choice) {
+    const k = Number(choice.dataset.choice);
+    if (typeOf(q) === 'multi') {
+      const picks = new Set(pending ?? []);
+      picks.has(k) ? picks.delete(k) : picks.add(k);
+      pending = [...picks].sort((a, b) => a - b);
+    } else pending = k;
+    return showQuestion(part, i);
+  }
+  if (e.target.closest('[data-submit]')) {
+    const fallback = typeOf(q) === 'number' ? (q.number.min + q.number.max) / 2 : typeOf(q) === 'multi' ? [] : null;
+    const answer = cleanAnswer(q, pending ?? fallback);
+    if (answer == null) return;
+    answersOf(part)[i] = answer;
+    save();
+    pending = null;
+    showQuestion(part, i);
   }
 });
 
-// ---------- the end ----------
+// ---------- results ----------
 
-function showDone() {
-  const best = questions.filter((q, i) => q.choices[answers[i]]?.points === bestPoints(q)).length;
-  $('lesson-progress').textContent = `${doneCount()} / ${questions.length}`;
+function showDone(part) {
+  const answers = answersOf(part);
+  const full = part.questions.filter((q, i) => i in answers && scoreAnswer(q, answers[i]) === bestPoints(q)).length;
+  const after = lesson.parts[lesson.parts.indexOf(part) + 1];
+  $('lesson-label').textContent = `Strategy Lab / ${part.title}`;
+  $('lesson-progress').textContent = `${done(part)} / ${part.questions.length}`;
   $('main').innerHTML = html`
     <section class="card">
-      <div class="kicker">Lesson ${lesson.number} complete</div>
+      <div class="kicker">${part.title} complete</div>
       <h2>${lesson.title}</h2>
-      <p><span class="score-big">${score()}</span> of ${maxScore()} points · ${best} of ${questions.length} best answers</p>
+      <p><span class="score-big">${score(part)}</span> of ${maxScore(part)} points · ${full} of ${part.questions.length} full marks</p>
       <div class="report">
-        ${questions.map((q, i) => {
-          const c = q.choices[answers[i]];
+        ${part.questions.map((q, i) => {
+          const a = answers[i];
           return html`
-            <a class="report-row" href="#lesson-${i + 1}">
-              <span>${i + 1}. ${q.title}</span>
-              <b>${c ? `+${c.points} / ${bestPoints(q)}` : 'not answered'}</b>
+            <a class="report-row" href="#${part.id}-${i + 1}">
+              <span>${i + 1}. ${q.title}${a != null && html`<small> · ${describeAnswer(q, a)}</small>`}</span>
+              <b>${a != null ? `+${scoreAnswer(q, a)} / ${bestPoints(q)}` : 'not answered'}</b>
             </a>`;
         })}
       </div>
-      <p>Now challenge the model itself: revisit any investigation, change its assumptions, and test what still holds.</p>
+      <p>Revisit any question, change the explorer’s assumptions, and test what still holds.</p>
       <div class="buttons">
-        <button type="button" class="btn primary" id="reset">Start Over</button>
-        <a class="btn" href="host.html">Play as a Team ▸</a>
+        ${after &&
+        (after.kind === 'quiz'
+          ? html`<a class="btn primary" href="#${after.id}-1">On to Part ${lesson.parts.indexOf(after) + 1}: ${after.title} ▸</a>`
+          : html`<a class="btn primary" href="host.html">Play the ${after.title} with Your Team ▸</a>`)}
+        <button type="button" class="btn" data-reset>Start ${part.title} Over</button>
       </div>
     </section>`;
 }
