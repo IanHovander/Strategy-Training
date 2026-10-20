@@ -294,6 +294,31 @@ try {
   host.socket.emit('lobby', { cmd: 'end' });
   await wait(150);
 
+  // --- Moderator lottery edge cases: multiple volunteers and no volunteers ---
+  host.socket.emit('lobby', { cmd: 'start' });
+  await wait(120);
+  await act(players[0], 'next', { from: 'pick:0' });
+  await act(players[0], 'volunteer', { wants: true });
+  await act(players[1], 'volunteer', { wants: false });
+  await act(p4, 'volunteer', { wants: true });
+  await wait(80);
+  check(view(host).phase === 'question' && [players[0], p4].filter((p) => view(p).isModerator).length === 1 &&
+    !view(players[1]).isModerator, 'when multiple students volunteer, one is randomly selected from volunteers only');
+  host.socket.emit('lobby', { cmd: 'end' });
+  await wait(120);
+
+  host.socket.emit('lobby', { cmd: 'start' });
+  await wait(120);
+  await act(players[0], 'next', { from: 'pick:0' });
+  await act(players[0], 'volunteer', { wants: false });
+  await act(players[1], 'volunteer', { wants: false });
+  await act(p4, 'volunteer', { wants: false });
+  await wait(80);
+  check(view(host).phase === 'question' && view(players[0]).isModerator && !view(p4).isModerator,
+    'when nobody volunteers, the leader moderates');
+  host.socket.emit('lobby', { cmd: 'end' });
+  await wait(120);
+
   // --- Learn: the leader runs two cases; picks ask how sure you are ---
   host.socket.emit('lobby', { cmd: 'start' });
   await wait(200);
