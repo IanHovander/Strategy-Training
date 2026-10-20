@@ -29,27 +29,49 @@ export default function (root) {
 }
 
 function head(v, lesson, part) {
+  if (v.phase === 'moderator-pick') return html`<header class="st-head"><span class="st-lesson">Lesson ${lesson.number} · <b>${lesson.title}</b></span><span class="spacer"></span><span class="st-step">LEARN · Moderator signup</span></header>`;
   const q = part.questions[v.q];
   return html`
     <header class="st-head">
       <span class="st-lesson">Lesson ${lesson.number} · ${part.title}: <b>${lesson.title}</b></span>
       ${v.phase !== 'final' && html`<span class="st-step">${q.caseTitle != null ? `Case ${q.caseIndex + 1}: ${q.caseTitle}` : `Question ${v.at} / ${v.of}`}</span>`}
       <span class="spacer"></span>
+      ${v.moderatorName && html`<span class="st-step">Moderator: <b>${v.moderatorName}</b></span>`}
       ${v.phase === 'question' &&
       html`
-        <span class="st-answered"><b>${v.answered}</b> / ${v.players.length} ${asksConfidence(q) ? 'done' : 'answered'}</span>
-        <span class="timer timer-lg" data-deadline="${v.deadline}"></span>
-        <button class="btn btn-sm secondary" data-action="more">+30s</button>
-        ${nextButton(v, 'Reveal ▸', 'btn-sm secondary')}`}
+        <span class="st-answered"><b>${v.answered}</b> / ${v.expected} ${asksConfidence(q) ? 'done' : 'answered'}</span>
+        ${v.deadline && html`<span class="timer timer-lg" data-deadline="${v.deadline}"></span><button class="btn btn-sm secondary" data-action="more">+30s</button>`}
+        ${nextButton(v, part.id === 'learn' ? 'Show responses ▸' : 'Reveal ▸', 'btn-sm secondary')}`}
     </header>`;
 }
 
 function body(v, lesson, part) {
+  if (v.phase === 'moderator-pick') return moderatorSignup(v);
   const q = part.questions[v.q];
   if (v.phase === 'question') return ask(v, part, q);
   if (v.phase === 'reveal') return reveal(v, part, q);
   if (v.phase === 'scores') return scores(v, part);
   return final(v, lesson, part);
+}
+
+// ---------- Learn: volunteers and moderator lottery ----------
+
+function moderatorSignup(v) {
+  return html`<div class="st-board-wrap st-mod-intro">
+    <div class="st-title"><span class="st-section">LEARN · BEFORE WE START</span><h1>Welcome to the Strategy Room.</h1></div>
+    <div class="st-card st-mod-summary">
+      <p>These are quick FRC strategy calls with imperfect information.</p>
+      <p>Make a plan, ask questions, and change your mind when new evidence shows up.</p>
+      <p>One student will moderate the discussion while everyone else works through each case.</p>
+    </div>
+    <div class="st-card st-mod-signup"><h2>Anyone want to moderate?</h2>
+      <p>Volunteer or pass on your phone. If multiple people volunteer, we'll pick one at random.</p>
+      <div class="st-mod-tally"><b>${v.volunteerCount}</b> volunteering <span>·</span> <b>${v.choicesIn} / ${v.waitingOn}</b> locked in</div>
+      ${status(v.players)}
+      <div class="st-actions">${nextButton(v, 'Pick a moderator & start ▸')}</div>
+      <p class="st-foot">The leader can move on early. If nobody volunteers, the leader moderates.</p>
+    </div>
+  </div>`;
 }
 
 // ---------- pick a lesson and a part ----------
@@ -165,6 +187,7 @@ function inputs(q) {
 function ask(v, part, q) {
   if (q.caseTitle != null) {
     return html`
+      ${v.moderatorName && html`<div class="st-mod-live">🎙 ${v.moderatorName} is moderating. They're reading the brief while everyone makes their first call.</div>`}
       <div class="st-caselayout">
         ${caseFile(q)}
         <div class="st-caseq">${prompt(q, v)}${inputs(q)}</div>
