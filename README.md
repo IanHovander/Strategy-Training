@@ -50,7 +50,8 @@ Every push to `main` then rebuilds and publishes the site.
   on their phone. Once everyone has answered (or the big screen or the leader presses **Pick the Moderator**),
   the moderator is picked at random from the volunteers, or from everyone if nobody volunteered. The moderator
   doesn't make calls. Their phone gets the controls and the case's private brief: the hidden numbers, the
-  existing records and the investigations. Nobody else sees the brief, not even the big screen.
+  existing records and the investigations. Nobody else is sent the brief, not even the big screen. (On the
+  website it is still a public file, like everything there, so a student who goes digging could find it.)
 - **Each call.** Everyone else picks a plan on their phone, says how sure they are on a slider (sure it's the
   best call, not their chance of winning) and why, if they like. They can change it until the moderator shows
   the room. The big screen then shows the votes and every call with its confidence and reason, marks who changed
