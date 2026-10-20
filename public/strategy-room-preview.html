@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#9a1119">
+<title>Strategy Room — Learn Mockup</title>
+<style>
+:root{--red:#b41421;--red-deep:#8f0e19;--black:#191b23;--muted:#59606f;--cream:#f5f3ed;--white:#fff;--line:#dbd9d3;--mint:#adeddc;--mint-text:#076c60;--gold:#ffe7ab;--gold-deep:#ad6e0e;--shadow:0 7px 0 rgba(25,27,35,.12);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--black)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#efece4;color:var(--black)}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #51a9c8;outline-offset:3px}a{color:inherit}p{line-height:1.5}h1,h2,h3,h4{margin:0;letter-spacing:-.04em}h1{font-size:clamp(26px,3.7vw,48px);line-height:1.05}h2{font-size:clamp(22px,2.4vw,33px);line-height:1.13}h3{font-size:19px}small{font-size:12px}button,.tag{touch-action:manipulation}textarea{resize:vertical;min-height:64px}input[type=range]{accent-color:var(--red);width:100%;height:30px;cursor:grab;touch-action:pan-x}input[type=range]:active{cursor:grabbing}.eyebrow{font-size:11px;font-weight:850;letter-spacing:.13em;text-transform:uppercase}.muted{color:var(--muted)}.minor{font-size:12px;color:var(--muted)}.safe{color:var(--mint-text)}.strong{font-weight:800}.nowrap{white-space:nowrap}
+.topbar{background:var(--black);color:white;padding:12px clamp(16px,3.2vw,54px);display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:11px;font-size:14px;font-weight:950;letter-spacing:.08em;white-space:nowrap}.brand-mark{width:33px;height:33px;border-radius:9px;background:var(--red);color:white;display:grid;place-items:center;font-size:21px;transform:rotate(-7deg)}.topright{display:flex;align-items:center;gap:16px}.topright a{text-decoration:none;font-size:12px;color:#ddd}.demo-flag{border:1px solid #786868;background:#3b3034;border-radius:100px;padding:5px 10px;color:#ffd7ce;font-size:11px;letter-spacing:.04em;font-weight:800}
+.shell{max-width:1620px;margin:auto;padding:21px clamp(14px,3.2vw,54px) 55px}.pagehead{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}.pagehead h1{margin:5px 0 6px}.pagehead p{margin:0;color:var(--muted);font-size:14px}.version{background:white;border:1px solid var(--line);border-radius:12px;padding:9px 13px;font-size:12px;line-height:1.3;max-width:260px;color:var(--muted)}.version b{color:var(--black)}
+.toolbar{display:flex;justify-content:space-between;flex-wrap:wrap;align-items:end;gap:12px;background:white;border:1px solid var(--line);border-radius:17px;padding:12px 16px;margin-bottom:16px;box-shadow:0 2px 0 #d3d0c8}.case-select{display:grid;gap:6px;min-width:min(330px,100%)}.case-select label{font-size:10px;color:var(--muted);letter-spacing:.1em;font-weight:900;text-transform:uppercase}.select-wrap{position:relative}.select-wrap select{appearance:none;width:100%;padding:11px 32px 11px 13px;color:var(--black);background:var(--cream);font-weight:800;border:1.5px solid var(--line);border-radius:9px}.select-wrap::after{content:'⌄';position:absolute;right:12px;top:8px;pointer-events:none;font-weight:950;font-size:20px}.toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.seg{background:var(--cream);border:1px solid var(--line);padding:4px;display:flex;gap:4px;border-radius:11px}.seg button{background:transparent;border:0;padding:8px 11px;border-radius:8px;font-size:12px;font-weight:800;color:var(--muted)}.seg button.active{background:var(--black);color:white;box-shadow:0 1px 3px #0002}.link-btn{background:transparent;border:0;color:var(--muted);font-size:12px;font-weight:800;padding:9px}.link-btn:hover{color:var(--red)}
+.stepper{display:flex;align-items:stretch;gap:4px;background:#e3dfd5;border-radius:11px;padding:5px;overflow-x:auto;margin-bottom:16px}.step{min-width:0;flex:1;text-align:center;padding:8px 6px 7px;font-size:11px;font-weight:850;border-radius:7px;color:#76777b;white-space:nowrap}.step.active{background:white;color:var(--black);box-shadow:0 2px 3px #00000013}.step.done{color:#2e645c}.step:before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#aca9a3;margin-right:5px;vertical-align:1px}.step.active:before{background:var(--red)}.step.done:before{background:#46a78f}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,390px);gap:18px;align-items:start}.workspace[data-view=host]{grid-template-columns:minmax(0,1fr)}.workspace[data-view=phone]{grid-template-columns:minmax(0,490px);justify-content:center}.workspace[data-view=host] .phoneframe,.workspace[data-view=phone] .hostframe{display:none}
+.framecap{display:flex;gap:9px;align-items:center;justify-content:space-between;margin-bottom:10px;color:var(--muted);font-weight:850;font-size:11px;text-transform:uppercase;letter-spacing:.11em}.framecap .bubble{font-size:10px;font-weight:750;letter-spacing:0;color:var(--muted)}.framecap .rightbadge{background:#e4e0d8;padding:4px 9px;border-radius:100px;letter-spacing:0}.hostsurface{background:white;border:1px solid #c9c7c1;border-radius:17px;overflow:hidden;box-shadow:var(--shadow);min-height:640px}.hosthead{background:var(--red-deep);color:#fff;padding:20px 22px 19px;position:relative;overflow:hidden}.hosthead:before{content:'';width:220px;height:220px;position:absolute;right:-80px;top:-150px;border:35px solid #ffffff13;border-radius:50%}.hosthead .eyebrow{color:#ffd9d8}.hosthead h2{margin:9px 0 4px;font-size:32px}.hosthead p{margin:0;font-size:13px;color:#ffe2df}.hostinner{padding:21px;display:grid;gap:17px}.panel{border:1px solid var(--line);border-radius:13px;padding:16px;background:#fff}.scenario{background:var(--cream);border:1px solid #e1ded7;border-radius:12px;padding:16px}.scenario-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}.roundchip{background:var(--black);color:#fff;border-radius:100px;font-size:11px;font-weight:850;padding:5px 10px}.scenario .summary{font-size:14px;font-weight:650;color:#292a30;line-height:1.55;margin:0 0 13px}.options-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.option-info{background:#fff;border:1px solid var(--line);padding:11px 12px;border-radius:9px}.option-info strong{display:block;font-size:13px;margin-bottom:4px}.option-info span{color:var(--muted);font-size:12px;line-height:1.35;display:block}.intel-list{display:grid;gap:9px;margin-top:12px}.intel-note{background:#fffaf0;border:1px solid #d8b871;border-left:4px solid #d69a2b;border-radius:9px;padding:10px 12px;color:#3f3522;font-size:13px;line-height:1.45}.intel-note strong{font-size:10px;letter-spacing:.1em;text-transform:uppercase;display:block;color:#96661b;margin-bottom:4px}
+.sectionrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.sectionrow h3{font-size:19px}.pill{background:#efefec;border:1px solid var(--line);border-radius:40px;padding:5px 9px;font-size:11px;font-weight:850;white-space:nowrap}.pill.green{background:#e2f8ef;border-color:#b7e5cd;color:#266948}.pill.orange{background:#fff3dd;border-color:#f0d0a0;color:#815711}.subtitle{font-size:13px;color:var(--muted);margin:0 0 12px}.promptline{font-size:19px;font-weight:950;line-height:1.2;margin-bottom:9px}.highlight{background:#f2faef;border:1px solid #c6e6c1;padding:11px 13px;border-radius:9px;font-size:13px}.discussion-cue{background:#f9f8f3;border-left:4px solid var(--black);padding:12px 15px;border-radius:7px;font-size:13px;margin-top:13px}.discussion-cue strong{display:block;margin-bottom:4px}.moderation{background:#1f2733;color:#f7f7f8;border-radius:13px;padding:17px}.moderation .subtitle,.moderation .minor{color:#b8c3cf}.moderation h3{font-size:18px}.moderation .eyebrow{color:#f6ba84;margin-bottom:5px}.moderation .actionrow{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin-top:15px}.moderation details{margin-top:13px;padding-top:12px;border-top:1px solid #414957}.moderation details summary{font-size:12px;font-weight:850;cursor:pointer;color:#e7dde0}.moderation details p{font-size:12px;color:#bdc6d1;margin:7px 0 0}
+.btn{border:1.5px solid var(--black);background:white;color:var(--black);border-radius:10px;padding:10px 13px;font-weight:850;font-size:13px;line-height:1.2;min-height:42px;transition:transform .12s,box-shadow .12s}.btn:hover:not(:disabled){transform:translateY(-1px)}.btn:active:not(:disabled){transform:translateY(1px)}.btn.red{background:var(--red);color:white;border-color:var(--red)}.btn.dark{background:var(--black);color:white;border-color:var(--black)}.btn.cream{background:var(--cream);border-color:var(--line)}.btn.outline-light{background:transparent;color:white;border-color:#8593a3}.btn.small{font-size:11px;min-height:32px;padding:7px 10px}.btn.full{width:100%}.btn:disabled{transform:none}
+.voteRow{display:grid;grid-template-columns:100px minmax(0,1fr) 48px;gap:10px;align-items:center;margin:12px 0}.voteRow strong{font-size:13px}.voteTrack{height:14px;border-radius:99px;overflow:hidden;background:#e6e4de}.voteFill{height:100%;border-radius:99px;background:var(--red)}.voteFill.secondary{background:#489786}.voteRow b{text-align:right;font-size:13px}.roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.person{background:#f6f4f0;border:1px solid #e9e6e0;border-radius:9px;padding:9px 11px}.person .name{display:flex;align-items:center;gap:6px;font-weight:800;font-size:12px}.person .initial{display:grid;place-items:center;width:21px;height:21px;background:#d7d5ce;border-radius:50%;font-size:9px}.person .decision{margin-top:4px;font-size:12px;color:var(--muted)}.person .decision b{color:var(--black)}.person .why{margin:6px 0 0;font-size:11px;color:#777d87;line-height:1.4}.person.mine{background:#fff1e9;border-color:#eab9a8}.statbar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metric{background:var(--cream);padding:13px 10px;border-radius:9px}.metric strong{display:block;font-size:22px}.metric span{font-size:11px;color:var(--muted)}
+.question-card{background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:8px}.qtop{display:flex;justify-content:space-between;gap:7px;align-items:start}.question-card .qname{font-size:11px;color:var(--muted);font-weight:800}.question-card p{margin:5px 0;font-size:13px;font-weight:700}.question-card .why{font-size:11px;color:#70747c;margin-top:5px;font-weight:450}.question-card .qactions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}.question-card select{border:1px solid var(--line);max-width:100%;padding:7px 9px;border-radius:8px;background:#fff;color:var(--black);font-size:11px;flex:1;min-width:150px}.voteTag{color:#6e6c68;font-weight:800;font-size:11px}.fact-result{background:#ecf9f5;border:1px solid #b9decf;color:#174c44;padding:11px 13px;border-radius:9px;font-size:13px;margin-top:9px}.fact-result strong{display:block;font-size:11px;margin-bottom:2px;color:#107869}.no-answer{background:#f8f4ee;border:1px dashed #cdbca8;color:#625648}.challenge{border:1px solid var(--line);border-radius:10px;padding:12px 13px;background:var(--cream);margin:9px 0}.challenge p{font-weight:750;font-size:14px;margin:6px 0}.challenge .chfoot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:space-between;margin-top:10px}.spotlight{background:#fff1d5;border-color:#d3a84b}.response{background:#fff;margin-top:10px;border-left:3px solid var(--red);padding:9px 10px;font-size:12px;color:var(--muted)}.prompt-card{background:#fff7e7;border:1px solid #f0d59d;padding:15px;border-radius:11px;font-size:14px}.prompt-card .eyebrow{color:#93631f}.timeline{display:grid;gap:12px}.timelineEntry{border-left:3px solid #d7d3ca;padding:1px 0 3px 13px}.timelineEntry .mini{font-size:11px;font-weight:900;letter-spacing:.08em;color:#717078}.timelineEntry strong{display:block;font-size:14px;margin:3px 0}.timelineEntry p{font-size:12px;color:#626872;margin:0}
+.phoneframe{position:relative}.phone{background:var(--black);padding:10px;border-radius:31px;box-shadow:0 12px 28px #251f1e3d;max-width:430px;margin:0 auto;position:sticky;top:12px}.phone::before{content:'';display:block;width:85px;height:13px;background:var(--black);border-radius:0 0 13px 13px;position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:2}.phone-inner{min-height:580px;max-height:min(80vh,760px);overflow-y:auto;background:#faf9f5;border-radius:23px;color:var(--black);scrollbar-width:thin}.phone-top{background:#fff;padding:25px 17px 12px;display:flex;justify-content:space-between;align-items:end;gap:5px;border-bottom:1px solid var(--line)}.phone-top .label{font-weight:950;letter-spacing:-.02em;font-size:16px}.phone-top .label b{color:var(--red)}.phone-top .small{font-size:11px;color:var(--muted)}.phone-content{padding:17px 17px 23px}.phone .eyebrow{color:var(--red-deep)}.phone h2{font-size:27px;margin:7px 0 7px}.phone p{font-size:13px}.phone .case-tiny{background:#f2eee9;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.4;margin:14px 0}.phone-options{display:grid;gap:9px;margin:15px 0}.radio-button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:15px 14px;background:#fff;border:2px solid #d6d5d2;border-radius:11px;font-weight:850;text-align:left;font-size:14px}.radio-button.selected{border-color:var(--red);background:#fff4f2}.radio-dot{border:2px solid #b7b5b0;border-radius:50%;width:17px;height:17px;display:grid;place-items:center}.radio-button.selected .radio-dot{border-color:var(--red)}.radio-button.selected .radio-dot:after{content:'';width:8px;height:8px;border-radius:50%;background:var(--red)}.form-row{margin:16px 0}.form-row label{font-size:12px;font-weight:850;display:block;margin-bottom:7px}.form-row textarea,.form-row input[type=text]{width:100%;border:1.5px solid #d6d4ce;border-radius:9px;background:white;color:var(--black);padding:12px;font-size:13px}.rangeheads{display:flex;align-items:center;justify-content:space-between;font-weight:850;font-size:12px}.rangeheads span{color:var(--red);font-size:24px}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.phone .btn{font-size:14px;padding:12px}.phone .eyeline{height:1px;background:var(--line);margin:17px 0}.form-note{font-size:11px;color:var(--muted);line-height:1.5}.success-card{background:#e7f7ed;border:1px solid #b7dcca;border-radius:11px;padding:15px;font-size:13px}.success-card strong{display:block;margin-bottom:5px}.phone-queue{display:grid;gap:8px;margin:13px 0}.phoneQ{background:#fff;border:1px solid var(--line);padding:10px 11px;border-radius:9px}.phoneQ p{font-size:12px;font-weight:750;margin:5px 0}.phoneQ .row{display:flex;align-items:center;justify-content:space-between}.phoneQ.own{border-color:#d7989d;background:#fff5f4}.little-tag{background:#eee9dc;color:#685841;border-radius:99px;padding:4px 7px;font-size:10px;font-weight:850}.little-tag.you{background:#f9d9d8;color:#a32829}.pill-question{font-size:11px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:white;font-weight:800}.pill-question.voted{background:#e0f5ed;border-color:#9dd6c0;color:#1a6553}.call-summary{font-size:13px;background:#f6f2eb;border-radius:10px;padding:12px;margin:10px 0}.inline-actions{display:flex;flex-wrap:wrap;align-items:center;gap:9px}.breakdown{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin:10px 0;background:#fff}.breakdown strong{font-size:12px}.breakdown p{font-size:12px;margin:5px 0 0;color:var(--muted)}
+.toast{position:fixed;z-index:10;bottom:18px;left:50%;transform:translateX(-50%);background:var(--black);color:white;padding:11px 17px;border-radius:10px;box-shadow:0 8px 18px #0003;max-width:calc(100vw - 30px);font-size:13px;font-weight:750;pointer-events:none;opacity:0;transition:opacity .18s}.toast.visible{opacity:1}
+.bottomline{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px;margin-top:25px;color:var(--muted)}
+@media(max-width:1180px){.workspace{grid-template-columns:minmax(0,1fr) 335px}.roster{grid-template-columns:1fr 1fr}.hostinner{padding:15px}.options-row{grid-template-columns:1fr 1fr}.phone-inner{max-height:80vh}}
+@media(max-width:940px){.workspace{grid-template-columns:minmax(0,1fr)}.workspace[data-view=both]{grid-template-columns:minmax(0,1fr)}.phone{position:static;max-width:480px}.framecap{margin-top:5px}.hostsurface{min-height:0}.phone-inner{max-height:none;min-height:450px}.pagehead .version{display:none}}
+@media(max-width:640px){.topbar{padding:10px 13px}.topright a{display:none}.brand{font-size:12px}.pagehead{margin-bottom:14px}.pagehead p{font-size:12px}.shell{padding:15px 12px 33px}.toolbar{padding:10px}.case-select{min-width:100%}.toolbar-right{width:100%;justify-content:space-between}.seg{flex:1;justify-content:space-around}.seg button{padding:7px 9px}.stepper{gap:1px}.step{font-size:0;min-width:35px;padding:10px 6px}.step:before{width:9px;height:9px;margin:0}.step.active{font-size:10px;min-width:85px}.step.active:before{margin-right:5px}.hosthead{padding:15px}.hosthead h2{font-size:27px}.hostinner{padding:12px}.panel{padding:12px}.scenario{padding:12px}.options-row{grid-template-columns:1fr}.roster{grid-template-columns:1fr}.phone{padding:7px;border-radius:26px}.phone-inner{border-radius:19px}.bottomline{margin-top:17px}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="brand"><div class="brand-mark">⚡</div> FRC STRATEGY LAB <span style="color:#a9adb7;font-weight:450;letter-spacing:0"> / LEARN</span></div><div class="topright"><span class="demo-flag">CLICKABLE MOCKUP · SAMPLE CLASS</span><a href="./lessons.html">← Full course</a></div></header>
+<div class="shell">
+<div class="pagehead"><div><div class="eyebrow" style="color:var(--red)">RISK &amp; CONSISTENCY · LEARN</div><h1>THE STRATEGY ROOM<span style="color:var(--red)">.</span></h1><p>Make the call. Ask better questions. See who changes their mind.</p></div><div class="version"><b>Try it yourself.</b> You play Alex. Eight classmates are simulated. Everything runs in this browser.</div></div>
+<div class="toolbar"><div class="case-select"><label for="casePicker">Jump to a case</label><div class="select-wrap"><select id="casePicker" aria-label="Choose case study"></select></div></div><div class="toolbar-right"><div class="seg" role="group" aria-label="Preview layout"><button data-view="both" class="active">Both</button><button data-view="host">Big screen</button><button data-view="phone">Student phone</button></div><button class="link-btn" data-action="reset">↻ Reset case</button></div></div>
+<div class="stepper" id="stepper" aria-label="Discussion stages"></div>
+<div class="workspace" id="workspace" data-view="both"><div class="hostframe"><div class="framecap"><span>▣ PROJECTOR / MODERATOR VIEW</span><span class="rightbadge">Facilitated, not auto-graded</span></div><div class="hostsurface" id="host"></div></div><div class="phoneframe"><div class="framecap"><span>▯ STUDENT PHONE / ALEX</span><span class="rightbadge">Demo participant</span></div><div class="phone"><div class="phone-inner" id="phone"></div></div></div></div>
+<div class="bottomline"><span>Mockup only: responses from classmates are simulated. No real multiplayer, AI calls, or scores.</span><span>Existing Test and Showdown are unchanged.</span></div>
+</div><div role="status" class="toast" id="toast" aria-live="polite"></div>
+<script>
+const CASES = [
+  {
+    title:'Robot A vs. B', short:'Robot A vs. B', tag:'The first call', prompt:'What’s the call?',
+    setup:'Robot A has two ways to score. Robot B puts up 9 cycles, every match. More cycles wins. Ties are not wins.',
+    options:[{id:'safe',label:'Safe',detail:'8 cycles. Every single time.'},{id:'aggressive',label:'Aggressive',detail:'11 cycles (70%) or 4 cycles (30%).'}],
+    intel:[
+      'Scouting update: B scores 7 cycles in 60% of matches and 9 in the other 40%.',
+      'More film came in. New estimate for B: 7 cycles (80%), 9 cycles (20%).',
+      'That 70% aggressive success rate? Just 7 successes in 10 attempts. Safe has worked every time we’ve tried it.'
+    ],
+    scout:[
+      {id:'sample',q:'How many runs gave us that 70%?',answer:'Ten observed aggressive attempts: seven hit the high result.',votes:4,who:'Jordan'},
+      {id:'opps',q:'Were B’s games against similar opponents?',answer:'We haven’t adjusted the opponent numbers for strength of schedule.',votes:3,who:'Casey'},
+      {id:'tie',q:'What happens if we tie?',answer:'A tie does not count as a win in this case.',votes:1,who:'Sam'},
+      {id:'floor',q:'Does aggressive always get at least 4 cycles?',answer:'The brief assumes 4 cycles on the bad outcome. We have no breakdown model yet.',votes:2,who:'Taylor'}
+    ],
+    challenges:[
+      'What if the 70% number came from a tiny sample?',
+      'We’re treating one score for B like it’s set in stone.'
+    ],
+    outs:['What would make our confidence in 70% stronger?','Which fact would actually flip your plan?'],
+    nudges:['Who thinks the other strategy is getting overlooked?','Is everyone making the same assumption about B?','What would you have to learn to change your call?'],
+    blind:'What if the aggressive result isn’t really just two possible scores?'
+  },
+  {
+    title:'Two-Shot Auto',short:'Two-Shot Auto',tag:'Linked luck',prompt:'Which auto are we running?',
+    setup:'Our opponent puts up 15 points in auto. We’ve got two routines. Each shot below is worth 10 points.',
+    options:[{id:'two',label:'Two-Shot',detail:'Two independent shots. 70% make rate each.'},{id:'reliable',label:'Reliable',detail:'12 points, guaranteed.'}],
+    optionsAfter:[
+      null,null,
+      [{id:'two',label:'Linked',detail:'Both shots hit or miss together. 70%.'},{id:'independent',label:'Independent',detail:'Each shot has a separate 65% make rate.'},{id:'reliable',label:'Reliable',detail:'12 points, guaranteed.'}]
+    ],
+    intel:[
+      'Plot twist: both shots depend on the same camera alignment. If it works (70%), both go in. If not, both miss.',
+      'New opponent. They score exactly 5 points in auto. All our routines still work the same way.',
+      'Programming has an update: we can separate the shots again, but each one drops to 65% accuracy. It’s now Linked vs. Independent vs. Reliable.'
+    ],
+    scout:[
+      {id:'align',q:'Do both shots use the same camera?',answer:'Yes. In the current routine, both shots share the alignment.',votes:5,who:'Riley'},
+      {id:'miss',q:'What happens if the first shot misses?',answer:'A miss alone does not tell us why. It could be alignment, or a shot-specific miss.',votes:3,who:'Taylor'},
+      {id:'reset',q:'Can the robot realign between shots?',answer:'Not in the current two-shot routine.',votes:4,who:'Jordan'},
+      {id:'clock',q:'Does reliable take longer?',answer:'We have no time data that distinguishes the routines.',votes:1,who:'Devon'}
+    ],
+    challenges:[
+      '“70% each” doesn’t tell us if the shots share a failure.',
+      'We’ve assumed our opponent keeps scoring 15. Are we sure?'
+    ],
+    outs:['What happens if both shots fail for the same reason?','What does “independent” really mean here?'],
+    nudges:['Would the best option change against a stronger auto?','How many *different* things have to go right?','Is this a match-winning question or a points question?'],
+    blind:'Is the camera failure a per-shot issue or a per-match issue?'
+  },
+  {
+    title:'Defensive Assignment', short:'Who Plays Defense?', tag:'Roles & tradeoffs',prompt:'What’s B doing?',
+    setup:'Our A scores 10 cycles. Our B scores 5. Their C scores 12 cycles (60%) or 8 (40%); their D scores 4. If B defends C, B scores nothing, and independently stops each of C’s attempted cycles with a 60% chance.',
+    options:[{id:'offense',label:'Keep B on offense',detail:'B contributes its 5 cycles.'},{id:'defense',label:'Send B to defend C',detail:'B gives up scoring to disrupt C.'}],
+    intel:[
+      'B’s been acting up. In eight defensive practice runs, it failed to complete its assignment four times. In those runs, it provided no useful defense.',
+      'Pit crew found a loose connector and fixed it. They think that caused the failures. No match-condition test yet.',
+      'More film: C has another scoring route when blocked. We don’t have reliable data on B defending that route. Match starts in five minutes.'
+    ],
+    scout:[
+      {id:'strength',q:'How strong is B’s defense, actually?',answer:'Against the original route, B stops each attempted C cycle with an estimated 60% probability.',votes:5,who:'Sam'},
+      {id:'failure',q:'How often does B break on defense?',answer:'Four incomplete defensive assignments in eight tests. Root cause not yet confirmed.',votes:5,who:'Jordan'},
+      {id:'route',q:'Can C just score a different way?',answer:'C has an alternate scoring route. We haven’t measured B against that route.',votes:4,who:'Casey'},
+      {id:'penalty',q:'Is there a risk of defensive penalties?',answer:'We have no penalty data from these scouting notes.',votes:2,who:'Devon'}
+    ],
+    challenges:[
+      'We’re counting all 5 of B’s offensive cycles as the cost. Are those guaranteed?',
+      'If C changes routes, do we still get that 60% stop rate?'
+    ],
+    outs:['Is the drive failure rate relevant after the repair?','How would C react if we actually defend?'],
+    nudges:['Who is paying the opportunity cost?','Which robot’s behavior is most uncertain?','What single fact is worth checking before the match?'],
+    blind:'We haven’t established how C behaves once it realizes B is defending.'
+  },
+  {
+    title:'The Third Robot',short:'Playoff Pick',tag:'Best of three',prompt:'Who are we picking?',
+    setup:'We need one more robot for playoffs. Our scouts say we win 70% of individual matches with Steady, or 75% with Fragile. For now, treat match results as independent. The first alliance to win two matches takes the series.',
+    options:[{id:'steady',label:'Steady',detail:'70% match win estimate.'},{id:'fragile',label:'Fragile',detail:'75% match win estimate.'}],
+    intel:[
+      'Fragile has an intermittent mechanism. There’s a 75% chance it works for the WHOLE series—and we win every match. Otherwise it stays broken and we lose every match.',
+      'Their pit crew can reset it between matches. Now functionality is a fresh, independent 75% chance each match.',
+      'The 75% estimate comes from four qualification matches (three worked). Steady’s estimate uses 30 matches from several events.'
+    ],
+    scout:[
+      {id:'repair',q:'Can Fragile fix the mechanism between matches?',answer:'The pit crew can attempt a reset; we don’t yet know the long-term durability.',votes:6,who:'Morgan'},
+      {id:'observations',q:'How many matches are those odds based on?',answer:'Fragile: four observed runs. Steady: 30 observed matches across events.',votes:5,who:'Jordan'},
+      {id:'correlation',q:'If Fragile fails once, is the next match affected?',answer:'If the mechanism stays broken, yes. If it is reset successfully, its outcome may be different.',votes:4,who:'Taylor'},
+      {id:'partner',q:'Do either of them conflict with our autos?',answer:'We have not scouted either robot’s autonomous path compatibility.',votes:3,who:'Casey'}
+    ],
+    challenges:[
+      'We’re treating match outcomes as independent. What if they aren’t?',
+      'How much should we trust 75% from just four matches?'
+    ],
+    outs:['What risk persists across a whole series?','How solid are these scouting numbers?'],
+    nudges:['Are we selecting for one match or for the series?','Would a failure in game one change game two?','Where did the 75% estimate come from?'],
+    blind:'How likely is a “fixed” mechanism to stay fixed through multiple matches?'
+  },
+  {
+    title:'The Picklist Meeting',short:'Picklist Meeting',tag:'Showdown prep',prompt:'Who’s higher on the list?',
+    setup:'Only one pick left. Delta has averaged 8.0 cycles over 10 matches and looks steady. Echo averaged 6.4 over 10 matches and looks all over the place.',
+    options:[{id:'delta',label:'Delta',detail:'8.0 cycles average. Very steady.'},{id:'echo',label:'Echo',detail:'6.4 cycles average. Very variable.'}],
+    intel:[
+      'Echo faced heavy defense in six of ten matches. Delta was rarely defended. Echo averaged 9.5 cycles in its four undefended matches.',
+      'Our likely playoff opponent has a great defender. Scouts say Delta is hard to slow down. Echo loses a lot of output when defended.',
+      'Our alliance already has two strong scorers but weak defense. Delta defends decently. Echo doesn’t. Their alliance has two strong scorers.'
+    ],
+    scout:[
+      {id:'schedule',q:'Who did each robot face?',answer:'Echo faced heavy defense in six matches. Delta was rarely defended. We lack a clean strength-of-schedule adjustment.',votes:5,who:'Casey'},
+      {id:'susceptible',q:'How vulnerable is Echo to defense?',answer:'Scouts report a large slowdown when Echo is defended, but no precise model is available.',votes:6,who:'Jordan'},
+      {id:'defense',q:'Can either team defend?',answer:'Delta is a capable defender. Echo offers little reliable defense.',votes:4,who:'Morgan'},
+      {id:'compat',q:'Would either robot fight us for the same lane?',answer:'We haven’t mapped path overlap or intake-side congestion.',votes:3,who:'Riley'}
+    ],
+    challenges:[
+      'Echo’s average is against tougher matches. Are those numbers comparable?',
+      'We’re picking on offense alone—but our other two robots already score.'
+    ],
+    outs:['What role would the third robot really have?','Which information would change our picklist order?'],
+    nudges:['How similar were their match conditions?','Are we selecting a robot, or a role in our alliance?','What’s the biggest reason this plan could flop?'],
+    blind:'How well will the three robots share lanes and game pieces?'
+  }
+];
+
+const OTHER_NAMES=['Sam','Jordan','Taylor','Riley','Morgan','Casey','Avery','Devon'];
+const SAMPLE_REASONS=['Feels less likely to give the match away.','I think the upside matters here.','I’m not buying the numbers yet.','I’d want another scouting run.','It depends on what the other side does.','I’d rather not gamble if we don’t have to.','I think we’re missing a key detail.','I don’t think the average tells the story.'];
+const $=id=>document.getElementById(id);
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const short=x=>String(x??'').slice(0,600);
+const plural=(n,label)=>`${n} ${label}${n===1?'':'s'}`;
+let view='both',state,toastHandle;
+function seededNum(seed){let v=(Math.imul(seed+43277, 1664525)+1013904223)>>>0;v^=v>>>16;v=Math.imul(v,0x45d9f3b)>>>0;return ((v^(v>>>16))>>>0)/4294967296}
+function current(){return CASES[state.caseIndex]}
+function choices(){const c=current();const switched=c.optionsAfter?.[state.round-1];return switched||c.options}
+function resetCase(i=state?.caseIndex??0){state={caseIndex:i,phase:'call',round:0,pick:null,confidence:75,why:'',calls:[],snapshots:[],questions:[],answers:{},evidenceChoice:{},scoutingLeft:2,votes:{},challenges:[],challengeText:'',challengeTarget:'',replies:{},replyDraft:'',spotlight:null,kudos:{},marked:[],currentQuestion:'',questionWhy:'',switchPoint:''};$('casePicker').value=String(i);render();scrollTop()}
+function scrollTop(){window.scrollTo({top:0,behavior:'instant'})}
+function notify(t){const x=$('toast');x.textContent=t;x.classList.add('visible');clearTimeout(toastHandle);toastHandle=setTimeout(()=>x.classList.remove('visible'),2800)}
+function mine(){return state.calls[state.round]}
+function generation(){const opts=choices(),n=opts.length;return OTHER_NAMES.map((who,i)=>{
+  const t=seededNum(i*17+state.caseIndex*109+state.round*397), ci=Math.min(n-1,Math.floor(t*n));
+  return {name:who,pick:opts[ci].id,confidence:55+5*Math.floor(seededNum(i*61+state.round*97+state.caseIndex*31)*9),why:SAMPLE_REASONS[(i+state.round*2+state.caseIndex)%SAMPLE_REASONS.length]};
+})}
+function repliesNow(){const m=mine();const others=generation();if(m)others.push({name:'Alex',pick:m.pick,confidence:m.confidence,why:m.why});return others}
+function snap(){return state.snapshots[state.round]||repliesNow()}
+function sampleQuestions(){const c=current();const rotation=state.round%c.scout.length;return [c.scout[rotation],c.scout[(rotation+1)%c.scout.length],c.scout[(rotation+2)%c.scout.length]].map((q,i)=>({...q,id:`${state.round}-seed-${q.id}`,round:state.round,own:false,votes:Math.max(1,q.votes-i)}))}
+function questions(){return [...sampleQuestions(),...state.questions.filter(q=>q.round===state.round)]}
+function challenges(){const c=current();const original=c.challenges.map((t,i)=>({id:`${state.round}-seed-ch-${i}`,round:state.round,text:t,who:["Jordan","Casey"][i],target:i===0?'The first plan':'The other plan',own:false}));return [...original,...state.challenges.filter(ch=>ch.round===state.round)]}
+function topSteps(){const labels=['Make the call','Show the room','Ask scouting','Challenge','New intel'];const phases=['call','discuss','scout','challenge','intel'];const at=phases.indexOf(state.phase);$('stepper').innerHTML=labels.map((x,i)=>`<div class="step ${state.phase==='wrap'?'done':i===at?'active':i<at?'done':''}">${x}</div>`).join('')}
+function caseFacts(){const c=current();const present=c.intel.slice(0,state.round);if(state.phase==='intel'&&c.intel[state.round])present.push(c.intel[state.round]);const learned=[...new Set(Object.values(state.answers).filter(a=>a.id!=='unknown').map(a=>a.text))];return present.map((t,i)=>`<div class="intel-note"><strong>New intel ${i+1}</strong>${esc(t)}</div>`).join('')+(learned.length?`<div class="intel-note" style="border-left-color:#469c86;background:#f2faf6"><strong>From the scouting desk</strong>${learned.map(esc).join('<hr style="border:0;border-top:1px solid #dae6dd">')}</div>`:'')}
+function scenario(){const c=current();const opts=choices();return `<div class="scenario"><div class="scenario-top"><span class="eyebrow" style="color:#8c1520">THE CASE FILE</span><span class="roundchip">CALL ${state.round+1}</span></div><p class="summary">${esc(c.setup)}</p><div class="options-row">${opts.map(o=>`<div class="option-info"><strong>${esc(o.label)}</strong><span>${esc(o.detail)}</span></div>`).join('')}</div>${state.round||state.phase==='intel'||Object.keys(state.answers).length?`<div class="intel-list">${caseFacts()}</div>`:''}</div>`}
+function hosthead(){const c=current();return `<div class="hosthead"><div class="eyebrow">CASE ${state.caseIndex+1} / 5 · ${esc(c.tag)}</div><h2>${esc(c.title)}</h2><p>${esc(c.prompt)} &nbsp;·&nbsp; Round ${state.round+1}</p></div>`}
+function moderator(actionLabel,action,description,disabled=false,other=''){
+  const hints={
+    call:'Give everyone space to decide alone. Don’t show votes until the room is ready.',
+    discuss:'Ask a student on each side to explain their thinking. Don’t announce a winner.',
+    scout:'The room has TWO scouting reveals for this case. Pick questions worth spending them on. “We don’t know” is a valid response.',
+    challenge:'Spotlight a challenge, let someone respond, then ask what they would actually do.',
+    intel:'Let the new fact land. Don’t interpret it—send everyone back to make the call.',
+    wrap:'Celebrate strong questions and thoughtful updates. No official answer is shown.'
+  };
+  return `<div class="moderation"><div class="eyebrow">MODERATOR DESK · HUMAN-LED</div><h3>${esc(description)}</h3><div class="actionrow"><button class="btn red" data-action="${action}" ${disabled?'disabled':''}>${esc(actionLabel)} &nbsp;→</button>${other}</div><details><summary>Facilitator notes · what do I say?</summary><p>${esc(hints[state.phase])}</p></details></div>`;
+}
+function renderHost(){const c=current();let h=hosthead()+`<div class="hostinner">${scenario()}`;
+  switch(state.phase){
+    case 'call':{
+      const m=mine();h+=`<section><div class="sectionrow"><h3>${state.round===0?'Make the call.':'Still the same call?'}</h3><span class="pill ${m?'green':''}">${m?'9 / 9 in the demo':'8 / 9 in the demo'}</span></div><p class="subtitle">Everyone decides on their own phone first. No peeking at the room.</p><div class="prompt-card"><b>${esc(c.prompt)}</b><p style="margin:6px 0 0;color:#765d3d;font-size:12px">Choose a plan, say how sure you are, and give your reason if you want.</p></div></section>`;
+      h+=moderator('Show the room','show-room','Ready to hear the arguments?',!m);break;
+    }
+    case 'discuss':{
+      h+=`<section><div class="sectionrow"><h3>Here’s where we stand.</h3><span class="pill green">9 / 9 answered</span></div>${votesBoard()}${roster()}<div class="discussion-cue"><strong>Get the debate going</strong>${esc(c.nudges[state.round%c.nudges.length])}</div></section>`;
+      h+=moderator('Open scouting','open-scout','What do we still need to know?',false);break;
+    }
+    case 'scout':{
+      const q=questions();h+=`<section><div class="sectionrow"><h3>Which question is worth it?</h3><span class="pill orange">${state.scoutingLeft} scouting ${state.scoutingLeft===1?'request':'requests'} left</span></div><p class="subtitle">Everyone can suggest a question. The room votes on what matters. The moderator chooses what to check.</p>`;
+      h+=q.map(quest=>{const answered=state.answers[quest.id];const chosen=state.evidenceChoice[quest.id]??(quest.own?'unknown':(current().scout.find(x=>quest.id.endsWith(x.id))?.id??'unknown'));return `<div class="question-card"><div class="qtop"><div><div class="qname">${esc(quest.who)} asked · ${esc(quest.votes+(state.votes[state.round]===quest.id?1:0))} votes</div><p>${esc(quest.q)}</p>${quest.why?`<div class="why">Why: ${esc(quest.why)}</div>`:''}${quest.switchPoint?`<div class="why">Would flip if: ${esc(quest.switchPoint)}</div>`:''}</div>${quest.own?'<span class="little-tag you">YOU</span>':''}</div>${answered?`<div class="fact-result ${answered.id==='unknown'?'no-answer':''}"><strong>${answered.id==='unknown'?'SCOUTING DOESN’T KNOW':'SCOUTING REPORT'}</strong>${esc(answered.text)}</div>`:`<div class="qactions"><select data-assign-evidence="${esc(quest.id)}" aria-label="Select verified scouting answer for ${esc(quest.q)}"><option value="unknown" ${chosen==='unknown'?'selected':''}>We don’t know</option>${c.scout.map(card=>`<option value="${card.id}" ${chosen===card.id?'selected':''}>${esc(card.q)}</option>`).join('')}</select><button class="btn small dark" data-action="answer-scout" data-id="${esc(quest.id)}" ${state.scoutingLeft===0?'disabled':''}>Ask scouting</button></div>`}</div>`}).join('')+`</section>`;
+      h+=moderator('Take it to debate','open-challenge','What did we learn? What’s still shaky?',false);break;
+    }
+    case 'challenge':{
+      h+=`<section><div class="sectionrow"><h3>Find the weak spot.</h3><span class="pill">One challenge each</span></div><p class="subtitle">Not “I disagree.” A real assumption, a counterexample, or a question that could flip the plan.</p>`;
+      for(const ch of challenges()){
+        const spot=state.spotlight===ch.id;h+=`<div class="challenge ${spot?'spotlight':''}"><div class="qtop"><span class="qname">${esc(ch.who)} → ${esc(ch.target)}</span>${state.kudos[ch.id]?'<span class="little-tag">★ Good catch</span>':''}</div><p>“${esc(ch.text)}”</p>${state.replies[ch.id]?`<div class="response"><b>Response:</b> ${esc(state.replies[ch.id])}</div>`:''}<div class="chfoot"><button class="btn small ${spot?'dark':'cream'}" data-action="spotlight" data-id="${esc(ch.id)}">${spot?'Spotlighted':'Spotlight'}</button><button class="btn small cream" data-action="kudos" data-id="${esc(ch.id)}" ${state.kudos[ch.id]?'disabled':''}>★ Good catch</button></div></div>`;
+      }h+=`</section>`;
+      const more=state.round<c.intel.length;h+=moderator(more?'Drop new intel':'Wrap the case',more?'drop-intel':'wrap','Get one reply before moving on.',false,more?'<button class="btn small outline-light" data-action="wrap">Wrap early</button>':'');break;
+    }
+    case 'intel':{
+      h+=`<section><div class="sectionrow"><h3>New intel just dropped.</h3><span class="pill orange">Update ${state.round+1}</span></div><div class="prompt-card"><div class="eyebrow" style="margin-bottom:7px">New information</div><div style="font-size:17px;font-weight:750;line-height:1.42">${esc(c.intel[state.round])}</div></div><p class="subtitle" style="margin-top:13px">No interpretation from the moderator. Everyone gets another call.</p></section>`;
+      h+=moderator('Make the call again','advance-round','Same people, new evidence. Where will they land?');break;
+    }
+    case 'wrap':{
+      h+=`<section><div class="sectionrow"><h3>How the room moved</h3><span class="pill green">Case complete</span></div>${wrapBoard()}<div class="discussion-cue"><strong>Still on the table</strong>${esc(c.blind)}<br><span class="minor">Not a gotcha. Just one more thing someone might reasonably want to know.</span></div></section>`;
+      h+=moderator(state.caseIndex===CASES.length-1?'Restart the room':'Next case',state.caseIndex===CASES.length-1?'restart':'next-case','No answer key. The point is the questions we learned to ask.');break;
+    }
+  }
+  $('host').innerHTML=h+'</div>';
+}
+function votesBoard(){const rs=snap(),opts=choices();return `${opts.map((o,i)=>{const count=rs.filter(r=>r.pick===o.id).length;return `<div class="voteRow"><strong>${esc(o.label)}</strong><div class="voteTrack"><div class="voteFill ${i===1?'secondary':''}" style="width:${(count/rs.length*100).toFixed(1)}%"></div></div><b>${Math.round(count/rs.length*100)}%</b></div>`}).join('')}<div class="minor" style="margin-top:5px">Average confidence ${Math.round(rs.reduce((s,r)=>s+r.confidence,0)/rs.length)}% · confidence is NOT chance of winning.</div>`}
+function roster(){return `<div class="roster">${snap().map(r=>{const opt=choices().find(o=>o.id===r.pick);return `<div class="person ${r.name==='Alex'?'mine':''}"><div class="name"><span class="initial">${esc(r.name[0])}</span>${esc(r.name)}</div><div class="decision"><b>${esc(opt?.label||r.pick)}</b> · ${r.confidence}% sure</div>${r.why?`<div class="why">“${esc(r.why)}”</div>`:''}</div>`}).join('')}</div>`}
+function wrapBoard(){const s=state.snapshots;let entries=s.map((snapshot,i)=>{const optForRound=i===state.round?choices():(current().optionsAfter?.[i-1]||current().options);return {round:i,parts:optForRound.map(opt=>({label:opt.label,count:snapshot.filter(x=>x.pick===opt.id).length})),my:state.calls[i]};});return `<div class="timeline">${entries.map(entry=>`<div class="timelineEntry"><div class="mini">CALL ${entry.round+1}</div><strong>${entry.parts.map(p=>`${p.label} ${p.count}/9`).join(' · ')}</strong><p>Alex: ${esc(entry.my?.pick||'—')} · ${entry.my?.confidence??'—'}% sure</p></div>`).join('')}</div><div class="statbar" style="margin-top:13px"><div class="metric"><strong>${s.length}</strong><span>times the room voted</span></div><div class="metric"><strong>${Object.keys(state.answers).length}</strong><span>scouting answers</span></div><div class="metric"><strong>${Object.keys(state.kudos).length}</strong><span>good catches</span></div></div><p class="subtitle" style="margin:12px 0 0">No correct call is revealed. Revisit the case in Test if you want the math.</p>`}
+function phoneStage(){const c=current();const m=mine();let inner=`<div class="eyebrow">CASE ${state.caseIndex+1} / 5 · ROUND ${state.round+1}</div>`;
+  if(state.phase==='call'){
+    inner+=`<h2>${state.round?'Still the same call?':esc(c.prompt)}</h2><p class="muted">${state.round?'New evidence, fresh decision.':'Make your call before you see anyone else’s.'}</p><div class="case-tiny">${esc(c.setup)}</div>${state.round?`<div class="prompt-card" style="margin:12px 0"><div class="eyebrow">New intel so far</div>${c.intel.slice(0,state.round).map(t=>`<p>${esc(t)}</p>`).join('')}</div>`:''}`;
+    if(m){
+      const name=choices().find(o=>o.id===m.pick)?.label||m.pick;
+      inner+=`<div class="success-card"><strong>✓ Locked in</strong>${esc(name)} · ${m.confidence}% confident${m.why?`<div style="margin-top:7px">“${esc(m.why)}”</div>`:''}</div><p class="form-note">You can edit until the moderator shows the room.</p><button class="btn cream full" style="margin-top:12px" data-action="edit-call">Change my call</button>`;
+    }else{
+      inner+=`<div class="phone-options" role="group" aria-label="Choose a strategy">${choices().map(o=>`<button class="radio-button ${state.pick===o.id?'selected':''}" data-action="select-plan" data-id="${o.id}" aria-pressed="${state.pick===o.id}"><span>${esc(o.label)}</span><span class="radio-dot"></span></button>`).join('')}</div><div class="form-row"><div class="rangeheads"><label for="confidence">Confidence</label><span id="confidenceValue">${state.confidence}%</span></div><input type="range" id="confidence" data-confidence min="${choices().length===3?35:50}" max="100" step="5" value="${state.confidence}" aria-label="Confidence in chosen strategy"><div class="range-ends"><span>${choices().length===3?'35%':'50%'} · It’s a toss-up</span><span>100% · Certain</span></div><p class="form-note">How sure are you this is the <b>best call</b>? Not your chance of winning.</p></div><div class="form-row"><label for="why">Why? <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="why" data-text="why" maxlength="300" placeholder="One sentence is plenty.">${esc(state.why)}</textarea></div><button class="btn red full" data-action="submit-call" ${!state.pick?'disabled':''}>Lock it in →</button>`;
+    }
+  }
+  if(state.phase==='discuss'){
+    inner+=`<h2>Let’s hear it.</h2><p>Votes are up. Why are people landing on different calls?</p><div class="call-summary"><strong>Your call:</strong> ${esc(choices().find(o=>o.id===m?.pick)?.label||'—')} · ${m?.confidence??'—'}% sure</div>${choices().map(o=>{const r=snap(),cnt=r.filter(p=>p.pick===o.id).length;return `<div class="voteRow" style="grid-template-columns:85px minmax(0,1fr) 32px;margin:8px 0"><strong>${esc(o.label)}</strong><div class="voteTrack"><div class="voteFill" style="width:${cnt/r.length*100}%"></div></div><b>${cnt}</b></div>`}).join('')}<div class="eyeline"></div><div class="form-note">Pick someone with a different answer. Ask <b>what would change their mind</b>. Your vote is locked for this round.</div>`;
+  }
+  if(state.phase==='scout'){
+    const submitted=state.questions.some(q=>q.round===state.round);
+    inner+=`<h2>What do we need to know?</h2><p>Everyone gets to ask. But the <b>room only gets ${state.scoutingLeft} more ${state.scoutingLeft===1?'request':'requests'}</b>.</p>`;
+    if(!submitted){
+      inner+=`<div class="form-row"><label for="askText">Ask scouting</label><textarea maxlength="280" id="askText" data-text="currentQuestion" placeholder="What do we need to find out?">${esc(state.currentQuestion)}</textarea></div><div class="form-row"><label for="questionWhy">Why might it matter? <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="questionWhy" data-text="questionWhy" maxlength="240" placeholder="How could this change our call?">${esc(state.questionWhy)}</textarea></div><div class="form-row"><label for="switchPoint">What would flip your call? <span class="muted" style="font-weight:500">(optional)</span></label><input type="text" id="switchPoint" data-text="switchPoint" maxlength="170" placeholder="I'd switch if…" value="${esc(state.switchPoint)}"></div><button class="btn red full" data-action="submit-question" ${state.currentQuestion.trim()?'':'disabled'}>Send the question →</button>`;
+    }else{
+      const own=state.questions.find(q=>q.round===state.round);
+      inner+=`<div class="success-card"><strong>✓ Question sent</strong>${esc(own.q)}</div>`;
+    }
+    inner+=`<div class="eyeline"></div><h3 style="font-size:16px">Which one’s worth checking?</h3><p class="form-note">Pick the question you think would change the plan most.</p><div class="phone-queue">${questions().map(q=>{const voted=state.votes[state.round]===q.id,answer=state.answers[q.id];return `<div class="phoneQ ${q.own?'own':''}"><div class="row"><span class="minor">${esc(q.who)}${q.own?' · you':''}</span><span class="little-tag">${q.votes+(voted?1:0)} votes</span></div><p>${esc(q.q)}</p>${answer?`<div class="fact-result ${answer.id==='unknown'?'no-answer':''}"><strong>${answer.id==='unknown'?'NOT KNOWN':'SCOUTING SAYS'}</strong>${esc(answer.text)}</div>`:`<button class="pill-question ${voted?'voted':''}" data-action="vote-question" data-id="${esc(q.id)}">${voted?'✓ Your vote':'Vote for this'}</button>`}</div>`}).join('')}</div>`;
+  }
+  if(state.phase==='challenge'){
+    const own=state.challenges.find(x=>x.round===state.round);
+    const selected=challenges().find(ch=>ch.id===state.spotlight);
+    inner+=`<h2>Find the weak spot.</h2><p>What is another plan assuming? You get <b>one</b> challenge.</p>`;
+    if(!own){
+      inner+=`<div class="form-row"><label for="challengeTarget">Challenge which plan?</label><div class="select-wrap"><select id="challengeTarget" data-challenge-target aria-label="Pick plan to challenge"><option value="">The room’s current thinking</option>${choices().map(o=>`<option value="${o.id}" ${state.challengeTarget===o.id?'selected':''}>${esc(o.label)}</option>`).join('')}</select></div></div><div class="form-row"><label for="challengeText">What’s the shaky assumption?</label><textarea id="challengeText" data-text="challengeText" maxlength="280" placeholder="This plan assumes that…">${esc(state.challengeText)}</textarea></div><button class="btn red full" data-action="submit-challenge" ${!state.challengeText.trim()?'disabled':''}>Throw down a challenge →</button>`;
+    }else inner+=`<div class="success-card"><strong>✓ Challenge in</strong>“${esc(own.text)}”</div>`;
+    inner+=`<div class="eyeline"></div>`;
+    if(selected){
+      inner+=`<div class="prompt-card"><div class="eyebrow">ON THE SPOT</div><p style="font-weight:800;font-size:14px">“${esc(selected.text)}”</p><div class="minor">${esc(selected.who)} wants an answer.</div></div>`;
+      if(!state.replies[selected.id])inner+=`<div class="form-row"><label for="replyDraft">Your response <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="replyDraft" data-text="replyDraft" placeholder="Here’s why I still think…" maxlength="300">${esc(state.replyDraft)}</textarea></div><button class="btn dark full" data-action="submit-reply" ${!state.replyDraft.trim()?'disabled':''}>Respond →</button>`;
+      else inner+=`<div class="success-card"><strong>Response heard</strong>${esc(state.replies[selected.id])}</div>`;
+    }else inner+=`<p class="form-note">Moderator will spotlight a challenge. Try responding to it instead of just repeating your original call.</p>`;
+  }
+  if(state.phase==='intel'){
+    inner+=`<h2>New intel.</h2><div class="prompt-card" style="margin:17px 0"><div class="eyebrow">JUST IN</div><p style="font-size:16px;font-weight:750;line-height:1.42">${esc(c.intel[state.round])}</p></div><p>No answer from the model. Just one more thing to think about.</p><p class="muted">Up next: another call, another confidence check.</p>`;
+  }
+  if(state.phase==='wrap'){
+    inner+=`<h2>Good debate.</h2><p>Here’s how <b>your</b> calls changed. Nobody’s getting a “right” or “wrong” stamp here.</p>`;
+    state.calls.forEach((call,i)=>{if(!call)return;let opts=i===0?c.options:(c.optionsAfter?.[i-1]||c.options);inner+=`<div class="breakdown"><strong>Call ${i+1} · ${esc(opts.find(o=>o.id===call.pick)?.label||call.pick)}</strong><p>${call.confidence}% confident${call.why?` · “${esc(call.why)}”`:''}</p></div>`});
+    inner+=`<div class="eyeline"></div><p class="form-note">The Test gives you the math. The Showdown asks what you’ll do when the math isn’t enough.</p><button class="btn red full" data-action="next-case">${state.caseIndex===CASES.length-1?'Restart the cases':'Try the next case →'}</button>`;
+  }
+  return inner;
+}
+function renderPhone(){const c=current();$('phone').innerHTML=`<div class="phone-top"><div><div class="label">STRATEGY <b>ROOM</b></div><div class="small">${esc(c.short)} · call ${state.round+1}</div></div><span class="little-tag you">ALEX</span></div><div class="phone-content">${phoneStage()}</div>`}
+function render(){topSteps();renderHost();renderPhone();$('casePicker').value=String(state.caseIndex)}
+function action(act,el){
+  switch(act){
+    case 'reset':resetCase();notify('Case reset. Fresh start.');break;
+    case 'select-plan':state.pick=el.dataset.id;renderPhone();break;
+    case 'submit-call':{
+      if(!state.pick||!choices().some(o=>o.id===state.pick))return;
+      state.calls[state.round]={pick:state.pick,confidence:state.confidence,why:short(state.why)};
+      render();notify('Call locked. The room can open it when everyone is ready.');break;
+    }
+    case 'edit-call':delete state.calls[state.round];render();break;
+    case 'show-room':{
+      if(!mine()){notify('Alex needs to lock a call first.');return;}
+      state.snapshots[state.round]=repliesNow();state.phase='discuss';render();scrollTop();break;
+    }
+    case 'open-scout':state.phase='scout';render();scrollTop();break;
+    case 'submit-question':{
+      if(!state.currentQuestion.trim())return;
+      if(state.questions.some(q=>q.round===state.round))return;
+      state.questions.push({id:`${state.round}-alex-question`,q:short(state.currentQuestion).slice(0,280),who:'Alex',votes:0,why:short(state.questionWhy),switchPoint:short(state.switchPoint),round:state.round,own:true});
+      state.currentQuestion='';state.questionWhy='';state.switchPoint='';render();notify('Scouting question sent.');break;
+    }
+    case 'vote-question':state.votes[state.round]=el.dataset.id;render();break;
+    case 'answer-scout':{
+      if(state.scoutingLeft<=0){notify('No scouting requests left.');return;}
+      const id=el.dataset.id;
+      if(state.answers[id])return;
+      const sourceQuestion=questions().find(q=>q.id===id);
+      const defaultCard=sourceQuestion&&!sourceQuestion.own?current().scout.find(card=>id.endsWith('seed-'+card.id)):null;
+      const answerId=state.evidenceChoice[id]??(defaultCard?.id||'unknown');
+      const found=current().scout.find(card=>card.id===answerId);
+      state.answers[id]={id:found?answerId:'unknown',text:found?found.answer:'Nothing reliable in our scouting notes. We’d need another way to find out.'};
+      state.scoutingLeft--;
+      render();notify(found?'Scouting report is on the screen.':'Scouting couldn’t confirm that.');break;
+    }
+    case 'open-challenge':state.phase='challenge';render();scrollTop();break;
+    case 'submit-challenge':{
+      if(!state.challengeText.trim()||state.challenges.some(ch=>ch.round===state.round))return;
+      const o=choices().find(o=>o.id===state.challengeTarget);
+      state.challenges.push({id:`${state.round}-alex-challenge`,round:state.round,text:short(state.challengeText).slice(0,280),target:o?.label||'The room’s current plan',who:'Alex',own:true});
+      state.challengeText='';state.challengeTarget='';render();notify('Challenge posted.');break;
+    }
+    case 'spotlight':state.spotlight=state.spotlight===el.dataset.id?null:el.dataset.id;state.replyDraft='';render();break;
+    case 'kudos':state.kudos[el.dataset.id]=true;render();notify('★ Good catch marked by facilitator.');break;
+    case 'submit-reply':if(state.spotlight&&state.replyDraft.trim()){state.replies[state.spotlight]=short(state.replyDraft);state.replyDraft='';render();notify('Response added to the room.')}break;
+    case 'drop-intel':state.phase='intel';render();scrollTop();break;
+    case 'advance-round':{
+      const prev=mine();state.round++;
+      state.phase='call';state.pick=choices().find(o=>o.id===prev?.pick)?prev?.pick:null;
+      state.confidence=prev?.confidence??70;state.why='';state.spotlight=null;state.replyDraft='';state.currentQuestion='';state.questionWhy='';state.switchPoint='';state.challengeTarget='';state.challengeText='';
+      render();scrollTop();break;
+    }
+    case 'wrap':state.phase='wrap';render();scrollTop();break;
+    case 'next-case':resetCase((state.caseIndex+1)%CASES.length);break;
+    case 'restart':resetCase(0);break;
+  }
+}
+function onInput(e){const t=e.target;
+  if(t.matches('[data-confidence]')){state.confidence=+t.value;const label=$('confidenceValue');if(label)label.textContent=t.value+'%';}
+  if(t.dataset.text){state[t.dataset.text]=t.value;const submitButton=t.closest('.phone-content')?.querySelector('[data-action="submit-question"], [data-action="submit-challenge"], [data-action="submit-reply"]');if(submitButton){const required=submitButton.dataset.action==='submit-question'?'currentQuestion':submitButton.dataset.action==='submit-challenge'?'challengeText':'replyDraft';submitButton.disabled=!state[required]?.trim();}}
+  if(t.matches('[data-assign-evidence]'))state.evidenceChoice[t.dataset.assignEvidence]=t.value;
+  if(t.matches('[data-challenge-target]'))state.challengeTarget=t.value;
+}
+document.addEventListener('input',onInput);
+document.addEventListener('change',onInput);
+document.addEventListener('click',e=>{
+  const v=e.target.closest('button[data-view]');if(v){view=v.dataset.view;$('workspace').dataset.view=view;document.querySelectorAll('button[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===view));return;}
+  const a=e.target.closest('[data-action]');if(a&&!a.disabled)action(a.dataset.action,a);
+});
+$('casePicker').addEventListener('change',e=>resetCase(Number(e.target.value)));
+$('casePicker').innerHTML=CASES.map((c,i)=>`<option value="${i}">${String(i+1).padStart(2,'0')} · ${esc(c.short)}</option>`).join('');
+resetCase(0);
+</script>
+</body>
+</html>
