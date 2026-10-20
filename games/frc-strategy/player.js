@@ -36,7 +36,12 @@ export default function (root, api) {
   }
 
   main.addEventListener('click', (e) => {
-    if (view?.phase !== 'question') return;
+    if (view?.phase === 'moderator-pick') {
+      const vote = e.target.closest('[data-volunteer]');
+      if (vote) api.send('volunteer', { wants: vote.dataset.volunteer === 'yes' });
+      return;
+    }
+    if (view?.phase !== 'question' || view.isModerator) return;
     const { q } = current();
     if (!q) return;
     if (e.target.closest('[data-hint]')) {
@@ -95,9 +100,44 @@ export default function (root, api) {
 
   function phase(v, part, q) {
     if (v.phase === 'pick') return pick(v);
+    if (v.phase === 'moderator-pick') return moderatorSignup(v);
+    if (v.isModerator && ['question', 'reveal', 'scores'].includes(v.phase)) return moderatorGuide(v, part, q);
     if (v.phase === 'question') return question(v, part, q);
     if (v.phase === 'reveal' || v.phase === 'scores') return result(v, part, q);
     return final(v, part);
+  }
+
+  function moderatorSignup(v) {
+    return html`<div class="st-wait st-mod-phone">
+      <span class="st-section">LEARN · THE STRATEGY ROOM</span>
+      <h1>Anyone want to moderate?</h1>
+      <p>You'd run the conversation, answer questions using a private brief, and decide when to move on. You don't need to know everything.</p>
+      <div class="st-mod-buttons">
+        <button type="button" class="btn btn-xl ${v.volunteer === true ? 'primary' : ''}" data-volunteer="yes">I'm in 🎙</button>
+        <button type="button" class="btn btn-xl ${v.volunteer === false ? 'primary' : ''}" data-volunteer="no">Not this time</button>
+      </div>
+      ${v.volunteer !== null && html`<p class="st-hint">Locked in: ${v.volunteer ? 'you volunteered' : 'you passed'}. You can switch until signup closes.</p>`}
+      <p class="st-hint">${v.choicesIn} people have responded so far. If several volunteer, we'll pick randomly.</p>
+      ${v.isVip && next(v, 'Pick moderator now ▸', 'secondary')}
+    </div>`;
+  }
+
+  function moderatorGuide(v, part, q) {
+    const b = v.brief;
+    const label = v.phase === 'question' ? 'Show responses ▸' : v.phase === 'reveal' ? 'Next step ▸' : 'Keep going ▸';
+    return html`<div class="st-wait st-mod-phone">
+      <span class="st-section">🎙 YOU'RE THE MODERATOR</span>
+      <h1>You're running this one.</h1>
+      <p>Everyone's thinking through the case. Read your notes, hear both sides, answer questions from the brief, then move on when the room is ready.</p>
+      <div class="st-card st-mod-brief"><span class="st-section">PRIVATE CASE BRIEF · ${b?.caseTitle ?? ''}</span>
+        <h2>${q.title}</h2><p class="st-mod-focus">${b?.focus ?? 'Help the room question assumptions.'}</p>
+        <b>What you know</b><ul>${(b?.evidence ?? []).map((line) => html`<li>${line}</li>`)}</ul>
+        <b>Good questions if things go quiet</b><ul>${(b?.discussion ?? []).map((line) => html`<li>${line}</li>`)}</ul>
+        <p class="st-hint">Students can ask anything, as often as they want. Don't make up unplayed matches or invent data. “We don't know” is a useful answer.</p>
+      </div>
+      <p class="st-hint">${v.phase === 'question' ? 'Let them make a call before showing where the room landed.' : 'Talk through the result. Advance when discussion has run its course.'}</p>
+      ${next(v, label)}
+    </div>`;
   }
 
   const next = (v, label, extra = '') =>
@@ -169,7 +209,7 @@ export default function (root, api) {
       ${confidenceInputs(q, sure ?? v.sure)}
       ${asksConfidence(q) && v.answer != null && (sure ?? v.sure) == null && html`<p class="st-hint">Answer in. Now: how sure are you?</p>`}
       ${error && html`<p class="form-error">${error}</p>`}
-      ${v.isVip && next(v, 'Reveal Now ▸', 'secondary')}`;
+      ${v.isVip && next(v, part.id === 'learn' ? 'Show responses ▸' : 'Reveal Now ▸', 'secondary')}`;
   }
 
   function result(v, part, q) {
