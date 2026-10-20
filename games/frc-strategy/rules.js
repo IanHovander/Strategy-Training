@@ -1,9 +1,14 @@
-// Strategy Training: the room works through a lesson together, one question at a time.
-// Everyone answers on their phone; the big screen shows how the room answered, the points each
-// answer was worth, and a leaderboard after every question.
+// Strategy Training: the room works through a lesson together.
 //
-// Phases: pick (the leader chooses the lesson) -> question -> reveal -> scores -> question ... -> final
-import { LESSONS, bestPoints, lessonById } from './lessons.js';
+// The leader (big screen or the leader's phone) picks a lesson and a part:
+//   Learn and Test (kind 'quiz'): everyone answers each question on their phone; the big screen shows how the room
+//     answered and the points each answer earned. Phases: question -> reveal -> (scores) -> ... -> final.
+//     Learn shows the leaderboard after each case, Test after every question.
+//   Showdown (kind 'draft'): two groups build picklists, run alliance selection and play a best of three.
+//     Its rules are in draft-rules.js.
+import { LESSONS, lessonById, partById } from './lessons.js';
+import { bestPoints, cleanAnswer, isBest, scoreAnswer, tally } from './quiz.js';
+import * as draft from './draft-rules.js';
 
 const ANSWER_SECONDS = 120;
 const EXTRA_SECONDS = 30;
@@ -11,7 +16,7 @@ const ALL_IN_MS = 3000; // once everyone has answered, a moment to change their 
 
 export default {
   name: 'Strategy Training',
-  description: 'Work through a strategy lesson as a team. Answer on your phone, see how the room voted, and climb the leaderboard.',
+  description: 'Learn, test and compete: strategy lessons for the whole team. Answer on your phone; the big screen shows how the room thinks.',
   minPlayers: 1,
   maxPlayers: 32,
 
@@ -19,36 +24,40 @@ export default {
     return {
       phase: 'pick',
       lessonId: LESSONS[0].id,
-      q: 0,
+      partId: LESSONS[0].parts[0].id,
       deadline: null,
-      answers: {}, // playerId -> choice index, for the current question
       scores: {},
-      gained: {}, // points from the last revealed question
-      before: {}, // ranks before the last question, to show who moved up
+      gained: {}, // points from the last reveal / round
+      before: {}, // ranks before it, to show who moved up
+      // quiz
+      q: 0,
+      answers: {}, // playerId -> answer, for the current question
       best: {}, // playerId -> how many best answers
-      history: [], // per question: { counts, answered, players, bestShare }
+      history: [], // per question: { counts, answered, median, bestShare }
+      draft: null, // the Showdown (draft-rules.js)
     };
   },
 
-  // Late arrivals join in with 0 points.
   onJoin(ctx, player) {
     ctx.state.scores[player.id] ??= 0;
+    if (isDraft(ctx.state)) draft.onJoin(ctx, player);
   },
 
   onDisconnect(ctx) {
-    maybeReveal(ctx);
+    if (isDraft(ctx.state)) draft.onDisconnect(ctx);
+    else maybeReveal(ctx);
   },
 
   actions: {
     lesson(ctx, player, payload) {
-      if (player.isVip) pickLesson(ctx, payload?.lessonId);
+      if (player.isVip) pick(ctx, payload);
     },
     answer(ctx, player, payload) {
       const s = ctx.state;
-      const i = payload?.choice;
       if (s.phase !== 'question') return { error: 'Answers are closed for this question.' };
-      if (!Number.isInteger(i) || i < 0 || i >= question(s).choices.length) return { error: 'Pick one of the answers.' };
-      s.answers[player.id] = i; // you can change your mind until the reveal
+      const answer = cleanAnswer(question(s), payload?.answer);
+      if (answer === null) return { error: 'That isn’t a valid answer.' };
+      s.answers[player.id] = answer; // you can change your mind until the reveal
       maybeReveal(ctx);
       return { ok: true };
     },
@@ -58,165 +67,158 @@ export default {
     finish(ctx, player) {
       if (player.isVip) finish(ctx);
     },
+    // the Showdown: picklist, invite, assign, lock, shuffle
+    ...Object.fromEntries(
+      Object.entries(draft.actions).map(([name, fn]) => [name, (ctx, player, payload) => (isDraft(ctx.state) ? fn(ctx, player, payload) : undefined)]),
+    ),
   },
 
   // Buttons on the big screen.
   hostActions: {
     lesson(ctx, payload) {
-      pickLesson(ctx, payload?.lessonId);
+      pick(ctx, payload);
     },
     next(ctx, payload) {
       next(ctx, payload?.from);
     },
+    shuffle(ctx) {
+      if (isDraft(ctx.state)) draft.hostActions.shuffle(ctx);
+    },
     more(ctx) {
       const s = ctx.state;
-      if (s.phase !== 'question') return;
+      if (s.phase !== 'question' && s.phase !== 'plan' && s.phase !== 'prep' && s.phase !== 'select') return;
       s.deadline = Math.max(s.deadline, Date.now()) + EXTRA_SECONDS * 1000;
-      ctx.timer('phase', s.deadline - Date.now(), () => reveal(ctx));
+      ctx.timer('phase', s.deadline - Date.now(), () => (isDraft(s) ? draft.next(ctx) : reveal(ctx)));
     },
     finish(ctx) {
       finish(ctx);
     },
   },
 
-  // The big screen sees counts only after the reveal, and never who picked what.
+  // The big screen sees counts only after the reveal, and never who picked what before it.
   hostView(ctx) {
     const s = ctx.state;
-    const open = s.phase === 'question';
+    const base = { phase: s.phase, step: stepKey(s), lessonId: s.lessonId, partId: s.partId, deadline: s.deadline };
     const ranks = rankMap(ctx);
+    const players = ctx.players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      connected: p.connected,
+      score: s.scores[p.id] ?? 0,
+      gained: s.gained[p.id] ?? null,
+      rank: ranks[p.id],
+      before: s.before[p.id] ?? null,
+      done: s.phase === 'question' ? p.id in s.answers : null,
+    }));
+    if (s.phase === 'pick') return { ...base, players };
+    if (isDraft(s)) return draft.hostView(ctx, { ...base, players });
+    const revealed = s.phase !== 'question';
     return {
-      phase: s.phase,
-      step: stepKey(s),
-      lessonId: s.lessonId,
+      ...base,
       q: s.q,
-      deadline: s.deadline,
-      answered: open ? answeredCount(ctx) : null,
-      counts: open || s.phase === 'pick' ? null : s.history[s.q]?.counts ?? null,
+      players,
+      answered: s.phase === 'question' ? ctx.players.filter((p) => p.id in s.answers).length : null,
+      tally: revealed ? s.history[s.q] ?? null : null,
       history: s.phase === 'final' ? s.history.map(({ bestShare, answered }) => ({ bestShare, answered })) : null,
-      players: ctx.players.map((p) => ({
-        id: p.id,
-        name: p.name,
-        color: p.color,
-        connected: p.connected,
-        done: open ? p.id in s.answers : null,
-        score: s.scores[p.id] ?? 0,
-        gained: s.gained[p.id] ?? null,
-        rank: ranks[p.id],
-        before: s.before[p.id] ?? null,
-        best: s.best[p.id] ?? 0,
-      })),
     };
   },
 
   playerView(ctx, me) {
     const s = ctx.state;
     const ranks = rankMap(ctx);
-    const revealed = s.phase === 'reveal' || s.phase === 'scores';
-    return {
+    const base = {
       phase: s.phase,
       step: stepKey(s),
       lessonId: s.lessonId,
-      q: s.q,
+      partId: s.partId,
       deadline: s.deadline,
       isVip: me.isVip,
-      choice: s.answers[me.id] ?? null,
-      counts: revealed ? s.history[s.q]?.counts ?? null : null,
-      gained: revealed ? s.gained[me.id] ?? null : null,
       score: s.scores[me.id] ?? 0,
       rank: ranks[me.id] ?? null,
       of: ctx.players.length,
+      gained: s.gained[me.id] ?? null,
+    };
+    if (s.phase === 'pick') return base;
+    if (isDraft(s)) return draft.playerView(ctx, me, base);
+    const revealed = s.phase === 'reveal' || s.phase === 'scores';
+    return {
+      ...base,
+      q: s.q,
+      answer: s.answers[me.id] ?? null,
+      tally: revealed ? s.history[s.q] ?? null : null,
       best: s.best[me.id] ?? 0,
       asked: s.phase === 'final' ? s.history.length : s.q + (revealed ? 1 : 0),
     };
   },
 };
 
-// ---------- the rules ----------
+// ---------- shared ----------
 
 const lesson = (s) => lessonById(s.lessonId);
-const question = (s) => lesson(s).questions[s.q];
+const part = (s) => partById(lesson(s), s.partId);
+const isDraft = (s) => part(s)?.kind === 'draft';
+const question = (s) => part(s).questions[s.q];
 /** Which screen we're on, so a double-tapped "next" (big screen and leader at once) only moves once. */
-const stepKey = (s) => `${s.phase}:${s.q}`;
+const stepKey = (s) => `${s.phase}:${isDraft(s) ? (s.phase === 'select' ? s.draft.pick : s.draft?.match ?? 0) : s.q}`;
 
-function pickLesson(ctx, lessonId) {
-  if (ctx.state.phase === 'pick' && lessonById(lessonId)) ctx.state.lessonId = lessonId;
+function pick(ctx, payload) {
+  const s = ctx.state;
+  if (s.phase !== 'pick') return;
+  const l = lessonById(payload?.lessonId) ?? lesson(s);
+  const p = partById(l, payload?.partId) ?? l.parts[0];
+  s.lessonId = l.id;
+  s.partId = p.id;
 }
 
 function next(ctx, from) {
   const s = ctx.state;
   if (from !== stepKey(s)) return;
-  if (s.phase === 'pick') startLesson(ctx);
-  else if (s.phase === 'question') reveal(ctx);
-  else if (s.phase === 'reveal') s.phase = 'scores';
-  else if (s.phase === 'scores') {
-    if (s.q + 1 < lesson(s).questions.length) ask(ctx, s.q + 1);
+  if (s.phase === 'pick') return isDraft(s) ? (resetScores(ctx), draft.start(ctx)) : startQuiz(ctx);
+  if (isDraft(s)) return draft.next(ctx);
+  if (s.phase === 'question') return reveal(ctx);
+  if (s.phase === 'reveal') {
+    const q = question(s);
+    const last = s.q + 1 >= part(s).questions.length;
+    if (part(s).leaderboard === 'case' && !q.lastInCase && !last) return ask(ctx, s.q + 1);
+    s.phase = 'scores';
+  } else if (s.phase === 'scores') {
+    if (s.q + 1 < part(s).questions.length) ask(ctx, s.q + 1);
     else s.phase = 'final';
   }
 }
 
-/** Back to the lobby, which shows who came out on top. */
-function finish(ctx) {
-  if (ctx.state.phase !== 'final') return;
-  const top = ranked(ctx)[0];
-  ctx.end(top ? `${top.name} topped ${lesson(ctx.state).title} with ${top.score} points` : 'Lesson complete');
-}
-
-function startLesson(ctx) {
+function resetScores(ctx) {
   const s = ctx.state;
   for (const p of ctx.players) s.scores[p.id] = 0;
   Object.assign(s, { gained: {}, before: {}, best: {}, history: [] });
-  ask(ctx, 0);
-}
-
-function ask(ctx, q) {
-  const s = ctx.state;
-  Object.assign(s, { phase: 'question', q, answers: {}, deadline: Date.now() + ANSWER_SECONDS * 1000 });
-  ctx.cancelTimer('allIn');
-  ctx.timer('phase', ANSWER_SECONDS * 1000, () => reveal(ctx));
 }
 
 function reveal(ctx) {
-  const s = ctx.state;
-  if (s.phase !== 'question') return;
-  ctx.cancelTimer('phase');
-  ctx.cancelTimer('allIn');
-  const { choices } = question(s);
-  const top = bestPoints(question(s));
-  s.before = rankMap(ctx);
-  s.gained = {};
-  const counts = choices.map(() => 0);
-  let bestCount = 0;
-  for (const [id, i] of Object.entries(s.answers)) {
-    if (!ctx.player(id)) continue;
-    counts[i]++;
-    s.gained[id] = choices[i].points;
-    s.scores[id] = (s.scores[id] ?? 0) + choices[i].points;
-    if (choices[i].points === top) {
-      s.best[id] = (s.best[id] ?? 0) + 1;
-      bestCount++;
-    }
-  }
-  const answered = counts.reduce((a, b) => a + b, 0);
-  s.history[s.q] = { counts, answered, players: ctx.players.length, bestShare: answered ? bestCount / answered : 0 };
-  s.phase = 'reveal';
-  s.deadline = null;
+  if (ctx.state.phase === 'question') revealAnswers(ctx);
 }
 
-function answeredCount(ctx) {
-  return ctx.players.filter((p) => p.id in ctx.state.answers).length;
-}
-
-/** Everyone still connected has answered: reveal after a short pause (unless that changes). */
+/** Everyone still connected is done: reveal after a short pause (unless that changes). */
 function maybeReveal(ctx) {
   const s = ctx.state;
   if (s.phase !== 'question') return;
-  const online = ctx.players.filter((p) => p.connected);
-  const allIn = online.length > 0 && online.every((p) => p.id in s.answers);
-  if (!allIn) return ctx.cancelTimer('allIn');
-  ctx.timer('allIn', ALL_IN_MS, () => {
-    const still = ctx.players.filter((p) => p.connected);
-    if (still.every((p) => p.id in s.answers)) reveal(ctx);
-  });
+  const done = (id) => id in s.answers;
+  const allIn = () => {
+    const online = ctx.players.filter((p) => p.connected);
+    return online.length > 0 && online.every((p) => done(p.id));
+  };
+  if (!allIn()) return ctx.cancelTimer('allIn');
+  ctx.timer('allIn', ALL_IN_MS, () => allIn() && reveal(ctx));
+}
+
+/** Back to the lobby, which shows who came out on top. */
+function finish(ctx) {
+  const s = ctx.state;
+  if (s.phase !== 'final') return;
+  const title = `${lesson(s).title} ${part(s).title}`;
+  if (isDraft(s)) return ctx.end(draft.summary(ctx));
+  const top = ranked(ctx)[0];
+  ctx.end(top ? `${top.name} topped ${title} with ${top.score} points` : `${title} complete`);
 }
 
 /** Players by score, highest first, with ties sharing a rank (1, 2, 2, 4). */
@@ -230,4 +232,43 @@ function ranked(ctx) {
 
 function rankMap(ctx) {
   return Object.fromEntries(ranked(ctx).map((p) => [p.id, p.rank]));
+}
+
+// ---------- Learn and Test ----------
+
+function startQuiz(ctx) {
+  resetScores(ctx);
+  ask(ctx, 0);
+}
+
+function ask(ctx, q) {
+  const s = ctx.state;
+  Object.assign(s, { phase: 'question', q, answers: {}, deadline: Date.now() + ANSWER_SECONDS * 1000 });
+  ctx.cancelTimer('allIn');
+  ctx.timer('phase', ANSWER_SECONDS * 1000, () => reveal(ctx));
+}
+
+function revealAnswers(ctx) {
+  const s = ctx.state;
+  ctx.cancelTimer('phase');
+  ctx.cancelTimer('allIn');
+  const q = question(s);
+  s.before = rankMap(ctx);
+  s.gained = {};
+  const given = [];
+  let bestCount = 0;
+  for (const [id, answer] of Object.entries(s.answers)) {
+    if (!ctx.player(id)) continue;
+    given.push(answer);
+    s.gained[id] = scoreAnswer(q, answer);
+    s.scores[id] = (s.scores[id] ?? 0) + s.gained[id];
+    if (isBest(q, answer)) {
+      s.best[id] = (s.best[id] ?? 0) + 1;
+      bestCount++;
+    }
+  }
+  const t = tally(q, given);
+  s.history[s.q] = { ...t, players: ctx.players.length, bestShare: t.answered ? bestCount / t.answered : 0, top: bestPoints(q) };
+  s.phase = 'reveal';
+  s.deadline = null;
 }

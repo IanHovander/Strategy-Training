@@ -53,7 +53,7 @@ function addBot(room) {
   });
 }
 
-/** Very simple players: tap during races, get through Odd One Out's phases, and answer Strategy Training questions. */
+/** Very simple players: tap during races, get through Odd One Out's phases, and play Strategy Training. */
 function play(bot) {
   const v = bot.view;
   const racing = bot.game === 'tap-race' && v?.phase === 'go';
@@ -63,21 +63,46 @@ function play(bot) {
     bot.tapper = null;
   }
   if (!v) return;
-  const later = (type, payload) => {
-    const key = `${type}:${v.round ?? v.step}:${v.phase}`;
+  // Act once per phase, after a short random delay. `actions` sends several in a row instead.
+  const later = (type, payload, actions = [[type, payload]]) => {
+    const key = `${type}:${v.step ?? v.round}:${v.phase}`;
     if (bot.pending === key) return;
     bot.pending = key;
-    setTimeout(() => bot.socket.emit('action', { type, payload }), 800 + Math.random() * 2500);
+    setTimeout(() => {
+      for (const [t, p] of actions) bot.socket.emit('action', { type: t, payload: p });
+    }, 800 + Math.random() * 2500);
   };
-  // Strategy Training: every question has at least three answers.
+  // Strategy Training: answer each question (any type); in the Showdown, build the picklist, invite and lock in.
   if (bot.game === 'frc-strategy') {
-    if (v.phase === 'question' && v.choice == null) later('answer', { choice: Math.floor(Math.random() * 3) });
+    strategy.then(({ lessonById, partById }) => {
+      const part = partById(lessonById(v.lessonId), v.partId);
+      if (v.phase === 'question' && v.answer == null) later('answer', { answer: randomAnswer(part.questions[v.q]) });
+      if (part.kind !== 'draft') return;
+      const taken = v.alliances.flat();
+      const open = v.event.map((s) => s.id).filter((id) => !taken.includes(id));
+      if (v.phase === 'prep' && v.picklist && v.picklist.pick.length < 3) later('picklist', { teamId: pick(open), list: 'pick' });
+      if (v.phase === 'select' && v.turn === v.group && v.captain) later('invite', { teamId: pick(open) });
+      if (v.phase === 'plan' && v.captain && !v.locked[v.group]) later('lock', {});
+    });
     return;
   }
   if (bot.game !== 'odd-one-out') return;
   if (v.phase === 'reveal' && !v.ready) later('ready');
   if (v.phase === 'clue' && !v.myClue) later('clue', { clue: pick(CLUES) });
   if (v.phase === 'vote' && !v.myVote && v.choices?.length) later('vote', { playerId: pick(v.choices).id });
+}
+
+// Strategy Training's lessons, so bots can give a valid answer to any question.
+const strategy = import('../../games/frc-strategy/lessons.js');
+
+function randomAnswer(q) {
+  if (q.type === 'number') {
+    const { min, max, step = 1 } = q.number;
+    const guess = q.number.value + (Math.random() - 0.5) * (max - min) * 0.3;
+    return Math.min(max, Math.max(min, Math.round(guess / step) * step));
+  }
+  if (q.type === 'multi') return q.choices.map((_, i) => i).filter(() => Math.random() < 0.5);
+  return Math.floor(Math.random() * q.choices.length);
 }
 
 function draw(bot) {

@@ -1,13 +1,18 @@
 # FRC Strategy Lab
 
-Strategy training for FRC teams, two ways:
+Strategy training for FRC teams. Each lesson has three parts, played in order:
 
-- **As a team (Game Night):** one big screen shows the lesson, everyone answers on their phone, and the board shows
-  how the room answered, the points each answer was worth, and a leaderboard after every question.
-- **Solo:** the self-paced lesson site, with sliders and match simulations for each investigation.
+1. **Learn** (team or solo): case studies. Each starts with an exact answer and adds a detail at every step:
+   estimate probabilities with a slider, pick the details that matter (red herrings cost points), and make the call.
+   The last cases are mostly unknowns to spot and argue about. Every reveal ends with a discussion prompt.
+2. **Test** (team or solo): one scored question per investigation.
+3. **Showdown** (team): the room splits at random into two groups. Each builds a picklist, runs alliance selection
+   like at an event, and plays the other group's alliance in a best of three.
 
-Lesson 1 is **Risk & Consistency**: ten investigations into when to play it safe, when to gamble, and the hidden
-assumptions behind both.
+As a team, one big screen runs the lesson and everyone answers on their phone; the board shows how the room
+answered, the points each answer earned, and a leaderboard. Solo, the same lessons run on one page.
+
+Lesson 1 is **Risk & Consistency**: when to play it safe, when to gamble, and the hidden assumptions behind both.
 
 ## Website
 
@@ -32,37 +37,77 @@ Every push to `main` then rebuilds and publishes the site.
 1. Open the big screen link on the computer connected to the TV and press F11.
 2. Everyone scans the QR code and types their name. The first to join is the **leader** (★).
 3. **Strategy Training** is the first game in the lobby. Press **Start Game**.
-4. The big screen (or the leader's phone) picks the lesson. Only Lesson 1 is available for now.
-5. For each question:
-   - Everyone answers on their phone and can change their mind until the reveal. The reveal comes when everyone
-     has answered, when the 2-minute timer runs out, or when the big screen presses **Reveal**. **+30s** adds time
-     for discussion.
-   - The reveal shows the share of the room that picked each answer, the points each answer was worth, and what
-     the model says. Phones show the same, plus an **Explore the Model** panel with sliders and match simulations.
-   - **Leaderboard** shows the scores, the points just earned, and who moved up.
-6. The end shows the podium and a per-question report of how the room did. **Finish** goes back to the lobby.
+4. The big screen (or the leader's phone) picks the lesson and the part: **Learn**, **Test** or **Showdown**.
 
-Answers earn the points set in the lesson: 100 for the best answer, partial credit for answers that are partly
-right, and double points on the final Mastery Challenge.
+**Learn and Test.** For each question:
+- Everyone answers on their phone and can change their mind until the reveal. The reveal comes when everyone has
+  answered, when the 2-minute timer runs out, or when the big screen presses **Reveal**. **+30s** adds time for
+  discussion.
+- Learn questions come in three kinds: a **number** to estimate with a slider (points for getting close), **pick
+  every detail that matters** (red herrings cost points), and a **decision**. The big screen keeps the case file on
+  the left, with each step's new details highlighted.
+- The reveal shows how the room answered (a histogram for estimates), the points each answer was worth, what the
+  model says, and a question to discuss. Phones also get an **Explore the Model** panel with sliders and match
+  simulations.
+- The leaderboard comes after each case in Learn, and after every question in the Test.
+
+**Showdown.** The room splits at random into a Red group (Alliance 1) and a Blue group (Alliance 2), each with a
+student captain. The big screen can shuffle first.
+- **The event:** sixteen teams. A robot does two things: it scores cycles, and it can defend. Each team has hidden
+  true attributes:
+  - a probability distribution for how many cycles (0–12) it completes in a match, always with some chance of 0;
+  - **susceptibility** to defense (0–100%);
+  - **defense** ability (0–100%).
+
+  Each game simulates qualifications: ten matches per team, shown as the % of matches with each cycle count, and
+  scouts' estimates of susceptibility and defense that land within ±20% of the true value. Teams are seeded from
+  those results, and seeds #1 and #2 captain the two alliances.
+- **Picklists (15 minutes):** each group builds one shared picklist on their phones, in the 2026-scout layout:
+  Your Picklist (toggling with Do Not Pick) beside Available Teams. Drag to rank (hold briefly on touch), tap a
+  team for its scouting. The other group and the big screen never see it.
+- **Alliance selection:** serpentine with two alliances (Alliance 1, Alliance 2, Alliance 2, Alliance 1), 45
+  seconds for first-round picks and 1:30 after that. The group captain makes each invitation. If time runs out,
+  the alliance gets the top available team on its picklist. As at an event, Alliance 1 may take Alliance 2's
+  captain, and the next seed then captains Alliance 2.
+- **Best of three:** before each match the group sets each robot to offense or to defend one robot of theirs
+  (anyone in the group can change it; the captain locks in). Roles are static for the whole match. The match plays
+  as soon as both alliances lock in, drawn from the true attributes. An alliance's score is its total cycles; ties
+  are replayed.
+- **How defense works:** a defended robot loses **defender's ability × its susceptibility** of what it does. On
+  offense, each cycle succeeds with probability 1 − ability × susceptibility (a 60% defender on a 50%-susceptible
+  robot costs it 30% of its cycles). Two defenders on one robot both apply. A defender breaks down with its usual
+  chance of 0 cycles plus 5 percentage points, at a random moment in the match: it defends the cycles before that and
+  none after (a robot's cycles are spread evenly through the match). Results show when each defender broke down and
+  how many of its target's cycles it defended. If the robot you chose to defend is
+  defending too, you decide beforehand: stay on it (its defense ability drops by the same rule) or switch to another
+  robot. Phones show each choice's effect from the scouts' estimates.
+- **The reveal:** once an alliance wins two matches, the big screen shows every team's true cycle distribution,
+  susceptibility and defense next to what was scouted, and each match's win chance for both alliances given the
+  assignments they chose (from 20,000 simulated matches, so within about 1%).
 
 ## Lessons: one source for both versions
 
-Every lesson lives in one file, `games/frc-strategy/lessons.js`: each question's prompt, its answers with their
-points and what the model says about each, the takeaway, and an optional explorer (sliders and a model to simulate).
-Both versions read it directly, so there is nothing to keep in sync:
+Everything about a lesson lives in `games/frc-strategy/`, and both the team game and the solo page read it, so
+there is nothing to keep in sync:
 
-- the team game (`games/frc-strategy/`) asks the questions, scores the answers and shows the explorer on phones;
-- the solo page (`public/lessons.html`) renders the same questions, scores you the same way, and mounts the same
-  explorer (`games/frc-strategy/explorer.js`).
+| File | What it holds |
+|---|---|
+| `lessons.js` | The list of lessons and their parts; how each question is described |
+| `lesson1-learn.js` | Lesson 1's case studies (Learn) |
+| `lesson1-test.js` | Lesson 1's investigations (Test) |
+| `lesson1-draft.js` | Lesson 1's Showdown teams (cycle distributions, susceptibility, defense), timers and rules |
+| `quiz.js` | How every question type is checked and scored |
+| `alliance.js`, `draft-rules.js`, `picklist.js` | The Showdown match model, rules and picklist |
+| `views.js`, `explorer.js` | Question screens and the Explore panel, shared by phones and the solo page |
 
-Edit a question once and both change. Add a lesson to the `LESSONS` list and it appears in the team lesson picker,
-and solo at `lessons.html?lesson=<id>`.
+Edit a question once and both versions change. Add a lesson to the `LESSONS` list and it appears in the team
+picker, and solo at `lessons.html?lesson=<id>`.
 
-Solo links: `lessons.html` (home), `lessons.html#lesson-3` (investigation 3), `lessons.html#done` (your results).
-Solo answers are kept in that browser.
+Solo links: `lessons.html` (home), `#learn-3` (Learn step 3), `#test-3` (Test investigation 3), `#learn-done` /
+`#test-done` (results). Older `#lesson-N` links open the Test. Solo answers are kept in that browser.
 
-`npm test` checks the room, plays a whole lesson (`test/frc-strategy.mjs`), checks that every explorer agrees with
-the answers it backs up, and that the solo page still loads the shared lesson file.
+`npm test` checks the lesson content (every best answer earns full points, every explorer agrees with the answers
+it backs up), the Showdown match model, and plays Learn, the Test and a Showdown with fake phones.
 
 ## Keeping up with Game Night
 
@@ -76,7 +121,7 @@ git pull game-night main
 
 Changes made here to shared Game Night files: the lobby's player list scrolls and shrinks with big groups
 (`public/css/host.css`), phones link to the solo lessons (`public/index.html`), the bots answer Strategy Training
-questions (`public/js/tools/bots.js`), and the room code prefix in `public/js/config.js` is this site's own.
+questions and play the Showdown (`public/js/tools/bots.js`), and the room code prefix in `public/js/config.js` is this site's own.
 
 ## Educational model
 
