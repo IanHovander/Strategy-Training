@@ -235,3 +235,45 @@ export function localPair(id = 'host') {
   client.connect = () => {};
   return { client, conn };
 }
+
+/**
+ * A data channel lookalike over a MessagePort (same events and messages as a PeerJS connection), for a phone page
+ * inside the big screen's own page: its Test Phone. The two talk through the browser, with no internet needed.
+ */
+export function portChannel(port, connectionId = `local-${Math.random().toString(36).slice(2)}`) {
+  const handlers = { open: [], data: [], close: [], error: [] };
+  let closed = false;
+  const fire = (event, arg) => handlers[event].forEach((fn) => fn(arg));
+  const shut = (tell) => {
+    if (closed) return;
+    closed = true;
+    try {
+      if (tell) port.postMessage({ t: '__closed' });
+      port.close();
+    } catch {}
+    fire('close');
+  };
+  port.onmessage = (e) => (e.data?.t === '__closed' ? shut(false) : fire('data', e.data));
+  return {
+    connectionId,
+    on(event, fn) {
+      handlers[event]?.push(fn);
+      if (event === 'open') setTimeout(() => !closed && fn(), 0); // already open
+    },
+    send(msg) {
+      if (closed) throw new Error('channel closed');
+      port.postMessage(msg);
+    },
+    close: () => shut(true),
+  };
+}
+
+/** The big screen's page around this one, when this is its Test Phone; otherwise null. */
+export function enclosingBigScreen() {
+  try {
+    const host = window.parent;
+    return host !== window && typeof host.gamenightLocalPhone === 'function' ? host : null;
+  } catch {
+    return null; // inside another site's page
+  }
+}

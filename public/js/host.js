@@ -87,7 +87,9 @@ for (const btn of document.querySelectorAll('[data-lobby]')) {
 
 function joinUrl() {
   const url = new URL('./', location.href);
-  url.search = state?.room.join.code ? `?room=${state.room.join.code}` : '';
+  // The website's big screen knows its code before it's registered online; its Test Phone can join right away.
+  const code = state?.room.join.code ?? window.gamenightLocalPhone?.roomCode;
+  url.search = code ? `?room=${code}` : '';
   return url.href;
 }
 // On a phone, show the big screen zoomed out to fit, the way it's laid out for a TV; the test phone gets normal scale.

@@ -1,7 +1,7 @@
 // A phone's connection to the website's big screen, over WebRTC. Looks like a socket.io socket to
 // play.js (on / emit / timeout().emit / connected / connect) so the phone page works the same
 // whether the game runs on the laptop server or in the big screen's browser.
-import { ClientSocket, loadPeerJS, peerOptions, PROTOCOL, roomPeerId } from './common.js';
+import { ClientSocket, enclosingBigScreen, loadPeerJS, peerOptions, portChannel, PROTOCOL, roomPeerId } from './common.js';
 import { getRelay } from './relay.js';
 
 const SILENT_MS = 6000; // the big screen answers our clock question every 2 s; silence this long = gone
@@ -54,9 +54,12 @@ export class PeerSocket extends ClientSocket {
     clearTimeout(this.retryTimer);
     this.retryTimer = null;
     try {
-      const peer = await this.newPeer();
-      this.status(`Looking for room ${this.code}…`);
-      const dc = peer.connect(roomPeerId(this.code), { reliable: true, serialization: 'json' });
+      let dc = this.localChannel();
+      if (!dc) {
+        const peer = await this.newPeer();
+        this.status(`Looking for room ${this.code}…`);
+        dc = peer.connect(roomPeerId(this.code), { reliable: true, serialization: 'json' });
+      }
       this.dc = dc;
       const welcome = setTimeout(() => {
         if (this.dc === dc && !this.connected) this.lost(dc, `Still looking for room ${this.code}. Is the big screen open?`);
@@ -89,6 +92,14 @@ export class PeerSocket extends ClientSocket {
     } finally {
       this.opening = false;
     }
+  }
+
+  /** As the big screen's Test Phone (inside its page, same room): a direct channel to it, no internet. Else null. */
+  localChannel() {
+    const host = enclosingBigScreen();
+    if (!host) return null;
+    const { port1, port2 } = new MessageChannel();
+    return host.gamenightLocalPhone(this.code, port2) ? portChannel(port1) : null;
   }
 
   /**
