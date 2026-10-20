@@ -179,12 +179,15 @@ function play(ctx) {
   if (winner !== null) draft.wins[winner]++;
   draft.results.push({
     assign: draft.assign.map((x) => JSON.parse(JSON.stringify(x))),
-    roles: match.roles, // who actually defended whom
+    roles: match.roles, // who defended whom
     scores: match.scores,
     cycles: match.cycles,
+    attempts: match.attempts,
+    defended: match.defended, // per offense robot: attempts made while a defender was on it
+    brokeAt: match.brokeAt, // per defender that broke down: when (0–1 through the match)
     winner,
     // each alliance's chance given these assignments: hidden until the series is over
-    odds: { win: odds.win, tie: odds.tie, mean: odds.mean },
+    odds: { win: odds.win, tie: odds.tie, mean: odds.mean, runs: odds.runs },
   });
   s.phase = 'result';
   s.deadline = null;

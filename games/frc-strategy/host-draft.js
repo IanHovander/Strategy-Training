@@ -4,6 +4,7 @@ import { html } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
 import { DRAFT } from './lesson1-draft.js';
 import { nextButton } from './host-parts.js';
+import { clock } from './alliance.js';
 import { GROUPS, groupBadge, pct, roleList, scoutCard, scoutOf, teamName, truthRow } from './draft-views.js';
 
 export function draftHead(v, lesson, part) {
@@ -142,7 +143,7 @@ function defenseRule() {
       <b>How defense works</b>
       <span>A defended robot loses <b>defender’s ability × its susceptibility</b> of its cycles. Example: a 60% defender on a 50%-susceptible robot takes 30%, so each cycle succeeds 70% of the time.</span>
       <span>Defend a robot that’s defending too, and you can stay on it (its defense weakens by the same rule) or switch to another robot. Decide before the match: robots don’t change roles mid-match.</span>
-      <span>A defender breaks down with its usual chance of 0 cycles <b>+5%</b>, and then defends nobody.</span>
+      <span>A defender breaks down with its usual chance of 0 cycles <b>+5%</b>, at a random moment: it defends the cycles before that and not the ones after.</span>
     </div>`;
 }
 
@@ -152,7 +153,7 @@ function side(v, r, i) {
       ${groupBadge(i, `Alliance ${i + 1}`)}
       <span class="st-side-score">${r.scores[i]}</span>
       <small>cycles</small>
-      ${roleList(v.alliances[i], r.roles, r.cycles)}
+      ${roleList(v.alliances[i], r)}
     </div>`;
 }
 
@@ -183,7 +184,7 @@ function final(v) {
                 <b>Match ${m + 1}</b>
                 <span>${r.scores[0]}–${r.scores[1]}${r.winner == null ? ' (tie)' : ''}</span>
                 <span>A1 win chance <b>${pct(r.odds.win[0])}</b> · A2 <b>${pct(r.odds.win[1])}</b>${r.odds.tie > 0.005 ? ` · tie ${pct(r.odds.tie)}` : ''}</span>
-                <small>A1: ${defenseLine(r.roles, v.alliances[0])} · A2: ${defenseLine(r.roles, v.alliances[1])}</small>
+                <small>A1: ${defenseLine(r, v.alliances[0])} · A2: ${defenseLine(r, v.alliances[1])}</small>
               </div>`,
           )}
         </div>
@@ -200,8 +201,10 @@ function final(v) {
     </div>`;
 }
 
-function defenseLine(roles, ids) {
-  const defenders = ids.filter((id) => roles[id].role === 'defend');
+function defenseLine(r, ids) {
+  const defenders = ids.filter((id) => r.roles[id].role === 'defend');
   if (!defenders.length) return 'all offense';
-  return defenders.map((id) => `${teamName(id)} ${roles[id].broken ? 'broke (was on' : roles[id].shadowing ? 'shadowed' : 'on'} ${teamName(roles[id].target)}${roles[id].broken ? ')' : ''}`).join(', ');
+  return defenders
+    .map((id) => `${teamName(id)} ${r.roles[id].shadowing ? 'shadowed' : 'on'} ${teamName(r.roles[id].target)}${r.brokeAt[id] != null ? `, broke at ${clock(r.brokeAt[id])}` : ''}`)
+    .join(', ');
 }

@@ -3,7 +3,7 @@
 // the teams' true attributes, except `truthRow` and `trueBars`, which are only used after the reveal.
 import { html } from '../../js/ui.js';
 import { DRAFT, MAX_CYCLES } from './lesson1-draft.js';
-import { cycleCounts, keepShare } from './alliance.js';
+import { clock, cycleCounts, keepShare } from './alliance.js';
 import { GROUPS } from './draft-rules.js';
 
 export { GROUPS };
@@ -85,22 +85,31 @@ export function truthRow(v, id) {
     </tr>`;
 }
 
-/** What a robot did in a match, from the resolved roles: "Offense · 6 cycles", "Defended Feather". */
-export function roleLine(role, cycles) {
+/** When a defender broke down: "broke down at 1:21 (54% through)". */
+export const brokeLine = (u) => `broke down at ${clock(u)} (${pct(u)} through)`;
+
+/**
+ * What a robot did in a match, from the result: "6 of 8 cycles (Brick defended 5 of them)",
+ * "Defended Feather until it broke down at 1:21 (54% through)".
+ */
+export function roleLine(r, id) {
+  const role = r.roles[id];
   if (role.role === 'offense') {
-    const slowed = role.defenders.length ? ` (defended by ${role.defenders.map(teamName).join(', ')})` : '';
-    return `${cycles ?? 0} cycles${slowed}`;
+    const n = r.attempts[id] ?? 0;
+    if (n === 0) return '0 cycles: broke down at the start';
+    const guards = role.defenders.length ? ` (${r.defended[id] === 0 ? 'none defended: its defender broke first' : r.defended[id] === n ? 'all defended' : `${r.defended[id]} defended`})` : '';
+    return `${r.cycles[id]} of ${n} cycles${guards}`;
   }
-  if (role.broken) return `Broke down (was set to defend ${teamName(role.target)})`;
   const how = role.shadowing ? `Shadowed ${teamName(role.target)}, who was defending` : `Defended ${teamName(role.target)}`;
-  return `${how}${role.switched ? ' (switched)' : ''}`;
+  const when = r.brokeAt[id] != null ? ` until it ${brokeLine(r.brokeAt[id])}` : ' all match';
+  return `${how}${role.switched ? ' (switched)' : ''}${when}`;
 }
 
 /** Each robot of an alliance and what it did. */
-export function roleList(ids, roles, cycles) {
+export function roleList(ids, r) {
   return html`
     <div class="st-assign-list">
-      ${ids.map((id) => html`<span><b>${teamName(id)}</b><em>${roleLine(roles[id], cycles[id])}</em></span>`)}
+      ${ids.map((id) => html`<span class="${r.brokeAt[id] != null && 'broke'}"><b>${teamName(id)}</b><em>${roleLine(r, id)}</em></span>`)}
     </div>`;
 }
 

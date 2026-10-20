@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { io } from 'socket.io-client';
 import { LESSONS, partById } from '../games/frc-strategy/lessons.js';
 import { bestPoints, cleanAnswer, scoreAnswer, tally, typeOf } from '../games/frc-strategy/quiz.js';
-import { completedDist, cycleCounts, cycleDist, defenderBreak, keepShare, matchOdds, playMatch, resolve, scoutTeam } from '../games/frc-strategy/alliance.js';
+import { abilityAt, attemptTime, clock, cycleCounts, cycleDist, defenderBreak, matchOdds, playMatch, resolve, scoutTeam, successAt } from '../games/frc-strategy/alliance.js';
 import { mean } from '../games/frc-strategy/prob.js';
 
 const PORT = 3198;
@@ -97,52 +97,62 @@ try {
   }
   const side = (ids, assign = {}) => ({ teams: ids.map(T), assign: Object.fromEntries(ids.map((id) => [id, assign[id] ?? 'offense'])) });
   const cyc = (id) => mean(cycleDist(T(id)));
+  const teamsOf = (sides) => Object.fromEntries(sides.flatMap((s) => s.teams).map((x) => [x.id, x]));
+  const at = (sides, id, u, brokeAt = {}) => successAt(teamsOf(sides), resolve(sides), id, u, brokeAt);
+  const on = (target, ifDefending = 'stay') => ({ target, ifDefending });
   // one defender on an offense robot: each cycle succeeds 1 − ability × susceptibility
-  let roles = resolve([side(['feather']), side(['brick'], { brick: { target: 'feather', ifDefending: 'stay' } })]);
-  check(near(roles.feather.p, 1 - 0.85 * 0.9, 1e-9) && roles.brick.target === 'feather' && !roles.brick.shadowing, 'a defender cuts each cycle’s success by ability × susceptibility');
-  check(near(mean(completedDist(T('feather'), roles.feather.p)), cyc('feather') * (1 - 0.85 * 0.9), 1e-9), 'completed cycles = attempts × success chance');
-  roles = resolve([side(['tank']), side(['brick'], { brick: { target: 'tank', ifDefending: 'stay' } })]);
-  check(near(roles.tank.p, 1 - 0.85 * 0.05, 1e-9), 'a low-susceptibility robot barely slows down');
-  roles = resolve([side(['feather']), side(['brick', 'wall'], { brick: { target: 'feather', ifDefending: 'stay' }, wall: { target: 'feather', ifDefending: 'stay' } })]);
-  check(near(roles.feather.p, (1 - 0.85 * 0.9) * (1 - 0.6 * 0.9), 1e-9), 'two defenders on one robot both apply');
+  let S = [side(['feather']), side(['brick'], { brick: on('feather') })];
+  check(near(at(S, 'feather', 0.5), 1 - 0.85 * 0.9, 1e-12) && resolve(S).brick.target === 'feather', 'a defender cuts each cycle’s success by ability × susceptibility');
+  S = [side(['tank']), side(['brick'], { brick: on('tank') })];
+  check(near(at(S, 'tank', 0.5), 1 - 0.85 * 0.05, 1e-12), 'a low-susceptibility robot barely slows down');
+  S = [side(['feather']), side(['brick', 'wall'], { brick: on('feather'), wall: on('feather') })];
+  check(near(at(S, 'feather', 0.5), (1 - 0.85 * 0.9) * (1 - 0.6 * 0.9), 1e-12), 'two defenders on one robot both apply');
   // defending a defender: stay on it (weakening its defense) or switch
-  const wallOnFeather = { wall: { target: 'feather', ifDefending: 'stay' } };
-  roles = resolve([side(['feather', 'brick'], { brick: { target: 'wall', ifDefending: 'stay' } }), side(['wall'], wallOnFeather)]);
+  S = [side(['feather', 'brick'], { brick: on('wall') }), side(['wall'], { wall: on('feather') })];
   const weakened = 0.6 * (1 - 0.85 * 0.3);
-  check(roles.brick.shadowing && near(roles.wall.ability, weakened, 1e-9) && near(roles.feather.p, 1 - weakened * 0.9, 1e-9), 'staying on a defender weakens its defense by the same rule');
-  roles = resolve([side(['apex', 'brick'], { brick: { target: 'wall', ifDefending: 'glass' } }), side(['wall', 'glass'], { wall: { target: 'apex', ifDefending: 'stay' } })]);
-  check(roles.brick.switched && roles.brick.target === 'glass' && !roles.brick.shadowing && near(roles.glass.p, 1 - 0.85 * 0.7, 1e-9), 'if the target is defending, a defender can switch to another robot');
-  roles = resolve([side(['apex', 'brick'], { brick: { target: 'glass', ifDefending: 'wall' } }), side(['wall', 'glass'], { wall: { target: 'apex', ifDefending: 'stay' } })]);
+  check(resolve(S).brick.shadowing && near(abilityAt(teamsOf(S), resolve(S), 'wall', 0.5, {}), weakened, 1e-12) && near(at(S, 'feather', 0.5), 1 - weakened * 0.9, 1e-12), 'staying on a defender weakens its defense by the same rule');
+  let roles = resolve([side(['apex', 'brick'], { brick: on('wall', 'glass') }), side(['wall', 'glass'], { wall: on('apex') })]);
+  check(roles.brick.switched && roles.brick.target === 'glass' && !roles.brick.shadowing, 'if the target is defending, a defender can switch to another robot');
+  roles = resolve([side(['apex', 'brick'], { brick: on('glass', 'wall') }), side(['wall', 'glass'], { wall: on('apex') })]);
   check(!roles.brick.switched && roles.brick.target === 'glass', 'the switch only happens when the first choice is defending');
-  // breakdowns: a defender breaks with its 0-cycle chance + 5 points, and then defends nobody
+  // breakdowns happen at a moment: a defender defends the cycles before it, and none after
   check(near(defenderBreak(T('brick')), T('brick').cycles[0] + 0.05, 1e-12) && near(draft.defenderBreakExtra, 0.05, 1e-12), 'a defender breaks down with its 0-cycle chance plus 5 points');
-  roles = resolve([side(['feather']), side(['brick'], { brick: { target: 'feather', ifDefending: 'stay' } })], new Set(['brick']));
-  check(roles.brick.broken && roles.feather.p === 1 && roles.feather.defenders.length === 0, 'a broken defender defends nobody');
-  roles = resolve([side(['feather', 'brick'], { brick: { target: 'wall', ifDefending: 'stay' } }), side(['wall'], wallOnFeather)], new Set(['brick']));
-  check(near(roles.wall.ability, 0.6, 1e-12) && near(roles.feather.p, 1 - 0.6 * 0.9, 1e-9), 'a broken shadow doesn’t weaken the defender it was on');
-  const oneOnOne = matchOdds([side(['feather']), side(['brick'], { brick: { target: 'feather', ifDefending: 'stay' } })]);
+  S = [side(['feather']), side(['brick'], { brick: on('feather') })];
+  check(near(at(S, 'feather', 0.3, { brick: 0.5 }), 1 - 0.85 * 0.9, 1e-12) && at(S, 'feather', 0.7, { brick: 0.5 }) === 1, 'a broken defender defends before it breaks, not after');
+  S = [side(['feather', 'brick'], { brick: on('wall') }), side(['wall'], { wall: on('feather') })];
+  check(near(at(S, 'feather', 0.7, { brick: 0.5 }), 1 - 0.6 * 0.9, 1e-12) && near(at(S, 'feather', 0.3, { brick: 0.5 }), 1 - weakened * 0.9, 1e-12), 'a shadow that breaks stops weakening its defender from then on');
+  check(attemptTime(0, 4) === 0.125 && attemptTime(3, 4) === 0.875 && clock(0.54) === '1:21', 'cycles are spread through the match; times show as m:ss of 2:30');
+  // the average works out: each attempt at moment u is defended unless the defender broke before u
   const q = defenderBreak(T('brick'));
-  check(near(oneOnOne.mean[0], cyc('feather') * (q + (1 - q) * (1 - 0.85 * 0.9)), 1e-9), 'the odds weigh in the chance the defender breaks');
+  let expect = 0;
+  for (const [n, pn] of cycleDist(T('feather'))) for (let k = 0; k < n; k++) expect += pn * (1 - 0.85 * 0.9 * (1 - q * attemptTime(k, n)));
+  const one = matchOdds([side(['feather']), side(['brick'], { brick: on('feather') })]);
+  check(near(one.mean[0], expect, 0.06), `simulated averages match the timing math (${one.mean[0].toFixed(2)} vs ${expect.toFixed(2)})`);
   // odds
   const A = side(['apex', 'metronome', 'eddie']);
   const B = side(['glass', 'feather', 'brick']);
   const plain = matchOdds([A, B]);
-  check(near(plain.win[0] + plain.tie + plain.win[1], 1, 1e-9), 'win, tie and loss chances add up');
-  const brickOnFeather = matchOdds([A, side(['glass', 'feather', 'brick'], { brick: { target: 'feather', ifDefending: 'stay' } })]);
-  const brickOnApex = matchOdds([A, side(['glass', 'feather', 'brick'], { brick: { target: 'apex', ifDefending: 'stay' } })]);
+  check(near(plain.win[0] + plain.tie + plain.win[1], 1, 1e-9) && plain.runs === 20000, 'win, tie and loss chances add up, from 20,000 simulated matches');
+  check(JSON.stringify(matchOdds([A, B])) === JSON.stringify(plain), 'the same plans always give the same estimate');
+  const brickOnApex = matchOdds([A, side(['glass', 'feather', 'brick'], { brick: on('apex') })]);
   check(brickOnApex.win[1] < plain.win[1], 'defending a low-susceptibility robot costs more than it saves');
   const AB = side(['apex', 'metronome', 'feather']);
-  const strongD = matchOdds([AB, side(['glass', 'boom', 'brick'], { brick: { target: 'feather', ifDefending: 'stay' } })]);
+  const strongD = matchOdds([AB, side(['glass', 'boom', 'brick'], { brick: on('feather') })]);
   const noD = matchOdds([AB, side(['glass', 'boom', 'brick'])]);
   check(strongD.win[1] > noD.win[1], 'a strong defender on a susceptible scorer pays');
-  let wins = 0;
   let seed = 1;
   const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  for (let k = 0; k < 4000; k++) {
-    const m = playMatch([AB, side(['glass', 'boom', 'brick'], { brick: { target: 'feather', ifDefending: 'stay' } })], rand);
-    if (m.scores[0] > m.scores[1]) wins++;
+  const m = playMatch([AB, side(['glass', 'boom', 'brick'], { brick: on('feather') })], rand);
+  check(m.scores[0] === ['apex', 'metronome', 'feather'].reduce((s, id) => s + m.cycles[id], 0) && m.defended.feather <= m.attempts.feather, 'a played match records cycles, attempts and defended attempts');
+  let broke = 0;
+  for (let k = 0; k < 3000; k++) {
+    const g = playMatch([AB, side(['glass', 'boom', 'brick'], { brick: on('feather') })], rand);
+    if (g.brokeAt.brick != null) {
+      broke++;
+      if (!(g.brokeAt.brick >= 0 && g.brokeAt.brick < 1) || g.defended.feather > g.attempts.feather) broke = -1e9;
+    }
   }
-  check(near(wins / 4000, strongD.win[0], 0.03), `played matches follow the odds, breakdowns included (${(wins / 40).toFixed(1)}% vs ${(100 * strongD.win[0]).toFixed(1)}%)`);
+  check(near(broke / 3000, q, 0.015), `defenders break at their rate, at a moment in the match (${(broke / 30).toFixed(1)}% vs ${(100 * q).toFixed(1)}%)`);
   const scouted = scoutTeam(T('pest'), draft, rand);
   const within = (est, tru) => est >= tru * 0.8 - 1e-9 && est <= tru * 1.2 + 1e-9;
   check(scouted.scores.length === 10 && cycleCounts(scouted.scores, 12).reduce((a, b) => a + b, 0) === 10, 'scouting draws ten matches of cycles');
@@ -323,7 +333,7 @@ try {
   await wait(3200);
   check(hv().phase === 'result' && hv().results.length === 1, 'the match plays once both alliances lock in');
   const r = hv().results[0];
-  check(r.odds === null && r.roles[a0[2]].role === 'defend' && r.roles[a0[2]].target === a1[0], 'after a match: who defended whom is shown, win chances still hidden');
+  check(r.odds === null && r.roles[a0[2]].role === 'defend' && r.roles[a0[2]].target === a1[0] && 'brokeAt' in r, 'after a match: who defended whom (and any breakdown time) is shown, win chances still hidden');
   check(r.scores[0] === a0.filter((id) => r.roles[id].role === 'offense').reduce((s, id) => s + r.cycles[id], 0), 'the alliance score is its offense robots’ cycles');
   for (let m = 1; hv().phase !== 'final' && m < 8; m++) {
     await go(`result:${m - 1}`);

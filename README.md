@@ -76,12 +76,14 @@ student captain. The big screen can shuffle first.
 - **How defense works:** a defended robot loses **defender's ability × its susceptibility** of what it does. On
   offense, each cycle succeeds with probability 1 − ability × susceptibility (a 60% defender on a 50%-susceptible
   robot costs it 30% of its cycles). Two defenders on one robot both apply. A defender breaks down with its usual
-  chance of 0 cycles plus 5 percentage points, and a broken defender defends nobody. If the robot you chose to defend is
+  chance of 0 cycles plus 5 percentage points, at a random moment in the match: it defends the cycles before that and
+  none after (a robot's cycles are spread evenly through the match). Results show when each defender broke down and
+  how many of its target's cycles it defended. If the robot you chose to defend is
   defending too, you decide beforehand: stay on it (its defense ability drops by the same rule) or switch to another
   robot. Phones show each choice's effect from the scouts' estimates.
 - **The reveal:** once an alliance wins two matches, the big screen shows every team's true cycle distribution,
   susceptibility and defense next to what was scouted, and each match's win chance for both alliances given the
-  assignments they chose.
+  assignments they chose (from 20,000 simulated matches, so within about 1%).
 
 ## Lessons: one source for both versions
 

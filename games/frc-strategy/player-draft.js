@@ -110,7 +110,7 @@ export function draftPhone(main, api) {
           <b>How defense works</b>
           <span>A defended robot loses <b>defender’s ability × its susceptibility</b> of its cycles: a 60% defender on a 50%-susceptible robot takes 30%. The numbers on the buttons use your scouts’ estimates (±20%).</span>
           <span>If the robot you defend is defending too, stay on it (its defense weakens by the same rule) or switch to another robot. Roles don’t change mid-match.</span>
-          <span>A defender breaks down with its usual chance of 0 cycles <b>+5%</b>, and then defends nobody.</span>
+          <span>A defender breaks down with its usual chance of 0 cycles <b>+5%</b>, at a random moment: it defends the cycles before that and not the ones after.</span>
         </div>
         <div class="st-card">
           <span class="st-section">Assign your robots ${v.locked[v.group] ? '· locked ✓' : ''}</span>
@@ -144,9 +144,9 @@ export function draftPhone(main, api) {
         </div>
         <div class="st-card">
           <span class="st-section">${groupBadge(us, 'Your alliance')}</span>
-          ${roleList(v.alliances[us], r.roles, r.cycles)}
+          ${roleList(v.alliances[us], r)}
           <span class="st-section">${groupBadge(them, 'Their alliance')}</span>
-          ${roleList(v.alliances[them], r.roles, r.cycles)}
+          ${roleList(v.alliances[them], r)}
         </div>
         ${v.isVip && next(v, over ? 'The Reveal ▸' : `Plan Match ${v.match + 2} ▸`)}`;
     }
@@ -158,7 +158,7 @@ export function draftPhone(main, api) {
         <span class="st-gained">${v.wins[0]}–${v.wins[1]}</span>
       </div>
       <div class="st-card">
-        <span class="st-section">Each match: your win chance, given both alliances’ assignments</span>
+        <span class="st-section">Each match: your win chance, given both alliances’ assignments (from 20,000 simulated matches)</span>
         ${v.results.map((r, m) => html`<p><b>Match ${m + 1}</b> ${r.scores[us]}–${r.scores[1 - us]}: you had <b>${pct(r.odds.win[us])}</b>, they had ${pct(r.odds.win[1 - us])}</p>`)}
       </div>
       <div class="st-card">

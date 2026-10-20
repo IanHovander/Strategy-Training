@@ -5,39 +5,47 @@
 //   - On offense: each of its cycles succeeds with probability 1 − ability × susceptibility.
 //   - On defense: its defense ability is multiplied by 1 − ability × susceptibility.
 // Roles are static: a robot plays offense or defends for the whole match.
-// Robots break: on offense a breakdown is just its chance of 0 cycles; a defender breaks with that chance plus
-// `defenderExtra` (5 points by default), and a broken defender defends nobody.
+//
+// Time: a match runs from 0 (start) to 1 (end). An offense robot's attempts are spread evenly through it (with n
+// attempts, attempt k happens at (k − ½) / n). Robots break: on offense, a breakdown is its chance of 0 cycles. A
+// defender breaks with that chance plus `defenderExtra` (5 points by default), at a random moment; it defends
+// until then and does nothing after, so it may defend some of a robot's cycles and not others.
 //
 // An assignment for one robot is 'offense' or { target, ifDefending }: defend robot `target`; if that robot is
 // itself defending, 'stay' on it (weakening its defense) or switch to the robot id in `ifDefending`.
-import { add, binomial, mean, sample } from './prob.js';
+import { sample } from './prob.js';
 
-/** A team's true cycle distribution as [[cycles, probability]]. */
-export const cycleDist = (team) => team.cycles.map((p, n) => [n, p]).filter(([, p]) => p > 0);
+export const MATCH_SECONDS = 150; // for showing breakdown times as m:ss
+const SIMULATIONS = 20000;
+
+const dists = new WeakMap();
+/** A team's true cycle distribution as [[cycles, probability]] (worked out once per team). */
+export function cycleDist(team) {
+  if (!dists.has(team)) dists.set(team, team.cycles.map((p, n) => [n, p]).filter(([, p]) => p > 0));
+  return dists.get(team);
+}
 
 /** How much of what a robot does survives a defender: 1 − ability × susceptibility. */
 export const keepShare = (ability, susceptibility) => 1 - ability * susceptibility;
 
-/** A defender's chance of breaking down: its usual chance of 0 cycles, plus `extra`. */
+/** A defender's chance of breaking down during the match: its usual chance of 0 cycles, plus `extra`. */
 export const defenderBreak = (team, extra = 0.05) => Math.min(1, team.cycles[0] + extra);
 
-/** Which robots end up defending (whatever breaks), from the assignments alone. */
-export const defenderIds = (sides) => sides.flatMap((s) => s.teams.filter((t) => (s.assign[t.id] ?? 'offense') !== 'offense').map((t) => t.id));
+/** The moment in the match attempt k (0-based) of n happens. */
+export const attemptTime = (k, n) => (k + 0.5) / n;
 
 /**
- * Work out what every robot actually does, given both alliances' assignments and which defenders broke down.
- * `sides` = [{ teams, assign }, { teams, assign }]. Returns per robot id:
- *   { role: 'offense', p, defenders: [ids] }   p: the chance each cycle succeeds
- *   { role: 'defend', target, ability, shadowing, shadowedBy: [ids], switched, broken }
- *     `target` is the robot it guards (or would have); `shadowing` is true when that robot is a defender;
- *     `ability` is after being shadowed; a broken defender does nothing.
- * The switch to a fallback depends only on the plans (a defender's target counts as defending even if it breaks).
+ * Who does what, from the assignments (breakdowns don't change plans). `sides` = [{ teams, assign }, …].
+ * Returns per robot id:
+ *   { role: 'offense', defenders: [ids] }
+ *   { role: 'defend', target, shadowing, shadowedBy: [ids], switched }
+ *     `target` is the robot it guards; `shadowing` is true when that robot is defending too.
+ * A defender switches to its fallback when its first choice is assigned to defend.
  */
-export function resolve(sides, broken = new Set()) {
-  const all = sides.flatMap((s, i) => s.teams.map((t) => ({ team: t, side: i, a: s.assign[t.id] ?? 'offense' })));
+export function resolve(sides) {
+  const all = sides.flatMap((s) => s.teams.map((t) => ({ team: t, a: s.assign[t.id] ?? 'offense' })));
   const byId = Object.fromEntries(all.map((r) => [r.team.id, r]));
   const out = {};
-  // 1. Where each defender ends up.
   for (const r of all) {
     if (r.a === 'offense') continue;
     let target = r.a.target;
@@ -46,101 +54,98 @@ export function resolve(sides, broken = new Set()) {
       target = r.a.ifDefending;
       switched = true;
     }
-    const isBroken = broken.has(r.team.id);
-    out[r.team.id] = { role: 'defend', target, switched, shadowing: byId[target]?.a !== 'offense', shadowedBy: [], ability: isBroken ? 0 : r.team.defense, broken: isBroken };
+    out[r.team.id] = { role: 'defend', target, switched, shadowing: byId[target]?.a !== 'offense', shadowedBy: [] };
   }
-  // 2. Working defenders shadowing defenders weaken them (using the shadow's own ability).
-  for (const [id, d] of Object.entries(out)) {
-    if (!d.shadowing || d.broken) continue;
-    const victim = out[d.target];
-    victim.shadowedBy.push(id);
-    victim.ability *= keepShare(byId[id].team.defense, byId[d.target].team.susceptibility);
-  }
-  // 3. Offense robots: each working defender on them cuts their cycle success.
+  for (const [id, d] of Object.entries(out)) if (d.shadowing) out[d.target].shadowedBy.push(id);
   for (const r of all) {
     if (r.a !== 'offense') continue;
-    const defenders = Object.entries(out).filter(([, d]) => !d.shadowing && !d.broken && d.target === r.team.id);
-    const p = defenders.reduce((k, [, d]) => k * keepShare(d.ability, r.team.susceptibility), 1);
-    out[r.team.id] = { role: 'offense', p, defenders: defenders.map(([id]) => id) };
+    out[r.team.id] = { role: 'offense', defenders: Object.keys(out).filter((id) => !out[id].shadowing && out[id].target === r.team.id) };
   }
   return out;
 }
 
-/** An offense robot's completed cycles: its attempts, each succeeding with probability p. */
-export function completedDist(team, p) {
-  const out = new Map();
-  for (const [n, q] of cycleDist(team)) for (const [k, r] of binomial(n, p)) out.set(k, (out.get(k) ?? 0) + q * r);
-  return [...out].filter(([, x]) => x > 0).sort((a, b) => a[0] - b[0]);
+/**
+ * A defender's ability at moment u: 0 once it has broken down; otherwise its defense, cut by each shadow still
+ * running. `brokeAt[id]` is when a robot broke (absent = it didn't).
+ */
+export function abilityAt(teams, roles, id, u, brokeAt) {
+  if ((brokeAt[id] ?? 2) <= u) return 0;
+  return roles[id].shadowedBy.reduce((a, s) => ((brokeAt[s] ?? 2) <= u ? a : a * keepShare(teams[s].defense, teams[id].susceptibility)), teams[id].defense);
 }
 
-/** Each alliance's score distribution for one set of broken defenders. */
-function scoreDists(sides, broken) {
-  const roles = resolve(sides, broken);
-  return sides.map((s) => s.teams.reduce((d, t) => (roles[t.id].role === 'offense' ? add(d, completedDist(t, roles[t.id].p)) : d), [[0, 1]]));
-}
-
-/** P(a > b) and P(a = b) for two distributions. */
-function compare(da, db) {
-  let win = 0;
-  let tie = 0;
-  let below = 0;
-  let j = 0;
-  for (const [x, p] of da) {
-    while (j < db.length && db[j][0] < x) below += db[j++][1];
-    win += p * below;
-    if (j < db.length && db[j][0] === x) tie += p * db[j][1];
-  }
-  return { win, tie };
+/** The chance an offense robot's cycle at moment u succeeds, given every defender still running then. */
+export function successAt(teams, roles, id, u, brokeAt) {
+  return roles[id].defenders.reduce((p, d) => p * keepShare(abilityAt(teams, roles, d, u, brokeAt), teams[id].susceptibility), 1);
 }
 
 /**
- * Each alliance's chance to win, tie chance and average cycles, exactly: every combination of which defenders
- * break down, weighted by its chance.
+ * Play one match. Defenders that break get a moment; offense robots attempt their cycles through the match.
+ * Returns { scores, cycles: { id: made }, attempts: { id }, defended: { id: attempts made while defended },
+ *           brokeAt: { defender id: moment 0–1 }, roles }.
  */
-export function matchOdds(sides, { defenderExtra = 0.05 } = {}) {
-  const teams = Object.fromEntries(sides.flatMap((s) => s.teams).map((t) => [t.id, t]));
-  const ids = defenderIds(sides);
-  let win = 0;
-  let tie = 0;
-  const means = [0, 0];
-  for (let mask = 0; mask < 1 << ids.length; mask++) {
-    let weight = 1;
-    const broken = new Set();
-    ids.forEach((id, k) => {
-      const q = defenderBreak(teams[id], defenderExtra);
-      if ((mask >> k) & 1) {
-        broken.add(id);
-        weight *= q;
-      } else weight *= 1 - q;
-    });
-    if (weight === 0) continue;
-    const [da, db] = scoreDists(sides, broken);
-    const c = compare(da, db);
-    win += weight * c.win;
-    tie += weight * c.tie;
-    means[0] += weight * mean(da);
-    means[1] += weight * mean(db);
-  }
-  return { win: [win, Math.max(0, 1 - win - tie)], tie, mean: means };
-}
-
-/** Play one match: which defenders break, then each offense robot's attempts and which of them succeed. */
 export function playMatch(sides, rand = Math.random, { defenderExtra = 0.05 } = {}) {
   const teams = Object.fromEntries(sides.flatMap((s) => s.teams).map((t) => [t.id, t]));
-  const broken = new Set(defenderIds(sides).filter((id) => rand() < defenderBreak(teams[id], defenderExtra)));
-  const roles = resolve(sides, broken);
-  const cyclesById = {};
+  const roles = resolve(sides);
+  const brokeAt = {};
+  for (const [id, r] of Object.entries(roles)) if (r.role === 'defend' && rand() < defenderBreak(teams[id], defenderExtra)) brokeAt[id] = rand();
+  const cycles = {};
+  const attempts = {};
+  const defended = {};
   const scores = sides.map((s) =>
     s.teams.reduce((total, t) => {
       if (roles[t.id].role !== 'offense') return total;
-      const attempts = sample(cycleDist(t), rand);
+      const n = sample(cycleDist(t), rand);
       let made = 0;
-      for (let k = 0; k < attempts; k++) if (rand() < roles[t.id].p) made++;
-      cyclesById[t.id] = made;
+      let guarded = 0;
+      for (let k = 0; k < n; k++) {
+        const p = successAt(teams, roles, t.id, attemptTime(k, n), brokeAt);
+        if (p < 1) guarded++;
+        if (rand() < p) made++;
+      }
+      cycles[t.id] = made;
+      attempts[t.id] = n;
+      defended[t.id] = guarded;
       return total + made;
     }, 0),
   );
-  return { scores, cycles: cyclesById, roles };
+  return { scores, cycles, attempts, defended, brokeAt, roles };
+}
+
+/** A small seeded random number generator, so the same plans always give the same estimate. */
+function seeded(seed) {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Each alliance's chance to win, the tie chance and average cycles, from simulating the match many times
+ * (breakdown timing makes an exact formula unwieldy). Within about 1% of the true chance.
+ */
+export function matchOdds(sides, { defenderExtra = 0.05, runs = SIMULATIONS, seed = 5026 } = {}) {
+  const rand = seeded(seed);
+  let wins = 0;
+  let ties = 0;
+  const totals = [0, 0];
+  for (let k = 0; k < runs; k++) {
+    const { scores } = playMatch(sides, rand, { defenderExtra });
+    if (scores[0] > scores[1]) wins++;
+    else if (scores[0] === scores[1]) ties++;
+    totals[0] += scores[0];
+    totals[1] += scores[1];
+  }
+  return { win: [wins / runs, (runs - wins - ties) / runs], tie: ties / runs, mean: totals.map((x) => x / runs), runs };
+}
+
+/** "1:21" from a moment 0–1 in the match. */
+export function clock(u) {
+  const s = Math.round(u * MATCH_SECONDS);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 /**
