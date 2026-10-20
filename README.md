@@ -41,6 +41,8 @@ Every push to `main` then rebuilds and publishes the site.
 3. **Strategy Training** is the first game in the lobby. Press **Start Game**.
 4. The big screen (or the leader's phone) picks the lesson and the part: **Learn**, **Test** or **Showdown**.
 
+**Learn moderator signup.** Before the first case, the big screen gives a three-sentence introduction and asks for a volunteer moderator. Everyone volunteers or passes on their phone. Once all connected students respond (or the leader advances early), one volunteer is selected randomly; if nobody volunteers, the leader moderates. That student sees a private case brief while others tackle the problem, and controls progression throughout Learn; the leader and big screen can still advance if needed. There is no automatic question timer in multiplayer Learn. In a static public website, the private brief is hidden from other players' views but is not secure against someone inspecting public source files.
+
 **Learn and Test.** For each question:
 - Everyone answers on their phone and can change their mind until the reveal. The reveal comes when everyone has
   answered, when the 2-minute timer runs out, or when the big screen presses **Reveal**. **+30s** adds time for
