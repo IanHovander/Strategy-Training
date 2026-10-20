@@ -2,7 +2,7 @@
 // simulations. Shared by the phones (player.js) and the solo lessons page (lessons.html), so both always show
 // the same model from lessons.js.
 import { html } from '../../js/ui.js';
-import { pct } from './lessons.js';
+import { pct } from './prob.js';
 
 /** Draw the explorer for `explore` (a question's `explore` from lessons.js) into `container`. */
 export function mountExplorer(container, explore) {
@@ -50,7 +50,7 @@ export function mountExplorer(container, explore) {
           : html`
             <label class="st-ctl">
               <span>${c.label} <b data-out="${c.id}">${values[c.id]}${c.unit ?? ''}</b></span>
-              <input type="range" min="${c.min}" max="${c.max}" step="${c.step ?? 1}" value="${values[c.id]}" data-control="${c.id}">
+              <input class="st-range" type="range" min="${c.min}" max="${c.max}" step="${c.step ?? 1}" value="${values[c.id]}" data-control="${c.id}">
             </label>`,
       )}
       <div class="st-ex-out"></div>`;
