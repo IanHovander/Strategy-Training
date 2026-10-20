@@ -91,6 +91,7 @@ export function roleLine(role, cycles) {
     const slowed = role.defenders.length ? ` (defended by ${role.defenders.map(teamName).join(', ')})` : '';
     return `${cycles ?? 0} cycles${slowed}`;
   }
+  if (role.broken) return `Broke down (was set to defend ${teamName(role.target)})`;
   const how = role.shadowing ? `Shadowed ${teamName(role.target)}, who was defending` : `Defended ${teamName(role.target)}`;
   return `${how}${role.switched ? ' (switched)' : ''}`;
 }

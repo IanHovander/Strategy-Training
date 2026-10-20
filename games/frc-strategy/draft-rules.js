@@ -173,8 +173,8 @@ function play(ctx) {
   ctx.cancelTimer('phase');
   ctx.cancelTimer('allIn');
   const sides = draft.alliances.map((ids, i) => ({ teams: ids.map(team), assign: draft.assign[i] }));
-  const odds = matchOdds(sides);
-  const match = playMatch(sides);
+  const odds = matchOdds(sides, { defenderExtra: DRAFT.defenderBreakExtra });
+  const match = playMatch(sides, Math.random, { defenderExtra: DRAFT.defenderBreakExtra });
   const winner = match.scores[0] > match.scores[1] ? 0 : match.scores[1] > match.scores[0] ? 1 : null;
   if (winner !== null) draft.wins[winner]++;
   draft.results.push({

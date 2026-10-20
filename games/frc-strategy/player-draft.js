@@ -110,6 +110,7 @@ export function draftPhone(main, api) {
           <b>How defense works</b>
           <span>A defended robot loses <b>defender’s ability × its susceptibility</b> of its cycles: a 60% defender on a 50%-susceptible robot takes 30%. The numbers on the buttons use your scouts’ estimates (±20%).</span>
           <span>If the robot you defend is defending too, stay on it (its defense weakens by the same rule) or switch to another robot. Roles don’t change mid-match.</span>
+          <span>A defender breaks down with its usual chance of 0 cycles <b>+5%</b>, and then defends nobody.</span>
         </div>
         <div class="st-card">
           <span class="st-section">Assign your robots ${v.locked[v.group] ? '· locked ✓' : ''}</span>

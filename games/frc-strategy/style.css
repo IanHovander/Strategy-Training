@@ -605,3 +605,8 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .st-qhist.truth b { display: none; }
 .st-qhist.truth i { background: #6b5a00; }
 .st-qhist.truth span.zero i { background: var(--red-hi); }
+/* match planning on the big screen: shorter cards so the defense rules fit below */
+.st-matchup .st-scout.compact .st-qhist.labeled { height: 3.1rem; padding-top: 0.75rem; }
+.st-matchup .st-alliance-col { gap: 0.35rem; }
+.st-host .st-rulebox { font-size: 1rem; gap: 0.2rem; padding: 0.55rem 0.9rem; }
+.st-host .st-rulebox > b { font-size: 1.5rem; }

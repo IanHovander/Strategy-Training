@@ -31,9 +31,11 @@ export const DRAFT = {
   maxMatches: 5, // ties are replayed, up to this many matches
   qualMatches: 10,
   scoutError: 0.2, // scouts' estimates land within ±20% of the true value
+  defenderBreakExtra: 0.05, // a defender breaks with its usual chance of 0 cycles, plus this
   rules: [
     'Each robot plays offense (scoring cycles) or defense, the whole match. Robots don’t change roles mid-match.',
     'A defender scores nothing and guards one robot of your choice for the whole match.',
+    'Robots break. A defender breaks down 5 points more often than it scores 0 cycles (a 3% robot breaks 8% of the time), and a broken defender defends nobody.',
     'Defense takes away (defender’s ability × target’s susceptibility). A 60% defender on a 50%-susceptible robot costs it 30% of its cycles: each cycle succeeds 70% of the time.',
     'If the robot you chose is defending too, you decide beforehand: stay on it, which weakens its defense by the same rule, or switch to another robot.',
     'Two defenders on one robot both apply. An alliance’s score is its total cycles. Best of three; a tie is replayed.',

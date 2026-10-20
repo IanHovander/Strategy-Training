@@ -142,6 +142,7 @@ function defenseRule() {
       <b>How defense works</b>
       <span>A defended robot loses <b>defender’s ability × its susceptibility</b> of its cycles. Example: a 60% defender on a 50%-susceptible robot takes 30%, so each cycle succeeds 70% of the time.</span>
       <span>Defend a robot that’s defending too, and you can stay on it (its defense weakens by the same rule) or switch to another robot. Decide before the match: robots don’t change roles mid-match.</span>
+      <span>A defender breaks down with its usual chance of 0 cycles <b>+5%</b>, and then defends nobody.</span>
     </div>`;
 }
 
@@ -202,5 +203,5 @@ function final(v) {
 function defenseLine(roles, ids) {
   const defenders = ids.filter((id) => roles[id].role === 'defend');
   if (!defenders.length) return 'all offense';
-  return defenders.map((id) => `${teamName(id)} ${roles[id].shadowing ? 'shadowed' : 'on'} ${teamName(roles[id].target)}`).join(', ');
+  return defenders.map((id) => `${teamName(id)} ${roles[id].broken ? 'broke (was on' : roles[id].shadowing ? 'shadowed' : 'on'} ${teamName(roles[id].target)}${roles[id].broken ? ')' : ''}`).join(', ');
 }

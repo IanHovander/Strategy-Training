@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { io } from 'socket.io-client';
 import { LESSONS, partById } from '../games/frc-strategy/lessons.js';
 import { bestPoints, cleanAnswer, scoreAnswer, tally, typeOf } from '../games/frc-strategy/quiz.js';
-import { completedDist, cycleCounts, cycleDist, keepShare, matchOdds, playMatch, resolve, scoutTeam } from '../games/frc-strategy/alliance.js';
+import { completedDist, cycleCounts, cycleDist, defenderBreak, keepShare, matchOdds, playMatch, resolve, scoutTeam } from '../games/frc-strategy/alliance.js';
 import { mean } from '../games/frc-strategy/prob.js';
 
 const PORT = 3198;
@@ -114,6 +114,15 @@ try {
   check(roles.brick.switched && roles.brick.target === 'glass' && !roles.brick.shadowing && near(roles.glass.p, 1 - 0.85 * 0.7, 1e-9), 'if the target is defending, a defender can switch to another robot');
   roles = resolve([side(['apex', 'brick'], { brick: { target: 'glass', ifDefending: 'wall' } }), side(['wall', 'glass'], { wall: { target: 'apex', ifDefending: 'stay' } })]);
   check(!roles.brick.switched && roles.brick.target === 'glass', 'the switch only happens when the first choice is defending');
+  // breakdowns: a defender breaks with its 0-cycle chance + 5 points, and then defends nobody
+  check(near(defenderBreak(T('brick')), T('brick').cycles[0] + 0.05, 1e-12) && near(draft.defenderBreakExtra, 0.05, 1e-12), 'a defender breaks down with its 0-cycle chance plus 5 points');
+  roles = resolve([side(['feather']), side(['brick'], { brick: { target: 'feather', ifDefending: 'stay' } })], new Set(['brick']));
+  check(roles.brick.broken && roles.feather.p === 1 && roles.feather.defenders.length === 0, 'a broken defender defends nobody');
+  roles = resolve([side(['feather', 'brick'], { brick: { target: 'wall', ifDefending: 'stay' } }), side(['wall'], wallOnFeather)], new Set(['brick']));
+  check(near(roles.wall.ability, 0.6, 1e-12) && near(roles.feather.p, 1 - 0.6 * 0.9, 1e-9), 'a broken shadow doesn’t weaken the defender it was on');
+  const oneOnOne = matchOdds([side(['feather']), side(['brick'], { brick: { target: 'feather', ifDefending: 'stay' } })]);
+  const q = defenderBreak(T('brick'));
+  check(near(oneOnOne.mean[0], cyc('feather') * (q + (1 - q) * (1 - 0.85 * 0.9)), 1e-9), 'the odds weigh in the chance the defender breaks');
   // odds
   const A = side(['apex', 'metronome', 'eddie']);
   const B = side(['glass', 'feather', 'brick']);
@@ -130,10 +139,10 @@ try {
   let seed = 1;
   const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   for (let k = 0; k < 4000; k++) {
-    const m = playMatch([A, side(['glass', 'feather', 'brick'], { brick: { target: 'feather', ifDefending: 'stay' } })], rand);
+    const m = playMatch([AB, side(['glass', 'boom', 'brick'], { brick: { target: 'feather', ifDefending: 'stay' } })], rand);
     if (m.scores[0] > m.scores[1]) wins++;
   }
-  check(near(wins / 4000, brickOnFeather.win[0], 0.03), `played matches follow the odds (${(wins / 40).toFixed(1)}% vs ${(100 * brickOnFeather.win[0]).toFixed(1)}%)`);
+  check(near(wins / 4000, strongD.win[0], 0.03), `played matches follow the odds, breakdowns included (${(wins / 40).toFixed(1)}% vs ${(100 * strongD.win[0]).toFixed(1)}%)`);
   const scouted = scoutTeam(T('pest'), draft, rand);
   const within = (est, tru) => est >= tru * 0.8 - 1e-9 && est <= tru * 1.2 + 1e-9;
   check(scouted.scores.length === 10 && cycleCounts(scouted.scores, 12).reduce((a, b) => a + b, 0) === 10, 'scouting draws ten matches of cycles');

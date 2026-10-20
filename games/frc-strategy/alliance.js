@@ -5,6 +5,8 @@
 //   - On offense: each of its cycles succeeds with probability 1 − ability × susceptibility.
 //   - On defense: its defense ability is multiplied by 1 − ability × susceptibility.
 // Roles are static: a robot plays offense or defends for the whole match.
+// Robots break: on offense a breakdown is just its chance of 0 cycles; a defender breaks with that chance plus
+// `defenderExtra` (5 points by default), and a broken defender defends nobody.
 //
 // An assignment for one robot is 'offense' or { target, ifDefending }: defend robot `target`; if that robot is
 // itself defending, 'stay' on it (weakening its defense) or switch to the robot id in `ifDefending`.
@@ -16,14 +18,22 @@ export const cycleDist = (team) => team.cycles.map((p, n) => [n, p]).filter(([, 
 /** How much of what a robot does survives a defender: 1 − ability × susceptibility. */
 export const keepShare = (ability, susceptibility) => 1 - ability * susceptibility;
 
+/** A defender's chance of breaking down: its usual chance of 0 cycles, plus `extra`. */
+export const defenderBreak = (team, extra = 0.05) => Math.min(1, team.cycles[0] + extra);
+
+/** Which robots end up defending (whatever breaks), from the assignments alone. */
+export const defenderIds = (sides) => sides.flatMap((s) => s.teams.filter((t) => (s.assign[t.id] ?? 'offense') !== 'offense').map((t) => t.id));
+
 /**
- * Work out what every robot actually does, given both alliances' assignments.
+ * Work out what every robot actually does, given both alliances' assignments and which defenders broke down.
  * `sides` = [{ teams, assign }, { teams, assign }]. Returns per robot id:
  *   { role: 'offense', p, defenders: [ids] }   p: the chance each cycle succeeds
- *   { role: 'defend', target, ability, shadowedBy: [ids], switched }   ability after being shadowed
- *     (`target` is the robot it actually guards; `shadowing` is true when that robot is a defender)
+ *   { role: 'defend', target, ability, shadowing, shadowedBy: [ids], switched, broken }
+ *     `target` is the robot it guards (or would have); `shadowing` is true when that robot is a defender;
+ *     `ability` is after being shadowed; a broken defender does nothing.
+ * The switch to a fallback depends only on the plans (a defender's target counts as defending even if it breaks).
  */
-export function resolve(sides) {
+export function resolve(sides, broken = new Set()) {
   const all = sides.flatMap((s, i) => s.teams.map((t) => ({ team: t, side: i, a: s.assign[t.id] ?? 'offense' })));
   const byId = Object.fromEntries(all.map((r) => [r.team.id, r]));
   const out = {};
@@ -36,19 +46,20 @@ export function resolve(sides) {
       target = r.a.ifDefending;
       switched = true;
     }
-    out[r.team.id] = { role: 'defend', target, switched, shadowing: byId[target]?.a !== 'offense', shadowedBy: [], ability: r.team.defense };
+    const isBroken = broken.has(r.team.id);
+    out[r.team.id] = { role: 'defend', target, switched, shadowing: byId[target]?.a !== 'offense', shadowedBy: [], ability: isBroken ? 0 : r.team.defense, broken: isBroken };
   }
-  // 2. Defenders shadowing defenders weaken them (using the shadow's own ability).
+  // 2. Working defenders shadowing defenders weaken them (using the shadow's own ability).
   for (const [id, d] of Object.entries(out)) {
-    if (!d.shadowing) continue;
+    if (!d.shadowing || d.broken) continue;
     const victim = out[d.target];
     victim.shadowedBy.push(id);
     victim.ability *= keepShare(byId[id].team.defense, byId[d.target].team.susceptibility);
   }
-  // 3. Offense robots: each defender on them cuts their cycle success.
+  // 3. Offense robots: each working defender on them cuts their cycle success.
   for (const r of all) {
     if (r.a !== 'offense') continue;
-    const defenders = Object.entries(out).filter(([, d]) => !d.shadowing && d.target === r.team.id);
+    const defenders = Object.entries(out).filter(([, d]) => !d.shadowing && !d.broken && d.target === r.team.id);
     const p = defenders.reduce((k, [, d]) => k * keepShare(d.ability, r.team.susceptibility), 1);
     out[r.team.id] = { role: 'offense', p, defenders: defenders.map(([id]) => id) };
   }
@@ -62,11 +73,14 @@ export function completedDist(team, p) {
   return [...out].filter(([, x]) => x > 0).sort((a, b) => a[0] - b[0]);
 }
 
-/** Each alliance's chance to win, tie chance and average cycles, plus what every robot did. */
-export function matchOdds(sides) {
-  const roles = resolve(sides);
-  const dists = sides.map((s) => s.teams.reduce((d, t) => (roles[t.id].role === 'offense' ? add(d, completedDist(t, roles[t.id].p)) : d), [[0, 1]]));
-  const [da, db] = dists;
+/** Each alliance's score distribution for one set of broken defenders. */
+function scoreDists(sides, broken) {
+  const roles = resolve(sides, broken);
+  return sides.map((s) => s.teams.reduce((d, t) => (roles[t.id].role === 'offense' ? add(d, completedDist(t, roles[t.id].p)) : d), [[0, 1]]));
+}
+
+/** P(a > b) and P(a = b) for two distributions. */
+function compare(da, db) {
   let win = 0;
   let tie = 0;
   let below = 0;
@@ -76,12 +90,45 @@ export function matchOdds(sides) {
     win += p * below;
     if (j < db.length && db[j][0] === x) tie += p * db[j][1];
   }
-  return { win: [win, Math.max(0, 1 - win - tie)], tie, mean: [mean(da), mean(db)], roles };
+  return { win, tie };
 }
 
-/** Play one match: each offense robot's attempts, then which of them succeed. */
-export function playMatch(sides, rand = Math.random) {
-  const roles = resolve(sides);
+/**
+ * Each alliance's chance to win, tie chance and average cycles, exactly: every combination of which defenders
+ * break down, weighted by its chance.
+ */
+export function matchOdds(sides, { defenderExtra = 0.05 } = {}) {
+  const teams = Object.fromEntries(sides.flatMap((s) => s.teams).map((t) => [t.id, t]));
+  const ids = defenderIds(sides);
+  let win = 0;
+  let tie = 0;
+  const means = [0, 0];
+  for (let mask = 0; mask < 1 << ids.length; mask++) {
+    let weight = 1;
+    const broken = new Set();
+    ids.forEach((id, k) => {
+      const q = defenderBreak(teams[id], defenderExtra);
+      if ((mask >> k) & 1) {
+        broken.add(id);
+        weight *= q;
+      } else weight *= 1 - q;
+    });
+    if (weight === 0) continue;
+    const [da, db] = scoreDists(sides, broken);
+    const c = compare(da, db);
+    win += weight * c.win;
+    tie += weight * c.tie;
+    means[0] += weight * mean(da);
+    means[1] += weight * mean(db);
+  }
+  return { win: [win, Math.max(0, 1 - win - tie)], tie, mean: means };
+}
+
+/** Play one match: which defenders break, then each offense robot's attempts and which of them succeed. */
+export function playMatch(sides, rand = Math.random, { defenderExtra = 0.05 } = {}) {
+  const teams = Object.fromEntries(sides.flatMap((s) => s.teams).map((t) => [t.id, t]));
+  const broken = new Set(defenderIds(sides).filter((id) => rand() < defenderBreak(teams[id], defenderExtra)));
+  const roles = resolve(sides, broken);
   const cyclesById = {};
   const scores = sides.map((s) =>
     s.teams.reduce((total, t) => {
