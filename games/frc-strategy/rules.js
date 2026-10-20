@@ -10,6 +10,7 @@
 import { LESSONS, lessonById, partById } from './lessons.js';
 import { CONFIDENCE, asksConfidence, bestPoints, calibration, cleanAnswer, isBest, scoreAnswer, tally } from './quiz.js';
 import * as draft from './draft-rules.js';
+import { moderatorBrief } from './moderator-briefs.js';
 
 const ANSWER_SECONDS = 120;
 const EXTRA_SECONDS = 30;
@@ -33,6 +34,9 @@ export default {
       // quiz
       q: 0,
       cases: null, // Learn: the case numbers to run (null = all)
+      volunteerChoices: {}, // player ID -> true if volunteering, false if passing
+      moderatorId: null,
+      moderatorName: null,
       answers: {}, // playerId -> answer, for the current question
       sure: {}, // playerId -> how sure they are (Learn's picks)
       best: {}, // playerId -> how many best answers
@@ -48,16 +52,31 @@ export default {
 
   onDisconnect(ctx) {
     if (isDraft(ctx.state)) draft.onDisconnect(ctx);
-    else maybeReveal(ctx);
+    else {
+      if (isLearn(ctx.state) && ctx.state.phase === 'moderator-pick') maybeChooseModerator(ctx);
+      else {
+        if (isLearn(ctx.state)) ensureModerator(ctx);
+        maybeReveal(ctx);
+      }
+    }
   },
 
   actions: {
     lesson(ctx, player, payload) {
       if (player.isVip) pick(ctx, payload);
     },
+    volunteer(ctx, player, payload) {
+      const s = ctx.state;
+      if (s.phase !== 'moderator-pick') return { error: 'Moderator signup is closed.' };
+      if (typeof payload?.wants !== 'boolean') return { error: 'Choose volunteer or pass.' };
+      s.volunteerChoices[player.id] = payload.wants;
+      maybeChooseModerator(ctx);
+      return { ok: true };
+    },
     answer(ctx, player, payload) {
       const s = ctx.state;
       if (s.phase !== 'question') return { error: 'Answers are closed for this question.' };
+      if (isLearn(s) && s.moderatorId === player.id) return { error: 'You are moderating this case.' };
       const answer = cleanAnswer(question(s), payload?.answer);
       if (answer === null) return { error: 'That isn’t a valid answer.' };
       s.answers[player.id] = answer; // you can change your mind until the reveal
@@ -67,6 +86,7 @@ export default {
     sure(ctx, player, payload) {
       const s = ctx.state;
       if (s.phase !== 'question' || !asksConfidence(question(s))) return;
+      if (isLearn(s) && s.moderatorId === player.id) return { error: 'You are moderating this case.' };
       if (!CONFIDENCE.includes(payload?.level)) return { error: 'Pick one of the levels.' };
       s.sure[player.id] = payload.level;
       maybeReveal(ctx);
@@ -76,7 +96,7 @@ export default {
       if (player.isVip) pickCases(ctx, payload);
     },
     next(ctx, player, payload) {
-      if (player.isVip) next(ctx, payload?.from);
+      if (player.isVip || (isLearn(ctx.state) && ctx.state.moderatorId === player.id)) next(ctx, payload?.from);
     },
     finish(ctx, player) {
       if (player.isVip) finish(ctx);
@@ -104,6 +124,7 @@ export default {
     more(ctx) {
       const s = ctx.state;
       if (s.phase !== 'question' && s.phase !== 'plan' && s.phase !== 'prep' && s.phase !== 'select') return;
+      if (isLearn(s)) return; // Learn is discussion-led; no countdown.
       s.deadline = Math.max(s.deadline, Date.now()) + EXTRA_SECONDS * 1000;
       ctx.timer('phase', s.deadline - Date.now(), () => (isDraft(s) ? draft.next(ctx) : reveal(ctx)));
     },
@@ -115,7 +136,8 @@ export default {
   // The big screen sees counts only after the reveal, and never who picked what before it.
   hostView(ctx) {
     const s = ctx.state;
-    const base = { phase: s.phase, step: stepKey(s), lessonId: s.lessonId, partId: s.partId, deadline: s.deadline };
+    const base = { phase: s.phase, step: stepKey(s), lessonId: s.lessonId, partId: s.partId, deadline: s.deadline,
+      moderatorName: isLearn(s) ? s.moderatorName : null };
     const ranks = rankMap(ctx);
     const players = ctx.players.map((p) => ({
       id: p.id,
@@ -126,9 +148,14 @@ export default {
       gained: s.gained[p.id] ?? null,
       rank: ranks[p.id],
       before: s.before[p.id] ?? null,
-      done: s.phase === 'question' ? isDone(s, p.id) : null,
+      done: s.phase === 'moderator-pick' ? p.id in s.volunteerChoices : s.phase === 'question' && p.id !== s.moderatorId ? isDone(s, p.id) : null,
+      moderator: isLearn(s) && s.moderatorId === p.id,
     }));
     if (s.phase === 'pick') return { ...base, players, cases: s.cases };
+    if (s.phase === 'moderator-pick') return { ...base, players,
+      volunteerCount: ctx.players.filter((p) => p.connected && s.volunteerChoices[p.id] === true).length,
+      choicesIn: ctx.players.filter((p) => p.connected && p.id in s.volunteerChoices).length,
+      waitingOn: ctx.players.filter((p) => p.connected).length };
     if (isDraft(s)) return draft.hostView(ctx, { ...base, players });
     const revealed = s.phase !== 'question';
     return {
@@ -136,7 +163,8 @@ export default {
       q: s.q,
       ...progress(s),
       players,
-      answered: s.phase === 'question' ? ctx.players.filter((p) => isDone(s, p.id)).length : null,
+      answered: s.phase === 'question' ? ctx.players.filter((p) => p.connected && p.id !== s.moderatorId && isDone(s, p.id)).length : null,
+      expected: ctx.players.filter((p) => p.connected && p.id !== s.moderatorId).length,
       tally: revealed ? s.history[s.q] ?? null : null,
       history: s.phase === 'final' ? s.history.map(({ bestShare, answered }) => ({ bestShare, answered })) : null,
     };
@@ -156,8 +184,13 @@ export default {
       rank: ranks[me.id] ?? null,
       players: ctx.players.length,
       gained: s.gained[me.id] ?? null,
+      isModerator: isLearn(s) && s.moderatorId === me.id,
+      moderatorName: isLearn(s) ? s.moderatorName : null,
     };
     if (s.phase === 'pick') return { ...base, cases: s.cases };
+    if (s.phase === 'moderator-pick') return { ...base, volunteer: s.volunteerChoices[me.id] ?? null,
+      volunteerCount: ctx.players.filter((p) => p.connected && s.volunteerChoices[p.id] === true).length,
+      choicesIn: ctx.players.filter((p) => p.connected && p.id in s.volunteerChoices).length };
     if (isDraft(s)) return draft.playerView(ctx, me, base);
     const revealed = s.phase === 'reveal' || s.phase === 'scores';
     return {
@@ -169,6 +202,7 @@ export default {
       tally: revealed ? s.history[s.q] ?? null : null,
       best: s.best[me.id] ?? 0,
       asked: s.phase === 'final' ? s.history.filter(Boolean).length : progress(s).at - (revealed ? 0 : 1),
+      brief: isLearn(s) && s.moderatorId === me.id ? { ...moderatorBrief(question(s).caseIndex), caseTitle: question(s).caseTitle, questionTitle: question(s).title } : null,
     };
   },
 };
@@ -178,6 +212,7 @@ export default {
 const lesson = (s) => lessonById(s.lessonId);
 const part = (s) => partById(lesson(s), s.partId);
 const isDraft = (s) => part(s)?.kind === 'draft';
+const isLearn = (s) => part(s)?.id === 'learn';
 const question = (s) => part(s).questions[s.q];
 /** The questions this run covers, by index: all of them, or Learn's chosen cases. */
 const runOrder = (s) =>
@@ -217,6 +252,7 @@ function next(ctx, from) {
   if (from !== stepKey(s)) return;
   if (s.phase === 'pick') return isDraft(s) ? (resetScores(ctx), draft.start(ctx)) : startQuiz(ctx);
   if (isDraft(s)) return draft.next(ctx);
+  if (s.phase === 'moderator-pick') return chooseModerator(ctx);
   if (s.phase === 'question') return reveal(ctx);
   if (s.phase === 'reveal') {
     const q = question(s);
@@ -226,6 +262,35 @@ function next(ctx, from) {
     if (nextQ(s) != null) ask(ctx, nextQ(s));
     else s.phase = 'final';
   }
+}
+
+/** Finish signup automatically when everyone has responded, or manually when the leader requests it. */
+function maybeChooseModerator(ctx) {
+  const s = ctx.state;
+  if (s.phase !== 'moderator-pick') return;
+  const online = ctx.players.filter((p) => p.connected);
+  if (online.length && online.every((p) => p.id in s.volunteerChoices)) chooseModerator(ctx);
+}
+
+function chooseModerator(ctx) {
+  const s = ctx.state;
+  if (s.phase !== 'moderator-pick') return;
+  const online = ctx.players.filter((p) => p.connected);
+  const willing = online.filter((p) => s.volunteerChoices[p.id] === true);
+  const moderator = willing.length ? willing[Math.floor(Math.random() * willing.length)] : online.find((p) => p.isVip) ?? online[0];
+  s.moderatorId = moderator?.id ?? null;
+  s.moderatorName = moderator?.name ?? 'Leader';
+  ask(ctx, runOrder(s)[0]);
+}
+
+function ensureModerator(ctx) {
+  const s = ctx.state;
+  if (!isLearn(s) || ['pick', 'moderator-pick', 'final'].includes(s.phase)) return;
+  if (ctx.players.some((p) => p.id === s.moderatorId && p.connected)) return;
+  const online = ctx.players.filter((p) => p.connected);
+  const chosen = online.find((p) => s.volunteerChoices[p.id] === true) ?? online.find((p) => p.isVip) ?? online[0];
+  s.moderatorId = chosen?.id ?? null;
+  s.moderatorName = chosen?.name ?? 'Leader';
 }
 
 function resetScores(ctx) {
@@ -241,7 +306,7 @@ function reveal(ctx) {
 /** Everyone still connected is done: reveal after a short pause (unless that changes). */
 function maybeReveal(ctx) {
   const s = ctx.state;
-  if (s.phase !== 'question') return;
+  if (s.phase !== 'question' || isLearn(s)) return; // the moderator advances Learn
   const allIn = () => {
     const online = ctx.players.filter((p) => p.connected);
     return online.length > 0 && online.every((p) => isDone(s, p.id));
@@ -279,14 +344,20 @@ function startQuiz(ctx) {
   const s = ctx.state;
   if (!part(s).cases) s.cases = null;
   resetScores(ctx);
+  if (isLearn(s)) {
+    Object.assign(s, { phase: 'moderator-pick', volunteerChoices: {}, moderatorId: null, moderatorName: null, deadline: null });
+    return;
+  }
   ask(ctx, runOrder(s)[0]);
 }
 
 function ask(ctx, q) {
   const s = ctx.state;
-  Object.assign(s, { phase: 'question', q, answers: {}, sure: {}, deadline: Date.now() + ANSWER_SECONDS * 1000 });
+  const timed = !isLearn(s);
+  Object.assign(s, { phase: 'question', q, answers: {}, sure: {}, deadline: timed ? Date.now() + ANSWER_SECONDS * 1000 : null });
   ctx.cancelTimer('allIn');
-  ctx.timer('phase', ANSWER_SECONDS * 1000, () => reveal(ctx));
+  ctx.cancelTimer('phase');
+  if (timed) ctx.timer('phase', ANSWER_SECONDS * 1000, () => reveal(ctx));
 }
 
 function revealAnswers(ctx) {
@@ -300,7 +371,7 @@ function revealAnswers(ctx) {
   const rated = [];
   let bestCount = 0;
   for (const [id, answer] of Object.entries(s.answers)) {
-    if (!ctx.player(id)) continue;
+    if (!ctx.player(id) || (isLearn(s) && id === s.moderatorId)) continue;
     given.push(answer);
     if (id in s.sure) rated.push({ sure: s.sure[id], right: isBest(q, answer) });
     s.gained[id] = scoreAnswer(q, answer);
