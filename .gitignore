@@ -1,0 +1,5 @@
+node_modules/
+dist/
+
+# Settings that stay on this computer
+*.local.json

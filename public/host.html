@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" class="host" data-theme="arena">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game Night · Big Screen</title>
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/host.css">
+  <script type="module" src="js/host.js"></script>
+</head>
+<body>
+  <section id="lobby" class="screen lobby">
+    <header class="lobby-head">
+      <div class="logo">Game <span>Night</span></div>
+      <div id="last-result" class="last-result" hidden></div>
+      <div class="team-tag">Iron Panthers · FRC 5026</div>
+    </header>
+
+    <div class="lobby-body">
+      <aside class="join-card">
+        <div class="join-title">Join on Your Phone</div>
+        <img id="qr" class="qr" alt="QR code for joining">
+        <div class="join-or">or go to</div>
+        <div id="join-text" class="join-text"></div>
+        <div id="join-code" class="join-code" hidden></div>
+        <div id="join-hint" class="join-hint"></div>
+        <div id="join-local" class="join-local" hidden>On this Wi-Fi? <b id="join-local-text"></b> is faster</div>
+      </aside>
+
+      <div class="lobby-main">
+        <div class="panel">
+          <h2>Players <span id="player-count" class="count"></span></h2>
+          <div id="players" class="player-chips"></div>
+        </div>
+        <div class="panel grow">
+          <h2>Pick a Game</h2>
+          <div id="games" class="game-cards"></div>
+        </div>
+        <div class="start-row">
+          <button id="start" class="btn btn-xl">Start Game</button>
+          <div id="start-problem" class="start-problem"></div>
+          <span class="spacer"></span>
+          <button id="relay-btn" class="btn btn-sm secondary" hidden>Relay</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="game" class="screen game-screen" hidden>
+    <main id="stage" class="stage"></main>
+    <footer class="game-bar">
+      <b id="game-title" class="game-bar-title"></b>
+      <span>Join: <b id="join-mini"></b></span>
+      <span class="spacer"></span>
+      <button class="btn btn-sm secondary" data-lobby="restart">Restart</button>
+      <button class="btn btn-sm secondary" data-lobby="end">Back to Lobby</button>
+    </footer>
+  </section>
+
+  <dialog id="relay-dialog" class="relay-dialog">
+    <form method="dialog" class="stack">
+      <h2>Relay login</h2>
+      <p class="muted">
+        Phones on mobile data usually reach this big screen through a relay server (Metered). This site has a relay
+        login built in. To use a different one on this computer, enter it here (it's kept in this browser only).
+        "Forget it" goes back to the built-in login.
+      </p>
+      <label>Username <input id="relay-user" autocomplete="off" spellcheck="false"></label>
+      <label>Password <input id="relay-pass" type="password" autocomplete="off"></label>
+      <div class="row">
+        <button class="btn" value="save">Save</button>
+        <button class="btn secondary" value="forget">Forget it</button>
+        <button class="btn ghost" value="cancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="error" class="error-toast" hidden>
+    <span id="error-text"></span>
+    <button id="error-close" class="error-close" title="Dismiss">✕</button>
+  </div>
+  <div id="offline" class="offline" hidden>Lost connection to the game server. Reconnecting…</div>
+</body>
+</html>

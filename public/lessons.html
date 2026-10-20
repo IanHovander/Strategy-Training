@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#9a0000">
+<title>FRC Strategy Lab</title>
+<link rel="icon" type="image/png" href="img/favicon.png">
+<!-- The questions, points and explorers come from the same file the team game uses: games/frc-strategy/lessons.js.
+     The explorer's look is the game's stylesheet too, so the two always match. -->
+<link rel="stylesheet" href="games/frc-strategy/style.css">
+<style>
+/* The Game Night "arena" look: red sunburst, white sticker cards with black outlines and hard shadows,
+   Teko for headings and numbers, Roboto for sentences. Only the Iron Panthers brand colors. */
+@font-face{font-family:"Teko";src:url("fonts/teko.woff2") format("woff2");font-weight:300 600;font-display:swap}
+@font-face{font-family:"Roboto";src:url("fonts/roboto.woff2") format("woff2");font-weight:300 900;font-display:swap}
+@font-face{font-family:"Roboto";src:url("fonts/roboto-italic.woff2") format("woff2");font-weight:300 400;font-style:italic;font-display:swap}
+:root{--red:#9a0000;--red-hi:#c80f14;--grey:#cccccc;--black:#1a1a1a;--off-black:#333333;--white:#ffffff;--ink:var(--black);--muted:#555555;--outline:.22rem;--drop:.35rem .42rem 0 var(--black);--display:Teko,Roboto,Arial,sans-serif;--font:Roboto,Arial,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+html{background:var(--red)}
+body{min-height:100vh;color:var(--white);font:16px/1.5 var(--font);background:radial-gradient(circle at 24% 14%,var(--red-hi),var(--red) 75%) fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before,body::after{content:"";position:fixed;z-index:-1;pointer-events:none}
+body::before{left:calc(24vw - 150vmax);top:calc(14vh - 150vmax);width:300vmax;height:300vmax;background:repeating-conic-gradient(rgba(0,0,0,.1) 0 6deg,transparent 6deg 12deg);animation:spin 160s linear infinite}
+body::after{inset:0;background:radial-gradient(circle,rgba(0,0,0,.26) 28%,transparent 31%) 0 0/1.05rem 1.05rem;-webkit-mask:linear-gradient(140deg,transparent 50%,#000 95%);mask:linear-gradient(140deg,transparent 50%,#000 95%)}
+@keyframes spin{to{transform:rotate(1turn)}}
+@media (prefers-reduced-motion:reduce){body::before{animation:none}}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:.95;letter-spacing:.01em;margin:0}
+p{margin:.6rem 0}
+.wrap{max-width:1180px;margin:auto;padding:1.6rem 1.6rem 2.4rem}
+
+/* home: logo, hero, the investigations */
+.brand{display:flex;justify-content:center}
+.logo{font-family:var(--display);font-size:2.4rem;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:var(--white);display:inline-flex;align-items:center;gap:.5rem}
+.logo i{width:1.4em;height:1.66em;transform:translateY(-.07em);background:var(--white);-webkit-mask:url("img/panther.png") center/contain no-repeat;mask:url("img/panther.png") center/contain no-repeat}
+.hero{max-width:820px;margin:1.4rem auto 2.2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.hero h1{font-size:clamp(3rem,7vw,5.6rem);text-shadow:.3rem .35rem 0 rgba(0,0,0,.35)}
+.hero p{margin:0;width:fit-content;padding:.35em .9em .3em;background:var(--black);color:var(--white);font-weight:700;border-radius:.5rem;rotate:-1deg;box-shadow:.25rem .3rem 0 rgba(0,0,0,.35)}
+.hero-actions{margin-top:.6rem;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:1.2rem}
+.btn.hero-start{font-size:2.2rem;rotate:-2deg;box-shadow:.35rem .42rem 0 var(--black)}
+.btn.team{font-size:1.9rem;text-decoration:none;rotate:1.5deg}
+.script-warning{max-width:730px;margin:16px auto;padding:16px 20px;background:var(--white);color:var(--black);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:var(--drop)}
+.kicker{display:inline-block;width:fit-content;padding:.35rem .8rem .15rem;background:var(--black);color:var(--white);font-family:var(--display);font-size:1.35rem;line-height:1;letter-spacing:.04em;rotate:-2deg;box-shadow:.25rem .3rem 0 rgba(0,0,0,.35)}
+.hero .kicker{font-size:1.6rem;background:var(--white);color:var(--red-hi);border:var(--outline) solid var(--black);border-radius:.5rem;box-shadow:.25rem .3rem 0 var(--black)}
+.nav,.card{background:var(--white);color:var(--ink);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:var(--drop)}
+.home-nav{max-width:850px;margin:0 auto 2.4rem;padding:1rem;rotate:-.4deg}
+.nav-heading{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;font-family:var(--display);font-size:1.9rem;line-height:1;padding:.3rem .4rem .8rem}
+.nav-heading span{font-family:var(--font);font-size:.85rem;font-weight:700;color:var(--red-hi)}
+.nav-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.nav-links button{display:flex;align-items:center;gap:.7rem;min-height:4rem;text-align:left;background:var(--white);color:var(--ink);border:var(--outline) solid var(--black);border-radius:.8rem;padding:.5rem .8rem .4rem;font-family:var(--display);font-size:1.45rem;line-height:1.05;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s}
+.nav-links button:hover,.nav-links button:focus-visible{rotate:-1deg}
+.nav-links button.done{background:var(--black);color:var(--white)}
+.nav-links button small{display:block;font-family:var(--font);font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--muted)}
+.nav-links button.done small{color:var(--grey)}
+.nav-links .st-shape{width:2.2rem;height:2.2rem;font-size:1.4rem}
+.nav-links button.done .st-shape{background:var(--red-hi)}
+
+/* the focused lesson view */
+.lesson-topbar{max-width:850px;margin:0 auto 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem}
+.back-button{font-size:1.4rem}
+.lesson-top-label{font-family:var(--display);font-size:1.3rem;line-height:1;letter-spacing:.04em;text-transform:uppercase}
+.lesson-progress{padding:.3rem .7rem .1rem;border-radius:.5rem;background:var(--black);font-family:var(--display);font-size:1.5rem;line-height:1;white-space:nowrap}
+.lesson-main{max-width:850px;margin:0 auto;display:flex;flex-direction:column;gap:1.4rem}
+.card{padding:1.6rem 1.8rem 1.8rem}
+.card h2{font-size:3.4rem;margin:.9rem 0 .2rem}
+.card > p{color:var(--muted)}
+.section{display:block;margin-top:.9rem;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red-hi)}
+.prompt{margin:1.1rem 0;padding:1rem 1.2rem;background:#f1f1f1;border:var(--outline) solid var(--black);border-left-width:.6rem;border-left-color:var(--red-hi);border-radius:.7rem;font-size:1.1rem;color:var(--black)}
+.prompt b{color:var(--red-hi)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem}
+.option{position:relative;display:flex;align-items:flex-start;gap:.8rem;background:var(--white);color:var(--black);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:.25rem .3rem 0 var(--black);text-align:left;padding:.9rem 1.1rem;transition:transform .08s,box-shadow .08s,rotate .15s}
+.option:not(:disabled):hover{rotate:-1deg}
+.option:not(:disabled):active{transform:translate(.15rem,.2rem);box-shadow:0 0 0 var(--black)}
+.option:disabled{cursor:default}
+.option strong{display:block;font-family:var(--display);font-weight:400;font-size:1.9rem;line-height:1.05;padding-top:.1em}
+.option small{display:block;margin-top:.2rem;font-size:.85rem;font-weight:700;color:var(--muted)}
+.option.selected{background:var(--black);color:var(--white);rotate:-1deg}
+.option.selected small{color:var(--grey)}
+.option.selected .st-shape{background:var(--red-hi)}
+.option .pts{margin-left:auto;padding:.2rem .5rem .05rem;border-radius:.4rem;background:#e6e6e6;color:var(--black);font-family:var(--display);font-size:1.5rem;line-height:1}
+.option.best .pts{background:var(--red-hi);color:var(--white)}
+.option.best{outline:.3rem solid var(--white);outline-offset:-.6rem}
+.option.best small::before{content:"✓ Best answer · ";color:var(--red-hi)}
+.option.selected.best small::before{color:var(--white)}
+.result{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;margin-top:1.4rem}
+.result h3{font-size:2.4rem;color:var(--black)}
+.result .gained{padding:.25rem .7rem .05rem;border-radius:.6rem;background:var(--black);color:var(--white);font-family:var(--display);font-size:2.4rem;line-height:1;rotate:-3deg}
+.result.best .gained{background:var(--red-hi)}
+.result span:last-child{font-weight:700;color:var(--muted)}
+
+/* buttons: chunky pills that squash when pressed */
+.buttons{display:flex;flex-wrap:wrap;gap:.8rem;margin:1.3rem 0 .4rem}
+.btn{border:var(--outline) solid var(--black);border-radius:999px;background:var(--white);color:var(--red-hi);padding:.38em 1.3em .22em;font-family:var(--display);font-size:1.6rem;line-height:1;letter-spacing:.02em;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s;touch-action:manipulation;text-decoration:none;display:inline-block}
+.btn:hover:not(:disabled){rotate:-1.5deg}
+.btn:active:not(:disabled){transform:translate(.15rem,.2rem);box-shadow:0 0 0 var(--black)}
+.btn.primary{background:var(--red-hi);color:var(--white)}
+.btn.secondary{background:var(--black);color:var(--white)}
+.btn.btn-sm{font-size:1.35rem;padding:.3em .8em .12em}
+.btn:disabled{background:#d4d4d4;color:#8a8a8a;box-shadow:.2rem .25rem 0 rgba(0,0,0,.4);cursor:not-allowed}
+
+/* what the model says: a black sticker */
+.reveal{margin:1.4rem 0 0;padding:1rem 1.3rem;background:var(--black);color:var(--white);border-radius:.9rem;rotate:-.5deg;box-shadow:.3rem .35rem 0 rgba(0,0,0,.35)}
+.reveal h3{font-size:1.5rem;color:var(--grey)}
+.reveal .takeaway{font-family:var(--display);font-size:2rem;line-height:1.05;margin:.4rem 0}
+.reveal p{color:var(--white)}
+.st-ctl input[type="range"]{width:100%;accent-color:var(--red-hi)}
+
+/* the end */
+.report{display:flex;flex-direction:column;gap:.4rem;margin:1rem 0}
+.report-row{text-decoration:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.45rem 0 .35rem;border-top:2px solid #e6e6e6;font-family:var(--display);font-size:1.5rem;line-height:1;color:var(--black);background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+.report-row b{font-weight:400;color:var(--red-hi)}
+.score-big{font-family:var(--display);font-size:4rem;line-height:1;color:var(--red-hi)}
+.footer{font-size:.8rem;color:rgba(255,255,255,.85);margin:1.6rem 0;text-align:center}
+
+@media(max-width:780px){
+.wrap{padding:1rem .9rem 2rem}
+.hero{margin:1rem auto 1.6rem}
+.btn.hero-start{font-size:1.9rem}
+.home-nav{rotate:0deg;padding:.8rem}
+.nav-links button{font-size:1.2rem;gap:.5rem;padding:.45rem .55rem .35rem}
+.nav-links .st-shape{width:1.8rem;height:1.8rem;font-size:1.15rem}
+.lesson-top-label{display:none}
+.grid{grid-template-columns:1fr}
+.card{padding:1.2rem 1.1rem 1.3rem}
+.card h2{font-size:2.6rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="home-screen">
+    <div class="brand"><div class="logo">Strategy <i></i> Lab</div></div>
+    <header class="hero">
+      <div class="kicker" id="lesson-kicker"></div>
+      <h1 id="lesson-tagline"></h1>
+      <p>Make predictions. Run matches. Discover the hidden assumptions.</p>
+      <div class="hero-actions">
+        <button class="btn primary hero-start" type="button" id="start"></button>
+        <a class="btn team" href="host.html">Play as a Team ▸</a>
+      </div>
+    </header>
+    <nav class="nav home-nav" aria-label="Choose an investigation">
+      <div class="nav-heading">Investigations <span id="progress"></span></div>
+      <div class="nav-links" id="nav"></div>
+    </nav>
+  </div>
+  <div id="lesson-screen" hidden>
+    <header class="lesson-topbar">
+      <a class="btn back-button" href="#home" aria-label="Return to all investigations">← All Investigations</a>
+      <span class="lesson-top-label" id="lesson-label"></span>
+      <span class="lesson-progress" id="lesson-progress"></span>
+    </header>
+    <main id="main" class="lesson-main"></main>
+  </div>
+  <noscript><div class="script-warning">This website needs JavaScript to run its interactive lessons. Please enable JavaScript in your browser.</div></noscript>
+  <div class="footer">Abstract teaching simulations, not any particular FRC game. Ties are tracked separately.</div>
+</div>
+<script type="module">
+// Everything on this page comes from games/frc-strategy/lessons.js, the same lessons the team game plays.
+// Links: lessons.html (home), lessons.html#lesson-3 (investigation 3), lessons.html#done (your results).
+// With more lessons, ?lesson=<id> picks one; the first lesson is the default.
+import { html, raw } from './js/ui.js';
+import { LESSONS, SHAPES, bestPoints, lessonById } from './games/frc-strategy/lessons.js';
+import { mountExplorer } from './games/frc-strategy/explorer.js';
+
+const $ = (id) => document.getElementById(id);
+const lesson = lessonById(new URLSearchParams(location.search).get('lesson')) ?? LESSONS[0];
+const questions = lesson.questions;
+const KEY = 'frc-strategy-solo';
+let picked = null; // the answer chosen but not yet locked in
+
+// Your answers, kept in this browser: { [lessonId]: { [question index]: answer index } }
+function loadAnswers() {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || '{}')[lesson.id] ?? {};
+  } catch {
+    return {};
+  }
+}
+let answers = loadAnswers();
+function saveAnswers() {
+  try {
+    const all = JSON.parse(localStorage.getItem(KEY) || '{}');
+    all[lesson.id] = answers;
+    localStorage.setItem(KEY, JSON.stringify(all));
+  } catch {
+    // Storage may be disabled (private window, embedded preview); the lesson still works.
+  }
+}
+
+const score = () => Object.entries(answers).reduce((s, [q, a]) => s + (questions[q]?.choices[a]?.points ?? 0), 0);
+const maxScore = () => questions.reduce((s, q) => s + bestPoints(q), 0);
+const doneCount = () => questions.filter((_, i) => i in answers).length;
+
+document.title = `${lesson.title} · FRC Strategy Lab`;
+$('lesson-kicker').textContent = `Lesson ${lesson.number} · ${lesson.title}`;
+$('lesson-tagline').textContent = lesson.tagline;
+$('lesson-label').textContent = `Strategy Lab / ${lesson.title}`;
+$('start').textContent = doneCount() ? 'Continue ▸' : `Start Lesson ${lesson.number} ▸`;
+$('start').addEventListener('click', () => {
+  const next = questions.findIndex((_, i) => !(i in answers));
+  location.hash = next < 0 ? 'done' : `lesson-${next + 1}`;
+});
+
+// ---------- routing: #lesson-N is investigation N, #done the results, anything else home ----------
+
+function route() {
+  const m = /^#lesson-(\d{1,2})$/.exec(location.hash);
+  const i = m ? Number(m[1]) - 1 : -1;
+  const inLesson = (i >= 0 && i < questions.length) || location.hash === '#done';
+  $('home-screen').hidden = inLesson;
+  $('lesson-screen').hidden = !inLesson;
+  picked = null;
+  if (location.hash === '#done') showDone();
+  else if (inLesson) showQuestion(i);
+  else showHome();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+addEventListener('hashchange', route);
+
+function showHome() {
+  $('start').textContent = doneCount() >= questions.length ? 'See Your Results ▸' : doneCount() ? 'Continue ▸' : `Start Lesson ${lesson.number} ▸`;
+  $('progress').textContent = doneCount() ? `${doneCount()} / ${questions.length} done · ${score()} pts` : '';
+  $('nav').innerHTML = html`${questions.map(
+    (q, i) => html`
+      <button type="button" class="${i in answers && 'done'}" data-go="${i + 1}">
+        <span class="st-shape">${i in answers ? '✓' : i + 1}</span>
+        <span>${q.title}<small>${q.section}</small></span>
+      </button>`,
+  )}`;
+}
+$('nav').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-go]');
+  if (btn) location.hash = `lesson-${btn.dataset.go}`;
+});
+
+// ---------- one investigation ----------
+
+function showQuestion(i) {
+  const q = questions[i];
+  const chosen = answers[i];
+  const locked = chosen != null;
+  const top = bestPoints(q);
+  const mine = locked ? chosen : picked;
+  const last = i + 1 >= questions.length;
+  $('lesson-progress').textContent = `${i + 1} / ${questions.length}`;
+  $('main').innerHTML = html`
+    <section class="card">
+      <div class="kicker">Investigation ${i + 1} / ${questions.length}</div>
+      <span class="section">${q.section}</span>
+      <h2>${q.title}</h2>
+      <div class="prompt">${raw(q.prompt)}</div>
+      <div class="grid">
+        ${q.choices.map(
+          (c, k) => html`
+            <button type="button" class="option ${mine === k && 'selected'} ${locked && c.points === top && 'best'}" data-choice="${k}" ${locked && 'disabled'}>
+              <span class="st-shape">${SHAPES[k]}</span>
+              <span><strong>${c.text}</strong>${locked && html`<small>${c.result}</small>`}</span>
+              ${locked && html`<span class="pts">+${c.points}</span>`}
+            </button>`,
+        )}
+      </div>
+      ${locked
+        ? html`
+          <div class="result ${q.choices[chosen].points === top && 'best'}">
+            <span class="gained">+${q.choices[chosen].points}</span>
+            <h3>${q.choices[chosen].points === top ? 'Best Answer!' : q.choices[chosen].points > 0 ? 'Partly Right' : 'Not This Time'}</h3>
+            <span>Score ${score()} / ${maxScore()}</span>
+          </div>
+          <div class="reveal">
+            <h3>What the Model Says</h3>
+            <p class="takeaway">${q.takeaway}</p>
+            <p>${q.explain}</p>
+          </div>`
+        : html`
+          <div class="buttons">
+            <button type="button" class="btn primary" id="lock" ${mine == null && 'disabled'}>Lock Prediction &amp; Reveal</button>
+          </div>`}
+    </section>
+    ${locked && html`<div id="explore"></div>`}
+    ${locked &&
+    html`
+      <div class="buttons">
+        <a class="btn primary" href="#${last ? 'done' : `lesson-${i + 2}`}">${last ? 'Finish Lesson ▸' : 'Next Investigation ▸'}</a>
+        <button type="button" class="btn" id="retry">Try Again</button>
+      </div>`}`;
+  if (locked && q.explore) mountExplorer($('explore'), q.explore);
+}
+
+$('main').addEventListener('click', (e) => {
+  if (e.target.closest('#reset')) {
+    answers = {};
+    saveAnswers();
+    location.hash = 'lesson-1';
+    return;
+  }
+  const m = /^#lesson-(\d{1,2})$/.exec(location.hash);
+  if (!m) return;
+  const i = Number(m[1]) - 1;
+  const choice = e.target.closest('[data-choice]');
+  if (choice && !(i in answers)) {
+    picked = Number(choice.dataset.choice);
+    showQuestion(i);
+  } else if (e.target.closest('#lock') && picked != null) {
+    answers[i] = picked;
+    saveAnswers();
+    showQuestion(i);
+  } else if (e.target.closest('#retry')) {
+    delete answers[i];
+    saveAnswers();
+    picked = null;
+    showQuestion(i);
+  }
+});
+
+// ---------- the end ----------
+
+function showDone() {
+  const best = questions.filter((q, i) => q.choices[answers[i]]?.points === bestPoints(q)).length;
+  $('lesson-progress').textContent = `${doneCount()} / ${questions.length}`;
+  $('main').innerHTML = html`
+    <section class="card">
+      <div class="kicker">Lesson ${lesson.number} complete</div>
+      <h2>${lesson.title}</h2>
+      <p><span class="score-big">${score()}</span> of ${maxScore()} points · ${best} of ${questions.length} best answers</p>
+      <div class="report">
+        ${questions.map((q, i) => {
+          const c = q.choices[answers[i]];
+          return html`
+            <a class="report-row" href="#lesson-${i + 1}">
+              <span>${i + 1}. ${q.title}</span>
+              <b>${c ? `+${c.points} / ${bestPoints(q)}` : 'not answered'}</b>
+            </a>`;
+        })}
+      </div>
+      <p>Now challenge the model itself: revisit any investigation, change its assumptions, and test what still holds.</p>
+      <div class="buttons">
+        <button type="button" class="btn primary" id="reset">Start Over</button>
+        <a class="btn" href="host.html">Play as a Team ▸</a>
+      </div>
+    </section>`;
+}
+
+route();
+</script>
+</body>
+</html>
