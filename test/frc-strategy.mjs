@@ -1,11 +1,11 @@
-// Checks for Strategy Training: the lesson content, the Showdown model, and a real server played with fake phones
-// through Learn, Test and the Showdown.
+// Checks for Strategy Training: the lesson content, the Alliance Selection robot model, and a real server played
+// with fake phones through Learn, the Test and Alliance Selection.
 //   node test/frc-strategy.mjs
 import { spawn } from 'node:child_process';
 import { io } from 'socket.io-client';
 import { LESSONS, partById } from '../games/frc-strategy/lessons.js';
 import { bestPoints, cleanAnswer, scoreAnswer, tally, typeOf } from '../games/frc-strategy/quiz.js';
-import { PLAN_IDS, effectiveRates, matchOdds, mostUsed } from '../games/frc-strategy/showdown.js';
+import { bestPlan, effectiveRates, matchOdds, robotDist, robotPlans } from '../games/frc-strategy/alliance.js';
 
 const PORT = 3198;
 const URL = `http://localhost:${PORT}`;
@@ -37,7 +37,8 @@ try {
   const risk = LESSONS[0];
   const learn = partById(risk, 'learn');
   const test = partById(risk, 'test');
-  const showdown = partById(risk, 'showdown');
+  const { draft } = partById(risk, 'draft');
+  const bot = (id) => draft.robots.find((r) => r.id === id);
 
   // --- the lesson content ---
   for (const part of [learn, test]) {
@@ -87,28 +88,30 @@ try {
   const lottery = learn.questions.find((q) => q.title === 'Three on Three').explore;
   check(near(lottery.model(defaults(lottery)).strategies[0].win, 0.4253, 0.001), 'Learn, Three on Three: Lotteries win 42.5%');
 
-  // --- the Showdown model ---
-  const r1 = showdown.rounds[0];
-  for (const [i, r] of showdown.rounds.entries()) {
-    const o = matchOdds(r, ['cycle', 'power', 'climb'], ['defend', 'cycle', 'climb']);
-    check(near(o.a.win + o.a.tie + o.b.win, 1, 1e-9) && r.key.answer < r.key.choices.length && r.house.every((p) => PLAN_IDS.includes(p)), `Showdown round ${i + 1}: odds add up, key and House plans are valid`);
+  // --- the Alliance Selection robot model ---
+  const F = draft.field;
+  for (const r of draft.robots) {
+    const plans = robotPlans(r);
+    const sums = plans.map((plan) => robotDist(F, r, effectiveRates(F, { robots: [r], plans: [plan] }, { robots: [], plans: [] })[0]).reduce((s, [, p]) => s + p, 0));
+    check(plans.includes('cycle') && plans.includes('defend') && plans.includes(r.start) && sums.every((x) => near(x, 1, 1e-9)) && r.truth && r.scout.lines.length >= 3, `robot ${r.name}: plans, a starting plan, a full distribution, a scouting report and the truth`);
   }
-  const r2 = showdown.rounds[1];
-  check(near(effectiveRates(r2, ['cycle', 'cycle', 'cycle'], [])[0].p, 0.55), 'crowding: three Cyclers drop to 55% in round 2');
-  const r3 = showdown.rounds[2];
-  const guarded = effectiveRates(r3, ['cycle', 'power', 'climb'], ['defend', 'cycle', 'cycle']);
-  check(guarded[1].guarded && !guarded[0].guarded && near(guarded[1].p, 0.1), 'a defender guards the top scorer (the Power Shot)');
-  const r4 = showdown.rounds[3];
-  const climbers = effectiveRates(r4, ['climb', 'climb', 'cycle'], []);
-  check(climbers[0].climbP === 0.75 && climbers[1].climbP === 0, 'only one robot fits on the round 4 climb');
-  check(matchOdds(r1, ['cycle', 'cycle', 'cycle'], ['power', 'power', 'power']).a.win > 0.6, 'round 1: steady Cyclers beat Power Shots');
-  check(JSON.stringify(mostUsed(['cycle', 'power', 'cycle'])) === '["cycle"]' && mostUsed(['cycle', 'power', 'climb']).length === 3, 'most-used plan handles ties');
+  check(bestPlan(F, bot('tortoise')) === 'climb' && bestPlan(F, bot('flash')) === 'power' && bestPlan(F, bot('wall')) === 'cycle', 'each robot’s best plan matches its strengths');
+  const crowd = effectiveRates(F, { robots: [bot('metronome'), bot('anchor')], plans: ['cycle', 'cycle'] }, { robots: [], plans: [] });
+  check(near(crowd[0].p, 0.84) && near(crowd[1].p, 0.72), 'two Cyclers crowd each other (−8 points each)');
+  const climb = effectiveRates(F, { robots: [bot('ace'), bot('tortoise'), bot('anchor')], plans: ['climb', 'climb', 'climb'] }, { robots: [], plans: [] });
+  check(climb[0].climbP > 0 && climb[1].climbP > 0 && climb[2].climbP === 0, 'only two robots fit on the climb');
+  const guarded = effectiveRates(F, { robots: [bot('flash'), bot('metronome')], plans: ['power', 'cycle'] }, { robots: [bot('brick')], plans: ['defend'] });
+  check(guarded[0].guardedBy === 'brick' && near(guarded[0].p, 0.05) && guarded[1].guardedBy === null, 'a defender guards the most dangerous scorer');
+  const lineup = (ids) => ({ robots: ids.map(bot), plans: ids.map((id) => bestPlan(F, bot(id))) });
+  const steady = matchOdds(F, lineup(['metronome', 'tortoise', 'anchor']), lineup(['comet', 'spark', 'flash']));
+  check(near(steady.a.win + steady.a.tie + steady.b.win, 1, 1e-9) && steady.a.win > steady.b.win, 'consistent, well-scouted robots beat the flashy small-sample ones');
+  check(bot('comet').scout.matches <= 5 && bot('spark').scout.matches <= 5 && bot('lucky').scout.matches <= 5, 'the misleading reports are the small samples');
 
   // --- the solo page reads the same lessons ---
   const solo = await fetch(`${URL}/lessons.html`);
   const soloText = await solo.text();
   check(solo.ok && ['lessons.js', 'explorer.js', 'views.js', 'quiz.js'].every((f) => soloText.includes(`./games/frc-strategy/${f}`)), 'solo page loads the shared lessons, scoring, views and explorer');
-  for (const f of ['explorer.js', 'views.js', 'quiz.js', 'prob.js', 'lesson1-learn.js', 'player-showdown.js', 'host-showdown.js']) {
+  for (const f of ['explorer.js', 'views.js', 'quiz.js', 'prob.js', 'lesson1-learn.js', 'lesson1-draft.js', 'alliance.js', 'draft-views.js', 'player-draft.js', 'host-draft.js']) {
     check((await fetch(`${URL}/games/frc-strategy/${f}`)).ok, `games/frc-strategy/${f} is served`);
   }
 
@@ -209,7 +212,7 @@ try {
   host.socket.emit('lobby', { cmd: 'end' });
   await wait(150);
 
-  // --- the Showdown ---
+  // --- Alliance Selection ---
   const p4 = client('player');
   await wait(150);
   await p4.socket.timeout(3000).emitWithAck('join', { name: 'P4' });
@@ -219,64 +222,86 @@ try {
   const four = [players[0], players[1], p3, p4];
   host.socket.emit('lobby', { cmd: 'start' });
   await wait(200);
-  hostAct(host, 'lesson', { lessonId: 'risk', partId: 'showdown' });
+  hostAct(host, 'lesson', { lessonId: 'risk', partId: 'draft' });
   await wait(60);
   hostAct(host, 'next', { from: 'pick:0' });
-  await wait(150);
-  check(view(host).phase === 'teams' && view(host).teams.length === 2 && view(host).teams.every((t) => t.members.length === 2), 'Showdown: four players make two alliances of two');
+  await wait(200);
+  check(view(host).phase === 'teams' && view(host).teams.every((t) => t.members.length === 2 && t.captainId), 'Alliance Selection: two teams of two, each with a captain');
   hostAct(host, 'next', { from: 'teams:0' });
-  await wait(150);
-  check(view(host).phase === 'plan' && view(host).pairs.length === 1, 'Showdown: round 1 pairs the two alliances');
-  check((await act(four[0], 'pick', { plan: 'nope' }))?.error, 'an unknown plan is rejected');
-  for (const p of four) {
-    await act(p, 'pick', { plan: 'cycle' });
-    await act(p, 'pick', { predict: 'cycle' });
+  await wait(250);
+  check(view(host).phase === 'scout', 'scouting starts');
+  const teamOf = (p) => view(p).team;
+  const captain = (i) => four.find((p) => teamOf(p) === i && view(p).captain);
+  const member = (i) => four.find((p) => teamOf(p) === i && !view(p).captain);
+  await act(member(0), 'star', { robotId: 'tortoise' });
+  await wait(250);
+  check(view(captain(0)).teamStars.tortoise === 1 && !view(captain(1)).teamStars.tortoise, 'stars reach your own captain, not the other team');
+  check(!JSON.stringify(view(host)).includes('tortoise'), 'the big screen never shows stars');
+  hostAct(host, 'next', { from: 'scout:0' });
+  await wait(250);
+  check(view(host).phase === 'draft' && view(host).turn === view(host).first, 'the coin-flip winner picks first');
+  const firstPick = view(host).first;
+  check((await act(member(firstPick), 'draftPick', { robotId: 'ace' }))?.error, 'only the captain can pick');
+  check((await act(captain(firstPick), 'guess', { robotId: 'ace' }))?.error, 'you can’t guess your own team’s pick');
+  await act(member(1 - firstPick), 'guess', { robotId: 'ace' });
+  await act(captain(firstPick), 'draftPick', { robotId: 'ace' });
+  await wait(250);
+  check(view(member(1 - firstPick)).score === 20 && view(host).lastGuess.right === 1, 'a right guess of the other team’s pick earns 20');
+  check((await act(captain(1 - firstPick), 'draftPick', { robotId: 'ace' }))?.error, 'a taken robot can’t be picked');
+  const order = ['metronome', 'tortoise', 'flash', 'comet', 'spark']; // picks 2–6, serpentine
+  for (const id of order) {
+    const turn = view(host).turn;
+    await act(captain(turn), 'draftPick', { robotId: id });
+    await wait(120);
   }
-  await wait(250); // phones get at most ~15 updates a second
-  const mates = view(four[0]).team.members;
-  check(mates.length === 2 && mates.every((m) => m.plan === 'cycle'), 'teammates see each other’s plans');
-  check(!JSON.stringify(view(host)).includes('"plan":"cycle"') && view(host).players.every((p) => !p.done), 'the big screen sees no plans, and nobody is locked in without the key answer');
-  for (const p of four) await act(p, 'pick', { key: showdown.rounds[0].key.answer });
-  await wait(3400);
-  check(view(host).phase === 'result' && view(host).results.length === 1, 'Showdown: the match plays once everyone has locked in');
-  const res = view(host).results[0];
-  check(near(res.a.win + res.a.tie / 2 + res.b.win + res.b.tie / 2, 1, 1e-9) && res.a.points.decision + res.b.points.decision >= 99, 'both sides share the win chance');
-  const me = view(four[0]);
-  const mySide = me.result.a.teamId === me.team.id ? me.result.a : me.result.b;
-  check(me.gained === mySide.points.total + 40 && me.calls === 2, 'each player gets alliance points plus 20 per good call');
-  hostAct(host, 'next', { from: 'result:0' });
-  await wait(60);
-  check(view(host).phase === 'standings' && view(host).teams.some((t) => t.score > 0), 'standings show alliance totals');
-  for (let r = 1; r < showdown.rounds.length; r++) {
-    hostAct(host, 'next', { from: `standings:${r - 1}` });
-    await wait(150);
-    hostAct(host, 'next', { from: `plan:${r}` }); // nobody picks: empty seats run the round's auto plan
+  check(view(host).phase === 'plan' && view(host).picks.length === 6, 'six picks, then match planning');
+  check(JSON.stringify(view(host).picks.map((p) => p.team)) === JSON.stringify([0, 1, 1, 0, 0, 1].map((x) => (firstPick + x) % 2)), 'the draft runs serpentine');
+  const firstTeam = view(captain(firstPick)).lineup;
+  check(firstTeam.ace === 'power' && firstTeam.flash === 'power', 'robots start on the plan their scouting suggests');
+  check((await act(captain(firstPick), 'lineup', { robotId: 'flash', plan: 'climb' }))?.error, 'a robot can’t run a plan it has no hardware for');
+  await act(member(firstPick), 'lineup', { robotId: 'flash', plan: 'defend' });
+  await wait(250);
+  check(view(captain(firstPick)).suggested.flash?.defend === 1 && view(captain(firstPick)).lineup.flash === 'power', 'a teammate’s tap is a suggestion the captain sees');
+  check(!JSON.stringify(view(host)).includes('"power"'), 'the big screen never shows lineups before the match');
+  await act(captain(firstPick), 'lineup', { robotId: 'flash', plan: 'defend' });
+  for (const p of four) await act(p, 'predict', { defenders: teamOf(p) === firstPick ? 0 : 1 });
+  await act(captain(0), 'lock');
+  await act(captain(1), 'lock');
+  await wait(3500);
+  check(view(host).phase === 'result' && view(host).results.length === 1, 'the match plays once both captains lock');
+  const r = view(host).results[0];
+  check(near(r.chances[0] + r.chances[1], 1, 1e-9) && r.defenders[firstPick] === 1, 'both sides share the win chance; the defender is on record');
+  const me = member(1 - firstPick); // predicted 1 defender from the firstPick team: right
+  const won = r.winner === 1 - firstPick ? 30 : r.winner == null ? 15 : 0;
+  check(view(me).gained === Math.round(60 * r.chances[1 - firstPick]) + won + 20, 'match points: 60 × win chance + the win + a right prediction');
+  for (let m = 1; view(host).phase !== 'final' && m < 6; m++) {
+    hostAct(host, 'next', { from: `result:${m - 1}` });
     await wait(200);
-    check(view(host).phase === 'result', `Showdown round ${r + 1} plays without picks`);
-    hostAct(host, 'next', { from: `result:${r}` });
-    await wait(150);
+    if (view(host).phase === 'final') break;
+    hostAct(host, 'next', { from: `plan:${m}` });
+    await wait(250);
   }
-  hostAct(host, 'next', { from: `standings:${showdown.rounds.length - 1}` });
-  await wait(100);
-  check(view(host).phase === 'final' && view(host).history.length === showdown.rounds.length, 'Showdown final with a key-question report');
-  check(JSON.stringify(view(host)).length < 16000, `Showdown hostView is small (${JSON.stringify(view(host)).length} bytes)`);
+  check(view(host).phase === 'final' && (view(host).champion === null || view(host).teams[view(host).champion].wins >= 2), 'the series ends with a champion (or a draw after five)');
+  check(JSON.stringify(view(host)).length < 16000, `Alliance Selection hostView is small (${JSON.stringify(view(host)).length} bytes)`);
   hostAct(host, 'finish');
   await wait(200);
-  check(/Alliance .* won the Risk & Consistency Showdown/.test(host.room.lastResult ?? ''), 'finish names the winning alliance');
+  check(/Alliance Selection/.test(host.room.lastResult ?? ''), 'finish reports the series');
 
-  // An odd number of alliances: one plays the House.
-  for (const p of four.slice(1)) p.socket.disconnect();
-  await wait(200);
+  // A pick timer running out takes the team's most-starred robot.
   host.socket.emit('lobby', { cmd: 'start' });
   await wait(200);
-  hostAct(host, 'lesson', { lessonId: 'risk', partId: 'showdown' });
+  hostAct(host, 'lesson', { lessonId: 'risk', partId: 'draft' });
   hostAct(host, 'next', { from: 'pick:0' });
-  await wait(100);
+  await wait(150);
   hostAct(host, 'next', { from: 'teams:0' });
-  await wait(100);
-  hostAct(host, 'next', { from: 'plan:0' });
-  await wait(100);
-  check(view(host).results?.[0]?.b.teamId === 'house', 'a lone alliance plays the House Bots');
+  await wait(150);
+  const t0 = view(host).first;
+  for (const p of four.filter((p) => teamOf(p) === t0)) await act(p, 'star', { robotId: 'brick' });
+  hostAct(host, 'next', { from: 'scout:0' });
+  await wait(150);
+  hostAct(host, 'next', { from: 'draft:0' }); // the big screen's Auto-pick
+  await wait(200);
+  check(view(host).picks[0]?.robotId === 'brick' && view(host).picks[0].auto, 'auto-pick takes the team’s most-starred robot');
 } finally {
   server.kill();
 }

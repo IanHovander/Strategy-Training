@@ -4,7 +4,7 @@
 // A lesson has three parts, played in order:
 //   learn     case studies (lesson1-learn.js): exact answers first, then more details and unknowns each step
 //   test      one question per investigation (lesson1-test.js)
-//   showdown  alliances of three play each other (lesson1-showdown.js); team game only
+//   draft     Alliance Selection (lesson1-draft.js): two teams draft robots and play a best of three; team game only
 //
 // Text may contain <b>…</b>: it's written here, never typed by players, so the screens insert it as HTML.
 // A question (learn steps and test investigations):
@@ -20,7 +20,7 @@
 // Learn steps also get the case they belong to (see `fromCases`).
 import { LEARN } from './lesson1-learn.js';
 import { TEST } from './lesson1-test.js';
-import { SHOWDOWN } from './lesson1-showdown.js';
+import { DRAFT } from './lesson1-draft.js';
 
 /**
  * Lay out a part's cases as one list of questions. Each question learns its case's title and setup, its
@@ -71,11 +71,11 @@ export const LESSONS = [
         questions: TEST,
       },
       {
-        id: 'showdown',
-        kind: 'showdown',
-        title: 'Showdown',
-        blurb: 'Alliances of three. Pick your robot’s plan, predict the other alliance, and win matches. Team game only.',
-        rounds: SHOWDOWN,
+        id: 'draft',
+        kind: 'draft',
+        title: 'Alliance Selection',
+        blurb: 'Two teams scout twelve robots, draft alliances of three, and play a best of three. Captains pick; everyone advises. Team game only.',
+        draft: DRAFT,
       },
     ],
   },

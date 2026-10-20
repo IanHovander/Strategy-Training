@@ -6,8 +6,8 @@ Strategy training for FRC teams. Each lesson has three parts, played in order:
    estimate probabilities with a slider, pick the details that matter (red herrings cost points), and make the call.
    The last cases are mostly unknowns to spot and argue about. Every reveal ends with a discussion prompt.
 2. **Test** (team or solo): one scored question per investigation.
-3. **Showdown** (team): alliances of three play each other. Each round everyone picks their robot's plan, predicts
-   the other alliance, and answers the round's key question, then the matches play out.
+3. **Alliance Selection** (team): the room splits into two teams that scout a pool of twelve robots, draft an
+   alliance of three each, and play each other in a best of three.
 
 As a team, one big screen runs the lesson and everyone answers on their phone; the board shows how the room
 answered, the points each answer earned, and a leaderboard. Solo, the same lessons run on one page.
@@ -37,7 +37,7 @@ Every push to `main` then rebuilds and publishes the site.
 1. Open the big screen link on the computer connected to the TV and press F11.
 2. Everyone scans the QR code and types their name. The first to join is the **leader** (★).
 3. **Strategy Training** is the first game in the lobby. Press **Start Game**.
-4. The big screen (or the leader's phone) picks the lesson and the part: **Learn**, **Test** or **Showdown**.
+4. The big screen (or the leader's phone) picks the lesson and the part: **Learn**, **Test** or **Alliance Selection**.
 
 **Learn and Test.** For each question:
 - Everyone answers on their phone and can change their mind until the reveal. The reveal comes when everyone has
@@ -51,17 +51,20 @@ Every push to `main` then rebuilds and publishes the site.
   simulations.
 - The leaderboard comes after each case in Learn, and after every question in the Test.
 
-**Showdown.** Players are dealt into alliances of three (the big screen can shuffle them first). Sit together. Each
-round:
-- The big screen shows the brief, its details (some are red herrings) and the plan card: Cycle, Power Shot,
-  Defend or Climb, with this round's numbers.
-- On their phones, everyone picks their robot's plan, predicts the other alliance's main plan, and answers the
-  key question. Teammates see each other's plans; the other alliance and the big screen don't.
-- The matches play out. Each alliance earns its win chance (0–100) plus 20 for winning the match plus any bonus,
-  and each player gets +20 for a correct prediction and +20 for the key question. Points follow the decision more
-  than the dice: a 90% plan that loses still earns 90.
-- Five rounds build up: know the numbers, crowding, live defense, a one-robot climb with a bonus, then everything at
-  once. An odd alliance out plays the House Bots.
+**Alliance Selection.** The room splits into a Red and a Blue team, each with a captain (the big screen can
+shuffle first). Each team should sit together.
+- **Scouting (3 minutes):** everyone studies twelve robots' scouting reports: scoring, consistency, climbs, defense,
+  breakdowns, and how many matches were scouted. Star the robots you want; only your team sees the stars.
+- **The draft:** serpentine like FRC (A, B, B, A, A, B; a coin flip decides who picks first). The captain picks
+  with the team's stars on every card; teammates keep advising. While the other team picks, everyone guesses their
+  pick (+20 if right). A pick timer that runs out takes the team's most-starred robot.
+- **Best of three:** before each match the captain sets each robot's plan (Cycle, Power Shot, Defend or Climb, as
+  its hardware allows) and locks; teammates' taps show up as suggestions. Everyone predicts how many of the other
+  side's robots will defend (+20). The big screen never shows a lineup until the match plays.
+- **Scoring:** each player earns 60 × their alliance's win chance, +30 for winning the match, and +60 for winning the
+  series. Points follow the decision more than the dice.
+- **Debrief:** the end reveals what the scouting hid. Some small-sample robots looked better than they really are.
+  The robots' true numbers drive the matches.
 
 ## Lessons: one source for both versions
 
@@ -73,9 +76,9 @@ there is nothing to keep in sync:
 | `lessons.js` | The list of lessons and their parts; how each question is described |
 | `lesson1-learn.js` | Lesson 1's case studies (Learn) |
 | `lesson1-test.js` | Lesson 1's investigations (Test) |
-| `lesson1-showdown.js` | Lesson 1's Showdown rounds |
+| `lesson1-draft.js` | Lesson 1's robot pool, scouting reports and the truth behind them (Alliance Selection) |
 | `quiz.js` | How every question type is checked and scored |
-| `showdown.js` | The Showdown match model |
+| `alliance.js`, `draft-rules.js` | The Alliance Selection match model and rules |
 | `views.js`, `explorer.js` | Question screens and the Explore panel, shared by phones and the solo page |
 
 Edit a question once and both versions change. Add a lesson to the `LESSONS` list and it appears in the team
@@ -85,7 +88,7 @@ Solo links: `lessons.html` (home), `#learn-3` (Learn step 3), `#test-3` (Test in
 `#test-done` (results). Older `#lesson-N` links open the Test. Solo answers are kept in that browser.
 
 `npm test` checks the lesson content (every best answer earns full points, every explorer agrees with the answers
-it backs up), the Showdown model, and plays Learn, the Test and a Showdown with fake phones.
+it backs up), the robot model, and plays Learn, the Test and Alliance Selection with fake phones.
 
 ## Keeping up with Game Night
 
@@ -99,7 +102,7 @@ git pull game-night main
 
 Changes made here to shared Game Night files: the lobby's player list scrolls and shrinks with big groups
 (`public/css/host.css`), phones link to the solo lessons (`public/index.html`), the bots answer Strategy Training
-questions and make Showdown picks (`public/js/tools/bots.js`), and the room code prefix in `public/js/config.js` is this site's own.
+questions and draft robots (`public/js/tools/bots.js`), and the room code prefix in `public/js/config.js` is this site's own.
 
 ## Educational model
 

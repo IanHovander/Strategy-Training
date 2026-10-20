@@ -53,7 +53,7 @@ function addBot(room) {
   });
 }
 
-/** Very simple players: tap during races, get through Odd One Out's phases, and answer Strategy Training questions. */
+/** Very simple players: tap during races, get through Odd One Out's phases, and play Strategy Training. */
 function play(bot) {
   const v = bot.view;
   const racing = bot.game === 'tap-race' && v?.phase === 'go';
@@ -72,15 +72,20 @@ function play(bot) {
       for (const [t, p] of actions) bot.socket.emit('action', { type: t, payload: p });
     }, 800 + Math.random() * 2500);
   };
-  // Strategy Training: answer each question (any type), and make the three Showdown calls.
+  // Strategy Training: answer each question (any type); in Alliance Selection, star, pick or guess, and predict.
   if (bot.game === 'frc-strategy') {
     strategy.then(({ lessonById, partById }) => {
       const part = partById(lessonById(v.lessonId), v.partId);
       if (v.phase === 'question' && v.answer == null) later('answer', { answer: randomAnswer(part.questions[v.q]) });
-      if (v.phase === 'plan' && v.pick?.key == null) {
-        const plans = ['cycle', 'power', 'defend', 'climb'];
-        const key = Math.floor(Math.random() * part.rounds[v.round].key.choices.length);
-        later('plan', null, [['pick', { plan: pick(plans) }], ['pick', { predict: pick(plans) }], ['pick', { key }]]);
+      if (part.kind !== 'draft') return;
+      const left = part.draft.robots.filter((r) => !v.picks.some((p) => p.robotId === r.id)).map((r) => r.id);
+      if (v.phase === 'scout' && !v.myStars.length) later('star', { robotId: pick(left) });
+      if (v.phase === 'draft' && v.turn === v.team && v.captain) later('draftPick', { robotId: pick(left) });
+      if (v.phase === 'draft' && v.turn !== v.team && !v.myGuess) later('guess', { robotId: pick(left) });
+      if (v.phase === 'plan' && v.myPredict == null) {
+        const actions = [['predict', { defenders: Math.floor(Math.random() * 2) }]];
+        if (v.captain && !v.locked) actions.push(['lock', {}]);
+        later('predict', null, actions);
       }
     });
     return;

@@ -1,11 +1,11 @@
 // Phone for Strategy Training. Learn and Test: the case file, the question and its answer controls; after the
-// reveal, your result, how the room answered, the lesson and the "explore" panel. Showdown: player-showdown.js.
+// reveal, your result, how the room answered, the lesson and the "explore" panel. Alliance Selection: player-draft.js.
 import { html } from '../../js/ui.js';
 import { LESSONS, lessonById, partById } from './lessons.js';
 import { cleanAnswer, typeOf } from './quiz.js';
 import { answerInputs, answerReview, caseFile, modelCard, promptCard, resultBanner, wireNumber } from './views.js';
 import { mountExplorer } from './explorer.js';
-import { showdownPhone } from './player-showdown.js';
+import { draftPhone } from './player-draft.js';
 
 export default function (root, api) {
   let view = null;
@@ -17,7 +17,7 @@ export default function (root, api) {
   root.innerHTML = '<div class="st-phone"><div class="st-main"></div><div class="st-explore"></div></div>';
   const main = root.querySelector('.st-main');
   const explore = root.querySelector('.st-explore');
-  const showdown = showdownPhone(main, api);
+  const draft = draftPhone(main, api);
 
   const current = () => {
     const part = partById(lessonById(view.lessonId), view.partId);
@@ -66,9 +66,9 @@ export default function (root, api) {
   function draw() {
     const v = view;
     const { part, q } = current();
-    if (part?.kind === 'showdown' && v.phase !== 'pick') {
+    if (part?.kind === 'draft' && v.phase !== 'pick') {
       setExplore(null);
-      showdown.update(v, part);
+      draft.update(v, part);
       return;
     }
     main.innerHTML = html`${phase(v, part, q)}`;
@@ -108,7 +108,7 @@ export default function (root, api) {
     return html`
       <div class="st-wait">
         <h1>You're the Leader</h1>
-        <p>Pick what everyone will do, then start. Go in order: Learn, Test, then Showdown.</p>
+        <p>Pick what everyone will do, then start. Go in order: Learn, Test, then Alliance Selection.</p>
         ${LESSONS.map(
           (l) => html`
             <div class="st-picks">

@@ -144,7 +144,7 @@ import { mountExplorer } from './games/frc-strategy/explorer.js';
 
 const $ = (id) => document.getElementById(id);
 const lesson = lessonById(new URLSearchParams(location.search).get('lesson')) ?? LESSONS[0];
-const solo = lesson.parts.filter((p) => p.kind === 'quiz'); // the Showdown needs a team
+const solo = lesson.parts.filter((p) => p.kind === 'quiz'); // Alliance Selection needs a team
 const KEY = 'frc-strategy-solo-v2';
 let pending = null; // the answer being edited before it's locked in
 let hintOpen = false;
@@ -363,7 +363,7 @@ function showDone(part) {
         ${after &&
         (after.kind === 'quiz'
           ? html`<a class="btn primary" href="#${after.id}-1">On to Part ${lesson.parts.indexOf(after) + 1}: ${after.title} ▸</a>`
-          : html`<a class="btn primary" href="host.html">Play the ${after.title} with Your Team ▸</a>`)}
+          : html`<a class="btn primary" href="host.html">Play ${after.title} with Your Team ▸</a>`)}
         <button type="button" class="btn" data-reset>Start ${part.title} Over</button>
       </div>
     </section>`;

@@ -1,11 +1,11 @@
 // Big screen for Strategy Training: the lesson picker, then Learn and Test (each question, how the room answered,
-// the leaderboard). The Showdown's screens are in host-showdown.js.
+// the leaderboard). Alliance Selection's screens are in host-draft.js.
 import { html, raw } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
 import { LESSONS, SHAPES, lessonById, partById } from './lessons.js';
 import { bestPoints, formatNumber, numberBins, typeOf } from './quiz.js';
 import { board, nextButton, podium, status } from './host-parts.js';
-import { showdownBody, showdownHead } from './host-showdown.js';
+import { draftBody, draftHead } from './host-draft.js';
 
 export default function (root) {
   let shown = null;
@@ -17,11 +17,11 @@ export default function (root) {
       shown = v.step;
       const lesson = lessonById(v.lessonId);
       const part = partById(lesson, v.partId);
-      const showdown = part.kind === 'showdown';
+      const isDraft = part.kind === 'draft';
       root.innerHTML = html`
-        <div class="st-host ${fresh && 'fresh'} ${v.players.length > 12 && 'many'}">
-          ${v.phase !== 'pick' && (showdown ? showdownHead(v, lesson, part) : head(v, lesson, part))}
-          <div class="st-body">${v.phase === 'pick' ? pick(v) : showdown ? showdownBody(v, lesson, part) : body(v, lesson, part)}</div>
+        <div class="st-host ${fresh && 'fresh'} ${v.players.length > 12 && 'many'} ${isDraft && v.phase !== 'pick' && 'drafting'}">
+          ${v.phase !== 'pick' && (isDraft ? draftHead(v, lesson, part) : head(v, lesson, part))}
+          <div class="st-body">${v.phase === 'pick' ? pick(v) : isDraft ? draftBody(v, lesson, part) : body(v, lesson, part)}</div>
         </div>`;
     },
   };
@@ -58,7 +58,7 @@ function pick(v) {
     <div class="st-picker">
       <div class="st-title">
         <h1>Strategy Training</h1>
-        <p>Pick what everyone will do. Go in order: Learn, then Test, then the Showdown.</p>
+        <p>Pick what everyone will do. Go in order: Learn, then Test, then Alliance Selection.</p>
       </div>
       ${LESSONS.map(
         (l) => html`
@@ -71,7 +71,7 @@ function pick(v) {
                     <span class="st-lesson-num">Part ${i + 1}</span>
                     <span class="st-lesson-name">${p.title}</span>
                     <span class="st-lesson-tag">${p.blurb}</span>
-                    <span class="st-lesson-meta">${p.kind === 'showdown' ? `${p.rounds.length} rounds · alliances of 3` : `${p.questions.length} questions`}</span>
+                    <span class="st-lesson-meta">${p.kind === 'draft' ? `${p.draft.robots.length} robots · two teams` : `${p.questions.length} questions`}</span>
                   </button>`,
               )}
             </div>
