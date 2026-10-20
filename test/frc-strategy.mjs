@@ -246,17 +246,30 @@ try {
   await wait(200);
   check(host.room.screen === 'lobby' && /P1 topped Risk & Consistency Test/.test(host.room.lastResult ?? ''), 'finish goes back to the lobby with the winner');
 
-  // --- Learn: estimates, pick-all-that-matter, leaderboard per case ---
+  // --- Learn: volunteers, moderator controls, estimates, leaderboard per case ---
+  const p4 = client('player');
+  await wait(150);
+  await p4.socket.timeout(3000).emitWithAck('join', { name: 'P4' });
   host.socket.emit('lobby', { cmd: 'start' });
   await wait(200);
   await act(players[0], 'next', { from: 'pick:0' });
   await wait(100);
-  check(view(host).phase === 'question' && view(host).partId === 'learn', 'the leader starts Learn');
+  check(view(host).phase === 'moderator-pick' && view(host).partId === 'learn', 'Learn begins with moderator volunteers');
+  await act(players[0], 'volunteer', { wants: false });
+  await act(players[1], 'volunteer', { wants: false });
+  await act(p4, 'volunteer', { wants: true });
+  await wait(100);
+  check(view(host).phase === 'question' && view(p4).isModerator && view(p4).brief?.focus && !view(players[0]).brief, 'the volunteer becomes moderator and gets the private brief');
+  check(view(host).deadline === null && view(host).expected === 2, 'Learn waits for moderator progression, not a timer or moderator answer');
+  check((await act(p4, 'answer', { answer: 60 }))?.error, 'moderator does not submit a case answer');
   const first = learn.questions[0];
   await act(players[0], 'answer', { answer: first.number.value });
   await act(players[1], 'answer', { answer: first.number.value + 7 });
-  await wait(3400);
-  check(view(host).phase === 'reveal' && view(players[0]).gained === 100 && view(players[1]).gained === 20, 'Learn: estimates score by closeness');
+  await wait(100);
+  check(view(host).phase === 'question', 'Learn does not automatically reveal answers');
+  await act(p4, 'next', { from: 'question:0' });
+  await wait(100);
+  check(view(host).phase === 'reveal' && view(players[0]).gained === 100 && view(players[1]).gained === 20, 'the moderator reveals results after discussion');
   check(view(host).tally.median != null && view(host).tally.counts.reduce((a, b) => a + b, 0) === 2, 'Learn: the room’s estimates become a histogram');
   hostAct(host, 'next', { from: 'reveal:0' });
   await wait(100);
@@ -292,6 +305,11 @@ try {
   check(JSON.stringify(view(host).cases) === '[3,11]', 'the leader chooses cases (checked and sorted)');
   await act(players[0], 'next', { from: 'pick:0' });
   await wait(100);
+  check(view(host).phase === 'moderator-pick', 'a new Learn session starts with signup again');
+  await act(p4, 'volunteer', { wants: true });
+  hostAct(host, 'next', { from: 'moderator-pick:0' });
+  await wait(100);
+  check(view(p4).isModerator && view(host).phase === 'question', 'leader can force selection before all choices are in');
   const run = learn.questions.flatMap((q, i) => ([3, 11].includes(q.caseIndex) ? [i] : []));
   check(view(host).q === run[0] && view(host).at === 1 && view(host).of === run.length && !view(host).last, 'Learn starts at the first chosen case');
   const rated = learn.questions[run[0]];
@@ -303,8 +321,9 @@ try {
   check((await act(players[0], 'sure', { level: 42 }))?.error, 'a rating must be one of the levels');
   await act(players[0], 'sure', { level: 90 });
   await act(players[1], 'sure', { level: 90 });
-  await wait(3400);
-  check(view(host).phase === 'reveal', 'reveals once everyone has answered and rated');
+  await act(p4, 'next', { from: `question:${run[0]}` });
+  await wait(100);
+  check(view(host).phase === 'reveal', 'moderator reveals a rated Learn question when the room is ready');
   check(JSON.stringify(view(host).tally.calibration) === '[{"level":90,"n":2,"right":1}]', 'the reveal shows how the room’s confidence held up');
   check(view(players[1]).sure === 90 && view(players[1]).tally.calibration.length === 1, 'a phone sees its own rating and the room’s');
   const seen = [view(host).q];
@@ -319,9 +338,6 @@ try {
   await wait(150);
 
   // --- the Showdown ---
-  const p4 = client('player');
-  await wait(150);
-  await p4.socket.timeout(3000).emitWithAck('join', { name: 'P4' });
   const p3 = client('player');
   await wait(150);
   await p3.socket.timeout(3000).emitWithAck('join', { name: 'P3' }); // P3 is back, on a new phone
