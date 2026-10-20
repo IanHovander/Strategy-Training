@@ -229,3 +229,32 @@ html.host body { overflow: hidden; }
   font-family: ui-monospace, Consolas, monospace;
 }
 .error-close { border: 0; background: transparent; cursor: pointer; color: var(--muted); }
+
+/* ---------- Test phone (host.js) ---------- */
+
+.test-phone {
+  position: fixed;
+  z-index: 95;
+  right: 1rem;
+  bottom: 4.6rem;
+  width: 380px;
+  height: min(780px, calc(100vh - 6rem));
+  display: flex;
+  flex-direction: column;
+  border: 0.22rem solid var(--black);
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--black);
+  box-shadow: 0.5rem 0.6rem 0 rgba(0, 0, 0, 0.5);
+}
+.test-phone-bar { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.5rem 0.35rem 0.8rem; color: var(--white); font-family: var(--display); font-size: 1.3rem; }
+.test-phone-bar .btn.btn-sm { font-size: 1rem; padding: 0.25em 0.7em 0.12em; }
+.test-phone iframe { flex: 1; width: 100%; border: 0; background: var(--red); }
+.test-phone-pill { position: fixed; z-index: 95; right: 1rem; bottom: 4.6rem; }
+/* On a phone (host.js adds .test-phone-full), the test phone takes the whole screen and the big screen's layout is
+   hidden so it can't widen the page; it keeps running. "Big Screen" switches back without leaving the game. */
+.test-phone-full body > .screen { display: none !important; }
+.test-phone-full .test-phone { inset: 0; width: auto; height: auto; border: 0; border-radius: 0; }
+.test-phone-full .test-phone-bar { font-size: 16px; padding-top: max(0.35rem, env(safe-area-inset-top)); }
+.test-phone-full .test-phone-bar .btn.btn-sm { font-size: 15px; }
+html.host:not(.test-phone-full) .test-phone-pill { font-size: max(1.2rem, 15px); }

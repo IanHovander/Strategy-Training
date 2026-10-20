@@ -41,6 +41,7 @@
           <button id="start" class="btn btn-xl">Start Game</button>
           <div id="start-problem" class="start-problem"></div>
           <span class="spacer"></span>
+          <button class="btn btn-sm secondary" data-test-phone>Test Phone</button>
           <button id="relay-btn" class="btn btn-sm secondary" hidden>Relay</button>
         </div>
       </div>
@@ -53,6 +54,7 @@
       <b id="game-title" class="game-bar-title"></b>
       <span>Join: <b id="join-mini"></b></span>
       <span class="spacer"></span>
+      <button class="btn btn-sm secondary" data-test-phone>Test Phone</button>
       <button class="btn btn-sm secondary" data-lobby="restart">Restart</button>
       <button class="btn btn-sm secondary" data-lobby="end">Back to Lobby</button>
     </footer>
@@ -75,6 +77,19 @@
       </div>
     </form>
   </dialog>
+
+  <!-- A phone inside this page, for trying a game on one device: it joins like any phone, but runs in this tab,
+       so the big screen keeps running (a big screen in a background tab gets paused). -->
+  <div id="test-phone" class="test-phone" hidden>
+    <div class="test-phone-bar">
+      <b>Test phone</b>
+      <span class="spacer"></span>
+      <button id="test-phone-hide" class="btn btn-sm">Big Screen ▸</button>
+      <button id="test-phone-close" class="btn btn-sm secondary" title="Leave the game and close the test phone">✕</button>
+    </div>
+    <iframe id="test-phone-frame" title="Test phone"></iframe>
+  </div>
+  <button id="test-phone-show" class="btn btn-sm test-phone-pill" hidden>📱 Test Phone</button>
 
   <div id="error" class="error-toast" hidden>
     <span id="error-text"></span>

@@ -83,6 +83,42 @@ for (const btn of document.querySelectorAll('[data-lobby]')) {
     if (confirm(question)) lobby(btn.dataset.lobby);
   });
 }
+// ---------- test phone: a player inside this page, for trying a game on a single device ----------
+
+function joinUrl() {
+  const url = new URL('./', location.href);
+  url.search = state?.room.join.code ? `?room=${state.room.join.code}` : '';
+  return url.href;
+}
+// On a phone, show the big screen zoomed out to fit, the way it's laid out for a TV; the test phone gets normal scale.
+const smallScreen = Math.min(screen.width, screen.height) < 600;
+let phoneShown = false;
+function fitViewport(phone = phoneShown) {
+  if (!smallScreen) return;
+  phoneShown = phone;
+  const width = 1280;
+  const scale = Math.min(1, (screen.orientation?.type.startsWith('landscape') ? Math.max : Math.min)(screen.width, screen.height) / width);
+  document.querySelector('meta[name=viewport]').content = phone ? 'width=device-width, initial-scale=1' : `width=${width}, initial-scale=${scale.toFixed(3)}`;
+}
+fitViewport(false);
+addEventListener('orientationchange', () => setTimeout(() => fitViewport(), 300));
+function showTestPhone(open) {
+  fitViewport(open);
+  // On a phone the test phone takes the whole screen; the big screen keeps running underneath, just not drawn.
+  document.documentElement.classList.toggle('test-phone-full', open && smallScreen);
+  const frame = $('test-phone-frame');
+  if (open && !frame.getAttribute('src')) frame.src = joinUrl();
+  $('test-phone').hidden = !open;
+  $('test-phone-show').hidden = open || !frame.getAttribute('src');
+}
+for (const btn of document.querySelectorAll('[data-test-phone]')) btn.addEventListener('click', () => showTestPhone(true));
+$('test-phone-show').addEventListener('click', () => showTestPhone(true));
+$('test-phone-hide').addEventListener('click', () => showTestPhone(false)); // keeps running, hidden
+$('test-phone-close').addEventListener('click', () => {
+  $('test-phone-frame').removeAttribute('src'); // leaves the game
+  showTestPhone(false);
+});
+
 $('error-close').addEventListener('click', () => {
   dismissedError = state?.error;
   $('error').hidden = true;
