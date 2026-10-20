@@ -81,7 +81,7 @@ function prep(v) {
       <span class="st-onclock">Qualifications are over. Seeds #1 and #2 captain the alliances. Build your picklist on your phone.</span>
     </div>
     <div class="st-pool">${v.event.map((s) => scoutCard(v, s, { compact: true }))}</div>
-    <p class="st-legend-line">Bars: % of 10 qualification matches with 0, 1, 2 … 12 cycles (red: 0, a breakdown). Susceptible and Defense are scouts’ estimates, within ±20% of the truth.</p>`;
+    <p class="st-legend-line">Bars: % of 10 qualification matches with 0, 1, 2 … 12 cycles (red: 0, a breakdown). Susceptible and Defense are scouts’ estimates: usually within about 15 points of the truth, sometimes 35 off.</p>`;
 }
 
 /** Each alliance: captain and pick slots. */

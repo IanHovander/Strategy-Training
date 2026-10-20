@@ -167,14 +167,19 @@ try {
   }
   check(near(broke / 3000, q, 0.015), `defenders break at their rate, at a moment in the match (${(broke / 30).toFixed(1)}% vs ${(100 * q).toFixed(1)}%)`);
   const scouted = scoutTeam(T('pest'), draft, rand);
-  const within = (est, tru) => est >= tru * 0.8 - 1e-9 && est <= tru * 1.2 + 1e-9;
   check(scouted.scores.length === 10 && cycleCounts(scouted.scores, 12).reduce((a, b) => a + b, 0) === 10, 'scouting draws ten matches of cycles');
-  let inside = true;
-  for (let k = 0; k < 500; k++) {
-    const s = scoutTeam(T('pest'), draft, rand);
-    inside &&= within(s.susceptibility, 0.4) && within(s.defense, 0.55);
+  const misses = [];
+  let capped = true;
+  for (let k = 0; k < 4000; k++) {
+    const s = scoutTeam(T('middler'), draft, rand);
+    for (const [est, tru] of [[s.susceptibility, 0.5], [s.defense, 0.35]]) {
+      misses.push(Math.abs(est - tru));
+      capped &&= est >= 0 && est <= 1 && Math.abs(est - tru) <= 0.45 + 1e-9;
+    }
   }
-  check(inside, 'scouted susceptibility and defense always land within ±20% of the truth');
+  const typical = misses.reduce((a, b) => a + b, 0) / misses.length;
+  const far = misses.filter((m) => m >= 0.35).length / misses.length;
+  check(capped && near(typical, 0.144, 0.01) && far > 0.03 && far < 0.07, `scouted defense numbers miss by about 15 points (${(100 * typical).toFixed(1)}), 35+ about 1 in 20 (${(100 * far).toFixed(1)}%)`);
 
   // --- the solo page reads the same lessons ---
   const solo = await fetch(`${URL}/lessons.html`);

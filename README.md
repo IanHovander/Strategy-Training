@@ -79,7 +79,8 @@ student captain. The big screen can shuffle first.
   - **defense** ability (0–100%).
 
   Each game simulates qualifications: ten matches per team, shown as the % of matches with each cycle count, and
-  scouts' estimates of susceptibility and defense that land within ±20% of the true value. Teams are seeded from
+  scouts' estimates of susceptibility and defense: the truth plus a bell-curve error, typically about 15 points and
+  sometimes 35 or more. Teams are seeded from
   those results, and seeds #1 and #2 captain the two alliances.
 - **Picklists (15 minutes):** each group builds one shared picklist on their phones, in the 2026-scout layout:
   Your Picklist (toggling with Do Not Pick) beside Available Teams. Drag to rank (hold briefly on touch), tap a
