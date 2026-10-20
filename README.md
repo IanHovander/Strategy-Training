@@ -45,16 +45,24 @@ Every push to `main` then rebuilds and publishes the site.
 Answers earn the points set in the lesson: 100 for the best answer, partial credit for answers that are partly
 right, and double points on the final Mastery Challenge.
 
-## Lessons
+## Lessons: one source for both versions
 
-The team version reads its lessons from `games/frc-strategy/lessons.js`: each question has a prompt, the answers with
-their points and what the model says about each, the takeaway, and an optional explorer (sliders and a model the
-phones can simulate). Add a lesson to the `LESSONS` list and it appears in the lesson picker.
+Every lesson lives in one file, `games/frc-strategy/lessons.js`: each question's prompt, its answers with their
+points and what the model says about each, the takeaway, and an optional explorer (sliders and a model to simulate).
+Both versions read it directly, so there is nothing to keep in sync:
 
-The solo site is `public/lessons.html`, a single page with no build step.
+- the team game (`games/frc-strategy/`) asks the questions, scores the answers and shows the explorer on phones;
+- the solo page (`public/lessons.html`) renders the same questions, scores you the same way, and mounts the same
+  explorer (`games/frc-strategy/explorer.js`).
 
-`npm test` checks the room and plays a whole lesson (`test/frc-strategy.mjs`), including that every explorer agrees
-with the answers it backs up.
+Edit a question once and both change. Add a lesson to the `LESSONS` list and it appears in the team lesson picker,
+and solo at `lessons.html?lesson=<id>`.
+
+Solo links: `lessons.html` (home), `lessons.html#lesson-3` (investigation 3), `lessons.html#done` (your results).
+Solo answers are kept in that browser.
+
+`npm test` checks the room, plays a whole lesson (`test/frc-strategy.mjs`), checks that every explorer agrees with
+the answers it backs up, and that the solo page still loads the shared lesson file.
 
 ## Keeping up with Game Night
 

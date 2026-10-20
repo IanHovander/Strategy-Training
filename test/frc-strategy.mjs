@@ -50,6 +50,12 @@ try {
   check(Math.abs(strat(3)[0].win - 0.23) < 1e-9 && Math.abs(strat(3)[1].win - 0.35) < 1e-9, 'Q4: 23% vs 35%');
   check(Math.abs(strat(4)[0].win - 0.875) < 0.001, 'Q5: 20 shots each, A wins about 87.5%');
 
+  // --- the solo page reads the same lessons ---
+  const solo = await fetch(`${URL}/lessons.html`);
+  const soloText = await solo.text();
+  check(solo.ok && soloText.includes('./games/frc-strategy/lessons.js') && soloText.includes('./games/frc-strategy/explorer.js'), 'solo page loads the shared lessons and explorer');
+  check((await fetch(`${URL}/games/frc-strategy/explorer.js`)).ok, 'the shared explorer is served');
+
   // --- a room plays a lesson ---
   const host = client('host');
   const players = [client('player'), client('player'), client('player')];

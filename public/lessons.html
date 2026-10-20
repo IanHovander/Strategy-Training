@@ -1,14 +1,25 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#9a0000"><title>FRC Strategy Lab</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#9a0000">
+<title>FRC Strategy Lab</title>
 <link rel="icon" type="image/png" href="img/favicon.png">
+<!-- The questions, points and explorers come from the same file the team game uses: games/frc-strategy/lessons.js.
+     The explorer's look is the game's stylesheet too, so the two always match. -->
+<link rel="stylesheet" href="games/frc-strategy/style.css">
 <style>
+/* The Game Night "arena" look: red sunburst, white sticker cards with black outlines and hard shadows,
+   Teko for headings and numbers, Roboto for sentences. Only the Iron Panthers brand colors. */
 @font-face{font-family:"Teko";src:url("fonts/teko.woff2") format("woff2");font-weight:300 600;font-display:swap}
 @font-face{font-family:"Roboto";src:url("fonts/roboto.woff2") format("woff2");font-weight:300 900;font-display:swap}
 @font-face{font-family:"Roboto";src:url("fonts/roboto-italic.woff2") format("woff2");font-weight:300 400;font-style:italic;font-display:swap}
-/* The Game Night "arena" look: red sunburst, white sticker cards with black outlines and hard shadows,
-   Teko for headings and numbers, Roboto for sentences. Only the Iron Panthers brand colors. */
-:root{--red:#9a0000;--red-hi:#c80f14;--grey:#cccccc;--black:#1a1a1a;--off-black:#333333;--white:#ffffff;--ink:var(--black);--muted:#555555;--a:var(--black);--b:var(--red-hi);--tie:#9a9a9a;--outline:.22rem;--drop:.35rem .42rem 0 var(--black);--display:Teko,Roboto,Arial,sans-serif;--font:Roboto,Arial,sans-serif;color-scheme:light}
+:root{--red:#9a0000;--red-hi:#c80f14;--grey:#cccccc;--black:#1a1a1a;--off-black:#333333;--white:#ffffff;--ink:var(--black);--muted:#555555;--outline:.22rem;--drop:.35rem .42rem 0 var(--black);--display:Teko,Roboto,Arial,sans-serif;--font:Roboto,Arial,sans-serif;color-scheme:light}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
+html{background:var(--red)}
 body{min-height:100vh;color:var(--white);font:16px/1.5 var(--font);background:radial-gradient(circle at 24% 14%,var(--red-hi),var(--red) 75%) fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 body::before,body::after{content:"";position:fixed;z-index:-1;pointer-events:none}
 body::before{left:calc(24vw - 150vmax);top:calc(14vh - 150vmax);width:300vmax;height:300vmax;background:repeating-conic-gradient(rgba(0,0,0,.1) 0 6deg,transparent 6deg 12deg);animation:spin 160s linear infinite}
@@ -20,7 +31,7 @@ h1,h2,h3{font-family:var(--display);font-weight:400;line-height:.95;letter-spaci
 p{margin:.6rem 0}
 .wrap{max-width:1180px;margin:auto;padding:1.6rem 1.6rem 2.4rem}
 
-/* header */
+/* home: logo, hero, the investigations */
 .brand{display:flex;justify-content:center}
 .logo{font-family:var(--display);font-size:2.4rem;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:var(--white);display:inline-flex;align-items:center;gap:.5rem}
 .logo i{width:1.4em;height:1.66em;transform:translateY(-.07em);background:var(--white);-webkit-mask:url("img/panther.png") center/contain no-repeat;mask:url("img/panther.png") center/contain no-repeat}
@@ -28,99 +39,311 @@ p{margin:.6rem 0}
 .hero h1{font-size:clamp(3rem,7vw,5.6rem);text-shadow:.3rem .35rem 0 rgba(0,0,0,.35)}
 .hero p{margin:0;width:fit-content;padding:.35em .9em .3em;background:var(--black);color:var(--white);font-weight:700;border-radius:.5rem;rotate:-1deg;box-shadow:.25rem .3rem 0 rgba(0,0,0,.35)}
 .hero-actions{margin-top:.6rem;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:1.2rem}
-.btn.team{font-size:1.9rem;text-decoration:none;rotate:1.5deg}
 .btn.hero-start{font-size:2.2rem;rotate:-2deg;box-shadow:.35rem .42rem 0 var(--black)}
+.btn.team{font-size:1.9rem;text-decoration:none;rotate:1.5deg}
 .script-warning{max-width:730px;margin:16px auto;padding:16px 20px;background:var(--white);color:var(--black);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:var(--drop)}
-
-/* labels: a black sticker, tilted */
 .kicker{display:inline-block;width:fit-content;padding:.35rem .8rem .15rem;background:var(--black);color:var(--white);font-family:var(--display);font-size:1.35rem;line-height:1;letter-spacing:.04em;rotate:-2deg;box-shadow:.25rem .3rem 0 rgba(0,0,0,.35)}
 .hero .kicker{font-size:1.6rem;background:var(--white);color:var(--red-hi);border:var(--outline) solid var(--black);border-radius:.5rem;box-shadow:.25rem .3rem 0 var(--black)}
-
-/* lesson picker */
-.layout{display:grid;grid-template-columns:260px 1fr;gap:1.8rem;align-items:start}
 .nav,.card{background:var(--white);color:var(--ink);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:var(--drop)}
-.nav{padding:.9rem;position:sticky;top:1rem;rotate:-.6deg}
-.nav-heading{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-size:1.7rem;line-height:1;padding:.3rem .4rem .7rem}
-.nav-heading span{font-family:var(--font);font-size:.8rem;font-weight:700;color:var(--red-hi)}
-.nav-links{display:grid;grid-template-columns:1fr;gap:.35rem}
-.nav button{width:100%;text-align:left;background:none;color:var(--ink);border:var(--outline) solid transparent;border-radius:.6rem;padding:.45rem .7rem .35rem;font-family:var(--display);font-size:1.35rem;line-height:1.05}
-.nav button:hover{border-color:var(--black)}
-.nav button.active{background:var(--black);color:var(--white);border-color:var(--black)}
-.nav small{display:block;font-family:var(--font);font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--muted)}
-.nav button.active small{color:var(--grey)}
+.home-nav{max-width:850px;margin:0 auto 2.4rem;padding:1rem;rotate:-.4deg}
+.nav-heading{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;font-family:var(--display);font-size:1.9rem;line-height:1;padding:.3rem .4rem .8rem}
+.nav-heading span{font-family:var(--font);font-size:.85rem;font-weight:700;color:var(--red-hi)}
+.nav-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.nav-links button{display:flex;align-items:center;gap:.7rem;min-height:4rem;text-align:left;background:var(--white);color:var(--ink);border:var(--outline) solid var(--black);border-radius:.8rem;padding:.5rem .8rem .4rem;font-family:var(--display);font-size:1.45rem;line-height:1.05;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s}
+.nav-links button:hover,.nav-links button:focus-visible{rotate:-1deg}
+.nav-links button.done{background:var(--black);color:var(--white)}
+.nav-links button small{display:block;font-family:var(--font);font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--muted)}
+.nav-links button.done small{color:var(--grey)}
+.nav-links .st-shape{width:2.2rem;height:2.2rem;font-size:1.4rem}
+.nav-links button.done .st-shape{background:var(--red-hi)}
 
-/* the investigation */
-.card{padding:1.6rem 1.8rem 1.8rem;margin-bottom:1.4rem}
+/* the focused lesson view */
+.lesson-topbar{max-width:850px;margin:0 auto 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem}
+.back-button{font-size:1.4rem}
+.lesson-top-label{font-family:var(--display);font-size:1.3rem;line-height:1;letter-spacing:.04em;text-transform:uppercase}
+.lesson-progress{padding:.3rem .7rem .1rem;border-radius:.5rem;background:var(--black);font-family:var(--display);font-size:1.5rem;line-height:1;white-space:nowrap}
+.lesson-main{max-width:850px;margin:0 auto;display:flex;flex-direction:column;gap:1.4rem}
+.card{padding:1.6rem 1.8rem 1.8rem}
 .card h2{font-size:3.4rem;margin:.9rem 0 .2rem}
-.card h3{font-size:2rem}
-.card p{color:var(--muted)}
+.card > p{color:var(--muted)}
+.section{display:block;margin-top:.9rem;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red-hi)}
 .prompt{margin:1.1rem 0;padding:1rem 1.2rem;background:#f1f1f1;border:var(--outline) solid var(--black);border-left-width:.6rem;border-left-color:var(--red-hi);border-radius:.7rem;font-size:1.1rem;color:var(--black)}
 .prompt b{color:var(--red-hi)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem}
-.option{position:relative;background:var(--white);color:var(--black);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:.25rem .3rem 0 var(--black);text-align:left;padding:.9rem 1.1rem;font-family:var(--display);font-size:1.6rem;line-height:1.05;transition:transform .08s,box-shadow .08s,rotate .15s}
-.option:hover{rotate:-1deg}
-.option:active{transform:translate(.15rem,.2rem);box-shadow:0 0 0 var(--black)}
+.option{position:relative;display:flex;align-items:flex-start;gap:.8rem;background:var(--white);color:var(--black);border:var(--outline) solid var(--black);border-radius:.9rem;box-shadow:.25rem .3rem 0 var(--black);text-align:left;padding:.9rem 1.1rem;transition:transform .08s,box-shadow .08s,rotate .15s}
+.option:not(:disabled):hover{rotate:-1deg}
+.option:not(:disabled):active{transform:translate(.15rem,.2rem);box-shadow:0 0 0 var(--black)}
+.option:disabled{cursor:default}
+.option strong{display:block;font-family:var(--display);font-weight:400;font-size:1.9rem;line-height:1.05;padding-top:.1em}
+.option small{display:block;margin-top:.2rem;font-size:.85rem;font-weight:700;color:var(--muted)}
 .option.selected{background:var(--black);color:var(--white);rotate:-1deg}
-.option.selected::after{content:"✓";position:absolute;top:.5rem;right:.8rem;font-size:1.5rem;color:var(--white)}
-.option strong{display:block;font-weight:400;font-size:2rem}
-.option small{display:block;font-family:var(--font);font-size:.75rem;font-weight:700;letter-spacing:.08em;color:var(--red-hi)}
 .option.selected small{color:var(--grey)}
+.option.selected .st-shape{background:var(--red-hi)}
+.option .pts{margin-left:auto;padding:.2rem .5rem .05rem;border-radius:.4rem;background:#e6e6e6;color:var(--black);font-family:var(--display);font-size:1.5rem;line-height:1}
+.option.best .pts{background:var(--red-hi);color:var(--white)}
+.option.best{outline:.3rem solid var(--white);outline-offset:-.6rem}
+.option.best small::before{content:"✓ Best answer · ";color:var(--red-hi)}
+.option.selected.best small::before{color:var(--white)}
+.result{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;margin-top:1.4rem}
+.result h3{font-size:2.4rem;color:var(--black)}
+.result .gained{padding:.25rem .7rem .05rem;border-radius:.6rem;background:var(--black);color:var(--white);font-family:var(--display);font-size:2.4rem;line-height:1;rotate:-3deg}
+.result.best .gained{background:var(--red-hi)}
+.result span:last-child{font-weight:700;color:var(--muted)}
 
 /* buttons: chunky pills that squash when pressed */
 .buttons{display:flex;flex-wrap:wrap;gap:.8rem;margin:1.3rem 0 .4rem}
-.btn{border:var(--outline) solid var(--black);border-radius:999px;background:var(--white);color:var(--red-hi);padding:.38em 1.3em .22em;font-family:var(--display);font-size:1.6rem;line-height:1;letter-spacing:.02em;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s;touch-action:manipulation}
+.btn{border:var(--outline) solid var(--black);border-radius:999px;background:var(--white);color:var(--red-hi);padding:.38em 1.3em .22em;font-family:var(--display);font-size:1.6rem;line-height:1;letter-spacing:.02em;box-shadow:.2rem .25rem 0 var(--black);transition:transform .08s,box-shadow .08s,rotate .15s;touch-action:manipulation;text-decoration:none;display:inline-block}
 .btn:hover:not(:disabled){rotate:-1.5deg}
 .btn:active:not(:disabled){transform:translate(.15rem,.2rem);box-shadow:0 0 0 var(--black)}
 .btn.primary{background:var(--red-hi);color:var(--white)}
+.btn.secondary{background:var(--black);color:var(--white)}
+.btn.btn-sm{font-size:1.35rem;padding:.3em .8em .12em}
 .btn:disabled{background:#d4d4d4;color:#8a8a8a;box-shadow:.2rem .25rem 0 rgba(0,0,0,.4);cursor:not-allowed}
 
 /* what the model says: a black sticker */
-.reveal{margin:1.4rem 0;padding:1rem 1.3rem;background:var(--black);color:var(--white);border-radius:.9rem;rotate:-.5deg;box-shadow:.3rem .35rem 0 rgba(0,0,0,.35)}
-.reveal>b{font-family:var(--display);font-size:1.7rem;font-weight:400;display:block;line-height:1;padding-top:.1em}
+.reveal{margin:1.4rem 0 0;padding:1rem 1.3rem;background:var(--black);color:var(--white);border-radius:.9rem;rotate:-.5deg;box-shadow:.3rem .35rem 0 rgba(0,0,0,.35)}
+.reveal h3{font-size:1.5rem;color:var(--grey)}
+.reveal .takeaway{font-family:var(--display);font-size:2rem;line-height:1.05;margin:.4rem 0}
 .reveal p{color:var(--white)}
-.reveal p b{color:#ff6b6b}
+.st-ctl input[type="range"]{width:100%;accent-color:var(--red-hi)}
 
-/* numbers */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin:.6rem 0}
-.stat{background:#f1f1f1;border:var(--outline) solid var(--black);border-radius:.7rem;padding:.6rem .9rem .4rem}
-.stat small{display:block;font-size:.8rem;font-weight:700;color:var(--muted)}
-.stat b{font-family:var(--display);font-size:2.6rem;font-weight:400;line-height:1}
-.bar{display:flex;height:1.2rem;border:var(--outline) solid var(--black);border-radius:999px;overflow:hidden;background:#e6e6e6;margin:.9rem 0 .4rem}
-.bar span{height:100%;transition:width .25s}
-.hint{color:var(--muted);font-size:.85rem;font-weight:700}
-.control{margin:1rem 0;padding:.7rem 1rem .6rem;border:var(--outline) solid var(--black);border-radius:.7rem;background:#f7f7f7}
-.control label{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
-.control label b{font-family:var(--display);font-size:1.8rem;font-weight:400;line-height:1;color:var(--red-hi)}
-.control input{width:100%;accent-color:var(--red-hi)}
+/* the end */
+.report{display:flex;flex-direction:column;gap:.4rem;margin:1rem 0}
+.report-row{text-decoration:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.45rem 0 .35rem;border-top:2px solid #e6e6e6;font-family:var(--display);font-size:1.5rem;line-height:1;color:var(--black);background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+.report-row b{font-weight:400;color:var(--red-hi)}
+.score-big{font-family:var(--display);font-size:4rem;line-height:1;color:var(--red-hi)}
 .footer{font-size:.8rem;color:rgba(255,255,255,.85);margin:1.6rem 0;text-align:center}
 
 @media(max-width:780px){
 .wrap{padding:1rem .9rem 2rem}
 .hero{margin:1rem auto 1.6rem}
 .btn.hero-start{font-size:1.9rem}
-.layout{grid-template-columns:1fr;gap:1.2rem}
-.nav{position:static;rotate:0deg}
-.nav-links{grid-template-columns:repeat(2,minmax(0,1fr))}
-.nav button{min-width:0;min-height:3.6rem;font-size:1.2rem;border-color:#e3e3e3}
+.home-nav{rotate:0deg;padding:.8rem}
+.nav-links button{font-size:1.2rem;gap:.5rem;padding:.45rem .55rem .35rem}
+.nav-links .st-shape{width:1.8rem;height:1.8rem;font-size:1.15rem}
+.lesson-top-label{display:none}
 .grid{grid-template-columns:1fr}
 .card{padding:1.2rem 1.1rem 1.3rem}
 .card h2{font-size:2.6rem}
-.stats{gap:.5rem}
-.stat{padding:.5rem .6rem .3rem}
-.stat b{font-size:2rem}
 }
-</style></head><body><div class="wrap"><div class="brand"><div class="logo">Strategy <i></i> Lab</div></div><header class="hero"><div class="kicker">Module 01 · Risk &amp; Consistency</div><h1>Winning Isn't the Same as Scoring More.</h1><p>Make predictions. Run matches. Discover the hidden assumptions.</p><div class="hero-actions"><button class="btn primary hero-start" type="button" onclick="go(0);document.getElementById('main').scrollIntoView({behavior:'smooth'})">Start Lesson 1 ▸</button><a class="btn team" href="host.html">Play as a Team ▸</a></div></header><noscript><div class="script-warning">This file is being shown in a preview that does not run interactive JavaScript. Download the HTML file and open it in a full web browser to use the lessons.</div></noscript><div class="layout"><nav class="nav" aria-label="Choose a lesson"><div class="nav-heading">Investigations <span id="progress"></span></div><div class="nav-links" id="nav"></div></nav><main id="main"><section class="card"><div class="kicker">INVESTIGATION 1 / 10</div><h2>Fixed opponent</h2><p>Choose a lesson above to begin.</p></section></main></div><div class="footer">Abstract teaching simulations, not any particular FRC game. Ties are tracked separately.</div></div><script>
-const names=['Fixed opponent','Uncertain opponent','Dependent outcomes','Three-outcome scores','Repeated attempts','Tail risks','Endgame choices','Scouting uncertainty','Opponent adaptation','Mastery challenge'];let page=0,choice='',locked=false,samples=[],cfg={},progress=loadProgress();function loadProgress(){try{return JSON.parse(localStorage.getItem('frc-risk-progress')||'{}')}catch(e){return {}}}function saveProgress(){try{localStorage.setItem('frc-risk-progress',JSON.stringify(progress))}catch(e){/* Storage may be disabled in an embedded preview; lessons remain usable. */}}const $=id=>document.getElementById(id),pct=x=>(100*x).toFixed(1)+'%',avg=d=>d.reduce((s,[v,p])=>s+v*p,0),pick=d=>{let r=Math.random();for(const [v,p] of d){r-=p;if(r<0)return v}return d.at(-1)[0]},win=(a,b)=>a.reduce((s,[v,p])=>s+p*b.reduce((t,[w,q])=>t+(v>w?q:0),0),0);function nav(){let done=names.filter((n,i)=>progress[i]).length;$('progress').textContent=done?done+' / 10 done':'';$('nav').innerHTML=names.map((n,i)=>`<button class="${page===i?'active':''}" aria-current="${page===i?'step':'false'}" onclick="go(${i})">${progress[i]?'✓':String(i+1).padStart(2,'0')} · ${n}<small>${i<5?'Probability foundations':i<8?'Applications':'Advanced'}</small></button>`).join('')}function go(i){page=i;choice='';locked=false;samples=[];cfg={};render();window.scrollTo(0,0)}function box(question,body){return `<section class="card"><div class="kicker">INVESTIGATION ${page+1} / 10</div><h2>${names[page]}</h2><div class="prompt">${question}</div>${body}</section>`}function opts(a,b){return `<div class="grid"><button class="option ${choice==='a'?'selected':''}" onclick="choose('a')"><small>OPTION A</small><strong>${a}</strong></button><button class="option ${choice==='b'?'selected':''}" onclick="choose('b')"><small>OPTION B</small><strong>${b}</strong></button></div>`}function choose(c){if(!locked){choice=c;render()}}function commit(){locked=true;render()}function button(){return `<div class="buttons"><button class="btn primary" ${choice?'':'disabled'} onclick="commit()">Lock Prediction &amp; Reveal</button></div>`}function next(){return `<div class="buttons"><button class="btn primary" onclick="advance()">${page===9?'Finish Lesson ▸':'Next Investigation ▸'}</button></div>`}function advance(){progress[page]=true;saveProgress();if(page<9)go(page+1);else{$('main').innerHTML=box('Branch complete','<h3>Now challenge the model itself.</h3><p>Revisit any investigation, change assumptions, and test what still holds.</p><button class="btn primary" onclick="go(0)">Restart</button>');nav()}}function reveal(t){return `<div class="reveal"><b>What the model says</b><p>${t}</p></div>`}function slider(id,label,min,max,initial,step=1){return `<div class="control"><label>${label}<b>${cfg[id]??initial}</b></label><input type="range" min="${min}" max="${max}" step="${step}" value="${cfg[id]??initial}" oninput="cfg['${id}']=+this.value;render()"></div>`}function sim(){return `<div class="buttons"><button class="btn" onclick="run(1)">Run 1</button><button class="btn" onclick="run(10)">Run 10</button><button class="btn" onclick="run(1000)">Run 1,000</button><button class="btn" onclick="samples=[];show()">Clear</button></div><div id="samples"></div>`}function run(n){for(let i=0;i<n;i++)samples.push(match());samples=samples.slice(-10000);show()}function show(){let n=samples.length,w=samples.filter(s=>s[0]>s[1]).length,t=samples.filter(s=>s[0]===s[1]).length,l=n-w-t;$('samples').innerHTML=`<div class="stats"><div class="stat"><small>A wins</small><b style="color:var(--a)">${n?pct(w/n):'—'}</b></div><div class="stat"><small>Ties</small><b>${n?pct(t/n):'—'}</b></div><div class="stat"><small>B wins</small><b style="color:var(--b)">${n?pct(l/n):'—'}</b></div></div><div class="bar"><span style="width:${n?100*w/n:0}%;background:var(--a)"></span><span style="width:${n?100*t/n:0}%;background:var(--tie)"></span><span style="width:${n?100*l/n:0}%;background:var(--b)"></span></div><div class="hint">${n.toLocaleString()} matches${n?' · Latest: '+samples.at(-1).join(' – '):''}</div>`}function dist(){if(page===0)return {a:[[11,1]],b:[[0,.6],[20,.4]],o:[[cfg.target??12,1]]};if(page===1)return {a:[[11,1]],b:[[0,.6],[20,.4]],o:[[8,(cfg.low??50)/100],[16,1-(cfg.low??50)/100]]};if(page===3)return {a:[[0,.2],[10,.5],[20,.3]],b:[[5,.5],[17,.5]],o:[[0,.1],[10,.5],[20,.4]]};if(page===5)return {a:[[10,1]],b:[[0,.1],[10,.8],[20,.1]],o:[[9,1]]};return {a:[[11,1]],b:[[0,.6],[20,.4]],o:[[12,1]]}}function match(){if(page===2){let h=Math.random()<.5;return cfg.dep?(h?[15,8]:[5,18]):(h?[15,18]:[5,8])}if(page===4){let a=0,b=0;for(let i=0;i<(cfg.n??10);i++){a+=Math.random()<.7?1:0;b+=Math.random()<.5?1:0}return[a,b]}let d=dist();return[pick(choice==='a'?d.a:d.b),pick(d.o)]}function standard(q,labels,explain,controls=''){let d=dist();return box(q,controls+opts(...labels)+(locked?reveal(`Option A wins <b>${pct(win(d.a,d.o))}</b>; option B wins <b>${pct(win(d.b,d.o))}</b>. Their expected scores are ${avg(d.a).toFixed(1)} and ${avg(d.b).toFixed(1)}. ${explain}`)+sim()+next():button()))}function binom(n,p){let d=[];for(let k=0;k<=n;k++){let c=1;for(let j=1;j<=k;j++)c*=((n-j+1)/j);d.push([k,c*p**k*(1-p)**(n-k)])}return d}
-function render(){nav();let h='';if(page===0)h=standard('Robot B always scores <b>12</b>. Robot A can score 11 for certain, or gamble for 20. Which choice maximizes win probability?',['11 points, guaranteed','20 points (40%), 0 otherwise'],'A lower expected score can still have a higher win probability. Change B’s score to reverse the decision.',slider('target','B fixed score',8,18,12));
-if(page===1)h=standard('Now B scores <b>8 or 16</b>. Both robots have uncertain scores. Which A strategy wins more often?',['11 points, guaranteed','20 (40%), 0 (60%)'],'We multiplied independent probabilities. What if A and B outcomes are linked?',slider('low','B scores 8 (% of matches)',0,100,50,5));
-if(page===2)h=box('A scores 5 or 15; B scores 8 or 18. Both are high exactly half the time. Does knowing each robot’s distribution determine the winner?',`<p>Choose the relationship between the robots’ outcomes.</p><div class="grid"><button class="option ${!cfg.dep?'selected':''}" onclick="cfg.dep=0;render()">Together: (15,18) or (5,8)</button><button class="option ${cfg.dep?'selected':''}" onclick="cfg.dep=1;render()">Opposite: (15,8) or (5,18)</button></div>${reveal(cfg.dep?'A wins 50% of matches, even though neither robot’s individual distribution changed.':'A wins 0% of matches because B always scores three more.')}<p>Discussion: How might field congestion, game-piece supply, or defense create shared randomness?</p>${sim()}${next()}`);
-if(page===3)h=standard('Two A strategies both average 11 points. B scores 0 (10%), 10 (50%), or 20 (40%). Which A strategy wins more often?',['0 (20%), 10 (50%), 20 (30%)','5 (50%), 17 (50%)'],'Same average, different chance of exceeding the opponent. Work through the outcome pairs.');
-if(page===4){let n=cfg.n??10,a=binom(n,.7),b=binom(n,.5);h=box('A succeeds on 70% of shots and B on 50%. Both have the same number of independent attempts. How does the number of attempts change the win probability?',`${slider('n','Shots per robot',1,30,10)}<div class="stats"><div class="stat"><small>A mean score</small><b>${(n*.7).toFixed(1)}</b></div><div class="stat"><small>B mean score</small><b>${(n*.5).toFixed(1)}</b></div><div class="stat"><small>A exact win chance</small><b>${pct(win(a,b))}</b></div></div><p>Predict the change before moving the slider. More attempts often make the persistent accuracy advantage clearer, although ties and discreteness matter.</p>${sim()}${next()}`)}
-if(page===5)h=standard('B always scores 9. A can score 10 guaranteed, or choose a strategy that scores 0 (10%), 10 (80%), or 20 (10%). Both A strategies have the same mean. Which wins more often?',['10 points guaranteed','0 / 10 / 20 with 10 / 80 / 10%'],'The risky strategy has a catastrophic lower tail, even though it sometimes scores 20. Mean alone misses this asymmetry.');
-if(page===6){let need=cfg.need??9;let safe=need<10?1:0,risky=need<15?.55:0;h=box('Thirty seconds remain. Robot A needs to score <b>more than</b> the remaining deficit. It can take two reliable 5-point cycles (10 total), or one 15-point attempt with a 55% success chance.',`${slider('need','Points A must exceed to win',3,17,9)}<div class="grid"><button class="option ${choice==='a'?'selected':''}" onclick="choose('a')"><strong>Reliable: +10</strong></button><button class="option ${choice==='b'?'selected':''}" onclick="choose('b')"><strong>Risky: +15 (55%)</strong></button></div>${locked?reveal(`Reliable wins ${pct(safe)}; risky wins ${pct(risky)}. The optimal risk changes with the score deficit. The model assumes B scores no additional points.`)+next():button()}`)}
-if(page===7){let s=cfg.success??7,n=cfg.trials??10,prior=1,post=(s+prior)/(n+2*prior);h=box('Scouting reports that a maneuver succeeded <b>7 times in 10 attempts</b>. Should you treat its true success probability as exactly 70%?',`${slider('success','Observed successes',0,10,7)}<div class="stats"><div class="stat"><small>Observed success rate</small><b>${pct(s/n)}</b></div><div class="stat"><small>Bayesian posterior mean</small><b>${pct(post)}</b></div><div class="stat"><small>Sample size</small><b>${n}</b></div></div><p>For the second number, we use a uniform Beta(1,1) prior, yielding Beta(${s+1},${n-s+1}) after observing these attempts. This is one explicit assumption, not an objective correction.</p><div class="reveal"><b>Try this thought experiment</b><p>If the same rate came from 70 successes in 100 attempts, should you have the same confidence? What if the attempts were all against weak defense?</p></div>${next()}`)}
-if(page===8){let defend=cfg.defend??50,offense=.7*(1-defend/100),safe=.4;h=box('Robot A can use a reliable plan or a risky maneuver. Robot B can defend the maneuver, reducing its success rate. B chooses its own strategy based on what it expects A to do.',`${slider('defend','Defense reduction in risky success (%)',0,100,50,5)}<div class="stats"><div class="stat"><small>Safe vs. defense</small><b>${pct(safe)}</b></div><div class="stat"><small>Risky vs. offense</small><b>70%</b></div><div class="stat"><small>Risky vs. defense</small><b>${pct(offense)}</b></div></div><p>These win probabilities are a deliberately simplified payoff model. Which action would B choose if it knew A’s plan? How could A benefit from being unpredictable?</p>${reveal('A strategy that dominates against an unchanging opponent can be exploited by an adapting opponent. Uncertainty about intentions becomes strategically important.')}${next()}`)}
-if(page===9){let x=cfg.eff??40,defense=.3+.007*x,offense=.52;h=box('Final challenge: An offensive plan wins 52% of matches. A defensive plan’s win rate depends on how effective defense truly is. Scouting suggests 40% effectiveness, but the estimate is uncertain.',`${slider('eff','Assumed defensive effectiveness (%)',0,70,40,5)}<div class="stats"><div class="stat"><small>Offense win chance</small><b>${pct(offense)}</b></div><div class="stat"><small>Defense win chance</small><b>${pct(defense)}</b></div><div class="stat"><small>Difference</small><b>${(100*(defense-offense)).toFixed(1)} pts</b></div></div><p>Which assumption values reverse your decision? How would you estimate them? Is more scouting worth its cost? Can the opponent change the effectiveness of your defense?</p><div class="reveal"><b>Mastery reflection</b><p>Write down your strategy, confidence, the most important assumption, and the cheapest observation that could change your choice. These are the foundations of real match strategy.</p></div>${next()}`)}
-$('main').innerHTML=h;if(locked&&$('samples'))show()}
-render();
-</script></body></html>
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="home-screen">
+    <div class="brand"><div class="logo">Strategy <i></i> Lab</div></div>
+    <header class="hero">
+      <div class="kicker" id="lesson-kicker"></div>
+      <h1 id="lesson-tagline"></h1>
+      <p>Make predictions. Run matches. Discover the hidden assumptions.</p>
+      <div class="hero-actions">
+        <button class="btn primary hero-start" type="button" id="start"></button>
+        <a class="btn team" href="host.html">Play as a Team ▸</a>
+      </div>
+    </header>
+    <nav class="nav home-nav" aria-label="Choose an investigation">
+      <div class="nav-heading">Investigations <span id="progress"></span></div>
+      <div class="nav-links" id="nav"></div>
+    </nav>
+  </div>
+  <div id="lesson-screen" hidden>
+    <header class="lesson-topbar">
+      <a class="btn back-button" href="#home" aria-label="Return to all investigations">← All Investigations</a>
+      <span class="lesson-top-label" id="lesson-label"></span>
+      <span class="lesson-progress" id="lesson-progress"></span>
+    </header>
+    <main id="main" class="lesson-main"></main>
+  </div>
+  <noscript><div class="script-warning">This website needs JavaScript to run its interactive lessons. Please enable JavaScript in your browser.</div></noscript>
+  <div class="footer">Abstract teaching simulations, not any particular FRC game. Ties are tracked separately.</div>
+</div>
+<script type="module">
+// Everything on this page comes from games/frc-strategy/lessons.js, the same lessons the team game plays.
+// Links: lessons.html (home), lessons.html#lesson-3 (investigation 3), lessons.html#done (your results).
+// With more lessons, ?lesson=<id> picks one; the first lesson is the default.
+import { html, raw } from './js/ui.js';
+import { LESSONS, SHAPES, bestPoints, lessonById } from './games/frc-strategy/lessons.js';
+import { mountExplorer } from './games/frc-strategy/explorer.js';
+
+const $ = (id) => document.getElementById(id);
+const lesson = lessonById(new URLSearchParams(location.search).get('lesson')) ?? LESSONS[0];
+const questions = lesson.questions;
+const KEY = 'frc-strategy-solo';
+let picked = null; // the answer chosen but not yet locked in
+
+// Your answers, kept in this browser: { [lessonId]: { [question index]: answer index } }
+function loadAnswers() {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || '{}')[lesson.id] ?? {};
+  } catch {
+    return {};
+  }
+}
+let answers = loadAnswers();
+function saveAnswers() {
+  try {
+    const all = JSON.parse(localStorage.getItem(KEY) || '{}');
+    all[lesson.id] = answers;
+    localStorage.setItem(KEY, JSON.stringify(all));
+  } catch {
+    // Storage may be disabled (private window, embedded preview); the lesson still works.
+  }
+}
+
+const score = () => Object.entries(answers).reduce((s, [q, a]) => s + (questions[q]?.choices[a]?.points ?? 0), 0);
+const maxScore = () => questions.reduce((s, q) => s + bestPoints(q), 0);
+const doneCount = () => questions.filter((_, i) => i in answers).length;
+
+document.title = `${lesson.title} · FRC Strategy Lab`;
+$('lesson-kicker').textContent = `Lesson ${lesson.number} · ${lesson.title}`;
+$('lesson-tagline').textContent = lesson.tagline;
+$('lesson-label').textContent = `Strategy Lab / ${lesson.title}`;
+$('start').textContent = doneCount() ? 'Continue ▸' : `Start Lesson ${lesson.number} ▸`;
+$('start').addEventListener('click', () => {
+  const next = questions.findIndex((_, i) => !(i in answers));
+  location.hash = next < 0 ? 'done' : `lesson-${next + 1}`;
+});
+
+// ---------- routing: #lesson-N is investigation N, #done the results, anything else home ----------
+
+function route() {
+  const m = /^#lesson-(\d{1,2})$/.exec(location.hash);
+  const i = m ? Number(m[1]) - 1 : -1;
+  const inLesson = (i >= 0 && i < questions.length) || location.hash === '#done';
+  $('home-screen').hidden = inLesson;
+  $('lesson-screen').hidden = !inLesson;
+  picked = null;
+  if (location.hash === '#done') showDone();
+  else if (inLesson) showQuestion(i);
+  else showHome();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+addEventListener('hashchange', route);
+
+function showHome() {
+  $('start').textContent = doneCount() >= questions.length ? 'See Your Results ▸' : doneCount() ? 'Continue ▸' : `Start Lesson ${lesson.number} ▸`;
+  $('progress').textContent = doneCount() ? `${doneCount()} / ${questions.length} done · ${score()} pts` : '';
+  $('nav').innerHTML = html`${questions.map(
+    (q, i) => html`
+      <button type="button" class="${i in answers && 'done'}" data-go="${i + 1}">
+        <span class="st-shape">${i in answers ? '✓' : i + 1}</span>
+        <span>${q.title}<small>${q.section}</small></span>
+      </button>`,
+  )}`;
+}
+$('nav').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-go]');
+  if (btn) location.hash = `lesson-${btn.dataset.go}`;
+});
+
+// ---------- one investigation ----------
+
+function showQuestion(i) {
+  const q = questions[i];
+  const chosen = answers[i];
+  const locked = chosen != null;
+  const top = bestPoints(q);
+  const mine = locked ? chosen : picked;
+  const last = i + 1 >= questions.length;
+  $('lesson-progress').textContent = `${i + 1} / ${questions.length}`;
+  $('main').innerHTML = html`
+    <section class="card">
+      <div class="kicker">Investigation ${i + 1} / ${questions.length}</div>
+      <span class="section">${q.section}</span>
+      <h2>${q.title}</h2>
+      <div class="prompt">${raw(q.prompt)}</div>
+      <div class="grid">
+        ${q.choices.map(
+          (c, k) => html`
+            <button type="button" class="option ${mine === k && 'selected'} ${locked && c.points === top && 'best'}" data-choice="${k}" ${locked && 'disabled'}>
+              <span class="st-shape">${SHAPES[k]}</span>
+              <span><strong>${c.text}</strong>${locked && html`<small>${c.result}</small>`}</span>
+              ${locked && html`<span class="pts">+${c.points}</span>`}
+            </button>`,
+        )}
+      </div>
+      ${locked
+        ? html`
+          <div class="result ${q.choices[chosen].points === top && 'best'}">
+            <span class="gained">+${q.choices[chosen].points}</span>
+            <h3>${q.choices[chosen].points === top ? 'Best Answer!' : q.choices[chosen].points > 0 ? 'Partly Right' : 'Not This Time'}</h3>
+            <span>Score ${score()} / ${maxScore()}</span>
+          </div>
+          <div class="reveal">
+            <h3>What the Model Says</h3>
+            <p class="takeaway">${q.takeaway}</p>
+            <p>${q.explain}</p>
+          </div>`
+        : html`
+          <div class="buttons">
+            <button type="button" class="btn primary" id="lock" ${mine == null && 'disabled'}>Lock Prediction &amp; Reveal</button>
+          </div>`}
+    </section>
+    ${locked && html`<div id="explore"></div>`}
+    ${locked &&
+    html`
+      <div class="buttons">
+        <a class="btn primary" href="#${last ? 'done' : `lesson-${i + 2}`}">${last ? 'Finish Lesson ▸' : 'Next Investigation ▸'}</a>
+        <button type="button" class="btn" id="retry">Try Again</button>
+      </div>`}`;
+  if (locked && q.explore) mountExplorer($('explore'), q.explore);
+}
+
+$('main').addEventListener('click', (e) => {
+  if (e.target.closest('#reset')) {
+    answers = {};
+    saveAnswers();
+    location.hash = 'lesson-1';
+    return;
+  }
+  const m = /^#lesson-(\d{1,2})$/.exec(location.hash);
+  if (!m) return;
+  const i = Number(m[1]) - 1;
+  const choice = e.target.closest('[data-choice]');
+  if (choice && !(i in answers)) {
+    picked = Number(choice.dataset.choice);
+    showQuestion(i);
+  } else if (e.target.closest('#lock') && picked != null) {
+    answers[i] = picked;
+    saveAnswers();
+    showQuestion(i);
+  } else if (e.target.closest('#retry')) {
+    delete answers[i];
+    saveAnswers();
+    picked = null;
+    showQuestion(i);
+  }
+});
+
+// ---------- the end ----------
+
+function showDone() {
+  const best = questions.filter((q, i) => q.choices[answers[i]]?.points === bestPoints(q)).length;
+  $('lesson-progress').textContent = `${doneCount()} / ${questions.length}`;
+  $('main').innerHTML = html`
+    <section class="card">
+      <div class="kicker">Lesson ${lesson.number} complete</div>
+      <h2>${lesson.title}</h2>
+      <p><span class="score-big">${score()}</span> of ${maxScore()} points · ${best} of ${questions.length} best answers</p>
+      <div class="report">
+        ${questions.map((q, i) => {
+          const c = q.choices[answers[i]];
+          return html`
+            <a class="report-row" href="#lesson-${i + 1}">
+              <span>${i + 1}. ${q.title}</span>
+              <b>${c ? `+${c.points} / ${bestPoints(q)}` : 'not answered'}</b>
+            </a>`;
+        })}
+      </div>
+      <p>Now challenge the model itself: revisit any investigation, change its assumptions, and test what still holds.</p>
+      <div class="buttons">
+        <button type="button" class="btn primary" id="reset">Start Over</button>
+        <a class="btn" href="host.html">Play as a Team ▸</a>
+      </div>
+    </section>`;
+}
+
+route();
+</script>
+</body>
+</html>
