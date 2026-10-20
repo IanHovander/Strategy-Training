@@ -62,7 +62,9 @@ Every push to `main` then rebuilds and publishes the site.
 group's captain to the next connected member). Clocks stop while the room is waiting: nobody connected, or the
 Showdown group whose turn it is has nobody connected. They pick up where they left off when someone is back. If the
 big screen's page reloads (phones often reload a tab that's been in the background), the game comes back where it
-was and phones rejoin in their seats. **Back to Lobby** starts fresh.
+was and phones rejoin in their seats. The save lives in the big screen's browser (on the laptop server, in a
+`.room-<port>.local.json` file) and lasts 12 hours. Pressed **Back to Lobby** or **Restart** by mistake? The lobby
+has a **Resume** button for the game that last stopped.
 
 **Trying it on one device.** Press **Test Phone** on the big screen to open a phone in a panel on the same page,
 and join from there. (Two separate tabs don't work on a phone: the browser pauses the hidden tab, and the hidden

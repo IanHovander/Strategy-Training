@@ -96,6 +96,27 @@ try {
   const redBack = client({ role: 'player', token: redToken });
   await wait(400);
   check(!view(host).paused && view(host).deadline > Date.now() && view(redBack)?.captain, 'Red is back: its captain is on the clock again');
+
+  // --- Back to Lobby by mistake: the game can be resumed, even after a restart ---
+  await act(redBack, 'picklist', { teamId: view(host).event[5].id, list: 'pick' });
+  const groups = JSON.stringify(view(host).groups);
+  host.socket.emit('lobby', { cmd: 'end' });
+  await wait(300);
+  check(host.room.screen === 'lobby' && host.room.previous?.name === 'Strategy Training', 'after Back to Lobby, the lobby offers to resume the game');
+  await wait(400);
+  host.socket.disconnect();
+  await stopServer(server);
+  server = await startServer();
+  host = client({ role: 'host' });
+  await wait(400);
+  check(host.room.screen === 'lobby' && host.room.previous?.name === 'Strategy Training', 'and still does after a restart');
+  const red2 = client({ role: 'player', token: redToken });
+  await wait(300);
+  host.socket.emit('lobby', { cmd: 'resume' });
+  await wait(400);
+  check(host.room.screen === 'game' && view(host).phase === 'select' && view(host).pick === 0 && JSON.stringify(view(host).groups) === groups, 'Resume picks up the same selection with the same groups');
+  check(view(red2)?.picklist?.pick.length === 1 && !view(host).paused, 'with Red’s picklist intact and the clock running');
+  check(host.room.previous === null, 'and the resume offer is used up');
 } finally {
   await stopServer(server);
   fs.rmSync(SAVE_FILE, { force: true });
