@@ -48,7 +48,6 @@ export default {
   onJoin(ctx, player) {
     ctx.state.scores[player.id] ??= 0;
     if (isDraft(ctx.state)) draft.onJoin(ctx, player);
-    else if (inRoom(ctx.state)) room.onJoin(ctx);
   },
 
   onDisconnect(ctx) {
@@ -82,7 +81,7 @@ export default {
       if (player.isVip) pickCases(ctx, payload);
     },
     next(ctx, player, payload) {
-      if (inRoom(ctx.state)) room.next(ctx, player, payload?.from); // the moderator moves the case along
+      if (inRoom(ctx.state)) room.next(ctx, player, payload?.from); // the moderator (or the leader) moves it along
       else if (player.isVip) next(ctx, payload?.from);
     },
     finish(ctx, player) {
@@ -96,9 +95,6 @@ export default {
     ...Object.fromEntries(
       Object.entries(room.actions).map(([name, fn]) => [name, (ctx, player, payload) => (inRoom(ctx.state) ? fn(ctx, player, payload) : undefined)]),
     ),
-    repick(ctx, player) {
-      if (inRoom(ctx.state)) room.repick(ctx, player);
-    },
   },
 
   // Buttons on the big screen.
@@ -107,11 +103,8 @@ export default {
       pick(ctx, payload);
     },
     next(ctx, payload) {
-      if (inRoom(ctx.state)) room.next(ctx, null, payload?.from); // only the intro: pick the moderator now
+      if (inRoom(ctx.state)) room.next(ctx, null, payload?.from); // a backup for the moderator
       else next(ctx, payload?.from);
-    },
-    repick(ctx) {
-      if (inRoom(ctx.state)) room.repick(ctx, null);
     },
     cases(ctx, payload) {
       pickCases(ctx, payload);

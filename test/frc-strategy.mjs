@@ -286,16 +286,19 @@ try {
   host.socket.emit('lobby', { cmd: 'start' });
   await until(() => view(host)?.phase === 'pick');
   await act(players[0], 'next', { from: 'pick:0' });
-  check(await until(() => view(host).phase === 'intro' && view(host).partId === 'learn' && view(host).players.every((p) => !p.done)), 'the leader starts Learn: the intro asks who wants to moderate');
+  check(await until(() => view(host).phase === 'moderator-pick' && view(host).partId === 'learn' && view(host).players.every((p) => !p.done)), 'the leader starts Learn: moderator signup comes first');
   const roomStep = () => view(host).step;
   await act(players[1], 'next', { from: roomStep() });
   await wait(100);
-  check(view(host).phase === 'intro', 'a non-leader phone can’t skip the volunteers');
-  await act(players[0], 'volunteer', { yes: false });
-  await act(players[1], 'volunteer', { yes: false });
-  await act(P5, 'volunteer', { yes: true });
-  check(await until(() => view(host).players.filter((p) => p.done).length === 3) && view(host).phase === 'intro', 'everyone has answered: a moment to change their mind');
-  check(await until(() => view(host).phase === 'call' && view(P5)?.isModerator && view(players[0]).isModerator === false, 4000) && view(host).moderator?.name === 'P5', 'the only volunteer moderates');
+  check(view(host).phase === 'moderator-pick', 'a non-leader phone can’t close signup');
+  check((await act(players[0], 'volunteer', { wants: 'yes' }))?.error, 'signup takes a volunteer or a pass');
+  await act(players[0], 'volunteer', { wants: false });
+  await act(players[1], 'volunteer', { wants: false });
+  await wait(150);
+  check(view(host).phase === 'moderator-pick' && view(host).players.filter((p) => p.done).length === 2, 'signup waits until everyone has answered');
+  await act(P5, 'volunteer', { wants: true });
+  check(await until(() => view(host).phase === 'call' && view(P5)?.isModerator && view(players[0]).isModerator === false) && view(host).moderator?.name === 'P5', 'once everyone has answered, the only volunteer moderates');
+  check((await act(P5, 'volunteer', { wants: false }))?.error, 'signup is closed once the moderator is picked');
   check(await until(() => JSON.stringify(view(P5)).includes(secret)) && view(P5).brief.records.length === BRIEFS[0].records.length, 'the moderator’s phone gets the case’s brief');
   const leaks = () => [host, players[0], players[1]].some((c) => JSON.stringify(view(c)).includes(secret) || 'brief' in view(c));
   check(!leaks(), 'nobody else sees the brief, not even the big screen');
@@ -306,10 +309,9 @@ try {
   check(await until(() => view(players[0]).mine?.pick === 'aggressive') && view(players[0]).mine.why === 'the upside matters' && view(players[1]).mine === null, 'a phone sees only its own call');
   check(view(players[0]).mine.wonder === '', 'the "one more thing" answer only counts on a case’s last call');
   check((await act(players[0], 'ask', { text: 'Were the 7s defended?' }))?.error, 'no questions on the warm-up’s first call');
-  await act(players[0], 'next', { from: roomStep() });
-  hostAct(host, 'next', { from: roomStep() });
+  await act(players[1], 'next', { from: roomStep() });
   await wait(150);
-  check(view(host).phase === 'call', 'only the moderator moves the case along');
+  check(view(host).phase === 'call', 'a classmate can’t move the case along');
   /** The moderator moves on, and the big screen catches up. */
   const advance = async (mod) => {
     const from = roomStep();
@@ -319,9 +321,12 @@ try {
   await advance(P5);
   const r0 = view(host);
   check(r0.phase === 'discuss' && r0.roster.length === 1 && r0.roster[0].pick === 'aggressive' && r0.roster[0].doubt === 'No robot always scores 8' && JSON.stringify(r0.counts) === '[0,1]', 'the room is shown: every call, with its confidence and reason');
-  await advance(P5);
-  check(view(host).phase === 'intel' && view(host).round === 0, 'then new intel');
-  await advance(P5);
+  let from = roomStep();
+  hostAct(host, 'next', { from });
+  await until(() => roomStep() !== from);
+  check(view(host).phase === 'intel' && view(host).round === 0, 'then new intel (the big screen can move things along too, as a backup)');
+  await advance(players[0]);
+  check(view(host).phase === 'call' && view(host).round === 1, 'so can the leader');
   check(view(host).phase === 'call' && view(host).round === 1 && (await until(() => view(players[0]).prev?.pick === 'aggressive')) && view(players[0]).mine === null, 'everyone calls it again, starting from their last call');
   await act(players[0], 'call', { pick: 'safe', confidence: 60 });
   await act(players[1], 'call', { pick: 'safe', confidence: 90 });
@@ -356,13 +361,11 @@ try {
   check(answered?.type === 'record' && answered.text.startsWith('Five-match scouting card'), 'answers show with the question, and in the case file');
   check(!leaks(), 'answers share only what the moderator chose');
   for (const c of [host, players[0], P5]) check(JSON.stringify(view(c)).length < 16000, `${c === host ? 'hostView' : 'playerView'} is small (${JSON.stringify(view(c)).length} bytes)`);
-  // the moderator's phone drops: the leader picks someone else
+  // the moderator's phone drops: nobody else volunteered, so the leader takes over
   P5.socket.disconnect();
-  check(await until(() => view(host).moderator?.connected === false && view(players[0]).canRepick) && !view(players[1]).canRepick, 'when the moderator drops, the leader can pick a new one');
-  await act(players[0], 'repick');
-  check(await until(() => [players[0], players[1]].some((c) => view(c).isModerator) && view(host).moderator?.connected), 'the leader picks a new moderator');
-  const mod = [players[0], players[1]].find((c) => view(c).isModerator);
-  check(await until(() => JSON.stringify(view(mod)).includes(secret)), 'the new moderator gets the brief');
+  check(await until(() => view(players[0]).isModerator && view(host).moderator?.name === 'P1') && !view(players[1]).isModerator, 'when the moderator drops, the leader takes over (nobody else volunteered)');
+  const mod = players[0];
+  check(await until(() => JSON.stringify(view(mod)).includes(secret)) && !JSON.stringify(view(players[1])).includes(secret), 'the new moderator gets the brief, and only them');
   for (let k = 0; k < 20 && view(host).phase !== 'wrap'; k++) await advance(mod);
   check(view(host).phase === 'wrap' && view(host).moves.length === lastRound(ROOM[0]) + 1 && view(host).stats.questions === 4, 'the wrap-up shows how the room moved, call by call');
   const minds = view(host).minds;
@@ -377,11 +380,11 @@ try {
   await until(() => view(host)?.phase === 'pick');
   await act(players[0], 'cases', { cases: [3, 1, 99] });
   await act(players[0], 'next', { from: 'pick:0' });
-  check(await until(() => view(host).phase === 'intro') && view(host).of === 2 && view(host).caseIndex === 1, 'Learn runs the leader’s chosen cases');
+  check(await until(() => view(host).phase === 'moderator-pick') && view(host).of === 2 && view(host).caseIndex === 1, 'Learn runs the leader’s chosen cases');
   hostAct(host, 'next', { from: view(host).step });
   check(
-    (await until(() => view(host).phase === 'call' && [players[0], players[1]].filter((c) => view(c).isModerator).length === 1)),
-    'nobody volunteered: the big screen moves on and someone is picked at random',
+    (await until(() => view(host).phase === 'call' && view(players[0]).isModerator && !view(players[1]).isModerator)),
+    'nobody volunteered: the big screen moves on and the leader moderates',
   );
   const runner = [players[0], players[1]].find((c) => view(c).isModerator);
   const caller = runner === players[0] ? players[1] : players[0];

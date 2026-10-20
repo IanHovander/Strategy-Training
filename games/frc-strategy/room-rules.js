@@ -1,25 +1,25 @@
 // The Strategy Room: the rules for Learn in the team game (rules.js hands over to these when the part's kind is
 // 'room'). The cases are in lesson1-room.js; the moderator's brief is in lesson1-room-brief.js.
 //
-//   intro     the big screen sums up the cases and asks who wants to moderate; phones answer yes or no. Once
-//             everyone has answered (or the leader moves on), the moderator is picked at random from the
-//             volunteers, or from everyone if nobody volunteered.
-//   call      everyone but the moderator makes the call: a plan, how sure they are, and why (optional). They can
-//             change it until the room is shown. The moderator reads the brief meanwhile.
-//   discuss   the big screen shows every call. The room argues it out and asks the moderator questions.
-//   intel     the next piece of intel; then everyone calls it again
-//   wrap      after the last call: how the room's calls moved. Then the next case, or back to the lobby.
+//   moderator-pick  the big screen welcomes the room and asks who wants to moderate; phones volunteer or pass.
+//                   Once everyone connected has answered (or the leader or the big screen moves on), a volunteer
+//                   is picked at random. If nobody volunteered, the leader moderates. One moderator for all of
+//                   Learn; if their phone drops, another volunteer takes over, or else the leader.
+//   call            everyone but the moderator makes the call: a plan, how sure they are, and why (optional).
+//                   They can change it until the room is shown. The moderator reads the brief meanwhile.
+//   discuss         the big screen shows every call. The room argues it out and asks the moderator questions.
+//   intel           the next piece of intel; then everyone calls it again
+//   wrap            after the last call: how the room's calls moved. Then the next case, or back to the lobby.
 //
-// The moderator moves the case along (no timers) and answers questions: in their own words, out loud, "we don't
-// know", an existing record (free) or an investigation (one of a few effort credits per case). Anyone but the
-// moderator may ask as many questions as they like, except on the warm-up's first call. Questions never show who
-// asked them. No points.
+// The moderator moves the case along (no timers); the leader and the big screen can too, if the moderator is
+// stuck. The moderator answers questions: in their own words, out loud, "we don't know", an existing record
+// (free) or an investigation (one of a few effort credits per case). Anyone but the moderator may ask as many
+// questions as they like, except on the warm-up's first call. Questions never show who asked them. No points.
 //
 // State lives in ctx.state.room. The brief goes only to the moderator's phone, one case at a time.
 import { LIMITS, ROOM, extraAsk, lastRound, minConfidence, optionsAt, questionsOpen } from './lesson1-room.js';
 import { BRIEFS, CREDITS } from './lesson1-room-brief.js';
 
-const ALL_IN_MS = 2500; // once everyone has said whether they'll moderate, a moment to change their mind
 const MAX_QUESTIONS = 300; // per case, so a stuck button can't flood the room
 const BIG_VIEW = 14500; // views have to stay under 16 KB; trim the extras past this
 
@@ -37,7 +37,7 @@ export function start(ctx, order) {
     order,
     at: 0,
     round: 0,
-    volunteers: {}, // playerId -> true (wants to moderate) or false
+    volunteers: {}, // playerId -> true (volunteered to moderate) or false (passed)
     moderatorId: null,
     calls: {}, // playerId -> { pick, confidence, why, doubt, wonder }, this call only
     history: [], // per call, once the room is shown: [{ id, name, pick, confidence, why, doubt, wonder }]
@@ -48,7 +48,7 @@ export function start(ctx, order) {
     serial: 0,
     totals: { calls: 0, questions: 0 }, // across the cases, for the lobby
   };
-  ctx.state.phase = 'intro';
+  ctx.state.phase = 'moderator-pick';
 }
 
 /** Which screen we're on, so a double-tapped button only moves things once. */
@@ -59,50 +59,54 @@ function newCase(ctx) {
   ctx.state.phase = 'call';
 }
 
-/** Everyone connected has said yes or no to moderating: pick soon (unless that changes). */
+/** Everyone connected has volunteered or passed: pick the moderator now. */
 function maybePick(ctx) {
-  if (ctx.state.phase !== 'intro') return;
-  const allIn = () => {
-    const online = ctx.players.filter((p) => p.connected);
-    return online.length > 0 && online.every((p) => p.id in R(ctx).volunteers);
-  };
-  if (!allIn()) return ctx.cancelTimer('volunteers');
-  ctx.timer('volunteers', ALL_IN_MS, () => allIn() && pickModerator(ctx));
+  if (ctx.state.phase !== 'moderator-pick') return;
+  const online = ctx.players.filter((p) => p.connected);
+  if (online.length && online.every((p) => p.id in R(ctx).volunteers)) pickModerator(ctx);
 }
 
-/** At random from the connected volunteers, or from everyone connected if nobody volunteered. */
-function pickModerator(ctx, skip = null) {
-  const r = R(ctx);
-  const online = ctx.players.filter((p) => p.connected && p.id !== skip);
+/** A volunteer at random; if nobody volunteered, the leader. Then the first case starts. */
+function pickModerator(ctx) {
+  const online = ctx.players.filter((p) => p.connected);
   if (!online.length) return;
-  const keen = online.filter((p) => r.volunteers[p.id] === true);
-  r.moderatorId = ctx.pick(keen.length ? keen : online).id;
-  delete r.calls[r.moderatorId]; // the moderator doesn't vote
-  ctx.cancelTimer('volunteers');
-  if (ctx.state.phase === 'intro') newCase(ctx);
+  const willing = online.filter((p) => R(ctx).volunteers[p.id] === true);
+  setModerator(ctx, willing.length ? ctx.pick(willing) : online.find((p) => p.isVip) ?? online[0]);
+  newCase(ctx);
 }
 
-export function onJoin(ctx) {
-  maybePick(ctx);
+function setModerator(ctx, player) {
+  R(ctx).moderatorId = player.id;
+  delete R(ctx).calls[player.id]; // the moderator doesn't make calls
+}
+
+/** The moderator's phone dropped: another volunteer takes over, or else the leader. */
+function ensureModerator(ctx) {
+  const r = R(ctx);
+  if (ctx.state.phase === 'moderator-pick' || ctx.player(r.moderatorId)?.connected) return;
+  const online = ctx.players.filter((p) => p.connected);
+  const next = online.find((p) => r.volunteers[p.id] === true) ?? online.find((p) => p.isVip) ?? online[0];
+  if (next) setModerator(ctx, next);
 }
 
 export function onDisconnect(ctx) {
   maybePick(ctx);
+  ensureModerator(ctx);
 }
 
 /**
- * The moderator moves the case along; in the intro, the leader (or the big screen) can stop waiting and pick the
- * moderator. `by` is the player, or null for the big screen.
+ * Move things along: the moderator, or as a backup the leader or the big screen (`by` is null). During signup,
+ * only the leader or the big screen can stop waiting and pick the moderator.
  */
 export function next(ctx, by, from) {
   const s = ctx.state;
   const r = R(ctx);
   if (from !== stepKey(ctx)) return;
-  if (s.phase === 'intro') {
+  if (by && !by.isVip && !isModerator(ctx, by.id)) return;
+  if (s.phase === 'moderator-pick') {
     if (!by || by.isVip) pickModerator(ctx);
     return;
   }
-  if (!by || !isModerator(ctx, by.id)) return;
   const c = caseOf(r);
   if (s.phase === 'call') {
     // Lock the calls in as they stand. Whoever hasn't called sits this one out.
@@ -127,19 +131,12 @@ export function next(ctx, by, from) {
   }
 }
 
-/** The moderator's phone dropped: the leader or the big screen picks someone else. */
-export function repick(ctx, by) {
-  const r = R(ctx);
-  if (ctx.state.phase === 'intro' || ctx.player(r.moderatorId)?.connected) return;
-  if (by && !by.isVip) return;
-  pickModerator(ctx, r.moderatorId);
-}
-
 export const actions = {
-  /** Intro: "Want to moderate?" yes or no. */
+  /** Signup: volunteer to moderate ({ wants: true }) or pass ({ wants: false }). */
   volunteer(ctx, player, payload) {
-    if (ctx.state.phase !== 'intro') return { error: 'The moderator has already been picked.' };
-    R(ctx).volunteers[player.id] = payload?.yes === true;
+    if (ctx.state.phase !== 'moderator-pick') return { error: 'Moderator signup is closed.' };
+    if (typeof payload?.wants !== 'boolean') return { error: 'Choose volunteer or pass.' };
+    R(ctx).volunteers[player.id] = payload.wants;
     maybePick(ctx);
     return { ok: true };
   },
@@ -166,7 +163,7 @@ export const actions = {
   /** Ask the moderator anything: { text, why? }. */
   ask(ctx, player, payload) {
     const r = R(ctx);
-    if (ctx.state.phase === 'intro') return { error: 'Questions open once the case starts.' };
+    if (ctx.state.phase === 'moderator-pick') return { error: 'Questions open once the case starts.' };
     if (isModerator(ctx, player.id)) return { error: 'You’re the moderator: you answer the questions.' };
     if (!questionsOpen(caseOf(r), r.round)) return { error: 'Questions open on the next call.' };
     const text = clean(payload?.text, LIMITS.question);
@@ -282,7 +279,7 @@ export function hostView(ctx, base) {
   const v = common(ctx, base);
   const many = ctx.players.length > 16;
   const chip = (p) => ({ id: p.id, name: p.name, color: p.color, connected: p.connected });
-  if (s.phase === 'intro') {
+  if (s.phase === 'moderator-pick') {
     return { ...v, players: ctx.players.map((p) => ({ ...chip(p), done: p.id in r.volunteers, keen: r.volunteers[p.id] === true })) };
   }
   if (s.phase === 'call') {
@@ -344,10 +341,16 @@ function minds(ctx, r) {
 export function playerView(ctx, me, base) {
   const r = R(ctx);
   const s = ctx.state;
-  const v = { ...common(ctx, base), isModerator: isModerator(ctx, me.id), canRepick: s.phase !== 'intro' && me.isVip && !ctx.player(r.moderatorId)?.connected };
-  if (s.phase === 'intro') {
+  const v = { ...common(ctx, base), isModerator: isModerator(ctx, me.id) };
+  if (s.phase === 'moderator-pick') {
     const online = ctx.players.filter((p) => p.connected);
-    return { ...v, choice: r.volunteers[me.id] ?? null, answered: online.filter((p) => p.id in r.volunteers).length, online: online.length };
+    return {
+      ...v,
+      choice: r.volunteers[me.id] ?? null,
+      answered: online.filter((p) => p.id in r.volunteers).length,
+      volunteering: online.filter((p) => r.volunteers[p.id] === true).length,
+      online: online.length,
+    };
   }
   const list = voters(ctx);
   const called = list.filter((p) => p.id in r.calls).length;

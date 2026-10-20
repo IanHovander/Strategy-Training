@@ -681,7 +681,6 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .sr-call, .sr-mod { padding: 0.4rem 0.9rem 0.25rem; border-radius: 0.5rem; background: var(--black); color: var(--white); font-family: var(--display); font-size: 1.6rem; line-height: 1; white-space: nowrap; }
 .sr-mod { background: var(--white); color: var(--black); border: var(--outline) solid var(--black); box-shadow: inset 0 -0.3rem 0 var(--c), 0.25rem 0.3rem 0 var(--black); rotate: 1deg; }
 .sr-mod b { font-weight: 400; color: var(--red-hi); }
-.sr-mod.away { border-style: dashed; opacity: 0.8; }
 
 /* the intro and the moderator volunteers */
 .sr-intro { display: flex; flex-direction: column; align-items: center; gap: 1.3rem; }
@@ -696,7 +695,10 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .sr-intro-foot .st-answered { background: var(--off-black); }
 .sr-keen { font-family: var(--display); font-size: 1.7rem; line-height: 1; }
 .st-who.keen { outline: 0.22rem solid var(--red-hi); outline-offset: 0.1rem; }
-.st-who.keen span::after { content: " ✋"; }
+.st-who.keen span::after { content: " 🎙"; }
+.sr-intro .st-title .st-section { padding: 0.3rem 0.8rem 0.2rem; border-radius: 0.45rem; background: var(--white); border: var(--outline) solid var(--black); }
+.sr-small-light { font-size: 0.95rem; font-weight: 700; color: var(--grey); }
+.sr-keen b { font-weight: 400; }
 
 /* the case beside the room */
 .sr-layout { display: grid; grid-template-columns: 24rem minmax(0, 1fr); gap: 1.6rem; align-items: start; }

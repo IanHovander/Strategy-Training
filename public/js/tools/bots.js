@@ -79,7 +79,7 @@ function play(bot) {
     Promise.all([strategy, quiz, roomCases]).then(([{ lessonById, partById }, { CONFIDENCE, asksConfidence }, { minConfidence, optionsAt }]) => {
       const part = partById(lessonById(v.lessonId), v.partId);
       if (part.kind === 'room' && v.phase !== 'pick') {
-        if (v.phase === 'intro' && v.choice == null) later('volunteer', { yes: false });
+        if (v.phase === 'moderator-pick' && v.choice == null) later('volunteer', { wants: false });
         if (v.isModerator) {
           const waiting = v.inbox?.find((q) => !q.answer);
           later('next', { from: v.step }, [...(waiting ? [['reply', { id: waiting.id, type: 'spoken' }]] : []), ['next', { from: v.step }]]);

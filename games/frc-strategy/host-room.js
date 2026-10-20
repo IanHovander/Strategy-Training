@@ -1,14 +1,13 @@
-// Big screen for Learn's Strategy Room (room-rules.js): the intro and moderator volunteers, then each case's
+// Big screen for Learn's Strategy Room (room-rules.js): the welcome and moderator signup, then each case's
 // file, the calls coming in, where the room stands, the questions and answers, new intel and the wrap-up.
-// The moderator runs it from their phone, so there are no buttons here except to stop waiting for volunteers
-// and to replace a moderator whose phone dropped.
+// The moderator runs it from their phone; the small button in the header is a backup for when they're stuck.
 import { html } from '../../js/ui.js';
 import { avatar } from '../../js/avatar.js';
-import { ANSWER_LABELS, ROOM_INTRO, optionsAt } from './lesson1-room.js';
+import { ANSWER_LABELS, ROOM_INTRO, nextLabel, optionsAt } from './lesson1-room.js';
 import { nextButton, status } from './host-parts.js';
 
 export function roomHead(v, lesson, part) {
-  if (v.phase === 'intro') return null;
+  if (v.phase === 'moderator-pick') return null;
   const c = part.cases[v.caseIndex];
   return html`
     <header class="st-head">
@@ -16,14 +15,13 @@ export function roomHead(v, lesson, part) {
       <span class="st-step">Case ${v.at} / ${v.of}: ${c.title}</span>
       ${v.phase !== 'wrap' && html`<span class="sr-call">Call ${v.round + 1}</span>`}
       <span class="spacer"></span>
-      ${v.moderator &&
-      html`<span class="sr-mod ${!v.moderator.connected && 'away'}" style="--c:${v.moderator.color}">Moderator <b>${v.moderator.name}</b>${!v.moderator.connected && ' · phone dropped'}</span>`}
-      ${v.moderator && !v.moderator.connected && html`<button class="btn btn-sm secondary" data-action="repick">New Moderator ▸</button>`}
+      ${v.moderator && html`<span class="sr-mod" style="--c:${v.moderator.color}">🎙 Moderator: <b>${v.moderator.name}</b></span>`}
+      ${nextButton(v, nextLabel(c, v), 'btn-sm secondary')}
     </header>`;
 }
 
 export function roomBody(v, lesson, part) {
-  if (v.phase === 'intro') return intro(v, lesson);
+  if (v.phase === 'moderator-pick') return signup(v);
   const c = part.cases[v.caseIndex];
   if (v.phase === 'wrap') return wrap(v, c);
   const main = v.phase === 'call' ? calling(v, c) : v.phase === 'discuss' ? discuss(v, c) : intel(v, c);
@@ -34,17 +32,17 @@ export function roomBody(v, lesson, part) {
     </div>`;
 }
 
-// ---------- the intro: what this is, and who moderates ----------
+// ---------- before the first case: what this is, and who moderates ----------
 
-function intro(v, lesson) {
+function signup(v) {
   const online = v.players.filter((p) => p.connected);
   return html`
     <div class="sr-intro">
-      <div class="st-title"><h1>${ROOM_INTRO.title}</h1><p>Lesson ${lesson.number} · Learn: ${lesson.title}</p></div>
+      <div class="st-title"><span class="st-section">Learn · before we start</span><h1>${ROOM_INTRO.title}</h1></div>
       <div class="sr-intro-lines">${ROOM_INTRO.lines.map((line) => html`<p>${line}</p>`)}</div>
       <div class="sr-volunteer">
-        <h2>Who wants to moderate?</h2>
-        <p>Answer on your phone. The moderator reads a private brief and runs the room instead of making calls. More than one volunteer? We pick at random.</p>
+        <h2>Anyone want to moderate?</h2>
+        <p>Volunteer or pass on your phone. If multiple people volunteer, we’ll pick one at random.</p>
         <div class="st-status">
           ${v.players.map(
             (p) => html`
@@ -55,10 +53,11 @@ function intro(v, lesson) {
           )}
         </div>
         <div class="sr-intro-foot">
-          <span class="st-answered"><b>${online.filter((p) => p.done).length}</b> / ${online.length} answered</span>
-          <span class="sr-keen">✋ ${v.players.filter((p) => p.keen).length} want to moderate</span>
-          ${nextButton(v, 'Pick the Moderator ▸', 'btn-xl')}
+          <span class="sr-keen">🎙 <b>${online.filter((p) => p.keen).length}</b> volunteering</span>
+          <span class="st-answered"><b>${online.filter((p) => p.done).length}</b> / ${online.length} locked in</span>
+          ${nextButton(v, 'Pick a Moderator & Start ▸', 'btn-xl')}
         </div>
+        <p class="sr-small-light">The leader can move on early. If nobody volunteers, the leader moderates.</p>
       </div>
     </div>`;
 }

@@ -6,7 +6,7 @@
 // and investigations) is in lesson1-room-brief.js, which only the rules read.
 //
 // The intro and a case:
-//   ROOM_INTRO      the big screen's summary before the cases (three sentences at most)
+//   ROOM_INTRO      the big screen's welcome during moderator signup (three sentences at most)
 //   title, short    the case's name, and a shorter one for the phone and the case chooser
 //   tag             what kind of call it is
 //   prompt          the question on the first call ("What's the call?"); later calls ask "Still the same call?"
@@ -23,11 +23,11 @@
 //   noQuestions     the calls (0-based) with no questions yet: the warm-up's first call
 
 export const ROOM_INTRO = {
-  title: 'The Strategy Room',
+  title: 'Welcome to the Strategy Room.',
   lines: [
-    'Five match-day calls, from a one-on-one warm-up to a picklist meeting.',
-    'Make your call on your phone and say how sure you are, then argue it out and ask the moderator anything.',
-    'New intel keeps landing and there’s no answer key, so it’s your questions that move the room.',
+    'These are quick FRC strategy calls with imperfect information.',
+    'Make a plan, ask questions, and change your mind when new evidence shows up.',
+    'One student will moderate the discussion while everyone else works through each case.',
   ],
 };
 
@@ -200,6 +200,15 @@ export const questionsOpen = (c, round) => !c.noQuestions?.includes(round);
 
 /** The last call of a case comes after its last intel. */
 export const lastRound = (c) => c.intel.length;
+
+/** The button that moves things along at each stage (the moderator's, and the leader's and big screen's backup). */
+export function nextLabel(c, v) {
+  if (v.phase === 'moderator-pick') return 'Pick a Moderator & Start ▸';
+  if (v.phase === 'call') return 'Show the Room ▸';
+  if (v.phase === 'discuss') return !questionsOpen(c, v.round) ? 'Show the Scout Sheet ▸' : v.round >= lastRound(c) ? 'Wrap the Case ▸' : 'Drop the Next Intel ▸';
+  if (v.phase === 'intel') return 'Make the Call Again ▸';
+  return v.at === v.of ? 'Finish Learn ▸' : 'Next Case ▸';
+}
 
 /** The extra written question on this call, if any: only the last call of a case that has one. */
 export const extraAsk = (c, round) => (round === lastRound(c) ? c.lastAsk ?? null : null);

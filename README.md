@@ -46,12 +46,13 @@ Every push to `main` then rebuilds and publishes the site.
 4. The big screen (or the leader's phone) picks the lesson and the part: **Learn**, **Test** or **Showdown**.
 
 **Learn: the Strategy Room.** Five match-day calls, from a one-on-one warm-up to a picklist meeting.
-- **The moderator.** After a three-line intro, the big screen asks who wants to moderate, and everyone answers
-  on their phone. Once everyone has answered (or the big screen or the leader presses **Pick the Moderator**),
-  the moderator is picked at random from the volunteers, or from everyone if nobody volunteered. The moderator
-  doesn't make calls. Their phone gets the controls and the case's private brief: the hidden numbers, the
-  existing records and the investigations. Nobody else is sent the brief, not even the big screen. (On the
-  website it is still a public file, like everything there, so a student who goes digging could find it.)
+- **Moderator signup.** Before the first case, the big screen gives a three-sentence welcome and asks for a
+  volunteer moderator. Everyone volunteers or passes on their phone. Once all connected students have answered
+  (or the leader or the big screen moves on early), one volunteer is picked at random; if nobody volunteers, the
+  leader moderates. The moderator doesn't make calls. Their phone gets the controls and each case's private
+  brief: the hidden numbers, the existing records and the investigations. Nobody else is sent the brief, not
+  even the big screen. (On the website it is still a public file, like everything there, so a student who goes
+  digging could find it.) If the moderator's phone drops, another volunteer takes over, or else the leader.
 - **Each call.** Everyone else picks a plan on their phone, says how sure they are on a slider (sure it's the
   best call, not their chance of winning) and why, if they like. They can change it until the moderator shows
   the room. The big screen then shows the votes and every call with its confidence and reason, marks who changed
@@ -66,8 +67,8 @@ Every push to `main` then rebuilds and publishes the site.
 - **Wrap-up.** How the room's calls moved, call by call; how many people changed their call or how sure they
   were, and the biggest movers; the answers to the last call's question, without names; and one thing still worth
   knowing. No answer key.
-- If the moderator's phone drops, the big screen or the leader picks a new one. Before starting, the leader can
-  choose which cases to run (about ten minutes each).
+- The moderator moves each case along. The leader's phone and the big screen can too, as a backup if the
+  moderator is stuck. Before starting, the leader can choose which cases to run (about ten minutes each).
 
 **Test.** For each question:
 - Everyone answers on their phone and can change their mind until the reveal. The reveal comes when everyone has

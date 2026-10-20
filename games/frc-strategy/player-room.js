@@ -1,12 +1,13 @@
-// Phone for Learn's Strategy Room (room-rules.js). Everyone: say whether you'll moderate. Students: make the call
-// (a plan, how sure, why), see where the room stands, ask the moderator anything. The moderator: the controls that
-// move the case along, the question inbox, and the private brief.
+// Phone for Learn's Strategy Room (room-rules.js). Everyone: volunteer to moderate or pass. Students: make the
+// call (a plan, how sure, why), see where the room stands, ask the moderator anything; the leader also has a
+// backup button for when the moderator is stuck. The moderator: the controls that move the case along, the
+// question inbox, and the private brief.
 //
 // Phones type here (questions, reasons, answers), so the screen is drawn in keyed sections and only the sections
 // whose HTML changed are redrawn. New questions arriving don't wipe a half-typed one or close the keyboard. Typed
 // text is also kept by element id, in case its section does have to be redrawn.
 import { html } from '../../js/ui.js';
-import { ANSWER_LABELS, LIMITS, MODERATOR, ROOM_INTRO, extraAsk, lastRound, minConfidence, optionsAt, questionsOpen } from './lesson1-room.js';
+import { ANSWER_LABELS, LIMITS, MODERATOR, ROOM_INTRO, extraAsk, lastRound, minConfidence, nextLabel, optionsAt, questionsOpen } from './lesson1-room.js';
 
 export function roomPhone(root, api) {
   let view = null;
@@ -172,7 +173,7 @@ export function roomPhone(root, api) {
       ['error', error && html`<p class="form-error">${error}</p>`],
       ['flash', flash && html`<p class="sr-flash">${flash}</p>`],
     ];
-    if (v.phase === 'intro') return [...top, ['intro', intro(v)]];
+    if (v.phase === 'moderator-pick') return [...top, ['signup', signup(v)]];
     if (v.isModerator) return [...top, ...moderatorSections(v)];
     return [...top, ...studentSections(v)];
   }
@@ -180,32 +181,30 @@ export function roomPhone(root, api) {
   function header(v) {
     return html`
       <div class="st-top">
-        <span>${v.phase === 'intro' ? 'Learn' : `Case ${v.at} / ${v.of} · Call ${v.round + 1}`}</span>
-        ${v.isModerator ? html`<span class="st-top-score">Moderator</span>` : v.phase !== 'intro' && html`<span class="st-top-score">${c().short}</span>`}
-      </div>
-      ${v.canRepick &&
-      html`<div class="sr-alert">The moderator’s phone dropped. <button class="btn btn-sm" data-action="repick">Pick a New Moderator ▸</button></div>`}`;
+        <span>${v.phase === 'moderator-pick' ? 'Learn' : `Case ${v.at} / ${v.of} · Call ${v.round + 1}`}</span>
+        ${v.isModerator ? html`<span class="st-top-score">🎙 Moderator</span>` : v.phase !== 'moderator-pick' && html`<span class="st-top-score">${c().short}</span>`}
+      </div>`;
   }
 
-  // ---------- the intro ----------
+  // ---------- moderator signup ----------
 
-  function intro(v) {
+  function signup(v) {
     return html`
       <div class="st-card">
-        <span class="st-section">Lesson 1 · Learn</span>
-        <b class="st-card-title">${ROOM_INTRO.title}</b>
-        ${ROOM_INTRO.lines.map((line) => html`<span>${line}</span>`)}
+        <span class="st-section">Learn · the Strategy Room</span>
+        <b class="st-card-title">Anyone want to moderate?</b>
+        <span>You’d run the conversation, answer questions using a private brief, and decide when to move on. You don’t need to know everything.</span>
+        <div class="st-answers">
+          <button class="st-answer ${v.choice === true && 'picked'}" data-action="volunteer" data-payload='{"wants":true}'><span>I’m in 🎙</span></button>
+          <button class="st-answer ${v.choice === false && 'picked'}" data-action="volunteer" data-payload='{"wants":false}'><span>Not this time</span></button>
+        </div>
+        ${v.choice != null && html`<p class="st-hint">Locked in: ${v.choice ? 'you volunteered' : 'you passed'}. You can switch until signup closes.</p>`}
+        <p class="st-hint">${v.answered} of ${v.online} have responded, ${v.volunteering} volunteering. If several volunteer, we’ll pick randomly. If nobody does, the leader moderates.</p>
       </div>
       <div class="st-card">
-        <b class="st-card-title">Want to be the moderator?</b>
-        <span>The moderator reads a private brief, answers the room’s questions and decides when to move on. They don’t make calls, and they don’t need to know everything: “we don’t know” is a fine answer.</span>
-        <div class="st-answers">
-          <button class="st-answer ${v.choice === true && 'picked'}" data-action="volunteer" data-payload='{"yes":true}'><span>✋ I’ll moderate</span></button>
-          <button class="st-answer ${v.choice === false && 'picked'}" data-action="volunteer" data-payload='{"yes":false}'><span>I’ll make calls</span></button>
-        </div>
-        <p class="st-hint">${v.answered} of ${v.online} answered. If more than one volunteers, it’s random.</p>
+        ${ROOM_INTRO.lines.map((line) => html`<span>${line}</span>`)}
       </div>
-      ${v.isVip && html`<button class="btn btn-xl block" data-action="next" data-payload="${JSON.stringify({ from: v.step })}">Pick the Moderator Now ▸</button>`}`;
+      ${v.isVip && html`<button class="btn btn-xl block secondary" data-action="next" data-payload="${JSON.stringify({ from: v.step })}">Pick Moderator Now ▸</button>`}`;
   }
 
   // ---------- students ----------
@@ -223,7 +222,18 @@ export function roomPhone(root, api) {
       list.push(['wrap', wrapUp(v)]);
     }
     if (v.questionsOpen) list.push(['ask', askForm()], ['rq', roomQuestions(v)]);
+    if (v.isVip) list.push([`lead-${v.step}`, leaderBackup(v)]);
     return list;
+  }
+
+  /** The leader can move things along if the moderator is stuck. */
+  function leaderBackup(v) {
+    return html`
+      <details class="sr-flag sr-lead">
+        <summary>Leader: moderator stuck?</summary>
+        <p>${v.moderator ? `${v.moderator.name} is moderating.` : ''} Only if they can’t, move the room on yourself.</p>
+        <button class="btn block secondary" data-action="next" data-payload="${JSON.stringify({ from: v.step })}">${nextLabel(c(), v)}</button>
+      </details>`;
   }
 
   function caseCard(v) {
@@ -375,7 +385,7 @@ export function roomPhone(root, api) {
 
   function moderatorSections(v) {
     const list = [['mod-controls', controls(v)]];
-    if (v.phase === 'call') list.push(['mod-start', html`<div class="sr-modcard"><b class="st-picks-title">You’re the moderator</b><ol>${MODERATOR.start.map((t) => html`<li>${t}</li>`)}</ol></div>`]);
+    if (v.phase === 'call') list.push(['mod-start', html`<div class="sr-modcard"><b class="st-picks-title">🎙 You’re running this one</b><ol>${MODERATOR.start.map((t) => html`<li>${t}</li>`)}</ol></div>`]);
     list.push(['mod-inbox', inboxHead(v)]);
     for (const q of v.inbox) {
       list.push([`q-${q.id}`, inboxCard(q)]);
@@ -386,14 +396,7 @@ export function roomPhone(root, api) {
   }
 
   function controls(v) {
-    const k = c();
-    const last = v.round >= lastRound(k);
-    const label = {
-      call: 'Show the Room ▸',
-      discuss: !questionsOpen(k, v.round) ? 'Show the Scout Sheet ▸' : last ? 'Wrap the Case ▸' : 'Drop the Next Intel ▸',
-      intel: 'Make the Call Again ▸',
-      wrap: v.at === v.of ? 'Finish Learn ▸' : 'Next Case ▸',
-    }[v.phase];
+    const label = nextLabel(c(), v);
     const line = {
       call: `${v.called} of ${v.voters} locked in. Show the room when you’re ready.`,
       discuss: `Let them argue. ${v.waiting ? `${v.waiting} question${v.waiting === 1 ? '' : 's'} waiting for you.` : 'Answer questions as they come in.'}`,
