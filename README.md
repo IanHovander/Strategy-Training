@@ -1,10 +1,89 @@
-# Game Night
+# FRC Strategy Lab
+
+Strategy training for FRC teams, two ways:
+
+- **As a team (Game Night):** one big screen shows the lesson, everyone answers on their phone, and the board shows
+  how the room answered, the points each answer was worth, and a leaderboard after every question.
+- **Solo:** the self-paced lesson site, with sliders and match simulations for each investigation.
+
+Lesson 1 is **Risk & Consistency**: ten investigations into when to play it safe, when to gamble, and the hidden
+assumptions behind both.
+
+## Website
+
+| | |
+|---|---|
+| Big screen (TV / projector) | https://ianhovander.github.io/Strategy-Training/host.html |
+| Phones (or scan the QR code) | https://ianhovander.github.io/Strategy-Training/ |
+| Solo lessons | https://ianhovander.github.io/Strategy-Training/lessons.html |
+
+### Publish (one-time setup)
+
+The site is now built by GitHub Actions (`.github/workflows/pages.yml`), because the game pages need a build step.
+
+1. Open [Settings → Pages](https://github.com/IanHovander/Strategy-Training/settings/pages).
+2. Under **Build and deployment → Source**, choose **GitHub Actions** (instead of "Deploy from a branch").
+3. Push to `main` (or run the "Publish website" workflow from the Actions tab).
+
+Every push to `main` then rebuilds and publishes the site.
+
+## Running a team session
+
+1. Open the big screen link on the computer connected to the TV and press F11.
+2. Everyone scans the QR code and types their name. The first to join is the **leader** (★).
+3. **Strategy Training** is the first game in the lobby. Press **Start Game**.
+4. The big screen (or the leader's phone) picks the lesson. Only Lesson 1 is available for now.
+5. For each question:
+   - Everyone answers on their phone and can change their mind until the reveal. The reveal comes when everyone
+     has answered, when the 2-minute timer runs out, or when the big screen presses **Reveal**. **+30s** adds time
+     for discussion.
+   - The reveal shows the share of the room that picked each answer, the points each answer was worth, and what
+     the model says. Phones show the same, plus an **Explore the Model** panel with sliders and match simulations.
+   - **Leaderboard** shows the scores, the points just earned, and who moved up.
+6. The end shows the podium and a per-question report of how the room did. **Finish** goes back to the lobby.
+
+Answers earn the points set in the lesson: 100 for the best answer, partial credit for answers that are partly
+right, and double points on the final Mastery Challenge.
+
+## Lessons
+
+The team version reads its lessons from `games/frc-strategy/lessons.js`: each question has a prompt, the answers with
+their points and what the model says about each, the takeaway, and an optional explorer (sliders and a model the
+phones can simulate). Add a lesson to the `LESSONS` list and it appears in the lesson picker.
+
+The solo site is `public/lessons.html`, a single page with no build step.
+
+`npm test` checks the room and plays a whole lesson (`test/frc-strategy.mjs`), including that every explorer agrees
+with the answers it backs up.
+
+## Keeping up with Game Night
+
+This repo includes the history of [IanHovander/game-night](https://github.com/IanHovander/game-night), so its
+updates can be merged in:
+
+```bash
+git remote add game-night https://github.com/IanHovander/game-night   # once
+git pull game-night main
+```
+
+Changes made here to shared Game Night files: the lobby's player list scrolls and shrinks with big groups
+(`public/css/host.css`), phones link to the solo lessons (`public/index.html`), the bots answer Strategy Training
+questions (`public/js/tools/bots.js`), and the room code prefix in `public/js/config.js` is this site's own.
+
+## Educational model
+
+The scenarios are abstract teaching simulations, not any particular FRC game. Ties are tracked separately.
+Calculations and results depend on the stated assumptions.
+
+---
+
+## Game Night (the framework underneath)
 
 A small framework for party games where **one screen is the game console and everyone's phone is a controller**.
 The big screen shows what everyone shares (scores, the board, clues, a timer). Each phone shows what only
 that player should see or do (a secret word, their own buttons, a text box). Nobody installs an app.
 
-## Three ways to run it
+### Three ways to run it
 
 | | **Website** (WebRTC) | **Laptop + internet link** | **Laptop, Wi-Fi only** |
 |---|---|---|---|
@@ -23,16 +102,16 @@ All three run the same games.
  Wi-Fi only:   phones ──Wi-Fi──► Node server on the laptop (runs the game)
 ```
 
-### Website
+#### Website
 
-Open **https://ianhovander.github.io/game-night/host.html** on the computer connected to the TV, and press F11.
+Open **https://ianhovander.github.io/Strategy-Training/host.html** on the computer connected to the TV, and press F11.
 Players scan the QR code (or open the site and type the 4-letter room code). Nothing to install, on any computer.
 
 - **Refreshing the big screen** keeps the same room code. Phones reconnect by themselves, back in the lobby.
 - **Keep the big-screen tab in front.** Browsers slow down hidden tabs, which makes the game lag.
 - **`check.html`** on the site tests a network in 10 seconds: green means that device can play from there.
 
-#### The relay
+##### The relay
 
 Phones that can't reach the big screen directly (most on mobile data, and phones on strict Wi-Fi) go through a
 relay server (Metered). Its login is **built into `public/js/config.js`, and it is public on purpose**: anyone can
@@ -45,7 +124,7 @@ copy with this repo brings in the new one. (`docs/adding-a-game.md`, section 2.)
 To use a different login on one computer, click **Relay** at the bottom of the big screen's lobby. It's kept in
 that browser only, and "Forget it" goes back to the built-in one.
 
-### Laptop + internet link
+#### Laptop + internet link
 
 You need [Node.js](https://nodejs.org) 20+ and, once, `winget install --id Cloudflare.cloudflared`.
 
@@ -64,14 +143,14 @@ just passes the traffic along.
 - The address is different every time. The big screen itself only opens on the laptop or its Wi-Fi.
 - People on the same Wi-Fi can use the Wi-Fi address shown under the QR code, which is faster.
 
-### Laptop, Wi-Fi only
+#### Laptop, Wi-Fi only
 
 `npm start`. Phones on the same Wi-Fi scan the QR code. Works with no internet at all. The first time, Windows
 may ask to let Node.js through the firewall: click **Allow** (and set the Wi-Fi to *Private*).
 
 The first player to join is the **leader** (★): they can pick and start games from their phone.
 
-## Saturday playbook
+### Saturday playbook
 
 **Before leaving:** laptop charged and plugged in, lid-close set to "do nothing", Windows Update paused,
 Chrome's Energy Saver off. The hotspot phone charged, with its charger.
@@ -86,7 +165,7 @@ Chrome's Energy Saver off. The hotspot phone charged, with its charger.
 
 **Don't change or publish the code on the day:** phones and the big screen could load different versions.
 
-## Making your own game
+### Making your own game
 
 Copy `games/_template` to `games/my-game` (lowercase letters, numbers and dashes). It appears in the lobby after
 restarting the server (`npm run dev` restarts it automatically when `rules.js` changes) or rebuilding the site
@@ -102,7 +181,7 @@ restarting the server (`npm run dev` restarts it automatically when `rules.js` c
 On the website every file is public, so a curious player could read a game's word list. What each phone
 *receives* is still private: a phone only ever gets its own `playerView`.
 
-### How it fits together
+#### How it fits together
 
 1. A phone does something: `api.send('vote', { playerId })`.
 2. The game runs your `actions.vote(ctx, player, payload)`, which changes `ctx.state`.
@@ -110,7 +189,7 @@ On the website every file is public, so a curious player could read a game's wor
    only when it changed (phones at most ~15 times a second, the big screen ~30).
 4. Each screen's `update(view)` redraws.
 
-### `rules.js`
+#### `rules.js`
 
 ```js
 export default {
@@ -151,7 +230,7 @@ export default {
 Keep views small (a few KB): the website can't send a message over 16 KB. For countdowns, put a deadline in
 the state (`Date.now() + 30000`) and show it with `<span class="timer" data-deadline="${view.deadline}"></span>`.
 
-### `host.js` and `player.js`
+#### `host.js` and `player.js`
 
 ```js
 import { html } from '../../js/ui.js';
@@ -190,11 +269,11 @@ If a game crashes, the error shows on the big screen and in the server window (o
 
 **Example games:** Tap Race (real-time, up to 32 players) and Odd One Out (secret words, phases, timers, voting; up to 24).
 
-## Testing
+### Testing
 
 ```bash
 npm test                 # end-to-end checks of the room on the laptop server (32 players, update rates, secrets)
-npm run site             # the website version on this computer: http://localhost:4000/game-night/host.html
+npm run site             # the website version on this computer: http://localhost:4000/Strategy-Training/host.html
 node test/load.mjs --join https://xxxx.trycloudflare.com --local http://localhost:3000 --bots 25 --seconds 300
 ```
 
@@ -205,12 +284,12 @@ node test/load.mjs --join https://xxxx.trycloudflare.com --local http://localhos
   chip shows RELAY or DIRECT.
 - `test/load.mjs` does the same for the laptop server, measuring data use and tap delay through the tunnel.
 
-## Publishing the website
+### Publishing the website
 
 Pushing to `main` on GitHub runs `.github/workflows/pages.yml`, which builds the site (`npm run build` → `dist/`)
 and publishes it to GitHub Pages. Phones may keep an old copy for ~10 minutes after a change.
 
-## Troubleshooting
+### Troubleshooting
 
 - **A phone is stuck on "Looking for room…"** Check the code. If it's right, open `check.html` on that phone; if
   anything is red, switch it to mobile data.

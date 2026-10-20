@@ -1,5 +1,5 @@
-// Serves dist/ the way GitHub Pages will: under /game-night/, as plain files.
-// For trying the website version on this computer:  npm run site  ->  http://localhost:4000/game-night/
+// Serves dist/ the way GitHub Pages will: under /Strategy-Training/, as plain files.
+// For trying the website version on this computer:  npm run site  ->  http://localhost:4000/Strategy-Training/
 // Only this computer can reach it.
 import fs from 'node:fs';
 import http from 'node:http';
@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
-const BASE = '/game-night/';
+const BASE = '/Strategy-Training/';
 const PORT = Number(process.env.PORT || 4000);
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',

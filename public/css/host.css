@@ -103,6 +103,11 @@ html.host body { overflow: hidden; }
 .lobby-main .panel.grow { flex: 1; min-height: 0; overflow: auto; }
 .lobby-main .chip { font-size: 1.7rem; position: relative; }
 .lobby-main .player-chips { gap: 0.7rem 0.8rem; }
+/* a big crowd (17+, see host.js): smaller chips, and the list scrolls before it pushes the games off the screen */
+.lobby-main > .panel:not(.grow) { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.lobby-main > .panel:not(.grow) .player-chips { min-height: 0; overflow: auto; }
+.lobby-main .panel.grow { min-height: 11rem; }
+.lobby-main .player-chips.still .chip { font-size: 1.3rem; }
 
 /* player count in a little hexagon */
 .count {

@@ -12,6 +12,8 @@ tunnel), and `npm start` (Node, same Wi-Fi only).
   - `server/` is the laptop server.
   - `public/js/tools/` has the test bots and the network check.
 - **Keep game work inside `games/<id>/`.** Core, net and server code are shared.
+- **Strategy Training** is `games/frc-strategy/`; its lesson content (questions, points, explorers) is `lessons.js`.
+  The solo lesson site is `public/lessons.html`.
 - **Commands:**
   - `npm test`: must say ALL PASSED.
   - `npm run dev`: laptop server, restarts on change.

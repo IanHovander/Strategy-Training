@@ -373,10 +373,10 @@ It restarts when `rules.js` changes. For `host.js`, `player.js` and `style.css`,
 npm run site
 ```
 
-Big screen: http://localhost:4000/game-night/host.html. Re-run it (or `npm run build` in another terminal)
+Big screen: http://localhost:4000/Strategy-Training/host.html. Re-run it (or `npm run build` in another terminal)
 after changes.
 
-- **Add bots** at http://localhost:4000/game-night/tools/bots.html?room=CODE&n=20 (CODE is on the big screen), and play a full game.
+- **Add bots** at http://localhost:4000/Strategy-Training/tools/bots.html?room=CODE&n=20 (CODE is on the big screen), and play a full game.
 - **Layout checks:**
   - Big screen at 1366×768 and 1920×1080, with 3, 12 and `maxPlayers` players: nothing cut off, no scrolling.
   - Phones at about 375×667 and 390×844.
@@ -394,7 +394,7 @@ Open the big screen with `host.html?relay=1`, then with `host.html?tls=1` (relay
 
 ### 5. Network check
 
-Open http://localhost:4000/game-night/check.html. Every line should be green.
+Open http://localhost:4000/Strategy-Training/check.html. Every line should be green.
 
 ### 6. Real devices (after publishing, before using it for real)
 
