@@ -895,3 +895,11 @@ input.st-range:focus-visible { outline: 0.2rem solid var(--black); outline-offse
 .sr-move-bar { height: 2.4rem; }
 .sr-move-bar span { font-size: 1.35rem; }
 .sr-mover:nth-child(n + 7) { display: none; }
+/* the intro: tighter, so the volunteer panel fits with a full row or two of robots */
+.sr-intro { gap: 0.9rem; }
+.sr-intro .st-title h1 { font-size: 3.9rem; }
+.sr-intro-lines { gap: 0.4rem; }
+.sr-intro-lines p { padding-block: 0.4rem; font-size: 1.3rem; }
+.sr-volunteer { gap: 0.5rem; padding-block: 0.8rem 0.9rem; }
+.sr-volunteer h2 { font-size: 2.5rem; }
+.sr-volunteer > p { font-size: 1.05rem; }
