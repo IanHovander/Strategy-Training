@@ -1,0 +1,28 @@
+{
+  "name": "game-night",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A tiny party-game framework: phones are the controllers, the laptop is the big screen.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js --open",
+    "dev": "node --watch server/index.js",
+    "online": "node server/index.js --open --online",
+    "test": "node test/smoke.mjs",
+    "build": "node scripts/build-site.mjs",
+    "site": "node scripts/build-site.mjs && node scripts/serve-site.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "peerjs": "1.5.5",
+    "qrcode-generator": "1.5.2",
+    "socket.io-client": "^4.8.4"
+  }
+}
