@@ -195,6 +195,8 @@ function intel(v, c) {
 // ---------- how the room moved ----------
 
 function wrap(v, c) {
+  const m = v.minds;
+  const call = (x) => `${optionsAt(c, x.round).find((o) => o.id === x.pick)?.label ?? x.pick} ${x.confidence}%`;
   return html`
     <div class="sr-wrap">
       <div class="sr-wrap-main">
@@ -213,6 +215,16 @@ function wrap(v, c) {
               </div>`;
           })}
         </div>
+        ${m.people > 0 &&
+        html`
+          <div class="sr-minds">
+            <span class="sr-mind"><b>${m.changedCall} / ${m.people}</b> changed their call at least once</span>
+            <span class="sr-mind"><b>${m.changedSure} / ${m.people}</b> changed how sure they were</span>
+          </div>
+          ${m.movers.length > 0 &&
+          html`<div class="sr-movers">
+            ${m.movers.map((x) => html`<span class="sr-mover ${x.switched && 'switched'}" style="--c:${x.color ?? 'var(--grey)'}"><b>${x.name}</b> ${call(x.from)} → ${call(x.to)}</span>`)}
+          </div>`}`}
       </div>
       <aside class="st-report sr-wrap-side">
         <h2>The Room</h2>
@@ -221,6 +233,8 @@ function wrap(v, c) {
           <span class="st-stat"><small>questions asked</small><b>${v.stats.questions}</b></span>
           <span class="st-stat hi"><small>moderator answers</small><b>${v.stats.answers}</b></span>
         </div>
+        ${v.wonders.length > 0 &&
+        html`<div class="sr-wonders"><b>${c.lastAsk}</b><ul>${v.wonders.map((w) => html`<li>${w}</li>`)}</ul></div>`}
         <div class="sr-cue"><b>Still on the table</b>${c.blind}</div>
         <p class="sr-small">Not a gotcha. Just one more thing someone might reasonably want to know. The point is the questions we learned to ask.</p>
       </aside>

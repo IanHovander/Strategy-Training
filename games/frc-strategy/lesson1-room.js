@@ -18,6 +18,8 @@
 //   intel           the new intel dropped after each call; the case ends after the call that follows the last one
 //   nudges          one per call, under the votes, to keep the conversation going (the last one repeats)
 //   blind           at the wrap-up: something the room might still want to know (not a gotcha)
+//   lastAsk         optional: one more short written question on the last call; the answers show, without
+//                   names, at the wrap-up
 //   noQuestions     the calls (0-based) with no questions yet: the warm-up's first call
 
 export const ROOM_INTRO = {
@@ -117,6 +119,7 @@ export const ROOM = [
     ],
     nudges: ['Who is paying the opportunity cost?', 'Which robot’s behavior is most uncertain?', 'What single fact is worth checking before the match?'],
     blind: 'We haven’t established how C behaves once it realizes B is defending.',
+    lastAsk: 'What would you most want to find out before the match?',
   },
   {
     title: 'The Third Robot',
@@ -135,6 +138,7 @@ export const ROOM = [
     ],
     nudges: ['Are we selecting for one match or for the series?', 'Would a failure in game one change game two?', 'Where did the 75% estimate come from?'],
     blind: 'How likely is a “fixed” mechanism to stay fixed through multiple matches?',
+    lastAsk: 'Anything you’d want to check before alliance selection?',
   },
   {
     title: 'The Picklist Meeting',
@@ -153,6 +157,7 @@ export const ROOM = [
     ],
     nudges: ['How similar were their match conditions?', 'Are we selecting a robot, or a role in our alliance?', 'What’s the biggest reason this plan could flop?'],
     blind: 'How well will the three robots share lanes and game pieces?',
+    lastAsk: 'What’s the biggest thing we’re still unsure about?',
   },
 ];
 
@@ -179,7 +184,7 @@ export const MODERATOR = {
 export const ANSWER_LABELS = { answer: 'Moderator', spoken: 'Answered out loud', unknown: 'Not known', record: 'Existing record', investigation: 'New investigation' };
 
 /** The longest text a player can type for each thing. */
-export const LIMITS = { why: 140, doubt: 200, question: 200, questionWhy: 140, reply: 400 };
+export const LIMITS = { why: 140, doubt: 200, wonder: 140, question: 200, questionWhy: 140, reply: 400 };
 
 /** The lowest confidence you can give: an even split between the plans, rounded up to a step of 5. */
 export const minConfidence = (count) => Math.ceil(100 / count / 5) * 5;
@@ -195,3 +200,6 @@ export const questionsOpen = (c, round) => !c.noQuestions?.includes(round);
 
 /** The last call of a case comes after its last intel. */
 export const lastRound = (c) => c.intel.length;
+
+/** The extra written question on this call, if any: only the last call of a case that has one. */
+export const extraAsk = (c, round) => (round === lastRound(c) ? c.lastAsk ?? null : null);

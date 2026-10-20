@@ -61,7 +61,11 @@ Every push to `main` then rebuilds and publishes the site.
   call). They show on the big screen without names. The moderator answers in their own words, says it was answered out loud
   or that nobody knows, shares an existing record (free), or spends one of two effort credits per case on an
   investigation. Matches already played are fixed: investigations re-check footage, logs and the pits.
-- **Wrap-up.** How the room's calls moved, call by call, and one thing still worth knowing. No answer key.
+- **The last call** of cases 3–5 adds one short written question, such as "What would you most want to find out
+  before the match?"
+- **Wrap-up.** How the room's calls moved, call by call; how many people changed their call or how sure they
+  were, and the biggest movers; the answers to the last call's question, without names; and one thing still worth
+  knowing. No answer key.
 - If the moderator's phone drops, the big screen or the leader picks a new one. Before starting, the leader can
   choose which cases to run (about ten minutes each).
 

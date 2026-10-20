@@ -301,9 +301,10 @@ try {
   check(!leaks(), 'nobody else sees the brief, not even the big screen');
   check((await act(P5, 'call', { pick: 'safe', confidence: 80 }))?.error, 'the moderator doesn’t make a call');
   check((await act(players[0], 'call', { pick: 'nope', confidence: 80 }))?.error && (await act(players[0], 'call', { pick: 'safe', confidence: 42 }))?.error, 'a call needs one of the plans and a confidence on the slider');
-  await act(players[0], 'call', { pick: 'aggressive', confidence: 80, why: '  the upside   matters ', doubt: 'No robot always scores 8' });
+  await act(players[0], 'call', { pick: 'aggressive', confidence: 80, why: '  the upside   matters ', doubt: 'No robot always scores 8', wonder: 'not asked here' });
   check(await until(() => view(host).answered === 1) && view(host).players.length === 2 && JSON.stringify(view(host)).indexOf('aggressive') === -1, 'the big screen counts calls (not the moderator) without showing them');
   check(await until(() => view(players[0]).mine?.pick === 'aggressive') && view(players[0]).mine.why === 'the upside matters' && view(players[1]).mine === null, 'a phone sees only its own call');
+  check(view(players[0]).mine.wonder === '', 'the "one more thing" answer only counts on a case’s last call');
   check((await act(players[0], 'ask', { text: 'Were the 7s defended?' }))?.error, 'no questions on the warm-up’s first call');
   await act(players[0], 'next', { from: roomStep() });
   hostAct(host, 'next', { from: roomStep() });
@@ -364,6 +365,8 @@ try {
   check(await until(() => JSON.stringify(view(mod)).includes(secret)), 'the new moderator gets the brief');
   for (let k = 0; k < 20 && view(host).phase !== 'wrap'; k++) await advance(mod);
   check(view(host).phase === 'wrap' && view(host).moves.length === lastRound(ROOM[0]) + 1 && view(host).stats.questions === 4, 'the wrap-up shows how the room moved, call by call');
+  const minds = view(host).minds;
+  check(minds.people === 1 && minds.changedCall === 1 && minds.changedSure === 1 && minds.movers[0]?.name === 'P1' && minds.movers[0].switched && minds.movers[0].from.pick === 'aggressive' && minds.movers[0].to.pick === 'safe', 'the wrap-up shows how minds changed, and who moved');
   await advance(mod);
   check(view(host).phase === 'call' && view(host).at === 2 && view(host).caseIndex === 1 && (await until(() => view(mod).credits === 2 && view(mod).inbox.length === 0)), 'the next case starts fresh: no questions, full credits');
   host.socket.emit('lobby', { cmd: 'end' });
@@ -381,6 +384,20 @@ try {
     'nobody volunteered: the big screen moves on and someone is picked at random',
   );
   const runner = [players[0], players[1]].find((c) => view(c).isModerator);
+  const caller = runner === players[0] ? players[1] : players[0];
+  // on the last call of a case with "one more thing", answers go up at the wrap-up without names
+  for (let k = 0; k < 40 && !(view(host).caseIndex === 3 && view(host).phase === 'call' && view(host).round === lastRound(ROOM[3])); k++) {
+    const from = roomStep();
+    await act(runner, 'next', { from });
+    await until(() => roomStep() !== from);
+  }
+  await act(caller, 'call', { pick: 'steady', confidence: 70, wonder: '  Can the pit crew really reset it every time? ' });
+  for (let k = 0; k < 4 && view(host).phase !== 'wrap'; k++) {
+    const from = roomStep();
+    await act(runner, 'next', { from });
+    await until(() => roomStep() !== from);
+  }
+  check(view(host).phase === 'wrap' && JSON.stringify(view(host).wonders) === '["Can the pit crew really reset it every time?"]' && JSON.stringify(view(host).wonders).indexOf(caller.self.you.name) === -1, 'the last call’s "one more thing" shows at the wrap-up, without names');
   for (let k = 0; k < 60 && host.room.screen === 'game'; k++) {
     const from = roomStep();
     await act(runner, 'next', { from });

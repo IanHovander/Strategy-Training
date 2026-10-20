@@ -16,7 +16,7 @@
 // asked them. No points.
 //
 // State lives in ctx.state.room. The brief goes only to the moderator's phone, one case at a time.
-import { LIMITS, ROOM, lastRound, minConfidence, optionsAt, questionsOpen } from './lesson1-room.js';
+import { LIMITS, ROOM, extraAsk, lastRound, minConfidence, optionsAt, questionsOpen } from './lesson1-room.js';
 import { BRIEFS, CREDITS } from './lesson1-room-brief.js';
 
 const ALL_IN_MS = 2500; // once everyone has said whether they'll moderate, a moment to change their mind
@@ -39,8 +39,8 @@ export function start(ctx, order) {
     round: 0,
     volunteers: {}, // playerId -> true (wants to moderate) or false
     moderatorId: null,
-    calls: {}, // playerId -> { pick, confidence, why, doubt }, this call only
-    history: [], // per call, once the room is shown: [{ id, name, pick, confidence, why, doubt }]
+    calls: {}, // playerId -> { pick, confidence, why, doubt, wonder }, this call only
+    history: [], // per call, once the room is shown: [{ id, name, pick, confidence, why, doubt, wonder }]
     questions: [], // { id, text, why, round, by, hear: [playerId] }
     answers: {}, // question id -> { type, text, round }
     credits: CREDITS,
@@ -144,7 +144,7 @@ export const actions = {
     return { ok: true };
   },
 
-  /** Make (or change) the call: { pick, confidence, why?, doubt? }. */
+  /** Make (or change) the call: { pick, confidence, why?, doubt?, wonder? }. */
   call(ctx, player, payload) {
     const r = R(ctx);
     if (ctx.state.phase !== 'call') return { error: 'The room has already been shown. Wait for the next call.' };
@@ -158,7 +158,8 @@ export const actions = {
       return { error: 'Set how sure you are with the slider.' };
     }
     const doubt = questionsOpen(c, r.round) ? '' : clean(payload?.doubt, LIMITS.doubt); // the warm-up's "feels off?"
-    r.calls[player.id] = { pick, confidence, why: clean(payload?.why, LIMITS.why), doubt };
+    const wonder = extraAsk(c, r.round) ? clean(payload?.wonder, LIMITS.wonder) : ''; // the last call's "one more thing"
+    r.calls[player.id] = { pick, confidence, why: clean(payload?.why, LIMITS.why), doubt, wonder };
     return { ok: true };
   },
 
@@ -304,11 +305,40 @@ export function hostView(ctx, base) {
   }
   if (s.phase === 'intel') return { ...v, learned: learned(r) };
   // wrap
-  return {
-    ...v,
-    moves: r.history.map((_, round) => countsAt(r, round)),
-    stats: { calls: r.history.length, answers: Object.values(r.answers).filter((a) => a.type !== 'spoken').length, questions: r.questions.length },
-  };
+  return fit(
+    {
+      ...v,
+      moves: r.history.map((_, round) => countsAt(r, round)),
+      minds: minds(ctx, r),
+      // the last call's "one more thing", without names (sorted, so the order gives nobody away)
+      wonders: (r.history[lastRound(caseOf(r))] ?? []).flatMap((e) => (e.wonder ? [e.wonder] : [])).sort((a, b) => a.localeCompare(b)).slice(0, 12),
+      stats: { calls: r.history.length, answers: Object.values(r.answers).filter((a) => a.type !== 'spoken').length, questions: r.questions.length },
+    },
+    [(x) => (x.wonders = x.wonders.slice(0, 6)), (x) => (x.minds.movers = x.minds.movers.slice(0, 4))],
+  );
+}
+
+/**
+ * How minds changed over the case, among everyone who made at least two calls: how many switched plans or
+ * changed how sure they were at some point, and the biggest movers (first call to last).
+ */
+function minds(ctx, r) {
+  const byPlayer = new Map();
+  r.history.forEach((snap, round) => {
+    for (const e of snap) byPlayer.set(e.id, [...(byPlayer.get(e.id) ?? []), { ...e, round }]);
+  });
+  const people = [...byPlayer.values()].filter((calls) => calls.length > 1);
+  const changed = (calls, key) => calls.some((e, i) => i > 0 && e[key] !== calls[i - 1][key]);
+  const movers = people
+    .map((calls) => {
+      const [first, last] = [calls[0], calls.at(-1)];
+      const at = (e) => ({ pick: e.pick, confidence: e.confidence, round: e.round });
+      return { name: last.name, color: ctx.player(last.id)?.color ?? null, from: at(first), to: at(last), switched: first.pick !== last.pick, swing: Math.abs(last.confidence - first.confidence) };
+    })
+    .filter((m) => m.switched || m.swing > 0)
+    .sort((a, b) => b.switched - a.switched || b.swing - a.swing || a.name.localeCompare(b.name))
+    .slice(0, 8);
+  return { people: people.length, changedCall: people.filter((c) => changed(c, 'pick')).length, changedSure: people.filter((c) => changed(c, 'confidence')).length, movers };
 }
 
 export function playerView(ctx, me, base) {

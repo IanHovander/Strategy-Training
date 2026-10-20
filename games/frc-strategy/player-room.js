@@ -6,7 +6,7 @@
 // whose HTML changed are redrawn. New questions arriving don't wipe a half-typed one or close the keyboard. Typed
 // text is also kept by element id, in case its section does have to be redrawn.
 import { html } from '../../js/ui.js';
-import { ANSWER_LABELS, LIMITS, MODERATOR, ROOM_INTRO, lastRound, minConfidence, optionsAt, questionsOpen } from './lesson1-room.js';
+import { ANSWER_LABELS, LIMITS, MODERATOR, ROOM_INTRO, extraAsk, lastRound, minConfidence, optionsAt, questionsOpen } from './lesson1-room.js';
 
 export function roomPhone(root, api) {
   let view = null;
@@ -71,7 +71,8 @@ export function roomPhone(root, api) {
     }
     if (what === 'lock') {
       const sure = Math.min(100, Math.max(minConfidence(options().length), confidence));
-      return send('call', { pick, confidence: sure, why: typed(`sr-why-${s}`), doubt: typed(`sr-doubt-${s}`) }, () => (editing = false));
+      const extra = { why: typed(`sr-why-${s}`), doubt: typed(`sr-doubt-${s}`), wonder: typed(`sr-wonder-${s}`) };
+      return send('call', { pick, confidence: sure, ...extra }, () => (editing = false));
     }
     if (what === 'edit') {
       editing = true;
@@ -197,7 +198,7 @@ export function roomPhone(root, api) {
       </div>
       <div class="st-card">
         <b class="st-card-title">Want to be the moderator?</b>
-        <span>The moderator reads a private brief, answers the room’s questions and runs each case. They don’t make calls.</span>
+        <span>The moderator reads a private brief, answers the room’s questions and decides when to move on. They don’t make calls, and they don’t need to know everything: “we don’t know” is a fine answer.</span>
         <div class="st-answers">
           <button class="st-answer ${v.choice === true && 'picked'}" data-action="volunteer" data-payload='{"yes":true}'><span>✋ I’ll moderate</span></button>
           <button class="st-answer ${v.choice === false && 'picked'}" data-action="volunteer" data-payload='{"yes":false}'><span>I’ll make calls</span></button>
@@ -249,6 +250,7 @@ export function roomPhone(root, api) {
           <span class="st-card-title">${label} · ${v.mine.confidence}% sure</span>
           ${v.mine.why && html`<span>“${v.mine.why}”</span>`}
           ${v.mine.doubt && html`<span>⚑ ${v.mine.doubt}</span>`}
+          ${v.mine.wonder && html`<span>❓ ${v.mine.wonder}</span>`}
         </div>
         <button class="btn block secondary" data-do="edit">Change My Call</button>`;
     }
@@ -275,6 +277,10 @@ export function roomPhone(root, api) {
         <p class="st-how">How sure you are this is the <b>best call</b>. Not your chance of winning.</p>
         <label class="sr-label" for="sr-why-${s}">Why? <small>(optional)</small></label>
         <textarea class="sr-field" id="sr-why-${s}" maxlength="${LIMITS.why}" rows="2" placeholder="One sentence is plenty."></textarea>
+        ${extraAsk(k, v.round) &&
+        html`<label class="sr-label" for="sr-wonder-${s}">One more thing: <b>${extraAsk(k, v.round)}</b> <small>(optional)</small></label>
+          <textarea class="sr-field" id="sr-wonder-${s}" maxlength="${LIMITS.wonder}" rows="2" placeholder="Short and specific."></textarea>
+          <p class="st-how">These go up on the big screen at the end, without names.</p>`}
         ${!questionsOpen(k, v.round) &&
         html`<details class="sr-flag">
           <summary>Something about this setup feels off?</summary>
