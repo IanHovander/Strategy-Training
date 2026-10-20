@@ -53,7 +53,7 @@ function addBot(room) {
   });
 }
 
-/** Very simple players: tap during races, and get through Odd One Out's phases. */
+/** Very simple players: tap during races, get through Odd One Out's phases, and answer Strategy Training questions. */
 function play(bot) {
   const v = bot.view;
   const racing = bot.game === 'tap-race' && v?.phase === 'go';
@@ -62,13 +62,19 @@ function play(bot) {
     clearInterval(bot.tapper);
     bot.tapper = null;
   }
-  if (bot.game !== 'odd-one-out' || !v) return;
+  if (!v) return;
   const later = (type, payload) => {
-    const key = `${type}:${v.round}:${v.phase}`;
+    const key = `${type}:${v.round ?? v.step}:${v.phase}`;
     if (bot.pending === key) return;
     bot.pending = key;
     setTimeout(() => bot.socket.emit('action', { type, payload }), 800 + Math.random() * 2500);
   };
+  // Strategy Training: every question has at least three answers.
+  if (bot.game === 'frc-strategy') {
+    if (v.phase === 'question' && v.choice == null) later('answer', { choice: Math.floor(Math.random() * 3) });
+    return;
+  }
+  if (bot.game !== 'odd-one-out') return;
   if (v.phase === 'reveal' && !v.ready) later('ready');
   if (v.phase === 'clue' && !v.myClue) later('clue', { clue: pick(CLUES) });
   if (v.phase === 'vote' && !v.myVote && v.choices?.length) later('vote', { playerId: pick(v.choices).id });
