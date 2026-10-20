@@ -148,11 +148,13 @@ export async function hostInBrowser({ onStatus }) {
 
   // The Test Phone (a phone page inside this one) joins through the browser instead of the internet, so it works
   // even where the introduction server or WebRTC is blocked. It passes its room code and one end of a MessageChannel.
+  // It works before the room code is registered online, so the Test Phone doesn't wait on that either.
   window.gamenightLocalPhone = (roomCode, port) => {
     if (roomCode !== code) return false;
     acceptPhone(portChannel(port));
     return true;
   };
+  Object.defineProperty(window.gamenightLocalPhone, 'roomCode', { get: () => code });
 
   keepScreenOn();
   start();
