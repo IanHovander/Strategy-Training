@@ -581,28 +581,43 @@ function drawBoot(now) {
 const chip = new Chip();
 chip.muted = params.has('mute');
 const player = new Player(chip);
-const ui = { state: 'boot', cursor: 0, dialog: 0 };
-const clock = { perf0: 0 };
+const ui = { state: 'boot', cursor: 0, dialog: 0, woke: false };
+// The picture always runs on its own clock. The music joins it at the current beat as soon as the audio is
+// actually running, which on some phones is only after a later tap, or again after the phone interrupted it.
+const clock = { perf0: 0, audio: false };
+const perfNow = () => performance.now() / 1000;
 
 function playFrom(beat) {
   chip.start();
-  player.play(beat);
-  clock.perf0 = performance.now() / 1000 + 0.06 - beat * BEAT;
+  clock.perf0 = perfNow() + 0.06 - beat * BEAT;
+  clock.audio = false;
 }
 function beatNow() {
   if (frozenAt != null) return frozenAt / BEAT;
-  if (chip.ac && chip.ac.state === 'running') return player.beatAt(chip.now());
-  return (performance.now() / 1000 - clock.perf0) / BEAT;
+  if (!chip.running) clock.audio = false;
+  else if (!clock.audio) {
+    player.play((perfNow() - clock.perf0) / BEAT, chip.now());
+    clock.audio = true;
+  }
+  if (!clock.audio) return (perfNow() - clock.perf0) / BEAT;
+  const beat = player.beatAt(chip.now());
+  clock.perf0 = perfNow() - beat * BEAT;
+  return beat;
 }
 
 function press(key) {
-  const now = performance.now() / 1000;
+  const now = perfNow();
   if (ui.state === 'boot') {
     ui.state = 'play';
     playFrom(params.has('title') ? INTRO_BEATS : 0);
     return;
   }
   if (ui.state === 'play') {
+    // If the browser held the sound back, the next tap wakes it instead of skipping the intro (once).
+    if (locked() && !ui.woke) {
+      ui.woke = true;
+      return;
+    }
     const beat = beatNow();
     if (beat < INTRO_BEATS - 0.5) playFrom(INTRO_BEATS);
     else if (beat > INTRO_BEATS + 1.5 && (key === 'a' || key === 'start')) {
@@ -647,8 +662,8 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (!e.repeat) press(key);
 });
-canvas.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
+// Taps act on click: phones only allow sound from the end of a tap, not its start.
+canvas.addEventListener('click', (e) => {
   const r = canvas.getBoundingClientRect();
   const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
   if (ui.state === 'menu' && !ui.dialog && x < 110 && y > 8 && y < 44) {
@@ -659,30 +674,35 @@ canvas.addEventListener('pointerdown', (e) => {
   press('a');
 });
 
+// Any later tap or key press retries the audio, in case the first one didn't count.
+for (const type of ['pointerup', 'touchend', 'click', 'keydown']) window.addEventListener(type, () => chip.unlock(), { capture: true, passive: true });
+
 const muteButton = document.getElementById('mute');
+const locked = () => chip.ready && !chip.running && !chip.muted;
 function toggleMute() {
   chip.setMuted(!chip.muted);
-  if (muteButton) {
-    muteButton.textContent = chip.muted ? 'Sound off' : 'Sound on';
-    muteButton.setAttribute('aria-pressed', String(chip.muted));
-  }
+  muteButton?.setAttribute('aria-pressed', String(chip.muted));
 }
 muteButton?.addEventListener('click', (e) => {
   e.stopPropagation();
-  toggleMute();
+  // While the audio is still asleep, this tap just wakes it (the capture listener above already did).
+  if (!locked()) toggleMute();
 });
-if (muteButton && chip.muted) muteButton.textContent = 'Sound off';
+/** Keep the button honest: it says when the browser is still holding the sound back. */
+function updateMuteLabel() {
+  if (!muteButton) return;
+  const label = chip.muted ? 'Sound off' : locked() ? 'Tap for sound' : 'Sound on';
+  if (muteButton.textContent !== label) muteButton.textContent = label;
+}
 
 function render() {
-  const now = performance.now() / 1000;
+  const now = perfNow();
   g.globalAlpha = 1;
+  updateMuteLabel();
   if (ui.state === 'boot' && frozenAt == null) return drawBoot(now);
-  if (ui.state === 'menu') {
-    player.pump();
-    return drawMenu(now);
-  }
-  player.pump();
   const B = beatNow();
+  if (clock.audio) player.pump();
+  if (ui.state === 'menu') return drawMenu(now);
   if (B < 0) {
     screen();
     return fill(0, 0, W, H, C.ink);

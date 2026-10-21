@@ -4,6 +4,15 @@
 export const BPM = 150;
 export const BEAT = 60 / BPM;
 
+// iPhones mute web audio when the ring/silent switch is on silent, unless the page asks to be treated like a music player.
+function playThroughSilentSwitch() {
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+  } catch {
+    // Not supported here: nothing to do.
+  }
+}
+
 // ---- Synth ----
 export class Chip {
   constructor() {
@@ -18,6 +27,8 @@ export class Chip {
     if (!this.ac) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!context && !AC) return false;
+      this.offline = !!context;
+      if (!context) playThroughSilentSwitch();
       const ac = (this.ac = context ?? new AC());
       this.master = ac.createGain();
       this.master.gain.value = this.muted ? 0 : 0.5;
@@ -31,11 +42,27 @@ export class Chip {
       this.waves = { p12: this.pulse(0.125), p25: this.pulse(0.25), p50: this.pulse(0.5) };
       this.bus = null;
     }
-    this.ac.resume?.()?.catch?.(() => {});
+    this.unlock();
     return true;
+  }
+  /**
+   * Wake the audio up. Must run inside a tap or key press; safe to call on every one until it works.
+   * iPhones only count the end of a tap (not its start), and older ones also need a sound to play right then.
+   */
+  unlock() {
+    if (!this.ac || this.offline || this.running) return;
+    playThroughSilentSwitch();
+    this.ac.resume?.()?.catch?.(() => {});
+    const blip = this.ac.createBufferSource();
+    blip.buffer = this.ac.createBuffer(1, 1, this.ac.sampleRate);
+    blip.connect(this.ac.destination);
+    blip.start();
   }
   get ready() {
     return !!this.ac;
+  }
+  get running() {
+    return this.ac?.state === 'running';
   }
   now() {
     return this.ac ? this.ac.currentTime : performance.now() / 1000;
