@@ -1,8 +1,8 @@
-// The main character at full height: a high-school drive coach, an Asian girl in the team's red 5026 shirt (the
-// front tucked into high-waisted jeans), burgundy glasses, a stud earring, rolled cuffs over mismatched socks and
-// canvas sneakers. She stands three-quarters on with her weight on one leg, a hand on that hip and the other
-// shoulder up, looking back at you. The drive team's whiteboard hangs from her other hand, tilted away from her side:
-// the 2019 field (red HAB, cargo ship, blue HAB) in a few muted marks, the marker swinging under it on a cord.
+// The main character at full height: a high-school drive coach, an Asian girl laughing with her whole face (eyes
+// shut, cheeks up, a wide open grin), long wavy side-parted hair, the team's red 5026 shirt tucked into high-waisted
+// jeans, rolled cuffs over mismatched socks and canvas sneakers. She stands three-quarters on with her weight on one
+// leg, a hand on that hip and the other shoulder up. The drive team's whiteboard hangs from her other hand, tilted
+// away from her side and wiped clean, the marker swinging under it on a cord.
 //
 // The other sprites are built from rectangles at the camera's scale. This one is drawn pixel by pixel at the canvas's
 // own resolution, so the face can have real features: draw it with the camera at scale 1. One letter per pixel,
@@ -16,16 +16,16 @@ const PALETTE = {
   s: '#eabf91', // skin
   d: '#d29a6c', // skin, shade
   D: '#a96d47', // skin, deep shade
-  g: '#15171e', // hair
-  h: '#262a38', // hair, strands
-  H: '#333a50', // hair, lit strands
-  G: '#4b5574', // hair, shine
-  E: '#4a2a1a', // iris
-  w: '#e4dbd2', // white of the eye
-  V: '#6a2236', // glasses frames
+  g: '#241913', // hair
+  h: '#3a271d', // hair, strands
+  H: '#5e3f2b', // hair, lit strands
+  G: '#8c6040', // hair, caramel
+  A: '#b08055', // hair, caramel ends
+  e: '#ee9f8c', // blush
   M: '#9a4040', // mouth
-  m: '#d0807a', // lip
-  Y: '#ffc61a', // earring, sock
+  m: '#d0807a', // tongue
+  T: '#f6f1ea', // teeth
+  Y: '#ffc61a', // sock
   Z: '#c48a0a', // sock, shade
   R: '#ff6a55', // shirt, lit
   r: '#d3212f', // shirt
@@ -38,7 +38,7 @@ const PALETTE = {
   N: '#222b4d', // jeans, under the hem
   C: '#c4cbe0', // button, clip shine
   U: '#4a90ff', // other sock
-  u: '#1d55e8', // other sock, stripe; blue HAB
+  u: '#1d55e8', // other sock, stripe; marker cap
   O: '#f4f6fb', // sneaker
   o: '#b9c0d4', // sneaker, shade
   p: '#7882a3', // sole, marker cord
@@ -48,50 +48,48 @@ const PALETTE = {
   f: '#9aa3bd', // board frame
   F: '#5d6580', // board frame, shade
   c: '#3f4761', // clip
-  x: '#2b3040', // cargo ship
-  y: '#e0333f', // red HAB
   K: '#eef1f8', // marker barrel
 };
 
 // Standing on the bottom row; column FOOT_X is under the middle of her body.
 const BODY = [
-  '.............kkkkkkkk...................',
-  '...........kkhHHhhghhkk.................',
-  '..........khHGHhhhghHhgk................',
-  '.........kgHhHhhhgghhHhgkkkk............',
-  '.........kghHhhhhgsghhHgkghgk...........',
-  '.........kghhHhgsSssghHgkhggk...........',
-  '.........kgghHgsSssssghgkgggk...........',
-  '.........kggHghggssgghggkgggk...........',
-  '.........kghgssssssssssgkgghk...........',
-  '........kkgghsVVVsssVVsgkghgk...........',
-  '.......khgksVVEEgVVVEgVdkghgk...........',
-  '......kghgkdsVEEwVsVEwVdkghgk...........',
-  '......kgHgksssVVVssdVVddkghgk...........',
-  '......kgHgkYsSssssddssdkkghgk...........',
-  '......kgHggkssssssssMddkgghgk...........',
-  '......kgHggkksssMMMMsdkhgghgk...........',
-  '......kgHgghkksssmmsdkghgghgk...........',
-  '......kgHgghggkssSsdkgghgghgk...........',
-  '......kgHgghgkdkkkkkggghgghgk...........',
-  '......kgHgghgkssssDkggghgghgk...........',
-  '......kghggkkkssssDkkgghgghgk...........',
-  '......kghgkRRqssssqqqkkkkkhgk...........',
-  '......kgkkRRrrqqqqrrrrrrqqkgk...........',
-  '.......kRRrrrrrrrrrrrrrrrqqk............',
-  '......kRRrWWWrWWWrWWWrWWWrqqk...........',
-  '.....kRRrrWrrrWrWrrrWrWrQrqqk...........',
-  '....kRRrrrWWWrWrWrWWWrWWWrqqk...........',
-  '...kRRrrrrrrWrWrWrWrrrWrWrqqk...........',
-  '...kRRrrrrWWWrWWWrWWWrWWWrqqk...........',
-  '...kRRrrrrrrrrrrrrrrrrrqqkkkk...........',
-  '...kkkkkkrrrrrrrrrrrrrrqqksdk...........',
-  '...kSssdkRRrrrrrrrrrrrrqqksdk...........',
-  '...kSssdkRRrrrrrrrrrrrrqqksdk...........',
-  '..kSssdk.kRRrrrrrrrrrrqqkssdk...........',
-  '..kSssdk.kRRrrrrrrrrrrqqkssdk...........',
-  '.kSssdk..kRRrrrrrrrrrqqkkssdk...........',
-  '.kSssdk..kRRrrrrrrrrrqqkkssdk...........',
+  '...........kkgghgggghgkk................',
+  '..........kgHHggghgggghgk...............',
+  '.........kgHHgggggghgggghk..............',
+  '........kgHHgHgghgggghggggk.............',
+  '.......kggHhkkkkgghgggghggk.............',
+  '.......kgHhgkssskggghgggghgk............',
+  '......kgHhggksssskgggghggggk............',
+  '......kgHhggkshghskkkkHggHHk............',
+  '......kgHHggkssssssssskHggHk............',
+  '......kggHhgkssggssssgskhggHk...........',
+  '.....kHhggHhksgssgsdgsgkggHHk...........',
+  '.....kgHhggHkSSSsssdsSskggHhgk..........',
+  '.....kgHhggHkeesssdDsedkgHhggk..........',
+  '.....kHhggHhksdMMMMMMdkgHhggHk..........',
+  '.....khggHhgksdMTTTTMskgHhggHhk.........',
+  '....kHggHHggkssSMmmMskhggHhggHk.........',
+  '....kHggHHggHksssSsskHHggHHggHk.........',
+  '....kHggHHggHHksssddkgHHggHHggHk........',
+  '....kHHggHHggkddddDkhggHhggHhggk........',
+  '...kggHHggHHgksssdDkggHHggHHggHk........',
+  '...kHggHHggHHksssdDkggHhggHhggHk........',
+  '...kHggGHggGkqssssqqkkkkkkkkkkkgk.......',
+  '...kggGHggGHkrqqqqrrrrrrqqkgHhggk.......',
+  '..kggGHggGHkrrrrrrrrrrrrrqqkHhggk.......',
+  '..kgGHggGHkWWrWWWrWWWrWWWrqqkHhggk......',
+  '..kgGHggGkWrrrWrWrrrWrWrQrqqkHHggk......',
+  '.kggGGggGkWWWrWrWrWWWrWWWrqqkgGGgk......',
+  '.kHggGHggkrrWrWrWrWrrrWrWrqqkggGk.......',
+  '.kAGggAGgkWWWrWWWrWWWrWWWrqqkgGGk.......',
+  '..kAGggAGkrrrrrrrrrrrrrqqkkkkgGhgk......',
+  '..kAGggAGgkrrrrrrrrrrrrqqksdkGhggk......',
+  '.kAGggAGgkRrrrrrrrrrrrrqqksdkhggk.......',
+  '.kGggAGggkRrrrrrrrrrrrrqqksdkhggk.......',
+  '..kgAGggAkRRrrrrrrrrrrqqkssdkGhk........',
+  '..kgAGggkkRRrrrrrrrrrrqqkssdkGGk........',
+  '.kSkAAgk.kRRrrrrrrrrrqqkkssdkkk.........',
+  '.kSskkk..kRRrrrrrrrrrqqkkssdk...........',
   '.kSsssdk.kRRrrrrrrrrrqqkkssdk...........',
   '..kSsssdkkRrrqrrqrqrrqqkkssdk...........',
   '...kSsssdkRrqQnnCnnQrqqkkssdk...........',
@@ -102,14 +100,14 @@ const BODY = [
   '......kJjjjjjjjjjjjjjjnnksssdkCck.......',
   '.......kJjjjjjjjjjjjjjnnkSsdskkkkkk.....',
   '.......kJjjjjjjjnnjjjjnnkkdkdkfffFk.....',
-  '.......kJjjjjjjnnkjjjjnnk.kfkyyBbFk.....',
-  '.......kJjjjjjjnnkjjjjnnk.kfbBBbbFk.....',
-  '........kJjjjjjnnkjjjjnnk..kfbBxbbFk....',
-  '........kJjjjjjnnkjjjjnnk..kfbBxbbFk....',
-  '........kJjjjjjnnkjjjjnnk..kfbBBbbFk....',
-  '.........kJjjjjnnkjjjjnnk..kfbBBbbFk....',
-  '.........kJjjjjnnkjjjjnnk...kfbBBbbFk...',
-  '.........kJjjjjnnkjjjjnnk...kfbuubbFk...',
+  '.......kJjjjjjjnnkjjjjnnk.kfBBBbbFk.....',
+  '.......kJjjjjjjnnkjjjjnnk.kfBBBbbFk.....',
+  '........kJjjjjjnnkjjjjnnk..kfBBBbbFk....',
+  '........kJjjjjjnnkjjjjnnk..kfBBBbbFk....',
+  '........kJjjjjjnnkjjjjnnk..kfBBBbbFk....',
+  '.........kJjjjjnnkjjjjnnk..kfBBBbbFk....',
+  '.........kJjjjjnnkjjjjnnk...kfBBBbbFk...',
+  '.........kJjjjjnnkjjjjnnk...kfBBBbbFk...',
   '.........kJjjjjnnkjjjjnnk...kFFFFFFFk...',
   '..........kJjjjnnkjjjjnnk...kkkkkkkkk...',
   '..........kJjjjnnkjjjjnnk...............',
@@ -167,10 +165,8 @@ function stamp(grid, x0, y0, lines) {
   });
 }
 
-function pixels(breath, blink, sway) {
+function pixels(breath, sway) {
   const grid = BODY.map((row) => [...row]);
-  // Eyes shut behind the lenses.
-  if (blink) stamp(grid, 14, 10, ['ddd...dd', 'ggg...gg']);
   grid[57][35] = 'p';
   grid[58][35 + sway] = 'p';
   stamp(grid, 34 + sway, 59, MARKER);
@@ -179,13 +175,13 @@ function pixels(breath, blink, sway) {
 }
 
 const cache = new Map();
-/** The hero as an offscreen layer, cached per pose. o: breath (1: breathing in), blink, sway (-1, 0 or 1: the marker). */
+/** The hero as an offscreen layer, cached per pose. o: breath (1: breathing in), sway (-1, 0 or 1: the marker). */
 export function heroLayer(o = {}) {
-  const breath = o.breath ? 1 : 0, blink = !!o.blink;
+  const breath = o.breath ? 1 : 0;
   const sway = Math.max(-1, Math.min(1, Math.round(o.sway ?? 0)));
-  const key = `${breath} ${blink} ${sway}`;
+  const key = `${breath} ${sway}`;
   if (!cache.has(key)) {
-    const grid = pixels(breath, blink, sway);
+    const grid = pixels(breath, sway);
     cache.set(key, layer(HERO_W, HERO_H, () => {
       grid.forEach((row, y) => {
         // One rectangle per run of the same colour.
@@ -201,10 +197,10 @@ export function heroLayer(o = {}) {
   return cache.get(key);
 }
 
-/** The idle loop at t seconds: a breath every 3.6 s, a blink now and then, the marker swinging on its cord. */
+/** The idle loop at t seconds: a breath every 3.6 s and the marker swinging on its cord. */
 export function heroIdle(t) {
   const swing = Math.sin(t * 2.1);
-  return { breath: t % 3.6 < 1.5 ? 1 : 0, blink: t % 4.7 > 4.55 || t % 11.3 > 11.15, sway: swing > 0.55 ? 1 : swing < -0.55 ? -1 : 0 };
+  return { breath: t % 3.6 < 1.5 ? 1 : 0, sway: swing > 0.55 ? 1 : swing < -0.55 ? -1 : 0 };
 }
 
 /** Draw the hero standing on (x, y): x is the middle of her body, y the floor. o as for heroLayer. */
