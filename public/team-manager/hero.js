@@ -152,11 +152,11 @@ const MARKER = [
   '.kk.',
 ];
 
-// One see-through row on top, so breathing in can lift her head and shoulders a pixel.
-export const HERO_W = 40, HERO_H = 84;
+export const HERO_W = 40, HERO_H = 83;
 const FOOT_X = 17;
-// Breathing stretches the sprite at this row: the middle of the shirt, where every column runs straight down.
-const BREATH_ROW = 31;
+// Breathing in lifts her shoulders and chest a pixel and her head stays put: a neck row drops out, and the sprite
+// stretches back at BREATH_ROW, the middle of the shirt, where every column runs straight down.
+const NECK_ROW = 19, BREATH_ROW = 31;
 
 function stamp(grid, x0, y0, lines) {
   lines.forEach((line, dy) => {
@@ -173,8 +173,8 @@ function pixels(breath, blink, sway) {
   grid[57][35] = 'p';
   grid[58][35 + sway] = 'p';
   stamp(grid, 34 + sway, 59, MARKER);
-  const blank = Array(HERO_W).fill('.');
-  return breath ? [...grid.slice(0, BREATH_ROW + 1), grid[BREATH_ROW], ...grid.slice(BREATH_ROW + 1)] : [blank, ...grid];
+  if (!breath) return grid;
+  return [...grid.slice(0, NECK_ROW), ...grid.slice(NECK_ROW + 1, BREATH_ROW + 1), grid[BREATH_ROW], ...grid.slice(BREATH_ROW + 1)];
 }
 
 const cache = new Map();
@@ -200,10 +200,10 @@ export function heroLayer(o = {}) {
   return cache.get(key);
 }
 
-/** The idle loop at t seconds: a breath every 3.6 s, a blink now and then, the marker swinging on its cord. */
+/** The idle loop at t seconds: a slow breath every 4.8 s, a blink now and then, the marker swinging on its cord. */
 export function heroIdle(t) {
   const swing = Math.sin(t * 2.1);
-  return { breath: t % 3.6 < 1.5 ? 1 : 0, blink: t % 4.7 > 4.55 || t % 11.3 > 11.15, sway: swing > 0.55 ? 1 : swing < -0.55 ? -1 : 0 };
+  return { breath: t % 4.8 < 2 ? 1 : 0, blink: t % 4.7 > 4.55 || t % 11.3 > 11.15, sway: swing > 0.55 ? 1 : swing < -0.55 ? -1 : 0 };
 }
 
 /** Draw the hero standing on (x, y): x is the middle of her body, y the floor. o as for heroLayer. */
