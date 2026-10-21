@@ -21,6 +21,7 @@ import {
 } from './sprites.js';
 import { Chip, Player, BEAT, INTRO_BEATS } from './chip.js';
 import { SONGS } from './songs.js';
+import { drawHero, heroIdle } from './hero.js';
 
 // The working title. Change it here; the logo is sized from the text.
 const GAME_TITLE = 'BLUE BANNER';
@@ -180,8 +181,8 @@ function scoreboard(blue, red, secs) {
   text(`0:${String(secs).padStart(2, '0')}`, x + 50, y + 3, { align: 'center', color: late ? C.red2 : C.yel2 });
 }
 const rslOn = (B) => Math.floor(B) % 2 === 0;
-// The main character, on the title screen and in the middle of the team holding up the banner.
-const HERO = { skin: 4, hair: 4, style: 'bangs' };
+// The main character in the middle of the team holding up the banner (the title screen draws her full size, hero.js).
+const HERO = { skin: 4, hair: 4, style: 'long' };
 // The defender's light blinks a beat after the hero's, so the two alternate like a tick-tock (0 = in unison).
 const DEFENDER_RSL_OFFSET = 1;
 const rslDefender = (B) => rslOn(B + DEFENDER_RSL_OFFSET);
@@ -589,11 +590,11 @@ function drawTitle(t, B) {
   screen();
   const subX = Math.round(lerp(330, 128, easeOut(seg(t, 1.1, 1.6))));
   text(SUBTITLE, subX, 40, { align: 'center', spacing: 1, color: C.blue3, shadow: C.blue0, sx: 0, sy: 1 });
-  // The coach and the robot line-up, at double size.
+  // The main character slides in, drawn at the canvas's own resolution; her idle loop runs in seconds.
+  screen();
+  drawHero(Math.round(lerp(-40, 64, easeOut(seg(t, 1.6, 2.2)))), 132, heroIdle(t * track.spb));
+  // The robot line-up, at double size.
   camera(0, -66, 2);
-  const cx = lerp(-20, 32, easeOut(seg(t, 1.6, 2.2)));
-  // The main character: a high-school student with the team's scouting tablet.
-  person(cx, Math.floor(t / 2) % 2 ? -0.5 : 0, { ...HERO, glasses: 'up', straps: true, tablet: true, smile: true, arms: 'down' });
   if (t > 2) {
     const c = (t - 2) % 8, i = Math.floor((t - 2) / 8) % ROSTER.length;
     const x = c < 0.8 ? lerp(160, 101, easeOut(c / 0.8)) : c > 7.2 ? lerp(101, 170, easeIn((c - 7.2) / 0.8)) : 101;
