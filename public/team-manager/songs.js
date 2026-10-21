@@ -5,7 +5,8 @@
 //   buzzer: when the HAB countdown reaches zero (realClock: show real seconds left, for long climbs);
 //   flashes: white flashes on big hits; titleAt: the logo drop;
 //   loop: the part of the song the title screen repeats (chosen where rhythm and harmony match on both sides).
-// The audio files are not in the repo yet: drop the MP3 into public/team-manager/songs/ to use one.
+// The audio goes in public/team-manager/songs/. Compete to Win 3 (the one index.html uses) is there; the other two
+// cue sheets were for comparing and need their MP3 dropped in to play.
 
 const grid = (t0, bpm) => (k) => t0 + (k * 60) / bpm;
 
@@ -74,7 +75,7 @@ export const SONGS = {
     loop: [14.679, 44.684],
     cues: [
       // The star crosses during the opening swell; the name completes on its peak.
-      { shot: 'logo', keys: [[0, 0], [0.6, 0.5], [2.194, 2.4], [3.985, 7]] },
+      { shot: 'logo', keys: [[0, 0], [0.6, 0.5], [2.194, 2.4], [3.985, 8]] },
       { shot: 'rocket', keys: [[3.985, 0], [6.371, 6.05]] },
       // Hatch on the downbeat at 0:08.
       { shot: 'lift', keys: [[6.371, 0], [7.992, 4], [8.94, 6.4]] },

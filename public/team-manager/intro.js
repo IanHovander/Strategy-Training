@@ -1,13 +1,14 @@
 // The opening of the FRC team manager game: a 26-second pixel-art sizzle reel, then the title screen.
 //   1 logo      a shooting star writes the studio name
 //   2 rocket    tilt down from the stars; the blue elevator robot races in to the 2019 rocket
-//   3 lift      two stage pops, hatch on the top level
+//   3 lift      the elevator runs straight up to level 3; hatch on the top port
 //   4 pan       whip pan to a red defender; close-ups of both robots
 //   5 clash     the hit, a spin move, then a sprint to the endgame
 //   6 hab       a level 3 climb that beats the buzzer
 //   7 win       final score, the team, and the blue banner going up
 // then the title screen loops. Every frame is drawn from the music clock, so cuts land on the beat.
-// It can also play over a recorded song (songs.js): <canvas data-song="wilderness-call"> or ?song=wilderness-call.
+// It can also play over a recorded song (songs.js): <canvas data-song="compete-to-win-3">, or ?song=... to pick
+// another (?song=chip for the chiptune). If the song file can't be loaded, it falls back to the chiptune.
 // URL options for testing: ?at=SECONDS (freeze that frame), ?title (start at the title), ?mute.
 
 import {
@@ -35,7 +36,7 @@ useContext(g);
 
 const params = new URLSearchParams(location.search);
 const frozenAt = params.has('at') ? Number(params.get('at')) : null;
-const SONG = SONGS[canvas.dataset.song || params.get('song')] ?? null;
+let SONG = SONGS[params.get('song') ?? canvas.dataset.song] ?? null;
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // ---- Art made once ----
@@ -242,7 +243,10 @@ function shotRocket(b, B) {
 }
 
 function shotLift(b, B) {
-  const e1 = easeBack(seg(b, 0.25, 1.1)), e2 = easeBack(seg(b, 2, 2.85));
+  // One smooth run straight to level 3: both stages travel together (the inner one a hair behind, like a cascade
+  // elevator) and settle at the top.
+  const settle = Math.sin(Math.PI * seg(b, 2.9, 3.3)) * 0.04;
+  const e1 = easeInOut(seg(b, 0.2, 2.7)) + settle, e2 = easeInOut(seg(b, 0.4, 2.9)) + settle;
   const placed = b >= 4;
   const reach = b < 3.2 ? 0 : !placed ? Math.round(seg(b, 3.2, 3.9) * 3) : Math.round((1 - seg(b, 4.2, 4.8)) * 3);
   const hy = hatchHeight(e1, e2);
@@ -730,7 +734,7 @@ class SongTrack {
   }
 }
 
-const track = SONG ? new SongTrack(SONG) : new ChipTrack();
+let track = SONG ? new SongTrack(SONG) : new ChipTrack();
 const ui = { state: 'boot', cursor: 0, dialog: 0, woke: false, pending: false };
 // The picture always runs on its own clock. The music joins it at the current moment as soon as the audio is
 // actually running, which on some phones is only after a later tap, or again after the phone interrupted it.
@@ -856,6 +860,11 @@ function render() {
   const now = perfNow();
   g.globalAlpha = 1;
   updateMuteLabel();
+  if (SONG && track.error) {
+    console.warn(`Could not load ${SONG.file}; playing the chiptune instead.`, track.error);
+    SONG = null;
+    track = new ChipTrack();
+  }
   if (ui.pending && track.ready) begin();
   if (ui.state === 'boot' && frozenAt == null) return drawBoot(now);
   const t = timeNow();

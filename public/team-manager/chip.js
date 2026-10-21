@@ -234,8 +234,6 @@ export class Chip {
       whoosh: () => this.noise(t, 0.45, { vol: 0.22, type: 'bandpass', hz: 400, sweep: 3500, q: 1.2 }),
       whip: () => this.noise(t, 0.7, { vol: 0.25, type: 'bandpass', hz: 300, sweep: 4000, q: 1.5 }),
       skid: () => this.noise(t, 0.3, { vol: 0.16, type: 'bandpass', hz: 1500, sweep: 700, q: 3 }),
-      pop: () => this.tone(t, 0.08, 520, { wave: 'p50', slide: 1300, vol: 0.12 }),
-      pop2: () => this.tone(t, 0.08, 700, { wave: 'p50', slide: 1800, vol: 0.12 }),
       clunk: () => {
         this.tone(t, 0.12, 140, { wave: 'p50', slide: 60, vol: 0.25, decay: true });
         this.noise(t, 0.12, { vol: 0.3, type: 'lowpass', hz: 900 });
@@ -385,7 +383,7 @@ export const TITLE_LOOP = TITLE.length * 4;
 const SFX = {
   logo: [[0.5, 'star']],
   rocket: [[3.4, 'whoosh'], [5, 'skid']],
-  lift: [[0.25, 'pop'], [2, 'pop2'], [4, 'clunk']],
+  lift: [[0.2, 'whine'], [4, 'clunk']],
   pan: [[0.4, 'whip'], [2.6, 'rev'], [4.5, 'glint'], [7.3, 'glint']],
   clash: [[0.2, 'rev'], [2, 'impact'], [3, 'spin'], [5, 'whoosh'], [6.5, 'alarm']],
   hab: [[0.8, 'skid'], [1, 'whine'], [3.8, 'clunk'], [6.5, 'whine'], ...[1, 2, 3, 4, 5, 6, 7].map((b) => [b, 'tick']), [8, 'buzzer'], [8.5, 'slam']],
