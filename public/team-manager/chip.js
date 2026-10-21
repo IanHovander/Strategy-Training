@@ -63,6 +63,10 @@ export class Chip {
       comp.threshold.value = -14;
       comp.ratio.value = 4;
       this.master.connect(comp).connect(ac.destination);
+      // Recorded music skips the compressor: it's already mastered.
+      this.direct = ac.createGain();
+      this.direct.gain.value = this.muted ? 0 : 1;
+      this.direct.connect(ac.destination);
       this.noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
       const d = this.noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -132,6 +136,7 @@ export class Chip {
   setMuted(m) {
     this.muted = m;
     if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.5, this.ac.currentTime, 0.02);
+    if (this.direct) this.direct.gain.setTargetAtTime(m ? 0 : 1, this.ac.currentTime, 0.02);
   }
   /** A fresh output for a new run of the music; the old one fades out with everything still queued on it. */
   newBus() {

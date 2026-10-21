@@ -7,6 +7,7 @@
 //   6 hab       a level 3 climb that beats the buzzer
 //   7 win       final score, the team, and the blue banner going up
 // then the title screen loops. Every frame is drawn from the music clock, so cuts land on the beat.
+// It can also play over a recorded song (songs.js): <canvas data-song="wilderness-call"> or ?song=wilderness-call.
 // URL options for testing: ?at=SECONDS (freeze that frame), ?title (start at the title), ?mute.
 
 import {
@@ -18,6 +19,7 @@ import {
   banner, ROCKET_LEVELS,
 } from './sprites.js';
 import { Chip, Player, BEAT, INTRO_BEATS } from './chip.js';
+import { SONGS } from './songs.js';
 
 // The working title. Change it here; the logo is sized from the text.
 const GAME_TITLE = 'BLUE BANNER';
@@ -33,6 +35,7 @@ useContext(g);
 
 const params = new URLSearchParams(location.search);
 const frozenAt = params.has('at') ? Number(params.get('at')) : null;
+const SONG = SONGS[canvas.dataset.song || params.get('song')] ?? null;
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // ---- Art made once ----
@@ -367,7 +370,7 @@ function shotSprint(b, B) {
   flash(b, 5, 0.08);
 }
 
-function shotHab(b, B) {
+function shotHab(b, B, info) {
   // The climb, step by step, all before the buzzer at beat 8.
   let x, lift, front, rear;
   if (b < 1) [x, lift] = [lerp(50, 131, easeOut(seg(b, 0, 1))), 0];
@@ -393,7 +396,7 @@ function shotHab(b, B) {
   // The body shudders up and down while the stilt feet stay planted on level 1.
   eleBot(x, HAB.l1, { lift: lift + jit, front: front ? front + jit : 0, rear: rear ? rear + jit : 0, spin: x * 0.64, rsl: done ? true : rslOn(B) });
   if (working) sparks(x + (b < 4.5 ? 1 : -12), HAB.l1 - 2, b, Math.floor(b * 4) / 4, 3, 14, 0.25, Math.floor(b * 4));
-  const secs = done ? 0 : Math.max(0, 8 - Math.floor(b));
+  const secs = done ? 0 : info?.buzzer != null ? Math.max(0, Math.ceil(info.buzzer - info.t - 1e-6)) : Math.max(0, 8 - Math.floor(b));
   const blue = done ? Math.round(lerp(64, 76, seg(b, 8.3, 9))) : 64;
   scoreboard(blue, 71, secs);
   if (b > 8.5) {
@@ -482,6 +485,40 @@ const SHOTS = [
   [8, shotLogo], [8, shotRocket], [8, shotLift], [8, shotPan], [8, shotClash], [12, shotHab], [12, shotWin],
 ];
 if (SHOTS.reduce((n, [len]) => n + len, 0) !== INTRO_BEATS) console.warn('Shot lengths do not match the score');
+const SHOT_BY_NAME = { logo: shotLogo, rocket: shotRocket, lift: shotLift, pan: shotPan, clash: shotClash, hab: shotHab, win: shotWin };
+
+/** Straight lines between [time, value] keys; flat before the first and after the last. */
+function interp(keys, t) {
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, v1] = keys[i];
+    if (t <= t1) {
+      const [t0, v0] = keys[i - 1];
+      return v0 + ((v1 - v0) * (t - t0)) / (t1 - t0);
+    }
+  }
+  return keys[keys.length - 1][1];
+}
+/** One intro frame at time t (seconds) over the chip score. */
+function drawChipIntro(t) {
+  const B = t / BEAT;
+  let start = 0;
+  for (const [len, draw] of SHOTS) {
+    if (B < start + len) return draw(B - start, B);
+    start += len;
+  }
+}
+/** One intro frame at song time t, from the song's cue sheet. */
+function drawSongIntro(t) {
+  const cue = SONG.cues.findLast((q) => t >= q.keys[0][0]) ?? SONG.cues[0];
+  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), t / track.spb, { t, buzzer: SONG.buzzer });
+  for (const f of SONG.flashes ?? []) {
+    if (t >= f && t < f + 0.12 && !reduceMotion) {
+      screen();
+      withAlpha(stepped(1 - (t - f) / 0.12), () => fill(0, 0, W, H, C.white));
+    }
+  }
+}
 
 // ---- Title screen ----
 const ROSTER = [
@@ -573,43 +610,163 @@ function drawBoot(now) {
   screen();
   fill(0, 0, W, H, C.ink);
   withAlpha(0.6, () => sky(SKY, 144, now / BEAT));
-  if (Math.floor(now * 1.6) % 2 === 0) text('PRESS START', 128, 62, { align: 'center', color: C.white });
+  const waiting = ui.pending && !track.ready;
+  if (track.error) text('COULD NOT LOAD THE SONG', 128, 62, { align: 'center', color: C.red2 });
+  else if (waiting) text('LOADING THE SONG...', 128, 62, { align: 'center', color: C.white });
+  else if (Math.floor(now * 1.6) % 2 === 0) text('PRESS START', 128, 62, { align: 'center', color: C.white });
   text('TAP OR PRESS ANY KEY. SOUND ON.', 128, 80, { font: 3, align: 'center', color: C.steel2 });
+  if (SONG) text(`MUSIC: ${SONG.name.toUpperCase()}`, 128, 92, { font: 3, align: 'center', color: C.blue3 });
 }
 
 // ---- Clock, input and the loop ----
 const chip = new Chip();
 chip.muted = params.has('mute');
-const player = new Player(chip);
-const ui = { state: 'boot', cursor: 0, dialog: 0, woke: false };
-// The picture always runs on its own clock. The music joins it at the current beat as soon as the audio is
+
+// ---- Soundtracks. Both count time in seconds from the start of the intro. ----
+
+/** The chiptune score from chip.js. */
+class ChipTrack {
+  constructor() {
+    this.player = new Player(chip);
+    this.ready = true;
+    this.spb = BEAT;
+    this.titleAt = INTRO_BEATS * BEAT;
+  }
+  start(t) {
+    this.player.play(t / BEAT, chip.now());
+  }
+  time() {
+    return this.player.beatAt(chip.now()) * BEAT;
+  }
+  pump() {
+    this.player.pump();
+  }
+}
+
+/** A recorded song: plays once up to the end of its title loop, then repeats the loop with a short crossfade. */
+class SongTrack {
+  constructor(song) {
+    this.song = song;
+    this.spb = 60 / song.bpm;
+    this.titleAt = song.titleAt;
+    this.buffer = null;
+    this.error = null;
+    this.playing = [];
+    // Decode without waiting for a tap: an offline context needs no permission.
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    fetch(new URL(song.file, document.baseURI))
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data) => new Promise((ok, fail) => new OAC(2, 1, 44100).decodeAudioData(data, ok, fail)))
+      .then((buf) => (this.buffer = buf), (e) => (this.error = e ?? new Error('decode failed')));
+  }
+  get ready() {
+    return !!this.buffer;
+  }
+  /** Song time t starts playing now. */
+  start(t) {
+    this.stop();
+    chip.newBus();
+    const ac = chip.ac;
+    this.t0 = ac.currentTime + 0.03 - t;
+    this.out = ac.createGain();
+    this.out.gain.value = 0.9;
+    this.out.connect(chip.direct);
+    this.queued = Math.max(0, t); // song time up to which audio is scheduled
+    this.sfxFrom = t;
+    this.pump();
+  }
+  time() {
+    return chip.now() - this.t0;
+  }
+  /** One stretch of the buffer, faded in and out so the loop seam doesn't click. */
+  segment(at, offset, dur) {
+    const ac = chip.ac, X = 0.03;
+    const src = ac.createBufferSource(), g = ac.createGain();
+    src.buffer = this.buffer;
+    const when = this.t0 + at;
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(1, when + X);
+    g.gain.setValueAtTime(1, when + dur);
+    g.gain.linearRampToValueAtTime(0, when + dur + X);
+    src.connect(g).connect(this.out);
+    src.start(when, offset, dur + X);
+    this.playing.push(src);
+  }
+  pump() {
+    if (!this.out) return;
+    const [L0, L1] = this.song.loop, now = this.time();
+    while (this.queued < now + 2) {
+      if (this.queued < L1) {
+        this.segment(this.queued, this.queued, L1 - this.queued);
+        this.queued = L1;
+      } else {
+        this.segment(this.queued, L0, L1 - L0);
+        this.queued += L1 - L0;
+      }
+    }
+    this.playing = this.playing.slice(-4);
+    if (this.song.buzzer >= this.sfxFrom && this.song.buzzer < now + 0.25) {
+      chip.sfx('buzzer', this.t0 + this.song.buzzer);
+      this.sfxFrom = Infinity;
+    }
+  }
+  stop() {
+    if (!this.out) return;
+    const out = this.out;
+    out.gain.setTargetAtTime(0, chip.ac.currentTime, 0.02);
+    const old = this.playing;
+    setTimeout(() => {
+      for (const s of old) {
+        try {
+          s.stop();
+        } catch {
+          // Already finished.
+        }
+      }
+      out.disconnect();
+    }, 300);
+    this.playing = [];
+    this.out = null;
+  }
+}
+
+const track = SONG ? new SongTrack(SONG) : new ChipTrack();
+const ui = { state: 'boot', cursor: 0, dialog: 0, woke: false, pending: false };
+// The picture always runs on its own clock. The music joins it at the current moment as soon as the audio is
 // actually running, which on some phones is only after a later tap, or again after the phone interrupted it.
 const clock = { perf0: 0, audio: false };
 const perfNow = () => performance.now() / 1000;
 
-function playFrom(beat) {
+function playFrom(t) {
   chip.start();
-  clock.perf0 = perfNow() + 0.06 - beat * BEAT;
+  clock.perf0 = perfNow() + 0.06 - t;
   clock.audio = false;
 }
-function beatNow() {
-  if (frozenAt != null) return frozenAt / BEAT;
-  if (!chip.running) clock.audio = false;
+function timeNow() {
+  if (frozenAt != null) return frozenAt;
+  if (!chip.running || !track.ready) clock.audio = false;
   else if (!clock.audio) {
-    player.play((perfNow() - clock.perf0) / BEAT, chip.now());
+    track.start(perfNow() - clock.perf0);
     clock.audio = true;
   }
-  if (!clock.audio) return (perfNow() - clock.perf0) / BEAT;
-  const beat = player.beatAt(chip.now());
-  clock.perf0 = perfNow() - beat * BEAT;
-  return beat;
+  if (!clock.audio) return perfNow() - clock.perf0;
+  const t = track.time();
+  clock.perf0 = perfNow() - t;
+  return t;
+}
+function begin() {
+  ui.state = 'play';
+  ui.pending = false;
+  playFrom(params.has('title') ? track.titleAt : 0);
 }
 
 function press(key) {
   const now = perfNow();
   if (ui.state === 'boot') {
-    ui.state = 'play';
-    playFrom(params.has('title') ? INTRO_BEATS : 0);
+    // The tap unlocks the audio now; a song still loading starts as soon as it's ready.
+    chip.start();
+    if (track.ready) begin();
+    else ui.pending = true;
     return;
   }
   if (ui.state === 'play') {
@@ -618,9 +775,9 @@ function press(key) {
       ui.woke = true;
       return;
     }
-    const beat = beatNow();
-    if (beat < INTRO_BEATS - 0.5) playFrom(INTRO_BEATS);
-    else if (beat > INTRO_BEATS + 1.5 && (key === 'a' || key === 'start')) {
+    const t = timeNow();
+    if (t < track.titleAt - 0.5 * track.spb) playFrom(track.titleAt);
+    else if (t > track.titleAt + 1.5 * track.spb && (key === 'a' || key === 'start')) {
       ui.state = 'menu';
       ui.cursor = 0;
       chip.sfx('select');
@@ -699,20 +856,17 @@ function render() {
   const now = perfNow();
   g.globalAlpha = 1;
   updateMuteLabel();
+  if (ui.pending && track.ready) begin();
   if (ui.state === 'boot' && frozenAt == null) return drawBoot(now);
-  const B = beatNow();
-  if (clock.audio) player.pump();
+  const t = timeNow();
+  if (clock.audio) track.pump();
   if (ui.state === 'menu') return drawMenu(now);
-  if (B < 0) {
+  if (t < 0) {
     screen();
     return fill(0, 0, W, H, C.ink);
   }
-  if (B >= INTRO_BEATS) return drawTitle(B - INTRO_BEATS, B);
-  let start = 0;
-  for (const [len, draw] of SHOTS) {
-    if (B < start + len) return draw(B - start, B);
-    start += len;
-  }
+  if (t >= track.titleAt) return drawTitle((t - track.titleAt) / track.spb, t / track.spb);
+  return SONG ? drawSongIntro(t) : drawChipIntro(t);
 }
 // Add #debug to the address to see what the audio is doing (handy on phones, which have no console).
 if (location.hash === '#debug') {
@@ -720,7 +874,8 @@ if (location.hash === '#debug') {
   out.style.cssText = 'position:fixed;left:8px;top:8px;margin:0;padding:6px 8px;background:#000d;color:#9fe8d0;font:11px/1.45 ui-monospace,monospace;z-index:9;pointer-events:none;white-space:pre-wrap;max-width:calc(100vw - 32px)';
   document.body.append(out);
   setInterval(() => {
-    out.textContent = `${chip.describe()}\nin a frame: ${window.top !== window}\n${navigator.userAgent}`;
+    const t = ui.state === 'boot' ? 'not started' : `${timeNow().toFixed(2)} s (${clock.audio ? 'on the audio clock' : 'on its own clock'})`;
+    out.textContent = `${chip.describe()}\nmusic: ${SONG ? SONG.name + (track.error ? ' (failed to load)' : track.ready ? '' : ' (loading)') : 'chiptune'}\nintro time: ${t}\nin a frame: ${window.top !== window}\n${navigator.userAgent}`;
   }, 400);
 }
 
