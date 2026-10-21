@@ -40,7 +40,7 @@
   button:hover { border-color: var(--blue); }
   button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   button[aria-pressed="true"] { background: var(--gold); color: var(--ink); border-color: var(--ink); }
-  .labels { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; font-size: 13px; color: var(--muted); }
+  .labels { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 13px; color: var(--muted); }
   ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 64ch; }
   li b { color: var(--text); }
   .foot { margin: 0; font-size: 13px; max-width: 64ch; }
@@ -53,7 +53,7 @@
 
   <section class="card" aria-labelledby="close-h">
     <h2 id="close-h">Up close</h2>
-    <div class="view"><canvas id="close" width="64" height="100" aria-label="The hero sprite, enlarged, breathing and blinking"></canvas></div>
+    <div class="view"><canvas id="close" width="64" height="100" aria-label="The hero sprite, enlarged, blinking now and then"></canvas></div>
     <div class="buttons"><button type="button" id="idle" aria-pressed="true">Idle animation</button></div>
   </section>
 
@@ -69,8 +69,8 @@
 
   <section class="card" aria-labelledby="all-h">
     <h2 id="all-h">The idle frames</h2>
-    <div class="view"><canvas id="all" width="176" height="96" aria-label="The four idle frames: resting, breathing in, a blink, the marker swinging"></canvas></div>
-    <div class="labels" aria-hidden="true"><span>Resting</span><span>Breathing in</span><span>Blink</span><span>Marker swing</span></div>
+    <div class="view"><canvas id="all" width="132" height="96" aria-label="The three idle frames: resting, a blink, the marker swinging"></canvas></div>
+    <div class="labels" aria-hidden="true"><span>Resting</span><span>Blink</span><span>Marker swing</span></div>
   </section>
 
   <section class="card" aria-labelledby="look-h">
@@ -160,8 +160,8 @@
 
     useContext(all.g);
     screen();
-    backdrop(176, 96, 90);
-    [{}, { breath: 1 }, { blink: true }, { sway: 1 }].forEach((frame, i) => drawHero(22 + i * 44, 90, frame));
+    backdrop(132, 96, 90);
+    [{}, { blink: true }, { sway: 1 }].forEach((frame, i) => drawHero(22 + i * 44, 90, frame));
   }
 
   function frame(now) {

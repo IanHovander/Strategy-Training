@@ -154,9 +154,6 @@ const MARKER = [
 
 export const HERO_W = 40, HERO_H = 83;
 const FOOT_X = 17;
-// Breathing in lifts her shoulders and chest a pixel and her head stays put: a neck row drops out, and the sprite
-// stretches back at BREATH_ROW, the middle of the shirt, where every column runs straight down.
-const NECK_ROW = 19, BREATH_ROW = 31;
 
 function stamp(grid, x0, y0, lines) {
   lines.forEach((line, dy) => {
@@ -166,25 +163,24 @@ function stamp(grid, x0, y0, lines) {
   });
 }
 
-function pixels(breath, blink, sway) {
+function pixels(blink, sway) {
   const grid = BODY.map((row) => [...row]);
   // Eyes shut: the lashes drop to where the irises were.
   if (blink) stamp(grid, 13, 9, ['dddd...ddd', '.ggg...gg']);
   grid[57][35] = 'p';
   grid[58][35 + sway] = 'p';
   stamp(grid, 34 + sway, 59, MARKER);
-  if (!breath) return grid;
-  return [...grid.slice(0, NECK_ROW), ...grid.slice(NECK_ROW + 1, BREATH_ROW + 1), grid[BREATH_ROW], ...grid.slice(BREATH_ROW + 1)];
+  return grid;
 }
 
 const cache = new Map();
-/** The hero as an offscreen layer, cached per pose. o: breath (1: breathing in), blink, sway (-1, 0 or 1: the marker). */
+/** The hero as an offscreen layer, cached per pose. o: blink, sway (-1, 0 or 1: the marker). */
 export function heroLayer(o = {}) {
-  const breath = o.breath ? 1 : 0, blink = !!o.blink;
+  const blink = !!o.blink;
   const sway = Math.max(-1, Math.min(1, Math.round(o.sway ?? 0)));
-  const key = `${breath} ${blink} ${sway}`;
+  const key = `${blink} ${sway}`;
   if (!cache.has(key)) {
-    const grid = pixels(breath, blink, sway);
+    const grid = pixels(blink, sway);
     cache.set(key, layer(HERO_W, HERO_H, () => {
       grid.forEach((row, y) => {
         // One rectangle per run of the same colour.
@@ -200,10 +196,10 @@ export function heroLayer(o = {}) {
   return cache.get(key);
 }
 
-/** The idle loop at t seconds: a slow breath every 4.8 s, a blink now and then, the marker swinging on its cord. */
+/** The idle loop at t seconds: a blink every 6.3 s and the marker swinging on its cord. */
 export function heroIdle(t) {
   const swing = Math.sin(t * 2.1);
-  return { breath: t % 4.8 < 2 ? 1 : 0, blink: t % 4.7 > 4.55 || t % 11.3 > 11.15, sway: swing > 0.55 ? 1 : swing < -0.55 ? -1 : 0 };
+  return { blink: t % 6.3 > 6.16, sway: swing > 0.55 ? 1 : swing < -0.55 ? -1 : 0 };
 }
 
 /** Draw the hero standing on (x, y): x is the middle of her body, y the floor. o as for heroLayer. */
