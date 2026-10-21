@@ -281,25 +281,27 @@ export class Chip {
 // The title screen then loops the full theme in D (16 bars, with a middle section that climbs back to it).
 
 const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
-const midi = (n) => {
+export const midi = (n) => {
   const m = /^([A-G]#?)(\d)$/.exec(n);
   return NOTE[m[1]] + (Number(m[2]) + 1) * 12;
 };
-const hz = (m) => 440 * 2 ** ((m - 69) / 12);
-/** "E5:1 r:.5 G5:.5" -> [{ b, d, m }], beats from the start of the bar. */
-function line(src) {
+export const hz = (m) => 440 * 2 ** ((m - 69) / 12);
+/** "E5:1 r:.5 G5:1/3" -> [{ b, d, m }], beats from the start of the bar. */
+export function line(src) {
   const out = [];
   let b = 0;
   for (const tok of src.split(/\s+/).filter(Boolean)) {
-    const [n, d] = tok.split(':');
-    if (n !== 'r') out.push({ b, d: Number(d), m: midi(n) });
-    b += Number(d);
+    const [n, ds] = tok.split(':');
+    const [num, den = 1] = ds.split('/').map(Number);
+    const d = num / den;
+    if (n !== 'r') out.push({ b, d, m: midi(n) });
+    b += d;
   }
   return out;
 }
 // Chords: 'C', 'Am', 'G7', 'F#m', 'C/G' (after the slash: the bass note).
-const QUALITY = { '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10] };
-function chord(name) {
+const QUALITY = { '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], m7: [0, 3, 7, 10] };
+export function chord(name) {
   const [top, slash] = name.split('/');
   const [, root, q] = /^([A-G]#?)(.*)$/.exec(top);
   return { tones: QUALITY[q].map((i) => (NOTE[root] + i) % 12), bass: 36 + NOTE[slash ?? root] };
@@ -310,7 +312,7 @@ const SCALE = [0, 2, 4, 5, 7, 9, 11];
  * The second voice's note under melody note m: a chord tone a third to a sixth below when the melody sits on
  * the chord, otherwise the note a third below in the key, so passing notes move in parallel thirds.
  */
-function harmony(m, tones, key) {
+export function harmony(m, tones, key) {
   const k = NOTE[key], deg = SCALE.indexOf((m - k + 120) % 12);
   if (!tones.includes(m % 12) && deg >= 0) {
     const below = SCALE[(deg + 5) % 7];
@@ -386,8 +388,9 @@ const SFX = {
 };
 const SHOT_STARTS = { logo: 0, rocket: 8, lift: 16, pan: 24, clash: 32, hab: 40, win: 52 };
 
-/** Turn bars into events [{ b (beats), play(chip, time) }]. */
-function render(bars, o = {}) {
+/** Turn bars into events [{ b (beats), play(chip, time) }]. o.beat: seconds per beat, for other tempos. */
+export function renderBars(bars, o = {}) {
+  const beatSec = o.beat ?? BEAT;
   const ev = [];
   const at = (b, play) => ev.push({ b, play });
   bars.forEach((bar, i) => {
@@ -400,11 +403,11 @@ function render(bars, o = {}) {
 
     // Lead, with a delayed vibrato on long notes, and a second voice under it.
     for (const n of line(bar.lead)) {
-      at(b0 + n.b, (c, t) => c.tone(t, BEAT * n.d * 0.92, hz(n.m), { wave: bar.wave ?? 'p25', vol, vib: n.d >= 1 }));
-      if (bar.echo) at(b0 + n.b + 0.75, (c, t) => c.tone(t, BEAT * n.d * 0.8, hz(n.m), { wave: 'p12', vol: vol * 0.35, decay: true }));
+      at(b0 + n.b, (c, t) => c.tone(t, beatSec * n.d * 0.92, hz(n.m), { wave: bar.wave ?? 'p25', vol, vib: n.d >= 1 }));
+      if (bar.echo) at(b0 + n.b + 0.75, (c, t) => c.tone(t, beatSec * n.d * 0.8, hz(n.m), { wave: 'p12', vol: vol * 0.35, decay: true }));
       if (bar.harm === false || n.d < 0.5) continue;
       const h = harmony(n.m, chordAt(n.b).tones, bar.key ?? o.key);
-      if (h) at(b0 + n.b, (c, t) => c.tone(t, BEAT * n.d * 0.92, hz(h), { wave: 'p50', vol: vol * 0.38 }));
+      if (h) at(b0 + n.b, (c, t) => c.tone(t, beatSec * n.d * 0.92, hz(h), { wave: 'p50', vol: vol * 0.38 }));
     }
 
     // Bass.
@@ -413,8 +416,8 @@ function render(bars, o = {}) {
       const after = segs[j + 1]?.bass ?? nextBass;
       const approach = after % 12 === r % 12 ? r + 12 : after - 1;
       const style = bar.bass ?? 'walk';
-      const eighth = (k, m, len = 0.42, v = 0.4) => at(b0 + s.from + k / 2, (c, t) => c.tone(t, BEAT * len, hz(m), { wave: 'tri', vol: v }));
-      if (style === 'hold') at(b0 + s.from, (c, t) => c.tone(t, BEAT * s.len * 0.95, hz(r), { wave: 'tri', vol: 0.28 }));
+      const eighth = (k, m, len = 0.42, v = 0.4) => at(b0 + s.from + k / 2, (c, t) => c.tone(t, beatSec * len, hz(m), { wave: 'tri', vol: v }));
+      if (style === 'hold') at(b0 + s.from, (c, t) => c.tone(t, beatSec * s.len * 0.95, hz(r), { wave: 'tri', vol: 0.28 }));
       else if (style === 'stab') for (let k = 0; k < s.len * 2; k += 2) eighth(k, r, 0.3, 0.45);
       else {
         const pattern = {
@@ -438,9 +441,9 @@ function render(bars, o = {}) {
     }
     for (const b of bar.crash ?? []) at(b0 + b, (c, t) => c.crash(t, 0.18));
     // Extras: twinkles and chord stings.
-    for (const [b, n] of bar.sparkle ?? []) at(b0 + b, (c, t) => c.tone(t, BEAT * 0.6, hz(midi(n)), { wave: 'p12', vol: 0.07, decay: true }));
+    for (const [b, n] of bar.sparkle ?? []) at(b0 + b, (c, t) => c.tone(t, beatSec * 0.6, hz(midi(n)), { wave: 'p12', vol: 0.07, decay: true }));
     for (const [b, notes] of bar.stabs ?? []) {
-      for (const n of notes) at(b0 + b, (c, t) => c.tone(t, BEAT * 0.7, hz(midi(n)), { wave: 'p50', vol: 0.06, decay: true }));
+      for (const n of notes) at(b0 + b, (c, t) => c.tone(t, beatSec * 0.7, hz(midi(n)), { wave: 'p50', vol: 0.06, decay: true }));
     }
   });
   return ev;
@@ -448,7 +451,7 @@ function render(bars, o = {}) {
 
 /** All intro events with absolute beats, sorted. */
 export function introScore() {
-  const ev = render(INTRO, { drums: null, key: 'C', wrap: TITLE[0] });
+  const ev = renderBars(INTRO, { drums: null, key: 'C', wrap: TITLE[0] });
   for (const [shot, list] of Object.entries(SFX)) for (const [b, name] of list) ev.push({ b: SHOT_STARTS[shot] + b, play: (c, t) => c.sfx(name, t) });
   // A rising noise swell under bar 2, into the drums.
   ev.push({ b: 5, play: (c, t) => c.noise(t, BEAT * 3, { vol: 0.2, hz: 2500, swell: true }) });
@@ -457,7 +460,7 @@ export function introScore() {
 
 /** One pass of the title loop, beats from its start. The first pass also thumps when the logo lands. */
 export function titleScore(first) {
-  const ev = render(TITLE, { drums: 'march', vol: 0.13, key: 'D', wrap: TITLE[0] });
+  const ev = renderBars(TITLE, { drums: 'march', vol: 0.13, key: 'D', wrap: TITLE[0] });
   if (first) {
     ev.push({ b: 0.5, play: (c, t) => c.sfx('slam', t) });
     ev.push({ b: 0.5, play: (c, t) => c.crash(t, 0.22) });
