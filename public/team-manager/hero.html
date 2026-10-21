@@ -59,11 +59,11 @@
 
   <section class="card" aria-labelledby="title-h">
     <h2 id="title-h">On the title screen</h2>
-    <p class="note">The real title layout and robot line-up, at the size the game shows them. Compare it with the coach that's there now.</p>
+    <p class="note">The real title layout and robot line-up, at the size the game shows them, next to the coach she replaced.</p>
     <div class="view"><canvas id="title" width="256" height="144" aria-label="The title screen with the hero in front of the robot line-up"></canvas></div>
     <div class="buttons" role="group" aria-label="Which coach">
       <button type="button" data-who="new" aria-pressed="true">New hero</button>
-      <button type="button" data-who="old" aria-pressed="false">Current coach</button>
+      <button type="button" data-who="old" aria-pressed="false">Old coach</button>
     </div>
   </section>
 
@@ -83,7 +83,7 @@
       <li><b>The board:</b> hanging from her far hand and tilted away from her side, wiped clean with no plan on it yet. The marker swings under it on its cord.</li>
     </ul>
   </section>
-  <p class="foot">The sprite lives in hero.js. Nothing in the intro uses it yet; the title screen still shows the current coach.</p>
+  <p class="foot">The sprite lives in hero.js, and the intro's title screen uses it.</p>
 </div>
 <script type="module">
   import { W, C, useContext, camera, screen, fill, text, measure, layer, blit, logoText } from './pixel.js';
