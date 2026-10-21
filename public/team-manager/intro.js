@@ -714,6 +714,16 @@ function render() {
     start += len;
   }
 }
+// Add #debug to the address to see what the audio is doing (handy on phones, which have no console).
+if (location.hash === '#debug') {
+  const out = Object.assign(document.createElement('pre'), { id: 'debug' });
+  out.style.cssText = 'position:fixed;left:8px;top:8px;margin:0;padding:6px 8px;background:#000d;color:#9fe8d0;font:11px/1.45 ui-monospace,monospace;z-index:9;pointer-events:none;white-space:pre-wrap;max-width:calc(100vw - 32px)';
+  document.body.append(out);
+  setInterval(() => {
+    out.textContent = `${chip.describe()}\nin a frame: ${window.top !== window}\n${navigator.userAgent}`;
+  }, 400);
+}
+
 function loop() {
   render();
   requestAnimationFrame(loop);

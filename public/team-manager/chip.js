@@ -4,7 +4,10 @@
 export const BPM = 150;
 export const BEAT = 60 / BPM;
 
-// iPhones mute web audio when the ring/silent switch is on silent, unless the page asks to be treated like a music player.
+// iPhones mute web audio when the ring/silent switch is on silent (videos and music apps ignore the switch).
+// Two ways around it: ask for the "playback" audio session (iOS 17+, top-level pages), and keep a silent <audio>
+// element looping, which puts the whole page in playback mode, including inside a frame like the artifact viewer.
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Mac/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 function playThroughSilentSwitch() {
   try {
     if (navigator.audioSession) navigator.audioSession.type = 'playback';
@@ -12,12 +15,36 @@ function playThroughSilentSwitch() {
     // Not supported here: nothing to do.
   }
 }
+/** A tenth of a second of 8-bit silence as a WAV data URL, at the audio context's own rate so iOS doesn't resample. */
+function silentWav(rate) {
+  const n = Math.round(rate / 10), bytes = new Uint8Array(44 + n), v = new DataView(bytes.buffer);
+  const tag = (at, str) => [...str].forEach((c, i) => (bytes[at + i] = c.charCodeAt(0)));
+  tag(0, 'RIFF');
+  v.setUint32(4, 36 + n, true);
+  tag(8, 'WAVEfmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); // PCM
+  v.setUint16(22, 1, true); // mono
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate, true);
+  v.setUint16(32, 1, true);
+  v.setUint16(34, 8, true);
+  tag(36, 'data');
+  v.setUint32(40, n, true);
+  bytes.fill(128, 44);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return `data:audio/wav;base64,${btoa(bin)}`;
+}
 
 // ---- Synth ----
 export class Chip {
   constructor() {
     this.ac = null;
     this.muted = false;
+    this.notes = 0;
+    this.silent = null; // the looping silent <audio> on iPhones
+    this.silentState = IOS ? 'not started' : 'not needed';
   }
   /**
    * Call from a tap or key press: browsers only allow sound after the viewer interacts.
@@ -50,13 +77,48 @@ export class Chip {
    * iPhones only count the end of a tap (not its start), and older ones also need a sound to play right then.
    */
   unlock() {
-    if (!this.ac || this.offline || this.running) return;
+    if (!this.ac || this.offline) return;
+    this.keepPlaybackMode();
+    if (this.running) return;
     playThroughSilentSwitch();
     this.ac.resume?.()?.catch?.(() => {});
     const blip = this.ac.createBufferSource();
     blip.buffer = this.ac.createBuffer(1, 1, this.ac.sampleRate);
     blip.connect(this.ac.destination);
     blip.start();
+  }
+  /** Start the silent <audio> loop (iPhones only, inside a tap). */
+  keepPlaybackMode() {
+    if (!IOS || typeof Audio !== 'function') return;
+    if (!this.silent) {
+      const a = (this.silent = new Audio());
+      a.setAttribute('x-webkit-airplay', 'deny');
+      a.loop = true;
+      a.preload = 'auto';
+      a.src = silentWav(this.ac.sampleRate);
+      // Pause it with the page so it never shows up as "now playing" on the lock screen.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) a.pause();
+        else if (this.silentState === 'playing') a.play().catch(() => {});
+      });
+    }
+    if (!this.silent.paused) return;
+    this.silentState = 'starting';
+    this.silent.play().then(
+      () => (this.silentState = 'playing'),
+      (e) => (this.silentState = `blocked (${e?.name ?? e})`),
+    );
+  }
+  /** What the audio is doing, for the #debug readout. */
+  describe() {
+    const ac = this.ac;
+    return [
+      `audio: ${ac ? `${ac.state}, ${ac.sampleRate} Hz, clock ${ac.currentTime.toFixed(1)} s` : 'not started'}`,
+      `notes played: ${this.notes}`,
+      `muted: ${this.muted}`,
+      `audio session: ${navigator.audioSession?.type ?? 'not supported'}`,
+      `silent loop: ${this.silentState}`,
+    ].join('\n');
   }
   get ready() {
     return !!this.ac;
@@ -89,6 +151,7 @@ export class Chip {
   }
   /** One note. o: wave ('p12' | 'p25' | 'p50' | 'tri' | 'saw' | 'sine'), vol, slide (end Hz), vib, decay. */
   tone(t, dur, hz, o = {}) {
+    this.notes++;
     const ac = this.ac, osc = ac.createOscillator(), g = ac.createGain();
     const w = o.wave ?? 'p25';
     if (this.waves[w]) osc.setPeriodicWave(this.waves[w]);
