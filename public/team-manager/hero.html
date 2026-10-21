@@ -40,7 +40,7 @@
   button:hover { border-color: var(--blue); }
   button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   button[aria-pressed="true"] { background: var(--gold); color: var(--ink); border-color: var(--ink); }
-  .labels { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 13px; color: var(--muted); }
+  .labels { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; font-size: 13px; color: var(--muted); }
   ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 64ch; }
   li b { color: var(--text); }
   .foot { margin: 0; font-size: 13px; max-width: 64ch; }
@@ -53,7 +53,7 @@
 
   <section class="card" aria-labelledby="close-h">
     <h2 id="close-h">Up close</h2>
-    <div class="view"><canvas id="close" width="64" height="100" aria-label="The hero sprite, enlarged, breathing"></canvas></div>
+    <div class="view"><canvas id="close" width="64" height="100" aria-label="The hero sprite, enlarged, breathing and blinking"></canvas></div>
     <div class="buttons"><button type="button" id="idle" aria-pressed="true">Idle animation</button></div>
   </section>
 
@@ -69,15 +69,15 @@
 
   <section class="card" aria-labelledby="all-h">
     <h2 id="all-h">The idle frames</h2>
-    <div class="view"><canvas id="all" width="132" height="96" aria-label="The three idle frames: resting, breathing in, the marker swinging"></canvas></div>
-    <div class="labels" aria-hidden="true"><span>Resting</span><span>Breathing in</span><span>Marker swing</span></div>
+    <div class="view"><canvas id="all" width="176" height="96" aria-label="The four idle frames: resting, breathing in, a blink, the marker swinging"></canvas></div>
+    <div class="labels" aria-hidden="true"><span>Resting</span><span>Breathing in</span><span>Blink</span><span>Marker swing</span></div>
   </section>
 
   <section class="card" aria-labelledby="look-h">
     <h2 id="look-h">What to look at</h2>
     <ul>
-      <li><b>Face:</b> laughing with her whole face and not caring how it looks: eyes shut into crescents, cheeks pushed up with a little blush, a wide open grin with her teeth showing.</li>
-      <li><b>Hair:</b> long, wavy and side-parted, after the reference photo. It's dark brown going caramel toward the ends, swept across her forehead from the part, falling forward over her near shoulder and cascading behind the other.</li>
+      <li><b>Face:</b> turned toward the robots with her eyes back on you, and a small smile that's all the way real: corners up, a glimpse of teeth, cheeks lifted with a little blush.</li>
+      <li><b>Hair:</b> shoulder length and near black with faint brown glints, parted at the side and swept across her forehead. It rests on her near shoulder and falls behind the other, with a soft wave.</li>
       <li><b>Stance:</b> weight on her near leg, so that hip pops out under her hand and the other shoulder rides higher. The other leg is relaxed, and her feet point the way she's turned.</li>
       <li><b>Clothes:</b> the red 5026 team shirt, fitted, with the front tucked into high-waisted jeans at the button. Rolled cuffs show one yellow sock and one blue, above canvas sneakers.</li>
       <li><b>The board:</b> hanging from her far hand and tilted away from her side, wiped clean with no plan on it yet. The marker swings under it on its cord.</li>
@@ -160,8 +160,8 @@
 
     useContext(all.g);
     screen();
-    backdrop(132, 96, 90);
-    [{}, { breath: 1 }, { sway: 1 }].forEach((frame, i) => drawHero(22 + i * 44, 90, frame));
+    backdrop(176, 96, 90);
+    [{}, { breath: 1 }, { blink: true }, { sway: 1 }].forEach((frame, i) => drawHero(22 + i * 44, 90, frame));
   }
 
   function frame(now) {
