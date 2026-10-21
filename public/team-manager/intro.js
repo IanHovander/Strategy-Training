@@ -52,6 +52,13 @@ const LOGO = (() => {
     }),
   );
 })();
+// The logo's letters in white, for the shine that sweeps across them.
+const LOGO_SHINE = layer(LOGO.w, LOGO.h, (ctx) => {
+  ctx.drawImage(LOGO.canvas, 0, 0);
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.fillStyle = C.white;
+  ctx.fillRect(0, 0, LOGO.w, LOGO.h);
+});
 
 // ---- Effects (all pure functions of time). The screen-space ones draw with fill() and leave the camera alone. ----
 function shake(b, b0, dur, amp) {
@@ -568,13 +575,14 @@ function drawTitle(t, B) {
   camera(0, 0, 1, shake(t, 0.5, 0.4, 3));
   blit(LOGO, lx, ly);
   if (t > 1.5) {
-    const k = seg(t, 1.5, 3) * 2.2;
+    // A glint runs across the letters (only the letters, not the sky behind them).
+    const k = seg(t, 1.5, 2.9) * 1.15;
     if (k < 1.1) {
       g.save();
       g.beginPath();
       g.rect(Math.round(lx + k * LOGO.w) - 6, 0, 6, 50);
       g.clip();
-      withAlpha(0.6, () => fill(0, 0, W, 50, C.white));
+      withAlpha(0.6, () => blit(LOGO_SHINE, lx, ly));
       g.restore();
     }
   }
