@@ -173,6 +173,9 @@ function scoreboard(blue, red, secs) {
   text(`0:${String(secs).padStart(2, '0')}`, x + 50, y + 3, { align: 'center', color: late ? C.red2 : C.yel2 });
 }
 const rslOn = (B) => Math.floor(B) % 2 === 0;
+// The defender's light blinks a beat after the hero's, so the two alternate like a tick-tock (0 = in unison).
+const DEFENDER_RSL_OFFSET = 1;
+const rslDefender = (B) => rslOn(B + DEFENDER_RSL_OFFSET);
 const crowd = (B) => STANDS[Math.floor(B * 2) % 2];
 
 // ---- Shots. b = beats into the shot, B = beats into the whole intro. ----
@@ -279,7 +282,7 @@ function shotPan(b, B) {
     eleBot(130, 0, { e1: 1 - easeInOut(seg(b, 0.3, 1)), e2: 1 - easeInOut(seg(b, 0, 0.6)), rsl: rslOn(B) });
     const rev = b > 2.6 && Math.floor(B * 10) % 2 ? -1 : 0;
     if (b > 2.6) dust(() => 490, -2, b, 2.6, 4, 7, 1, 0.8);
-    defBot(470, rev, { spin: B * 6, glint: seg(b, 3.2, 3.7) });
+    defBot(470, rev, { spin: B * 6, glint: seg(b, 3.2, 3.7), rsl: rslDefender(B) });
     speedLines(clamp(v, 0, 1), Math.floor(B * 20) * 7, C.white, 10, 130);
     return;
   }
@@ -291,7 +294,7 @@ function shotPan(b, B) {
     fill(0, 128, W, 1, C.red2);
     const rev = Math.floor(B * 10) % 2 ? -1 / 3 : 0;
     camera(-50, -43.4, 3);
-    defBot(0, rev, { spin: B * 9, glint: seg(b, 4.3, 4.9) });
+    defBot(0, rev, { spin: B * 9, glint: seg(b, 4.3, 4.9), rsl: rslDefender(B) });
     const s = b - 4.85;
     if (s > 0 && s < 0.7) sparkle(-17, -20, s < 0.15 ? 2 : s < 0.45 ? 4 : 2, C.white);
     speedLines(0.5, Math.floor(B * 20) * 3, C.red3, 0, 120);
@@ -333,7 +336,7 @@ function shotClash(b, B) {
   sky(SKY, 20, B);
   arena(crowd(B), CARPET);
   const rev = b < 2 && Math.floor(B * 10) % 2 ? -0.5 : 0;
-  defBot(dx, 0, { spin: dx * 0.64, glint: b < 2 ? (B * 2) % 1 : null });
+  defBot(dx, 0, { spin: dx * 0.64, glint: b < 2 ? (B * 2) % 1 : null, rsl: rslDefender(B) });
   dust(() => dx + 18, -1, b, 0.4, 2, 8, 1, 0.7);
   dust(() => hx - 12, -1, b, 2, 3, 6, -1, 0.8);
   dust((t) => lerp(92, 52, easeOut(seg(t, 3, 4.4))) + 16, -1, b, 3.3, 4.6, 7, 1, 0.8);
@@ -515,7 +518,7 @@ function drawChipIntro(t) {
 /** One intro frame at song time t, from the song's cue sheet. */
 function drawSongIntro(t) {
   const cue = SONG.cues.findLast((q) => t >= q.keys[0][0]) ?? SONG.cues[0];
-  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), t / track.spb, { t, buzzer: SONG.realClock ? SONG.buzzer : null });
+  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), track.beat(t), { t, buzzer: SONG.realClock ? SONG.buzzer : null });
   for (const f of SONG.flashes ?? []) {
     if (t >= f && t < f + 0.12 && !reduceMotion) {
       screen();
@@ -527,7 +530,7 @@ function drawSongIntro(t) {
 // ---- Title screen ----
 const ROSTER = [
   (x, t, B) => eleBot(x, 0, { spin: x * 0.64, rsl: rslOn(B), e1: 0.5 + 0.5 * Math.sin(t * 0.8) > 0.9 ? 0.15 : 0 }),
-  (x, t, B) => defBot(x, Math.floor(B * 8) % 2 ? -0.5 : 0, { dir: -1, spin: x * 0.64, glint: (t * 0.5) % 1 }),
+  (x, t, B) => defBot(x, Math.floor(B * 8) % 2 ? -0.5 : 0, { dir: -1, spin: x * 0.64, glint: (t * 0.5) % 1, rsl: rslDefender(B) }),
   (x, t) => armBot(x, 0, { angle: -0.5 + Math.sin(t * 1.4) * 0.35, spin: x * 0.64, num: '2019' }),
 ];
 
@@ -636,6 +639,10 @@ class ChipTrack {
     this.spb = BEAT;
     this.titleAt = INTRO_BEATS * BEAT;
   }
+  /** Beats since the start, for anything that pulses with the music. */
+  beat(t) {
+    return t / BEAT;
+  }
   start(t) {
     this.player.play(t / BEAT, chip.now());
   }
@@ -653,6 +660,7 @@ class SongTrack {
     this.song = song;
     this.spb = 60 / song.bpm;
     this.titleAt = song.titleAt;
+    this.beat0 = song.beat0 ?? 0;
     this.buffer = null;
     this.error = null;
     this.playing = [];
@@ -665,6 +673,10 @@ class SongTrack {
   }
   get ready() {
     return !!this.buffer;
+  }
+  /** Beats on the song's own grid, for anything that pulses with the music. */
+  beat(t) {
+    return (t - this.beat0) / this.spb;
   }
   /** Song time t starts playing now. */
   start(t) {
@@ -874,7 +886,7 @@ function render() {
     screen();
     return fill(0, 0, W, H, C.ink);
   }
-  if (t >= track.titleAt) return drawTitle((t - track.titleAt) / track.spb, t / track.spb);
+  if (t >= track.titleAt) return drawTitle((t - track.titleAt) / track.spb, track.beat(t));
   return SONG ? drawSongIntro(t) : drawChipIntro(t);
 }
 // Add #debug to the address to see what the audio is doing (handy on phones, which have no console).

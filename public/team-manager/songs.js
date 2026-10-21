@@ -4,6 +4,7 @@
 //         so a shot can run slower than written (a long climb) or line its big moment up with a hit.
 //   buzzer: when the HAB countdown reaches zero (realClock: show real seconds left, for long climbs);
 //   flashes: white flashes on big hits; titleAt: the logo drop;
+//   beat0: where the song's beat grid starts, so lights and the crowd pulse on its beats;
 //   loop: the part of the song the title screen repeats (chosen where rhythm and harmony match on both sides).
 // The audio goes in public/team-manager/songs/. Compete to Win 3 (the one index.html uses) is there; the other two
 // cue sheets were for comparing and need their MP3 dropped in to play.
@@ -19,6 +20,7 @@ export const SONGS = {
     name: 'Wilderness Call',
     file: 'songs/wilderness-call.mp3',
     bpm: 142.333,
+    beat0: 0.013,
     flashes: [0.081],
     realClock: true,
     buzzer: w(129),
@@ -44,6 +46,7 @@ export const SONGS = {
     name: 'Compete to Win',
     file: 'songs/compete-to-win.mp3',
     bpm: 150.159,
+    beat0: 0.456,
     flashes: [3.216],
     realClock: true,
     buzzer: c(95),
@@ -66,6 +69,7 @@ export const SONGS = {
     name: 'Compete to Win 3',
     file: 'songs/compete-to-win-3.mp3',
     bpm: 152.067,
+    beat0: 0.495,
     flashes: [2.194],
     // The original pace: every shot runs at its written speed, about 25 seconds in all, nudged a beat here and
     // there so the big moments land on this song's first hits. The rest of the song plays under the title.

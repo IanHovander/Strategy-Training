@@ -155,6 +155,7 @@ export function defBot(x, y, o = {}) {
   // Signal light and radio.
   part(f, -12, -27, 4, 4, C.ink);
   part(f, -11, -26, 2, 2, o.rsl === false ? C.org0 : C.org1);
+  if (o.rsl !== false) part(f, -11, -26, 1, 1, C.org2);
   part(f, -5, -28, 1, 5, C.ink);
   bumper(f, -18, 36, -12, TEAM.red, o.num ?? '7777');
 }
