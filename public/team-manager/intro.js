@@ -267,7 +267,8 @@ function shotLift(b, B) {
   camera(76, camY, 2, shake(b, 4, 0.5, 3));
   sky(SKY, clamp(30 + (-65 - camY) * 1.2, 0, 144), B);
   arena(crowd(B), CARPET);
-  const lights = [b > 4.5, b > 4.75, b > 5];
+  // The lower ports light up in turn after the hatch lands; level 3 stays steady (no light, no twinkle) into the cut.
+  const lights = [b > 4.5, b > 4.75, false];
   rocket(150, { hatches: [1, 1, placed], cargo: [1, 1, 0], lights });
   eleBot(130, 0, { e1, e2, hatch: !placed, reach, rsl: rslOn(B) });
   const port = ROCKET_LEVELS[2];
@@ -277,7 +278,6 @@ function shotLift(b, B) {
     const k = seg(b, 4, 6.2);
     withAlpha(stepped(1 - seg(b, 5.4, 6.2)), () => text('+2', 138, Math.round(port - 14 - k * 10), { color: C.yel2, outline: C.ink, align: 'center' }));
   }
-  if (b > 5) sparkle(164, port - 2, Math.floor(B * 4) % 3, C.white);
   flash(b, 4, 0.12);
 }
 
