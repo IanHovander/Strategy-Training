@@ -1,7 +1,7 @@
-// The hero as a walking sprite: 8 directions, standing, walking and running. Hand-drawing every frame wouldn't stay
-// consistent, so she's a small 3D rig (ellipsoids and capsules posed by a gait cycle) that is ray-cast to pixels, shaded
-// in three tones from her palette and outlined in ink. Her eyes and smile go on afterwards as crisp pixels. Frames are
-// made the first time they're drawn, then cached.
+// The hero as a walking sprite: 8 directions, standing, walking and running. Her body is a small 3D rig (ellipsoids and
+// capsules posed by a gait cycle) that is ray-cast to pixels, shaded in three tones from her palette and outlined in
+// ink, so every direction and frame stays consistent. Her head is hand-drawn for each direction in the portrait's style
+// (hero.js), since that's where the likeness lives. Frames are made the first time they're drawn, then cached.
 //
 // The camera looks down at 20 degrees. Directions turn clockwise from facing you: s, se, e, ne, n, nw, w, sw.
 
@@ -11,10 +11,133 @@ export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
 export const FOOT_X = 18, FOOT_Y = 52;
 
+const HEADS = {
+  s: [
+    '......kkkk......',
+    '....kkhHHhkk....',
+    '...khHHhhhhhk...',
+    '..khHhhhhhhhggk.',
+    '.kghHhhhhhhhhggk',
+    '.kghsShhhhhhhhgk',
+    '.kghssssshhhhhgk',
+    '.kghshgsssghhhgk',
+    '.kghsggsssggshgk',
+    '.kghsEEsssEEshgk',
+    '.kghesssdsssehgk',
+    '.kghsssMTMssshgk',
+    '.kghksssmssskhgk',
+    '.kgh.kssssdk.hgk',
+    '.kgh..kkkkk..hgk',
+    '.kgh.........hgk',
+    '.kgh.........hgk',
+    '..kk.........kk.',
+  ],
+  se: [
+    '.....kkkkkk.....',
+    '...kkhHHhhhkk...',
+    '..khHHhhhhhhhk..',
+    '.khHhhhhhhhhhhk.',
+    '.kgHhhhhhhhhhhgk',
+    '.kghhhsShhhhhhgk',
+    '.kghhssssshhhhgk',
+    '.kghhshgsssghhk.',
+    '.kghhsggsssggsk.',
+    '.kghhsEwsssEwsk.',
+    '.kghhesssssdesk.',
+    '.kghhssssMTMsk..',
+    '.kghksssssmdk...',
+    '.kgh...ksssdk...',
+    '.kgh....kkkkhgk.',
+    '.kgh.......khgk.',
+    '.kgh.......khgk.',
+    '..kk........kk..',
+  ],
+  e: [
+    '....kkkkkk......',
+    '..kkhHHhhhkk....',
+    '.khHHhhhhhhhk...',
+    'khHhhhhhhhhhhk..',
+    'kghhhhhhhhhhsSk.',
+    'kghhhhhhhhhsssk.',
+    'kghhhhhhhhsggsk.',
+    'kghhhhhhhsssssk.',
+    'kghhhhkssssggsk.',
+    'kghhhhkdssswEsk.',
+    'kghhhhkssssssdk.',
+    'kghhhhhkssssMMk.',
+    'kghhhhhhksssmk..',
+    'kghhhhhhhkssk...',
+    'kghhhhhhhkkk....',
+    '.kghhhhhk.......',
+    '.kghhhhk........',
+    '..kkkkk.........',
+  ],
+  ne: [
+    '......kkkkk.....',
+    '....kkhHHhhkk...',
+    '...khHHhhhhhhk..',
+    '..khHhhhhhhhhhk.',
+    '.khHhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhsk',
+    '.kghhhhhhhhhhssk',
+    '.kghhhhhhhhhhssk',
+    '.kghhhhhhhhhhsdk',
+    '.kghhhhhhhhhhksk',
+    '.kghhhhhhhhhhkdk',
+    '.kghhhhhhhhhhk..',
+    '.kghhhhhhhhhgk..',
+    '.kghhhhhhhhhgk..',
+    '.kghhhhhhhhhgk..',
+    '..kghhhhhhhgk...',
+    '...kkkkkkkkk....',
+  ],
+  n: [
+    '......kkkk......',
+    '....kkhHHhkk....',
+    '...khHHhhhhhk...',
+    '..khHhhhhhhhhhk.',
+    '.khHhhhhhhhhhhgk',
+    '.kghHhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '.kghhhhhhhhhhhgk',
+    '..kghhhhhhhhhgk.',
+    '...kkkkkkkkkkk..',
+  ],
+};
+// Facing left you see her swept side: the bangs come down over the near half of her forehead, the part is away from you.
+const mirror = (rows) => rows.map((r) => [...r].reverse().join(''));
+function leftFacing(src, rows) {
+  const out = mirror(src).map((r) => [...r]);
+  // Keep the light on the upper left: the hair's shine stays where the source had it.
+  out.forEach((r, y) => r.forEach((ch, x) => {
+    if (ch === 'H') r[x] = 'h';
+    if (src[y][x] === 'H' && (r[x] === 'h' || r[x] === 'g')) r[x] = 'H';
+  }));
+  for (const [y, row] of Object.entries(rows)) out[y] = [...row];
+  return out.map((r) => r.join(''));
+}
+HEADS.sw = leftFacing(HEADS.se, { 5: 'kgSshhhhhhhhhgk.', 6: 'kgssssshhhhhhgk.', 7: '.khgsssshhhhhgk.' });
+HEADS.w = leftFacing(HEADS.e, { 4: '.kghhhhhhhhhhhgk', 5: '.khHhhhhhhhhhhgk', 6: '.kshhhhhhhhhhhgk' });
+HEADS.nw = leftFacing(HEADS.ne, {});
+// The head's pixel that sits on the rig's head position.
+const HEAD_X = 8, HEAD_Y = 8;
+const HEAD_PAL = {
+  k: '#0b0d17', g: '#131216', h: '#211d22', H: '#352d31', s: '#eabf91', S: '#f8d9b8', d: '#d29a6c',
+  E: '#3a2218', w: '#e6ddd4', e: '#ee9f8c', M: '#8f4636', T: '#f6f1ea', m: '#c97a70',
+};
+
 const PAL = {
   ink: '#0b0d17',
   skin: ['#d29a6c', '#eabf91', '#f8d9b8'],
-  hair: ['#131216', '#211d22', '#352d31'],
   shirt: ['#a1172a', '#d3212f', '#ff6a55'],
   jeans: ['#34416e', '#4a5b92', '#6b80b8'],
   cuff: ['#4a5b92', '#6b80b8', '#8a9cd0'],
@@ -23,9 +146,6 @@ const PAL = {
   shoe: ['#b9c0d4', '#f4f6fb', '#ffffff'],
   sole: ['#4b5269', '#7882a3', '#7882a3'],
   board: ['#9aa3bd', '#c9d0de', '#e3e7f0'],
-  eye: '#2a1a10',
-  mouth: '#8f4636',
-  blush: '#ee9f8c',
   print: '#fff4ee',
 };
 
@@ -174,21 +294,7 @@ function pose(dirIndex, gait, phase) {
   for (const side of [-1, 1]) parts.push(ellipsoid(body(side * 4.6, torsoY(35.8), 0), axesLean, [2.0, 1.9, 2.0], () => 'shirt', 'torso'));
   parts.push(capsule(body(0, torsoY(36.2), -0.3), body(0, torsoY(39.6), -0.1), 1.45, () => 'skin', 'head'));
 
-  // Head and hair. The hair cap leaves a window for the face, swept low across her forehead from a part on her right.
   const head = body(0, torsoY(43.8), 0.35);
-  parts.push(ellipsoid(head, axesLean, [5.5, 5.9, 5.5], () => 'skin', 'head'));
-  parts.push(ellipsoid(add(head, mul(axesLean[1], 0.45)), axesLean, [6.1, 6.3, 6.1], (h) => {
-    const [x, y, z] = h.local;
-    const hairline = 0.2 + 0.3 * x;
-    return z > 0.15 && Math.abs(x) < 0.8 && y < hairline ? null : 'hair';
-  }, 'head'));
-  // Shoulder-length hair hanging behind her head and down beside her neck.
-  const hang = add(head, add(mul(axesLean[1], -4.2), mul(axesLean[2], -1.6)));
-  parts.push(ellipsoid(hang, axesLean, [6.1, 5.6, 4.1], (h) => {
-    const p = sub(hang, head);
-    const lx = h.local[0] * 6.1, lz = h.local[2] * 4.1 + dot(p, axesLean[2]);
-    return lz > -0.6 && Math.abs(lx) < 4.4 ? null : 'hair';
-  }, 'head'));
 
   // Arms swing against the legs. Running, her left arm holds the board tucked against her side.
   const s2 = Math.sin(2 * Math.PI * phase);
@@ -273,8 +379,7 @@ function render(dirIndex, gait, phase) {
       if (near) out[i] = PAL.ink;
     }
   }
-  // Face and shirt print, as crisp pixels on whatever skin or shirt is showing.
-  const facing = (p, n) => dot(n, TO_CAMERA) > 0.2 && p;
+  // The shirt print, on the chest or the back, whichever is toward you.
   const plot = (p, w, h, col, onMat) => {
     const [x, y] = project(p);
     const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
@@ -285,25 +390,17 @@ function render(dirIndex, gait, phase) {
       }
     }
   };
-  const [Rh, Uh, Fh] = rig.axes;
-  const onHead = (lat, up, r = 5.5) => {
-    const n = norm(add(add(mul(Fh, Math.cos(rad(lat)) * Math.cos(rad(up))), mul(Rh, Math.sin(rad(lat)))), mul(Uh, Math.sin(rad(up)))));
-    return [add(rig.head, mul(n, r)), n];
-  };
-  for (const lat of [-27, 27]) {
-    const [p, n] = onHead(lat, -4);
-    if (facing(p, n)) plot(p, 1, 2, PAL.eye, 'skin');
-  }
-  for (const lat of [-40, 40]) {
-    const [p, n] = onHead(lat, -24);
-    if (facing(p, n)) plot(p, 1, 1, PAL.blush, 'skin');
-  }
-  const [mp, mn] = onHead(0, -36);
-  if (facing(mp, mn)) plot(mp, dot(mn, TO_CAMERA) > 0.55 ? 2 : 1, 1, PAL.mouth, 'skin');
-  const chestN = norm(Fh);
+  const [, Uh, Fh] = rig.axes;
   const printAt = (sideSign) => add(rig.chest, add(mul(Fh, 3.2 * sideSign), mul(Uh, 0.6)));
-  if (dot(chestN, TO_CAMERA) > 0.3) plot(printAt(1), 4, 2, PAL.print, 'shirt');
-  if (dot(mul(chestN, -1), TO_CAMERA) > 0.3) plot(printAt(-1), 4, 2, PAL.print, 'shirt');
+  if (dot(Fh, TO_CAMERA) > 0.3) plot(printAt(1), 4, 2, PAL.print, 'shirt');
+  if (dot(mul(Fh, -1), TO_CAMERA) > 0.3) plot(printAt(-1), 4, 2, PAL.print, 'shirt');
+  // Her head, drawn by hand for this direction, over the neck and shoulders.
+  const [hx, hy] = project(rig.head);
+  const hx0 = Math.round(hx) - HEAD_X, hy0 = Math.round(hy) - HEAD_Y;
+  HEADS[DIRS[dirIndex]].forEach((row, y) => [...row].forEach((ch, x) => {
+    const px = hx0 + x, py = hy0 + y;
+    if (ch !== '.' && px >= 0 && py >= 0 && px < W && py < H) out[py * W + px] = HEAD_PAL[ch];
+  }));
   return out;
 }
 
