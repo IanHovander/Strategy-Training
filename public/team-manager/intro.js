@@ -243,8 +243,7 @@ function shotRocket(b, B) {
   camera(0, -116 - look, 1);
   sky(SKY, Math.min(144, look * 0.6), B);
   arena(crowd(B), CARPET);
-  const blink = b > 5.2 && Math.floor(B * 2) % 2 === 0;
-  rocket(150, { hatches: [1, 1, 0], cargo: [1, 1, 0], target: blink });
+  rocket(150, { hatches: [1, 1, 0], cargo: [1, 1, 0] });
   const xAt = (t) => lerp(-40, 130, easeOut(seg(t, 3.4, 5.4)));
   const x = xAt(b), speed = 1 - seg(b, 3.4, 5.2);
   if (b > 3.4) {

@@ -199,7 +199,7 @@ export function armBot(x, y, o = {}) {
 
 /**
  * The rocket, seen from the side with its scoring face on the left at x = rx.
- * o: hatches / cargo / lights: three booleans each, bottom level first; target (blink the empty top port).
+ * o: hatches / cargo / lights: three booleans each, bottom level first.
  */
 export const ROCKET_LEVELS = [-22, -50, -78];
 export function rocket(rx, o = {}) {
@@ -241,7 +241,6 @@ export function rocket(rx, o = {}) {
     // Hatch opening on the scoring face.
     part(f, -2, cy - 7, 4, 15, C.ink);
     part(f, -1, cy - 6, 2, 13, C.steel0);
-    if (o.target && l === 2 && !o.hatches?.[2]) part(f, -4, cy - 9, 1, 19, C.yel1);
     // Cargo port on the side, with its ring light.
     const px = rx + 14, py = cy - 2;
     disk(px, py, 6, C.ink);
