@@ -40,7 +40,7 @@
   button:hover { border-color: var(--blue); }
   button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   button[aria-pressed="true"] { background: var(--gold); color: var(--ink); border-color: var(--ink); }
-  .labels { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 13px; color: var(--muted); }
+  .labels { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; font-size: 13px; color: var(--muted); }
   ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 64ch; }
   li b { color: var(--text); }
   .foot { margin: 0; font-size: 13px; max-width: 64ch; }
@@ -49,16 +49,11 @@
 <body>
 <div class="page">
   <h1>Blue Banner: the hero</h1>
-  <p class="intro">A full-height sprite for the main character. It is drawn pixel by pixel at the screen's own resolution instead of the game's usual double-size pixels, which leaves room for a real face. The hair is the open question, so there are three to choose from; everything else is shared.</p>
+  <p class="intro">A full-height sprite for the main character. It is drawn pixel by pixel at the screen's own resolution instead of the game's usual double-size pixels, which leaves room for a real face.</p>
 
   <section class="card" aria-labelledby="close-h">
     <h2 id="close-h">Up close</h2>
     <div class="view"><canvas id="close" width="64" height="100" aria-label="The hero sprite, enlarged, breathing and blinking"></canvas></div>
-    <div class="buttons" id="hair" role="group" aria-label="Hairstyle">
-      <button type="button" data-hair="curtain">Curtain bangs</button>
-      <button type="button" data-hair="swept">Side-swept</button>
-      <button type="button" data-hair="ponytail">Ponytail</button>
-    </div>
     <div class="buttons"><button type="button" id="idle" aria-pressed="true">Idle animation</button></div>
   </section>
 
@@ -73,22 +68,22 @@
   </section>
 
   <section class="card" aria-labelledby="all-h">
-    <h2 id="all-h">The three hairstyles</h2>
-    <div class="view"><canvas id="all" width="168" height="100" aria-label="The hero with curtain bangs, side-swept hair and a ponytail"></canvas></div>
-    <div class="labels" aria-hidden="true"><span>Curtain bangs</span><span>Side-swept</span><span>Ponytail</span></div>
+    <h2 id="all-h">The idle frames</h2>
+    <div class="view"><canvas id="all" width="176" height="96" aria-label="The four idle frames: resting, breathing in, a blink, the marker swinging"></canvas></div>
+    <div class="labels" aria-hidden="true"><span>Resting</span><span>Breathing in</span><span>Blink</span><span>Marker swing</span></div>
   </section>
 
   <section class="card" aria-labelledby="look-h">
     <h2 id="look-h">What to look at</h2>
     <ul>
-      <li><b>Face:</b> straight dark brows, open eyes with a brown iris and a lash line, a nose drawn with shadow, an easy closed smile, and a jaw that narrows to the chin.</li>
-      <li><b>Hair:</b> black with blue-grey highlights that follow the strands. Curtain bangs and side-swept are common on Asian teens; the ponytail is tied back the way the pit safety rules ask.</li>
-      <li><b>Stance:</b> weight on one leg with the other knee relaxed, one hand in a pocket with the elbow out, and the board carried by its clip.</li>
-      <li><b>Clothes:</b> the red 5026 team shirt with sleeves and a crease where the pocket hand pulls it, plain jeans with a fly and pockets, and white sneakers.</li>
-      <li><b>The board:</b> the 2019 field (blue HAB left, red HAB right, the cargo ship in the middle, rockets on the walls), a blue cycle over the cargo ship and a red X where the defender waits. The marker swings on its cord.</li>
+      <li><b>Face:</b> turned three-quarters toward the robots with her eyes back on you, burgundy glasses over big brown irises, a small smirk lifting one corner of her mouth, a gold stud in the ear her hair is tucked behind.</li>
+      <li><b>Hair:</b> long and black with curtain bangs, the strands lit on the near side and falling behind both shoulders.</li>
+      <li><b>Stance:</b> weight on her near leg, so that hip pops out under her hand and the other shoulder rides higher. The other leg is relaxed, and her feet point the way she's turned.</li>
+      <li><b>Clothes:</b> the red 5026 team shirt, fitted, with the front tucked into high-waisted jeans at the button. Rolled cuffs show one yellow sock and one blue, above canvas sneakers.</li>
+      <li><b>The board:</b> hanging from her far hand and tilted away from her side, in muted greys with the 2019 field in three marks: red HAB, cargo ship, blue HAB. The marker swings under it on its cord.</li>
     </ul>
   </section>
-  <p class="foot">The sprite lives in hero.js. Nothing in the intro uses it yet; the title screen still shows the current coach until a hairstyle is picked.</p>
+  <p class="foot">The sprite lives in hero.js. Nothing in the intro uses it yet; the title screen still shows the current coach.</p>
 </div>
 <script type="module">
   import { W, C, useContext, camera, screen, fill, text, measure, layer, blit, logoText } from './pixel.js';
@@ -96,8 +91,7 @@
   import { drawHero, heroIdle } from './hero.js';
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const state = { hair: 'curtain', who: 'new', idle: !reduceMotion };
-  try { state.hair = localStorage.getItem('hero-hair') ?? state.hair; } catch {}
+  const state = { who: 'new', idle: !reduceMotion };
 
   const canvases = ['close', 'title', 'all'].map((id) => {
     const canvas = document.getElementById(id);
@@ -140,7 +134,7 @@
     useContext(close.g);
     screen();
     backdrop(64, 100, 94);
-    drawHero(26, 94, { ...pose, hair: state.hair });
+    drawHero(24, 94, pose);
 
     useContext(title.g);
     camera(0, -112, 1);
@@ -158,7 +152,7 @@
     if (state.who === 'old') person(32, Math.floor(t / 2) % 2 ? -0.5 : 0, OLD_COACH);
     else {
       screen();
-      drawHero(64, 132, { ...pose, hair: state.hair });
+      drawHero(64, 132, pose);
     }
     screen();
     if (t % 1 < 0.65) text('PRESS START', 128, 98, { align: 'center', color: C.white, outline: C.ink });
@@ -166,8 +160,8 @@
 
     useContext(all.g);
     screen();
-    backdrop(168, 100, 94);
-    ['curtain', 'swept', 'ponytail'].forEach((hair, i) => drawHero(30 + i * 56, 94, { ...pose, hair }));
+    backdrop(176, 96, 90);
+    [{}, { breath: 1 }, { blink: true }, { sway: 1 }].forEach((frame, i) => drawHero(22 + i * 44, 90, frame));
   }
 
   function frame(now) {
@@ -181,14 +175,6 @@
   function press(attr, value) {
     for (const b of document.querySelectorAll(`[data-${attr}]`)) b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
   }
-  document.getElementById('hair').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-hair]');
-    if (!b) return;
-    state.hair = b.dataset.hair;
-    try { localStorage.setItem('hero-hair', state.hair); } catch {}
-    press('hair', state.hair);
-    redraw();
-  });
   for (const b of document.querySelectorAll('[data-who]')) {
     b.addEventListener('click', () => {
       state.who = b.dataset.who;
@@ -204,7 +190,6 @@
     else redraw();
   });
   idleButton.setAttribute('aria-pressed', String(state.idle));
-  press('hair', state.hair);
   fit();
   if (state.idle) requestAnimationFrame(frame);
   else draw(0);

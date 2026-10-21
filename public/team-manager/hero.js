@@ -1,7 +1,8 @@
-// The main character at full height: a high-school drive coach in the team's red 5026 shirt, jeans and white
-// sneakers, one hand in a pocket, carrying the drive team's whiteboard by its clip. The board has the 2019 field on
-// it (the blue and red HABs at the ends, the cargo ship in the middle, the rockets on the walls) with the plan
-// scribbled over it: a blue cycle and a red X where the defender waits. The marker hangs off it on a cord.
+// The main character at full height: a high-school drive coach, an Asian girl in the team's red 5026 shirt (the
+// front tucked into high-waisted jeans), burgundy glasses, a stud earring, rolled cuffs over mismatched socks and
+// canvas sneakers. She stands three-quarters on with her weight on one leg, a hand on that hip and the other
+// shoulder up, looking back at you. The drive team's whiteboard hangs from her other hand, tilted away from her side:
+// the 2019 field (red HAB, cargo ship, blue HAB) in a few muted marks, the marker swinging under it on a cord.
 //
 // The other sprites are built from rectangles at the camera's scale. This one is drawn pixel by pixel at the canvas's
 // own resolution, so the face can have real features: draw it with the camera at scale 1. One letter per pixel,
@@ -16,14 +17,16 @@ const PALETTE = {
   d: '#d29a6c', // skin, shade
   D: '#a96d47', // skin, deep shade
   g: '#15171e', // hair
-  h: '#262a38', // hair, mid
-  H: '#333a50', // hair, highlight
+  h: '#262a38', // hair, strands
+  H: '#333a50', // hair, lit strands
   G: '#4b5574', // hair, shine
-  L: '#7a4a36', // lash tips
   E: '#4a2a1a', // iris
   w: '#e4dbd2', // white of the eye
-  M: '#8f4636', // mouth
-  m: '#c97b68', // lip
+  V: '#6a2236', // glasses frames
+  M: '#9a4040', // mouth
+  m: '#d0807a', // lip
+  Y: '#ffc61a', // earring, sock
+  Z: '#c48a0a', // sock, shade
   R: '#ff6a55', // shirt, lit
   r: '#d3212f', // shirt
   q: '#a1172a', // shirt, shade
@@ -32,174 +35,112 @@ const PALETTE = {
   J: '#6b80b8', // jeans, lit
   j: '#4a5b92', // jeans
   n: '#34416e', // jeans, shade
-  N: '#222b4d', // jeans, pocket
+  N: '#222b4d', // jeans, under the hem
+  C: '#c4cbe0', // button, clip shine
+  U: '#4a90ff', // other sock
+  u: '#1d55e8', // other sock, stripe; blue HAB
   O: '#f4f6fb', // sneaker
   o: '#b9c0d4', // sneaker, shade
   p: '#7882a3', // sole, marker cord
   P: '#4b5269', // sole edge
-  B: '#f6f8fc', // whiteboard
-  f: '#aab2c8', // board frame
-  F: '#6b7391', // board frame, shade
+  B: '#e3e7f0', // whiteboard
+  b: '#c9d0de', // whiteboard, shade
+  f: '#9aa3bd', // board frame
+  F: '#5d6580', // board frame, shade
   c: '#3f4761', // clip
-  C: '#c4cbe0', // clip, shine
-  i: '#b5bdd0', // printed field lines
-  x: '#2b3040', // black marker
-  u: '#1d55e8', // blue marker
-  U: '#4a90ff', // blue, shine
-  y: '#e0333f', // red marker
+  x: '#2b3040', // cargo ship
+  y: '#e0333f', // red HAB
   K: '#eef1f8', // marker barrel
 };
 
-// Standing on the bottom row; column FOOT_X is the middle of the body.
+// Standing on the bottom row; column FOOT_X is under the middle of her body.
 const BODY = [
-  '..............kkkkkkkk........................',
-  '............kkhHhgghhgkk......................',
-  '...........khHGhhgghHhggk.....................',
-  '..........kgHhhHgghhhHgggk....................',
-  '..........kghhHhgssghhHggk....................',
-  '..........kgHhgsSsssghhHgk....................',
-  '..........kgHgsSssssdghhgk....................',
-  '..........kghgssssssddghgk....................',
-  '..........kggshggssgghsggk....................',
-  '..........kgsssssssssssdgk....................',
-  '..........kgsLgEgssgEgLsgk....................',
-  '..........kssswEwsswEwssdk....................',
-  '..........kdSsssssdssssdsk....................',
-  '..........ksssssdsDdssssdk....................',
-  '...........ksssdsdssdssdk.....................',
-  '............ksssMMMMssdk......................',
-  '.............ksssmmssdk.......................',
-  '..............kSssssdk........................',
-  '..............kddddDDk........................',
-  '..............ksssddDk........................',
-  '..............ksssddDk........................',
-  '..............ksssddDk........................',
-  '..........kkkRqdsssddqqkkk....................',
-  '........kkRRrrrqqqqqqrrqqqkk..................',
-  '.......kRRrrrrrrrrrrrrrrrqqqk.................',
-  '......kRRrrrrrrrrrrrrrrrrrqqqk................',
-  '.....kRRrrrrrrrrrrrrrrrrrrrqqqk...............',
-  '....kRRrrrWWWrWWWrWWWrWWWrrrqqqk..............',
-  '....kRRrrrWrrrWrWrrrWrWrrrrrqqqk..............',
-  '....kRRrrQWWWrWrWrWWWrWWWrQrqqqk..............',
-  '....kRRrrQrrWrWrWrWrrrWrWrQrqqqk..............',
-  '....kRRrrQWWWrWWWrWWWrWWWrQrqqqk..............',
-  '....kkkkkqrrrrrrrrrrrrrrrrQkkkkk..............',
-  '....kSssdkRRrrrrrrrrrrrrqqksssdk..............',
-  '....kSssdkRRrrrrrrrrrrrrqqksssdk..............',
-  '...kSssdkRRrrrrrrrrrrrrrqqksssdk..............',
-  '...kSssdkRRrrrrrrrrrrrrrqqksssdk..............',
-  '..kSssdkkRRrrrrrrrrrrrqrqqksssdk..............',
-  '..kSssdkkRRrrrrrrrrrrqrrqqksssdk..............',
-  '..kSssdkkRRrrrrrrrrrqrrrqqksssdk..............',
-  '...kSssdkRRrrrrrrrrqrrrrqqkssdk...............',
-  '...kSssdkRRrrrrrrrrrrrrrqqkssdk...............',
-  '....kSssdkRRrrrrrrrrrrrrqqkssdk...............',
-  '.....kSssdkRrrrrrqrrrrrrqqkssdk...............',
-  '......kSssdkRrrrqrrrrrrrqqkssdk...............',
-  '.......kSssdkRrqrrrrrrrrqqkssdk...............',
-  '........kSssdkRrrrrrrrrrqqkssdk...............',
-  '........kkSsdkqrqqrqqrqqrqkssdk...............',
-  '.........kSssdkkkkkkkkkkkkkssdk...............',
-  '........kJNNNNjjjnjjjjjnjnkssdk...............',
-  '........kJjjjnjjjnnjjjjjnnksssdk..kkkk........',
-  '........kJjjjjjjnnkjjjjjjkSssssdkkCCCck.......',
-  '........kJjjjjjjnnkjjkkkkksdsdsdkkcccckkk.....',
-  '........kJjjjjjjnnkjkffffksssssskkcccckffk....',
-  '........kJjjjjjjnnkjkfBBBBkdddddk.kkkk.BFk....',
-  '........kJjjjjjjnnkjkfBBBBBkkkkkkBBBBBBBFk....',
-  '.........kJjjjjjnnkjkfBiiiiiiiiiiiiiiiiBFk....',
-  '.........kJjjjjjnnkjkfBiBBBxBBuBBBxBBBiBFk....',
-  '.........kJjjjjjnnkjkfBiuBuuuuuuBBBBByiBFk....',
-  '.........kJjjjjjnnkjkfBiuuuBBxxxxBBBByiBFk....',
-  '.........kJjjjjjnnkjkfBiuuBBBxBBxBBByyiBFk....',
-  '..........kJjjjnnkkjkfBiuuBBBxxxxyByByiBFk....',
-  '..........kJnjjnnkkjkfBiuBBBBBBBBByBByiBFk....',
-  '..........kJjnnnnkkjkfBiBBBxBBBBByByBBiBFk....',
-  '..........kJjjjnnkkjkfBiiiiiiiiiiiiiiiiBFk....',
-  '..........kJjjjnnk.kkfBBBBBBBBBBBBBBBBBBFk....',
-  '..........kJjjjnnk.kkfFFFFFFFFFFFFFFFFFFFk....',
-  '..........kJjjjnnk.kjkkkkkkkkkkkkkkkkkkkk.....',
-  '..........kJjjjnnk.kjjjjnnk...................',
-  '..........kJjjjnnk.kjjjjnnk...................',
-  '..........kJjjjnnk..knjjjnnk..................',
-  '..........kJjjjnnk..kjnjjnnk..................',
-  '..........kJjjjnnk..kjjjjnnk..................',
-  '..........kJjjjnnk..kjjjjnnk..................',
-  '..........kJjjjnnk..kjjjjnnk..................',
-  '..........kJjjjnnk..kjjjjnnk..................',
-  '..........kJjjjnnk...kjjjjnnk.................',
-  '..........kJjjjnnk...kjjjjnnk.................',
-  '..........kJjjjnnk...kjnjjnnk.................',
-  '..........kJnjnnnk...kjjnjnnk.................',
-  '..........kJjnjnnk...kjjjnnnk.................',
-  '..........kJjjjnnk...kjjjjnnk.................',
-  '..........kkkkkkkk...kkkkkkkk.................',
-  '.........kOOoOoook...kOOoOookk................',
-  '........kOOOOOOook...kOOOOOOook...............',
-  '.......kOOOOOOOOook..kOOOOOOOook..............',
-  '.......kPppppppppPk..kPpppppppPk..............',
-  '........kkkkkkkkkk....kkkkkkkkk...............',
+  '.............kkkkkkkk...................',
+  '...........kkhHHhhghhkk.................',
+  '..........khHGHhhhghHhgk................',
+  '.........kgHhHhhhgghhHhgkkkk............',
+  '.........kghHhhhhgsghhHgkghgk...........',
+  '.........kghhHhgsSssghHgkhggk...........',
+  '.........kgghHgsSssssghgkgggk...........',
+  '.........kggHghggssgghggkgggk...........',
+  '.........kghgssssssssssgkgghk...........',
+  '........kkgghsVVVsssVVsgkghgk...........',
+  '.......khgksVVEEgVVVEgVdkghgk...........',
+  '......kghgkdsVEEwVsVEwVdkghgk...........',
+  '......kgHgksssVVVssdVVddkghgk...........',
+  '......kgHgkYsSssssddssdkkghgk...........',
+  '......kgHggkssssssssMddkgghgk...........',
+  '......kgHggkksssMMMMsdkhgghgk...........',
+  '......kgHgghkksssmmsdkghgghgk...........',
+  '......kgHgghggkssSsdkgghgghgk...........',
+  '......kgHgghgkdkkkkkggghgghgk...........',
+  '......kgHgghgkssssDkggghgghgk...........',
+  '......kghggkkkssssDkkgghgghgk...........',
+  '......kghgkRRqssssqqqkkkkkhgk...........',
+  '......kgkkRRrrqqqqrrrrrrqqkgk...........',
+  '.......kRRrrrrrrrrrrrrrrrqqk............',
+  '......kRRrWWWrWWWrWWWrWWWrqqk...........',
+  '.....kRRrrWrrrWrWrrrWrWrQrqqk...........',
+  '....kRRrrrWWWrWrWrWWWrWWWrqqk...........',
+  '...kRRrrrrrrWrWrWrWrrrWrWrqqk...........',
+  '...kRRrrrrWWWrWWWrWWWrWWWrqqk...........',
+  '...kRRrrrrrrrrrrrrrrrrrqqkkkk...........',
+  '...kkkkkkrrrrrrrrrrrrrrqqksdk...........',
+  '...kSssdkRRrrrrrrrrrrrrqqksdk...........',
+  '...kSssdkRRrrrrrrrrrrrrqqksdk...........',
+  '..kSssdk.kRRrrrrrrrrrrqqkssdk...........',
+  '..kSssdk.kRRrrrrrrrrrrqqkssdk...........',
+  '.kSssdk..kRRrrrrrrrrrqqkkssdk...........',
+  '.kSssdk..kRRrrrrrrrrrqqkkssdk...........',
+  '.kSsssdk.kRRrrrrrrrrrqqkkssdk...........',
+  '..kSsssdkkRrrqrrqrqrrqqkkssdk...........',
+  '...kSsssdkRrqQnnCnnQrqqkkssdk...........',
+  '....kSsssdkrQJjjnjjjQrqkkssdk...........',
+  '.....kSsssdkJjjjnjjjQqqkkssdk...........',
+  '......kSssdkjjjjnjjjjNNnkssdk...........',
+  '......kkkkkJjjnjnjjjjjnnkssdkkkkk.......',
+  '......kJjjjjjjjjjjjjjjnnksssdkCck.......',
+  '.......kJjjjjjjjjjjjjjnnkSsdskkkkkk.....',
+  '.......kJjjjjjjjnnjjjjnnkkdkdkfffFk.....',
+  '.......kJjjjjjjnnkjjjjnnk.kfkyyBbFk.....',
+  '.......kJjjjjjjnnkjjjjnnk.kfbBBbbFk.....',
+  '........kJjjjjjnnkjjjjnnk..kfbBxbbFk....',
+  '........kJjjjjjnnkjjjjnnk..kfbBxbbFk....',
+  '........kJjjjjjnnkjjjjnnk..kfbBBbbFk....',
+  '.........kJjjjjnnkjjjjnnk..kfbBBbbFk....',
+  '.........kJjjjjnnkjjjjnnk...kfbBBbbFk...',
+  '.........kJjjjjnnkjjjjnnk...kfbuubbFk...',
+  '.........kJjjjjnnkjjjjnnk...kFFFFFFFk...',
+  '..........kJjjjnnkjjjjnnk...kkkkkkkkk...',
+  '..........kJjjjnnkjjjjnnk...............',
+  '..........kJjjjnnkkjjjnnk...............',
+  '..........kJjjjnnkkjjjnnk...............',
+  '..........kJjjjnnkkjjjnnk...............',
+  '...........kJjjnnkkjjjnnk...............',
+  '...........kJjjnnk.kjjjnnk..............',
+  '...........kJjjnnk.kjjjnnk..............',
+  '...........kJjjnnk.kjjjnnk..............',
+  '...........kJjjnnk.kjjjnnk..............',
+  '...........kJjjnnk..kjjjnnk.............',
+  '...........kJjjnnk..kjjjnnk.............',
+  '...........kJjjnnk..kjjjnnk.............',
+  '...........kJjjnnk..kjjjnnk.............',
+  '...........kJjjnnk...kjjnnk.............',
+  '...........kJjjnnk...kjjnnk.............',
+  '...........kJjjnnk...kjjnnk.............',
+  '...........kkkkkkk...kkkkkk.............',
+  '..........kJJJJJJJk.kJJJJJJk............',
+  '..........knnnnnnnk.knnnnnnk............',
+  '............kYYYZk...kUUUUk.............',
+  '............kYYYZk...kuuuuk.............',
+  '...........kOoOoOOk.kOoOoOOk............',
+  '...........kOOoOoOOkkOOoOoOOk...........',
+  '..........koOOOOOOOokoOOOOOOOok.........',
+  '..........kPpppppppPkPpppppppPk.........',
+  '...........kkkkkkkkk.kkkkkkkkk..........',
 ];
 
-// Hair styles drawn over BODY: [mode, x, y, rows]. 'over' replaces pixels, 'under' only fills see-through ones (hair
-// behind the head). '.' leaves a pixel alone.
-const STYLES = {
-  // Curtain bangs: the centre part, drawn into BODY.
-  curtain: [],
-  // Short at the sides, the fringe swept across the forehead from a side part.
-  swept: [
-    ['over', 8, 0, [
-      '.......kkkkkkk......',
-      '.....kkhHHhhhhkk....',
-      '...kkhHGHHhhhhhgk...',
-      '..kghHHhhhHhhhhggk..',
-      '..kgghhhHhhhhHhggk..',
-      '..kgsShhhhhHhhhggk..',
-      '..kgssShghhhhHhggk..',
-      '..kgsssssdghhhgggk..',
-      '..kggshggssgghhggk..',
-    ]],
-  ],
-  // Swept fringe, the rest tied back (as the pit safety rules want); the tail shows behind the head.
-  ponytail: [
-    ['over', 8, 0, [
-      '.......kkkkkkk......',
-      '.....kkhHHhhhhkk....',
-      '...kkhHGHHhhhhhgk...',
-      '..kghHHhhhHhhhhggk..',
-      '..kgghhhHhhhhHhggk..',
-      '..kgsShhhhhHhhhggk..',
-      '..kgssShghhhhHhggk..',
-      '..kgsssssdghhhgggk..',
-      '..kggshggssgghhggk..',
-    ]],
-    ['over', 8, 0, [
-      '......kkkkkkk.......',
-      '....kkhHHhhhhkk.....',
-      '...khHGHhhhhhhgk....',
-    ]],
-    ['under', 23, 1, [
-      '..kkk..',
-      '.kuuHk.',
-      '.kUuhgk',
-      '..khHgk',
-      '..kgHgk',
-      '..kghgk',
-      '..kghgk',
-      '..kgHgk',
-      '..kghgk',
-      '..kgggk',
-      '..kgHgk',
-      '..kghgk',
-      '...kgk.',
-      '...kgk.',
-      '....k..',
-    ]],
-  ],
-};
-
-// The marker and its cord, swinging under the board's corner.
+// The marker and its cord, hanging from the board's bottom corner.
 const MARKER = [
   '.kk.',
   'kUuk',
@@ -212,45 +153,39 @@ const MARKER = [
   '.kk.',
 ];
 
-export const HAIRSTYLES = Object.keys(STYLES);
-// One see-through row on top, so breathing in can lift the head and shoulders a pixel.
-export const HERO_W = 46, HERO_H = 89;
-const FOOT_X = 18;
+// One see-through row on top, so breathing in can lift her head and shoulders a pixel.
+export const HERO_W = 40, HERO_H = 84;
+const FOOT_X = 17;
 // Breathing stretches the sprite at this row: the middle of the shirt, where every column runs straight down.
-const BREATH_ROW = 33;
+const BREATH_ROW = 31;
 
-function stamp(grid, x0, y0, lines, under = false) {
+function stamp(grid, x0, y0, lines) {
   lines.forEach((line, dy) => {
     [...line].forEach((ch, dx) => {
-      const row = grid[y0 + dy];
-      if (ch === '.' || (under && row[x0 + dx] !== '.')) return;
-      row[x0 + dx] = ch;
+      if (ch !== '.') grid[y0 + dy][x0 + dx] = ch;
     });
   });
 }
 
-function pixels(hair, breath, blink, sway) {
+function pixels(breath, blink, sway) {
   const grid = BODY.map((row) => [...row]);
-  for (const [mode, x, y, lines] of STYLES[hair]) stamp(grid, x, y, lines, mode === 'under');
-  if (blink) stamp(grid, 13, 10, ['sddd..ddds', 'Lggg..gggL']);
-  grid[68][40] = 'p';
-  grid[69][40 + sway] = 'p';
-  stamp(grid, 39 + sway, 70, MARKER);
+  // Eyes shut behind the lenses.
+  if (blink) stamp(grid, 14, 10, ['ddd...dd', 'ggg...gg']);
+  grid[57][35] = 'p';
+  grid[58][35 + sway] = 'p';
+  stamp(grid, 34 + sway, 59, MARKER);
   const blank = Array(HERO_W).fill('.');
   return breath ? [...grid.slice(0, BREATH_ROW + 1), grid[BREATH_ROW], ...grid.slice(BREATH_ROW + 1)] : [blank, ...grid];
 }
 
 const cache = new Map();
-/**
- * The hero as an offscreen layer, cached per look.
- * o: hair (one of HAIRSTYLES, default 'curtain'), breath (1: breathing in), blink, sway (-1, 0 or 1: the marker).
- */
+/** The hero as an offscreen layer, cached per pose. o: breath (1: breathing in), blink, sway (-1, 0 or 1: the marker). */
 export function heroLayer(o = {}) {
-  const hair = STYLES[o.hair] ? o.hair : 'curtain', breath = o.breath ? 1 : 0, blink = !!o.blink;
+  const breath = o.breath ? 1 : 0, blink = !!o.blink;
   const sway = Math.max(-1, Math.min(1, Math.round(o.sway ?? 0)));
-  const key = `${hair} ${breath} ${blink} ${sway}`;
+  const key = `${breath} ${blink} ${sway}`;
   if (!cache.has(key)) {
-    const grid = pixels(hair, breath, blink, sway);
+    const grid = pixels(breath, blink, sway);
     cache.set(key, layer(HERO_W, HERO_H, () => {
       grid.forEach((row, y) => {
         // One rectangle per run of the same colour.
@@ -272,7 +207,7 @@ export function heroIdle(t) {
   return { breath: t % 3.6 < 1.5 ? 1 : 0, blink: t % 4.7 > 4.55 || t % 11.3 > 11.15, sway: swing > 0.55 ? 1 : swing < -0.55 ? -1 : 0 };
 }
 
-/** Draw the hero standing on (x, y): x is the middle of the body, y the floor. o as for heroLayer. */
+/** Draw the hero standing on (x, y): x is the middle of her body, y the floor. o as for heroLayer. */
 export function drawHero(x, y, o = {}) {
   blit(heroLayer(o), x - FOOT_X, y - HERO_H);
 }
