@@ -388,14 +388,14 @@ function shotHab(b, B, info) {
   else if (b < 4.5) [x, lift] = [145, lerp(16, 14, seg(b, 3.75, 4.5))];
   else if (b < 6) [x, lift] = [lerp(145, 156, easeInOut(seg(b, 4.5, 6))), 14];
   else if (b < 6.75) [x, lift] = [156, 14];
-  else [x, lift] = [lerp(156, 166, easeInOut(seg(b, 6.75, 7.5))), 14];
+  else [x, lift] = [lerp(156, 170, easeInOut(seg(b, 6.75, 7.5))), 14];
   front = b < 3.75 ? lift : lerp(16, 0, seg(b, 3.75, 4.5));
   rear = b < 6 ? lift : lerp(14, 0, seg(b, 6, 6.75));
   // Motors judder while they work.
   const working = (b > 1 && b < 3) || (b > 3.75 && b < 4.5) || (b > 6 && b < 6.75);
   const jit = working && Math.floor(B * 16) % 2 ? 0.5 : 0;
   const done = b >= 8;
-  const camX = lerp(30, 96, easeOut(seg(b, 0, 1.2)));
+  const camX = lerp(30, 88, easeOut(seg(b, 0, 1.2)));
   const camY = lerp(-64, -72, easeInOut(seg(b, 1, 3)));
   camera(camX, camY, 2, plus(shake(b, 8, 0.5, 2), shake(b, 8.5, 0.4, 3)));
   sky(SKY, 30, B);
@@ -405,17 +405,17 @@ function shotHab(b, B, info) {
   // The body shudders up and down while the stilt feet stay planted on level 1.
   eleBot(x, HAB.l1, { lift: lift + jit, front: front ? front + jit : 0, rear: rear ? rear + jit : 0, spin: x * 0.64, rsl: done ? true : rslOn(B) });
   if (working) sparks(x + (b < 4.5 ? 1 : -12), HAB.l1 - 2, b, Math.floor(b * 4) / 4, 3, 14, 0.25, Math.floor(b * 4));
-  // The clock ticks once a beat (or in real seconds for the long climbs), and the last three beats count down big.
-  const beatsLeft = info?.buzzer != null ? (info.buzzer - info.t) / info.spb : 8 - b;
-  const secs = done ? 0 : info?.realClock ? Math.max(0, Math.ceil(info.buzzer - info.t - 1e-6)) : Math.min(8, Math.max(0, Math.ceil(beatsLeft - 1e-6)));
+  // The match clock: real seconds over a song; over the chip score a second is two beats, so it shows 4 as the robot
+  // arrives and 1 as the rear legs start up. Its last three seconds also count down big.
+  const [left, secLen] = info?.buzzer != null ? [info.buzzer - info.t, 1] : [(8 - b) / 2, 2 * BEAT];
+  const secs = done ? 0 : Math.max(0, Math.ceil(left - 1e-6));
   const blue = done ? Math.round(lerp(64, 76, seg(b, 8.3, 9))) : 64;
   scoreboard(blue, 71, secs);
-  if (!done && beatsLeft > 0 && beatsLeft <= 3) {
-    // 3, 2, 1, throbbing on the beat where "HAB 3" will land.
-    const digit = Math.ceil(beatsLeft - 1e-6), pop = digit - beatsLeft;
+  if (!done && left > 0 && left <= 3) {
+    const pop = (secs - left) * secLen; // seconds since this number came up
     screen();
-    text(String(digit), 64, pop < 0.3 ? 22 : 26, {
-      scale: pop < 0.3 ? 7 : 6, align: 'center', color: pop < 0.12 ? C.white : C.red2, outline: C.ink, shadow: C.red0, sx: 2, sy: 2,
+    text(String(secs), 32, pop < 0.12 ? 22 : 26, {
+      scale: pop < 0.12 ? 7 : 6, align: 'center', color: pop < 0.05 ? C.white : C.red2, outline: C.ink, shadow: C.red0, sx: 2, sy: 2,
     });
   }
   if (b > 8.5) {
@@ -530,7 +530,7 @@ function drawChipIntro(t) {
 /** One intro frame at song time t, from the song's cue sheet. */
 function drawSongIntro(t) {
   const cue = SONG.cues.findLast((q) => t >= q.keys[0][0]) ?? SONG.cues[0];
-  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), track.beat(t), { t, buzzer: SONG.buzzer, realClock: !!SONG.realClock, spb: track.spb });
+  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), track.beat(t), { t, buzzer: SONG.buzzer });
   for (const f of SONG.flashes ?? []) {
     if (t >= f && t < f + 0.12 && !reduceMotion) {
       screen();

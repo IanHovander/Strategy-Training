@@ -2,7 +2,7 @@
 // Each song was measured (tempo grid, the big hits, the section changes) and the shots are pinned to it:
 //   keys: [song time in seconds, shot beat] pairs; the shot plays in between at whatever speed that implies,
 //         so a shot can run slower than written (a long climb) or line its big moment up with a hit.
-//   buzzer: when the HAB countdown reaches zero (realClock: show real seconds left, for long climbs);
+//   buzzer: when the HAB match clock (real seconds) reaches zero;
 //   flashes: white flashes on big hits; titleAt: the logo drop;
 //   beat0: where the song's beat grid starts, so lights and the crowd pulse on its beats;
 //   loop: the part of the song the title screen repeats (chosen where rhythm and harmony match on both sides).
@@ -22,7 +22,6 @@ export const SONGS = {
     bpm: 142.333,
     beat0: 0.013,
     flashes: [0.081],
-    realClock: true,
     buzzer: w(129),
     titleAt: w(161),
     loop: [56.91, 70.381],
@@ -48,7 +47,6 @@ export const SONGS = {
     bpm: 150.159,
     beat0: 0.456,
     flashes: [3.216],
-    realClock: true,
     buzzer: c(95),
     titleAt: c(123),
     loop: [c(107), c(139)],
@@ -86,10 +84,11 @@ export const SONGS = {
       { shot: 'pan', keys: [[8.94, 0], [10.719, 4], [11.51, 6], [12.3, 8]] },
       // The defender is already charging when we cut to it, so it hits on the crash as the band comes in.
       // The sprint is only a flash, which gives the climb an extra second.
-      { shot: 'clash', keys: [[12.3, 1.5], [12.498, 2], [13.682, 5], [13.93, 6.4], [14.56, 8]] },
-      // The climb: each step on a hit, then it stalls on the platform edge with the motors straining while the clock
-      // counts down; the rear legs snap up on the drum fill and it rolls on just before the buzzer (the big hit).
-      { shot: 'hab', keys: [[14.56, 0], [15.076, 1], [15.865, 3], [16.46, 4.5], [17.052, 6], [17.853, 6.08], [18.245, 6.75], [18.434, 7.5], [18.625, 8], [20.204, 12]] },
+      { shot: 'clash', keys: [[12.3, 1.5], [12.498, 2], [13.682, 5], [13.93, 6.4], [14.625, 8]] },
+      // The climb, counted down on the clock (it cuts in at 0:04): it arrives on a hit, lifts through the 3, and creeps
+      // onto the platform edge through the 2. Right on the 1 the rear legs come up, it rolls to the middle of the
+      // platform and sits still for the buzzer on the big hit.
+      { shot: 'hab', keys: [[14.625, 0], [15.076, 1], [15.865, 3], [16.46, 4.5], [17.3, 6], [17.625, 6], [17.853, 6.75], [18.245, 7.5], [18.625, 8], [20.204, 12]] },
       { shot: 'win', keys: [[20.204, 0], [21.789, 4], [24.947, 12]] },
     ],
   },

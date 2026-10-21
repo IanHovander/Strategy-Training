@@ -386,7 +386,7 @@ const SFX = {
   lift: [[0.2, 'whine'], [4, 'clunk']],
   pan: [[0.4, 'whip'], [2.6, 'rev'], [4.5, 'glint'], [7.3, 'glint']],
   clash: [[0.2, 'rev'], [2, 'impact'], [3, 'spin'], [5, 'whoosh'], [6.5, 'alarm']],
-  hab: [[0.8, 'skid'], [1, 'whine'], [3.8, 'clunk'], [6.5, 'whine'], ...[1, 2, 3, 4, 5, 6, 7].map((b) => [b, 'tick']), [8, 'buzzer'], [8.5, 'slam']],
+  hab: [[0.8, 'skid'], [1, 'whine'], [3.8, 'clunk'], [6, 'whine'], ...[2, 4, 6].map((b) => [b, 'tick']), [8, 'buzzer'], [8.5, 'slam']],
   win: [[0, 'slam'], [0.25, 'slam'], [2, 'pop3'], [4, 'whoosh']],
 };
 const SHOT_STARTS = { logo: 0, rocket: 8, lift: 16, pan: 24, clash: 32, hab: 40, win: 52 };
