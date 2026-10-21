@@ -10,6 +10,7 @@ const grid = (t0, bpm) => (k) => t0 + (k * 60) / bpm;
 
 const w = grid(0.013, 142.333);
 const c = grid(0.456, 150.159);
+const c3 = grid(0.495, 152.067);
 
 export const SONGS = {
   'wilderness-call': {
@@ -55,6 +56,30 @@ export const SONGS = {
       // The climb fills the calmer middle and the build; legs fully out on the biggest hit, buzzer on the triumph.
       { shot: 'hab', keys: [[c(63), 0], [c(67), 1], [c(70), 3], [c(74), 3.75], [c(78), 4.5], [c(85), 6], [c(88), 6.75], [c(92), 7.5], [c(95), 8], [c(99), 12]] },
       { shot: 'win', keys: [[c(99), 0], [c(103), 2], [c(107), 4], [c(109), 5], [c(113), 6.8], [c(121), 11.2], [c(123), 12]] },
+    ],
+  },
+  'compete-to-win-3': {
+    name: 'Compete to Win 3',
+    file: 'songs/compete-to-win-3.mp3',
+    bpm: 152.067,
+    flashes: [2.194],
+    // The intro and the breakdown re-entry sit off the grid, so those cues use the measured hit times.
+    buzzer: 65.782,
+    titleAt: c3(207),
+    // A long loop, so the title screen gets the climb and the loudest section, not just one phrase.
+    loop: [84.567, 122.453],
+    cues: [
+      // The name lands on the hit at the top of the opening swell.
+      { shot: 'logo', keys: [[0, 0], [0.6, 0.5], [2.194, 2.4], [4.0, 4.4], [5.2, 6.4], [5.968, 8]] },
+      // A slow tilt over the sparse intro; the robot arrives as the band comes in.
+      { shot: 'rocket', keys: [[5.968, 0], [10.9, 3.4], [12.498, 5.4], [c3(35), 6.6]] },
+      { shot: 'lift', keys: [[c3(35), 0], [c3(35.25), 0.25], [c3(39), 2], [c3(41), 3.2], [c3(42), 4], [c3(44), 5], [c3(47), 8]] },
+      // A long stare-down through the driving section, then the hit at 0:34.
+      { shot: 'pan', keys: [[c3(47), 0], [c3(48), 0.4], [c3(52), 2.6], [c3(57), 4], [c3(67), 6], [c3(77), 8]] },
+      { shot: 'clash', keys: [[c3(77), 0], [c3(86), 2], [c3(88), 3], [c3(90), 4], [c3(94), 5], [c3(111), 6.4], [c3(115), 8]] },
+      // The climb starts on the phrase change; the breakdown is the last seconds of the clock; buzzer on the re-entry.
+      { shot: 'hab', keys: [[c3(115), 0], [c3(119), 1], [c3(127), 3], [c3(131), 3.75], [c3(139), 4.5], [c3(147), 6], [c3(155), 6.75], [c3(160), 7.5], [65.782, 8], [c3(171), 12]] },
+      { shot: 'win', keys: [[c3(171), 0], [c3(175), 2], [c3(179), 4], [c3(183), 5], [c3(191), 6.8], [c3(203), 11.2], [c3(207), 12]] },
     ],
   },
 };
