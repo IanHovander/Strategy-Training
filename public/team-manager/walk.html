@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Walkabout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+  /* The night-arena look of the intro, with a phone in hand: big screen on the left, controller on the right. */
+  :root {
+    --bg: #0b0f24; --panel: #141a3a; --line: #29336a; --text: #e8ecff; --muted: #9aa6d6;
+    --gold: #ffc61a; --blue: #4a90ff; --red: #d3212f; --ink: #0b0d17; --well: #070a1a; --button: #1d2550;
+    --phone: #05070f; --screen: #10163a;
+    --pixel: "Press Start 2P", ui-monospace, Menlo, Consolas, monospace;
+    --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--body);
+    padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .page { max-width: 980px; margin: 0 auto; display: grid; gap: 18px; }
+  h1 { font: 18px/1.5 var(--pixel); color: var(--gold); margin: 0; text-wrap: balance; }
+  h2 { font: 12px/1.6 var(--pixel); margin: 0; }
+  .intro, .note, .foot { margin: 0; max-width: 64ch; color: var(--muted); }
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 4px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .play { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+  @media (max-width: 760px) { .play { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+  .tv { display: grid; gap: 8px; min-width: 0; width: 100%; }
+  .view { display: grid; place-items: center; background: var(--well); border: 2px solid var(--ink); padding: 10px 0; min-width: 0; overflow: hidden; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .label { font: 10px/1.6 var(--pixel); color: var(--muted); letter-spacing: 0.04em; }
+
+  /* The phone. */
+  .phone {
+    width: min(300px, 100%); aspect-ratio: 9 / 17; background: var(--phone); border-radius: 36px; padding: 14px;
+    border: 2px solid #232a4d; box-shadow: 0 0 0 6px #10142c, 0 18px 40px rgba(0, 0, 0, 0.5);
+    display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  .status { display: flex; justify-content: space-between; font: 9px/1 var(--pixel); color: var(--muted); padding: 6px 10px 0; }
+  .status b { color: var(--red); font-weight: 400; }
+  .who { display: flex; align-items: center; gap: 10px; background: var(--screen); border-radius: 18px; padding: 10px 12px; }
+  .who canvas { width: 36px; height: 56px; flex: none; }
+  .who div { display: grid; gap: 4px; min-width: 0; }
+  .who strong { font: 10px/1.4 var(--pixel); color: var(--text); font-weight: 400; }
+  #mode { font: 10px/1.4 var(--pixel); color: var(--gold); }
+  .padwrap { display: grid; place-items: center; background: var(--screen); border-radius: 22px; min-height: 0; }
+  #pad { position: relative; width: min(220px, 70vw); aspect-ratio: 1; border-radius: 50%; cursor: grab; touch-action: none; }
+  #pad:focus-visible { outline: 2px solid var(--gold); outline-offset: 6px; }
+  .ring { position: absolute; border-radius: 50%; inset: 0; border: 2px dashed #3a4789; }
+  .ring.walk { inset: 22%; border-style: solid; border-color: #2c376f; background: rgba(74, 144, 255, 0.08); }
+  .zone { position: absolute; left: 50%; transform: translateX(-50%); font: 8px/1 var(--pixel); color: var(--muted); pointer-events: none; }
+  .zone.walk { top: 25%; }
+  .zone.run { top: 5%; color: var(--gold); }
+  #knob {
+    position: absolute; left: 50%; top: 50%; width: 30%; aspect-ratio: 1; border-radius: 50%;
+    transform: translate(-50%, -50%); background: radial-gradient(circle at 35% 30%, #ff6a55, #d3212f 55%, #6b0f1b);
+    border: 2px solid var(--ink); box-shadow: 0 4px 0 #3d0710; pointer-events: none;
+  }
+  .hint { margin: 0; text-align: center; font-size: 12px; color: var(--muted); padding-bottom: 6px; }
+  /* On a phone, the page is the controller: no pretend phone around it, and the stick sits right under the screen. */
+  @media (max-width: 760px) {
+    .phone { width: 100%; aspect-ratio: auto; border-radius: 18px; box-shadow: none; padding: 10px; gap: 8px; }
+    .status, .hint { display: none; }
+    .padwrap { padding: 14px 0; }
+    #pad { width: min(190px, 56vw); }
+  }
+
+  .dirs { display: grid; grid-template-columns: repeat(8, 1fr); text-align: center; font: 9px/1.4 var(--pixel); color: var(--muted); }
+  .rows { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+  ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 64ch; }
+  li b { color: var(--text); }
+  @media (prefers-reduced-motion: reduce) { #knob { transition: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: on the move</h1>
+  <p class="intro">Our drive coach walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div class="play">
+      <div class="tv">
+        <span class="label">BIG SCREEN</span>
+        <div class="view"><canvas id="tv" width="256" height="144" aria-label="The practice field, with the drive coach you're steering"></canvas></div>
+      </div>
+      <div class="phone" aria-label="Phone controller">
+        <div class="status"><span>9:41</span><b>● 5026</b></div>
+        <div class="who">
+          <canvas id="face" width="36" height="56" aria-hidden="true"></canvas>
+          <div><strong>DRIVE COACH</strong><span id="mode" role="status">STANDING</span></div>
+        </div>
+        <div class="padwrap">
+          <div id="pad" tabindex="0" role="application" aria-label="Movement stick. Drag, or use the arrow keys and Shift.">
+            <div class="ring"></div>
+            <div class="ring walk"></div>
+            <span class="zone run">RUN</span>
+            <span class="zone walk">WALK</span>
+            <div id="knob"></div>
+          </div>
+        </div>
+        <p class="hint">Drag the stick</p>
+      </div>
+    </div>
+    <p class="note">Push the stick a little to walk, all the way to run. On a keyboard: arrow keys or WASD, hold Shift to run.</p>
+  </section>
+
+  <section class="card" aria-labelledby="sheet-h">
+    <h2 id="sheet-h">All eight directions</h2>
+    <div class="view"><canvas id="sheet" width="288" height="112" aria-label="Walking and running loops facing each of the eight directions"></canvas></div>
+    <div class="dirs" aria-hidden="true"><span>S</span><span>SE</span><span>E</span><span>NE</span><span>N</span><span>NW</span><span>W</span><span>SW</span></div>
+    <div class="rows" aria-hidden="true"><span>Top row: walking</span><span>Bottom row: running</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How she's made</h2>
+    <ul>
+      <li><b>One rig, every angle:</b> she's built as a small 3D figure (rounded shapes for her head, hair, body and limbs), turned to each of the eight directions and drawn to pixels in her own colours, three tones each, with an ink outline. Her eyes and smile are placed as single pixels so they stay crisp.</li>
+      <li><b>Walking:</b> eight frames a stride, arms swinging against her legs, the board hanging from her left hand.</li>
+      <li><b>Running:</b> eight frames, leaning in, knees high, arms pumping, the board tucked under her arm so it doesn't flap.</li>
+      <li><b>No sliding feet:</b> the animation steps with the distance she covers, so her stride matches her speed.</li>
+    </ul>
+  </section>
+  <p class="foot">The walking sprite lives in walker.js; the full-height portrait on the title screen is hero.js.</p>
+</div>
+<script type="module">
+  import { useContext, camera, fill, rnd } from './pixel.js';
+  import { eleBot } from './sprites.js';
+  import { DIRS, FRAMES, CELL_W, CELL_H, walkerFrame, drawWalker } from './walker.js';
+
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const ctx = (id) => {
+    const canvas = document.getElementById(id);
+    const g = canvas.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    return { canvas, g };
+  };
+  const tv = ctx('tv'), sheet = ctx('sheet'), face = ctx('face');
+
+  // Whole-number zoom for the pixel canvases.
+  function fit() {
+    for (const { canvas } of [tv, sheet]) {
+      const room = canvas.parentElement.clientWidth - 4;
+      const s = Math.max(1, Math.min(4, Math.floor(room / canvas.width)));
+      canvas.style.width = `${canvas.width * s}px`;
+    }
+  }
+  new ResizeObserver(fit).observe(document.querySelector('.page'));
+
+  // ---- The practice field ----
+  const FLOOR = (() => {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 144;
+    const g = c.getContext('2d');
+    g.fillStyle = '#2b2e3a'; g.fillRect(0, 0, 256, 144);
+    for (let i = 0; i < 900; i++) {
+      g.fillStyle = rnd(i) < 0.5 ? '#30333f' : '#272a35';
+      g.fillRect(Math.floor(rnd(i + 1000) * 256), Math.floor(rnd(i + 2000) * 144), 1, 1);
+    }
+    // Field tape and the HAB along the top wall.
+    g.fillStyle = '#e8ecf5';
+    g.fillRect(0, 34, 256, 1);
+    g.fillRect(128, 34, 1, 110);
+    g.fillStyle = '#4a90ff';
+    g.fillRect(0, 98, 256, 1);
+    g.fillStyle = '#0a237a'; g.fillRect(70, 6, 116, 28);
+    g.fillStyle = '#1d55e8'; g.fillRect(72, 8, 112, 24);
+    g.fillStyle = '#4a90ff'; g.fillRect(102, 10, 52, 18);
+    g.fillStyle = '#a8d2ff'; g.fillRect(102, 10, 52, 1);
+    g.fillStyle = '#0b0d17'; g.fillRect(0, 0, 256, 4);
+    return c;
+  })();
+  const ROBOT = { x: 206, y: 70 };
+  const BOUNDS = { x0: 12, x1: 244, y0: 44, y1: 140 };
+
+  // ---- Her state ----
+  const me = { x: 70, y: 96, dir: 0, gait: 'stand', dist: 0 };
+  const SPEED = { walk: 34, run: 78 };
+  const STRIDE = { walk: 3.2, run: 6 }; // pixels of travel per animation frame
+  const input = { x: 0, y: 0, keys: new Set() };
+
+  function stick() {
+    // The phone stick wins; otherwise the keyboard.
+    if (!input.x && !input.y && input.keys.size) {
+      const x = (input.keys.has('right') ? 1 : 0) - (input.keys.has('left') ? 1 : 0);
+      const y = (input.keys.has('down') ? 1 : 0) - (input.keys.has('up') ? 1 : 0);
+      return { x, y, mag: x || y ? (input.keys.has('shift') ? 1 : 0.5) : 0 };
+    }
+    return { x: input.x, y: input.y, mag: Math.min(1, Math.hypot(input.x, input.y)) };
+  }
+
+  function step(dt) {
+    const s = stick();
+    if (s.mag < 0.2) {
+      me.gait = 'stand';
+      return;
+    }
+    me.dir = ((Math.round((Math.atan2(s.x, s.y) * 180) / Math.PI / 45) % 8) + 8) % 8;
+    me.gait = s.mag < 0.68 ? 'walk' : 'run';
+    const a = (me.dir * Math.PI) / 4, v = SPEED[me.gait] * dt;
+    const nx = Math.max(BOUNDS.x0, Math.min(BOUNDS.x1, me.x + Math.sin(a) * v));
+    const ny = Math.max(BOUNDS.y0, Math.min(BOUNDS.y1, me.y + Math.cos(a) * v * 0.8));
+    me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
+    me.x = nx;
+    me.y = ny;
+  }
+
+  const frameOf = () => (me.gait === 'stand' ? 0 : Math.floor(me.dist / STRIDE[me.gait]));
+
+  function drawTV(t) {
+    const g = tv.g;
+    g.drawImage(FLOOR, 0, 0);
+    // Her shadow, then her and the robot in depth order.
+    const meDraw = () => {
+      g.fillStyle = 'rgba(5, 6, 13, 0.45)';
+      g.fillRect(Math.round(me.x) - 6, Math.round(me.y) - 1, 12, 3);
+      g.fillRect(Math.round(me.x) - 4, Math.round(me.y) - 2, 8, 5);
+      drawWalker(g, me.x, me.y, me.dir, me.gait, frameOf());
+    };
+    const robotDraw = () => {
+      useContext(g);
+      camera(0, 0, 1);
+      eleBot(ROBOT.x, ROBOT.y, { spin: 0, rsl: Math.floor(t * 2.5) % 2 === 0 });
+    };
+    if (me.y < ROBOT.y) { meDraw(); robotDraw(); } else { robotDraw(); meDraw(); }
+  }
+
+  function drawSheet(t) {
+    const g = sheet.g;
+    g.fillStyle = '#11184a';
+    g.fillRect(0, 0, sheet.canvas.width, sheet.canvas.height);
+    g.fillStyle = '#0d1338';
+    g.fillRect(0, CELL_H, sheet.canvas.width, CELL_H);
+    const tick = reduceMotion ? 0 : t;
+    DIRS.forEach((d, i) => {
+      g.drawImage(walkerFrame(d, 'walk', Math.floor(tick * 10)), i * CELL_W, 0);
+      g.drawImage(walkerFrame(d, 'run', Math.floor(tick * 14)), i * CELL_W, CELL_H);
+    });
+  }
+
+  let lastMode = '';
+  function drawPhone() {
+    face.g.clearRect(0, 0, CELL_W, CELL_H);
+    face.g.drawImage(walkerFrame(me.dir, me.gait, frameOf()), 0, 0);
+    const mode = me.gait === 'stand' ? 'STANDING' : `${me.gait === 'run' ? 'RUNNING' : 'WALKING'} ${DIRS[me.dir].toUpperCase()}`;
+    if (mode !== lastMode) document.getElementById('mode').textContent = lastMode = mode;
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    step(dt);
+    drawTV(now / 1000);
+    drawSheet(now / 1000);
+    drawPhone();
+    requestAnimationFrame(frame);
+  }
+
+  // ---- The stick ----
+  const pad = document.getElementById('pad'), knob = document.getElementById('knob');
+  let dragging = null;
+  function moveStick(e) {
+    const r = pad.getBoundingClientRect();
+    const radius = r.width / 2;
+    let x = (e.clientX - r.left - radius) / radius, y = (e.clientY - r.top - radius) / radius;
+    const m = Math.hypot(x, y);
+    if (m > 1) { x /= m; y /= m; }
+    input.x = x; input.y = y;
+    knob.style.left = `${50 + x * 50}%`;
+    knob.style.top = `${50 + y * 50}%`;
+  }
+  function release() {
+    dragging = null;
+    input.x = input.y = 0;
+    knob.style.left = knob.style.top = '50%';
+    pad.style.cursor = 'grab';
+  }
+  pad.addEventListener('pointerdown', (e) => {
+    dragging = e.pointerId;
+    pad.setPointerCapture(e.pointerId);
+    pad.style.cursor = 'grabbing';
+    moveStick(e);
+    e.preventDefault();
+  });
+  pad.addEventListener('pointermove', (e) => { if (e.pointerId === dragging) moveStick(e); });
+  pad.addEventListener('pointerup', release);
+  pad.addEventListener('pointercancel', release);
+
+  const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ShiftLeft: 'shift', ShiftRight: 'shift' };
+  addEventListener('keydown', (e) => {
+    const k = KEYS[e.code];
+    if (!k) return;
+    input.keys.add(k);
+    if (k !== 'shift') e.preventDefault();
+  });
+  addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (k) input.keys.delete(k); });
+  addEventListener('blur', () => input.keys.clear());
+
+  fit();
+  requestAnimationFrame(frame);
+</script>
+</body>
+</html>
