@@ -70,8 +70,8 @@ export const SONGS = {
     // there so the big moments land on this song's first hits. The rest of the song plays under the title.
     buzzer: 18.625,
     titleAt: 24.947,
-    // A long loop, so the title screen keeps the climb and the loudest section.
-    loop: [84.567, 122.453],
+    // The title screen repeats the first full-band phrase, so the big hit at 0:18.6 keeps coming back (every 30 s).
+    loop: [14.679, 44.684],
     cues: [
       // The star crosses during the opening swell; the name completes on its peak.
       { shot: 'logo', keys: [[0, 0], [0.6, 0.5], [2.194, 2.4], [3.985, 7]] },
