@@ -173,6 +173,8 @@ function scoreboard(blue, red, secs) {
   text(`0:${String(secs).padStart(2, '0')}`, x + 50, y + 3, { align: 'center', color: late ? C.red2 : C.yel2 });
 }
 const rslOn = (B) => Math.floor(B) % 2 === 0;
+// The main character, on the title screen and in the middle of the team holding up the banner.
+const HERO = { skin: 4, hair: 4, style: 'bangs' };
 // The defender's light blinks a beat after the hero's, so the two alternate like a tick-tock (0 = in unison).
 const DEFENDER_RSL_OFFSET = 1;
 const rslDefender = (B) => rslOn(B + DEFENDER_RSL_OFFSET);
@@ -403,9 +405,19 @@ function shotHab(b, B, info) {
   // The body shudders up and down while the stilt feet stay planted on level 1.
   eleBot(x, HAB.l1, { lift: lift + jit, front: front ? front + jit : 0, rear: rear ? rear + jit : 0, spin: x * 0.64, rsl: done ? true : rslOn(B) });
   if (working) sparks(x + (b < 4.5 ? 1 : -12), HAB.l1 - 2, b, Math.floor(b * 4) / 4, 3, 14, 0.25, Math.floor(b * 4));
-  const secs = done ? 0 : info?.buzzer != null ? Math.max(0, Math.ceil(info.buzzer - info.t - 1e-6)) : Math.max(0, 8 - Math.floor(b));
+  // The clock ticks once a beat (or in real seconds for the long climbs), and the last three beats count down big.
+  const beatsLeft = info?.buzzer != null ? (info.buzzer - info.t) / info.spb : 8 - b;
+  const secs = done ? 0 : info?.realClock ? Math.max(0, Math.ceil(info.buzzer - info.t - 1e-6)) : Math.min(8, Math.max(0, Math.ceil(beatsLeft - 1e-6)));
   const blue = done ? Math.round(lerp(64, 76, seg(b, 8.3, 9))) : 64;
   scoreboard(blue, 71, secs);
+  if (!done && beatsLeft > 0 && beatsLeft <= 3) {
+    // 3, 2, 1, throbbing on the beat where "HAB 3" will land.
+    const digit = Math.ceil(beatsLeft - 1e-6), pop = digit - beatsLeft;
+    screen();
+    text(String(digit), 64, pop < 0.3 ? 22 : 26, {
+      scale: pop < 0.3 ? 7 : 6, align: 'center', color: pop < 0.12 ? C.white : C.red2, outline: C.ink, shadow: C.red0, sx: 2, sy: 2,
+    });
+  }
   if (b > 8.5) {
     const k = easeBack(seg(b, 8.5, 8.9));
     screen();
@@ -437,9 +449,9 @@ function shotWin(b, B) {
   const team = [
     { x: 24, skin: 1, hair: 0, style: 'short', ph: 0 },
     { x: 46, skin: 0, hair: 2, style: 'long', ph: 0.3, holds: true },
-    { x: 68, skin: 3, hair: 4, style: 'cap', ph: 0.6, holds: true },
+    { x: 68, ...HERO, ph: 0.6, holds: true },
     { x: 90, skin: 2, hair: 3, style: 'bun', ph: 0.15, holds: true },
-    { x: 112, skin: 1, hair: 1, style: 'short', ph: 0.45 },
+    { x: 112, skin: 3, hair: 1, style: 'short', ph: 0.45 },
   ];
   for (const p of team) {
     const jumping = !(holding && p.holds);
@@ -518,7 +530,7 @@ function drawChipIntro(t) {
 /** One intro frame at song time t, from the song's cue sheet. */
 function drawSongIntro(t) {
   const cue = SONG.cues.findLast((q) => t >= q.keys[0][0]) ?? SONG.cues[0];
-  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), track.beat(t), { t, buzzer: SONG.realClock ? SONG.buzzer : null });
+  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), track.beat(t), { t, buzzer: SONG.buzzer, realClock: !!SONG.realClock, spb: track.spb });
   for (const f of SONG.flashes ?? []) {
     if (t >= f && t < f + 0.12 && !reduceMotion) {
       screen();
@@ -572,7 +584,8 @@ function drawTitle(t, B) {
   // The coach and the robot line-up, at double size.
   camera(0, -66, 2);
   const cx = lerp(-20, 32, easeOut(seg(t, 1.6, 2.2)));
-  person(cx, Math.floor(t / 2) % 2 ? -0.5 : 0, { skin: 1, hair: 0, style: 'cap', tablet: true, smile: true, arms: 'down' });
+  // The main character: a high-school student with the team's scouting tablet.
+  person(cx, Math.floor(t / 2) % 2 ? -0.5 : 0, { ...HERO, glasses: 'up', straps: true, tablet: true, smile: true, arms: 'down' });
   if (t > 2) {
     const c = (t - 2) % 8, i = Math.floor((t - 2) / 8) % ROSTER.length;
     const x = c < 0.8 ? lerp(160, 101, easeOut(c / 0.8)) : c > 7.2 ? lerp(101, 170, easeIn((c - 7.2) / 0.8)) : 101;

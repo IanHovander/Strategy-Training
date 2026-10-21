@@ -435,8 +435,8 @@ export function makeCarpet() {
 
 /**
  * A drive team member, facing the camera, about 36px tall. (x, y) = feet.
- * o: skin, hair (index), style ('short' | 'long' | 'cap' | 'bun'), shirt, arms ('down' | 'up' | 'hold'),
- *    smile, tablet.
+ * o: skin, hair (index), style ('short' | 'long' | 'cap' | 'bun' | 'bangs'), shirt, arms ('down' | 'up' | 'hold'),
+ *    smile, tablet, glasses ('up' = safety glasses pushed up on the head), straps (backpack).
  */
 export function person(x, y, o = {}) {
   const X = snap(x), Y = snap(y);
@@ -469,6 +469,10 @@ export function person(x, y, o = {}) {
   p(4, -24, 2, 11, shirtLo);
   p(-1, -20, 3, 3, C.white);
   p(-2, -24, 4, 1, skin);
+  if (o.straps) {
+    p(-4, -24, 1, 8, '#1d2236');
+    p(3, -24, 1, 8, '#1d2236');
+  }
   if (!up) {
     for (const ax of [-9, 7]) {
       p(ax, -25, 3, 12, C.ink);
@@ -491,6 +495,13 @@ export function person(x, y, o = {}) {
     p(-4, -35, 8, 3, C.blue1);
     p(-4, -35, 8, 1, C.blue2);
     p(1, -33, 6, 2, C.blue0);
+  } else if (style === 'bangs') {
+    // A little volume on top, a straight fringe, locks over the ears, a shine.
+    p(-4, -36, 8, 1, C.ink);
+    p(-4, -35, 8, 5, hair);
+    p(-4, -30, 1, 2, hair);
+    p(3, -30, 1, 2, hair);
+    p(-2, -34, 3, 1, '#2e3448');
   } else {
     p(-4, -34, 8, 3, hair);
     if (style === 'long') {
@@ -506,7 +517,22 @@ export function person(x, y, o = {}) {
       p(-1, -37, 2, 3, hair);
     }
   }
-  // Safety glasses and a grin.
+  // Safety glasses (on, or pushed up on the head with the eyes showing) and a grin.
+  if (o.glasses === 'up') {
+    p(-4, -33, 8, 1, C.ink);
+    p(-3, -33, 2, 1, C.blue3);
+    p(1, -33, 2, 1, C.blue3);
+    p(-2, -29, 1, 1, C.ink);
+    p(1, -29, 1, 1, C.ink);
+    p(-3, -28, 1, 1, '#f0a58a');
+    p(2, -28, 1, 1, '#f0a58a');
+    if (o.smile) {
+      p(-2, -27, 1, 1, '#5a2a22');
+      p(1, -27, 1, 1, '#5a2a22');
+      p(-1, -26, 2, 1, '#5a2a22');
+    } else p(-1, -27, 2, 1, '#8a4a3a');
+    return;
+  }
   p(-4, -30, 8, 3, C.ink);
   p(-3, -29, 2, 1, C.blue3);
   p(1, -29, 2, 1, C.blue3);

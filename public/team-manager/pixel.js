@@ -17,7 +17,7 @@ export const C = {
   yel0: '#a3650a', yel1: '#ffc61a', yel2: '#fff17a',
   org0: '#7a2604', org1: '#ff7a1c', org2: '#ffb46a',
   stand0: '#0d1030', stand1: '#171c45', stand2: '#232a5c',
-  skin: ['#f3c7a0', '#d39a6a', '#a8714a', '#6e4630'],
+  skin: ['#f3c7a0', '#d39a6a', '#a8714a', '#6e4630', '#eabf91'],
   hair: ['#2a1a12', '#5a3418', '#d9a441', '#a33a1c', '#141414'],
 };
 

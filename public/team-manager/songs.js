@@ -85,9 +85,11 @@ export const SONGS = {
       { shot: 'lift', keys: [[6.371, 0], [7.992, 4], [8.94, 6.4]] },
       { shot: 'pan', keys: [[8.94, 0], [10.719, 4], [11.51, 6], [12.3, 8]] },
       // The defender is already charging when we cut to it, so it hits on the crash as the band comes in.
-      { shot: 'clash', keys: [[12.3, 1.5], [12.498, 2], [14.47, 7], [15.468, 8]] },
-      // Buzzer on the strongest early hit; the banner goes up on the next one; title on the hit after that.
-      { shot: 'hab', keys: [[15.468, 0], [18.625, 8], [20.204, 12]] },
+      // The sprint is only a flash, which gives the climb an extra second.
+      { shot: 'clash', keys: [[12.3, 1.5], [12.498, 2], [13.682, 5], [13.93, 6.4], [14.56, 8]] },
+      // The climb: each step on a hit, then it stalls on the platform edge with the motors straining while the clock
+      // counts down; the rear legs snap up on the drum fill and it rolls on just before the buzzer (the big hit).
+      { shot: 'hab', keys: [[14.56, 0], [15.076, 1], [15.865, 3], [16.46, 4.5], [17.052, 6], [17.853, 6.08], [18.245, 6.75], [18.434, 7.5], [18.625, 8], [20.204, 12]] },
       { shot: 'win', keys: [[20.204, 0], [21.789, 4], [24.947, 12]] },
     ],
   },
