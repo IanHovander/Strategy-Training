@@ -511,7 +511,7 @@ function drawChipIntro(t) {
 /** One intro frame at song time t, from the song's cue sheet. */
 function drawSongIntro(t) {
   const cue = SONG.cues.findLast((q) => t >= q.keys[0][0]) ?? SONG.cues[0];
-  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), t / track.spb, { t, buzzer: SONG.buzzer });
+  SHOT_BY_NAME[cue.shot](interp(cue.keys, t), t / track.spb, { t, buzzer: SONG.realClock ? SONG.buzzer : null });
   for (const f of SONG.flashes ?? []) {
     if (t >= f && t < f + 0.12 && !reduceMotion) {
       screen();

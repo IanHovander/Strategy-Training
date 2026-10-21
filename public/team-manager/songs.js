@@ -2,7 +2,8 @@
 // Each song was measured (tempo grid, the big hits, the section changes) and the shots are pinned to it:
 //   keys: [song time in seconds, shot beat] pairs; the shot plays in between at whatever speed that implies,
 //         so a shot can run slower than written (a long climb) or line its big moment up with a hit.
-//   buzzer: when the HAB countdown reaches zero; flashes: white flashes on big hits; titleAt: the logo drop;
+//   buzzer: when the HAB countdown reaches zero (realClock: show real seconds left, for long climbs);
+//   flashes: white flashes on big hits; titleAt: the logo drop;
 //   loop: the part of the song the title screen repeats (chosen where rhythm and harmony match on both sides).
 // The audio files are not in the repo yet: drop the MP3 into public/team-manager/songs/ to use one.
 
@@ -18,6 +19,7 @@ export const SONGS = {
     file: 'songs/wilderness-call.mp3',
     bpm: 142.333,
     flashes: [0.081],
+    realClock: true,
     buzzer: w(129),
     titleAt: w(161),
     loop: [56.91, 70.381],
@@ -42,6 +44,7 @@ export const SONGS = {
     file: 'songs/compete-to-win.mp3',
     bpm: 150.159,
     flashes: [3.216],
+    realClock: true,
     buzzer: c(95),
     titleAt: c(123),
     loop: [c(107), c(139)],
@@ -63,23 +66,24 @@ export const SONGS = {
     file: 'songs/compete-to-win-3.mp3',
     bpm: 152.067,
     flashes: [2.194],
-    // The intro and the breakdown re-entry sit off the grid, so those cues use the measured hit times.
-    buzzer: 65.782,
-    titleAt: c3(207),
-    // A long loop, so the title screen gets the climb and the loudest section, not just one phrase.
+    // The original pace: every shot runs at its written speed, about 25 seconds in all, nudged a beat here and
+    // there so the big moments land on this song's first hits. The rest of the song plays under the title.
+    buzzer: 18.625,
+    titleAt: 24.947,
+    // A long loop, so the title screen keeps the climb and the loudest section.
     loop: [84.567, 122.453],
     cues: [
-      // The name lands on the hit at the top of the opening swell.
-      { shot: 'logo', keys: [[0, 0], [0.6, 0.5], [2.194, 2.4], [4.0, 4.4], [5.2, 6.4], [5.968, 8]] },
-      // A slow tilt over the sparse intro; the robot arrives as the band comes in.
-      { shot: 'rocket', keys: [[5.968, 0], [10.9, 3.4], [12.498, 5.4], [c3(35), 6.6]] },
-      { shot: 'lift', keys: [[c3(35), 0], [c3(35.25), 0.25], [c3(39), 2], [c3(41), 3.2], [c3(42), 4], [c3(44), 5], [c3(47), 8]] },
-      // A long stare-down through the driving section, then the hit at 0:34.
-      { shot: 'pan', keys: [[c3(47), 0], [c3(48), 0.4], [c3(52), 2.6], [c3(57), 4], [c3(67), 6], [c3(77), 8]] },
-      { shot: 'clash', keys: [[c3(77), 0], [c3(86), 2], [c3(88), 3], [c3(90), 4], [c3(94), 5], [c3(111), 6.4], [c3(115), 8]] },
-      // The climb starts on the phrase change; the breakdown is the last seconds of the clock; buzzer on the re-entry.
-      { shot: 'hab', keys: [[c3(115), 0], [c3(119), 1], [c3(127), 3], [c3(131), 3.75], [c3(139), 4.5], [c3(147), 6], [c3(155), 6.75], [c3(160), 7.5], [65.782, 8], [c3(171), 12]] },
-      { shot: 'win', keys: [[c3(171), 0], [c3(175), 2], [c3(179), 4], [c3(183), 5], [c3(191), 6.8], [c3(203), 11.2], [c3(207), 12]] },
+      // The star crosses during the opening swell; the name completes on its peak.
+      { shot: 'logo', keys: [[0, 0], [0.6, 0.5], [2.194, 2.4], [3.985, 7]] },
+      { shot: 'rocket', keys: [[3.985, 0], [6.371, 6.05]] },
+      // Hatch on the downbeat at 0:08.
+      { shot: 'lift', keys: [[6.371, 0], [7.992, 4], [8.94, 6.4]] },
+      { shot: 'pan', keys: [[8.94, 0], [10.719, 4], [11.51, 6], [12.3, 8]] },
+      // The defender is already charging when we cut to it, so it hits on the crash as the band comes in.
+      { shot: 'clash', keys: [[12.3, 1.5], [12.498, 2], [14.47, 7], [15.468, 8]] },
+      // Buzzer on the strongest early hit; the banner goes up on the next one; title on the hit after that.
+      { shot: 'hab', keys: [[15.468, 0], [18.625, 8], [20.204, 12]] },
+      { shot: 'win', keys: [[20.204, 0], [21.789, 4], [24.947, 12]] },
     ],
   },
 };
