@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+  /* The night-arena look of the intro and the theme auditions. */
+  :root {
+    --bg: #0b0f24; --panel: #141a3a; --line: #29336a; --text: #e8ecff; --muted: #9aa6d6;
+    --gold: #ffc61a; --blue: #4a90ff; --ink: #0b0d17; --well: #070a1a; --button: #1d2550;
+    --pixel: "Press Start 2P", ui-monospace, Menlo, Consolas, monospace;
+    --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--body);
+    padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .page { max-width: 760px; margin: 0 auto; display: grid; gap: 18px; }
+  h1 { font: 18px/1.5 var(--pixel); color: var(--gold); margin: 0; text-wrap: balance; }
+  h2 { font: 12px/1.6 var(--pixel); margin: 0; }
+  .intro, .note { margin: 0; max-width: 64ch; }
+  .intro, .note, .foot { color: var(--muted); }
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 4px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .view { display: grid; place-items: center; background: var(--well); border: 2px solid var(--ink); padding: 10px 0; min-width: 0; overflow: hidden; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+  button {
+    font: 11px/1 var(--pixel); color: var(--text); background: var(--button); border: 2px solid var(--line); border-radius: 2px;
+    padding: 12px 14px; min-height: 44px; cursor: pointer; touch-action: manipulation;
+  }
+  button:hover { border-color: var(--blue); }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--gold); color: var(--ink); border-color: var(--ink); }
+  .labels { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 13px; color: var(--muted); }
+  ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 64ch; }
+  li b { color: var(--text); }
+  .foot { margin: 0; font-size: 13px; max-width: 64ch; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: the hero</h1>
+  <p class="intro">A full-height sprite for the main character. It is drawn pixel by pixel at the screen's own resolution instead of the game's usual double-size pixels, which leaves room for a real face. The hair is the open question, so there are three to choose from; everything else is shared.</p>
+
+  <section class="card" aria-labelledby="close-h">
+    <h2 id="close-h">Up close</h2>
+    <div class="view"><canvas id="close" width="64" height="100" aria-label="The hero sprite, enlarged, breathing and blinking"></canvas></div>
+    <div class="buttons" id="hair" role="group" aria-label="Hairstyle">
+      <button type="button" data-hair="curtain">Curtain bangs</button>
+      <button type="button" data-hair="swept">Side-swept</button>
+      <button type="button" data-hair="ponytail">Ponytail</button>
+    </div>
+    <div class="buttons"><button type="button" id="idle" aria-pressed="true">Idle animation</button></div>
+  </section>
+
+  <section class="card" aria-labelledby="title-h">
+    <h2 id="title-h">On the title screen</h2>
+    <p class="note">The real title layout and robot line-up, at the size the game shows them. Compare it with the coach that's there now.</p>
+    <div class="view"><canvas id="title" width="256" height="144" aria-label="The title screen with the hero in front of the robot line-up"></canvas></div>
+    <div class="buttons" role="group" aria-label="Which coach">
+      <button type="button" data-who="new" aria-pressed="true">New hero</button>
+      <button type="button" data-who="old" aria-pressed="false">Current coach</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="all-h">
+    <h2 id="all-h">The three hairstyles</h2>
+    <div class="view"><canvas id="all" width="168" height="100" aria-label="The hero with curtain bangs, side-swept hair and a ponytail"></canvas></div>
+    <div class="labels" aria-hidden="true"><span>Curtain bangs</span><span>Side-swept</span><span>Ponytail</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="look-h">
+    <h2 id="look-h">What to look at</h2>
+    <ul>
+      <li><b>Face:</b> straight dark brows, open eyes with a brown iris and a lash line, a nose drawn with shadow, an easy closed smile, and a jaw that narrows to the chin.</li>
+      <li><b>Hair:</b> black with blue-grey highlights that follow the strands. Curtain bangs and side-swept are common on Asian teens; the ponytail is tied back the way the pit safety rules ask.</li>
+      <li><b>Stance:</b> weight on one leg with the other knee relaxed, one hand in a pocket with the elbow out, and the board carried by its clip.</li>
+      <li><b>Clothes:</b> the red 5026 team shirt with sleeves and a crease where the pocket hand pulls it, plain jeans with a fly and pockets, and white sneakers.</li>
+      <li><b>The board:</b> the 2019 field (blue HAB left, red HAB right, the cargo ship in the middle, rockets on the walls), a blue cycle over the cargo ship and a red X where the defender waits. The marker swings on its cord.</li>
+    </ul>
+  </section>
+  <p class="foot">The sprite lives in hero.js. Nothing in the intro uses it yet; the title screen still shows the current coach until a hairstyle is picked.</p>
+</div>
+<script type="module">
+  import { W, C, useContext, camera, screen, fill, text, measure, layer, blit, logoText } from './pixel.js';
+  import { eleBot, defBot, makeSky, sky, person } from './sprites.js';
+  import { drawHero, heroIdle } from './hero.js';
+
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const state = { hair: 'curtain', who: 'new', idle: !reduceMotion };
+  try { state.hair = localStorage.getItem('hero-hair') ?? state.hair; } catch {}
+
+  const canvases = ['close', 'title', 'all'].map((id) => {
+    const canvas = document.getElementById(id);
+    const g = canvas.getContext('2d', { alpha: false });
+    g.imageSmoothingEnabled = false;
+    return { canvas, g, w: canvas.width };
+  });
+  // Whole-number zoom so every pixel stays square.
+  function fit() {
+    for (const { canvas, w } of canvases) {
+      const room = canvas.parentElement.clientWidth - 4;
+      const s = Math.max(1, Math.min(canvas.id === 'close' ? 6 : 4, Math.floor(room / w)));
+      canvas.style.width = `${w * s}px`;
+    }
+  }
+  new ResizeObserver(fit).observe(document.querySelector('.page'));
+
+  const SKY = makeSky();
+  const LOGO_TEXT = 'BLUE BANNER';
+  const LOGO = layer(measure(LOGO_TEXT, { scale: 3 }) + 14, 33, () =>
+    logoText(LOGO_TEXT, 4, 4, {
+      scale: 3, fat: 1, outline: C.ink, outlineW: 2, extrude: [C.ink, C.blue0, C.blue0, C.blue1],
+      fillAt: (y) => (y < 5 ? C.yel2 : y < 13 ? C.yel1 : y < 17 ? '#ffa31a' : C.org1),
+    }),
+  );
+  const OLD_COACH = { skin: 4, hair: 4, style: 'bangs', glasses: 'up', straps: true, tablet: true, smile: true, arms: 'down' };
+
+  function backdrop(w, h, floor) {
+    fill(0, 0, w, h, C.night1);
+    fill(0, Math.round(h * 0.45), w, h, C.stand0);
+    fill(0, floor, w, h - floor, C.carpet0);
+    fill(0, floor, w, 1, C.carpet2);
+  }
+
+  function draw(t) {
+    const pose = state.idle ? heroIdle(t) : {};
+    const B = t / 0.4;
+    const [close, title, all] = canvases;
+
+    useContext(close.g);
+    screen();
+    backdrop(64, 100, 94);
+    drawHero(26, 94, { ...pose, hair: state.hair });
+
+    useContext(title.g);
+    camera(0, -112, 1);
+    sky(SKY, 60, B);
+    fill(0, 132, W, 12, C.carpet0);
+    fill(0, 132, W, 1, C.carpet2);
+    screen();
+    blit(LOGO, Math.round(128 - LOGO.w / 2), 6);
+    text('AN FRC TEAM MANAGER', 128, 40, { align: 'center', spacing: 1, color: C.blue3, shadow: C.blue0, sx: 0, sy: 1 });
+    camera(0, -66, 2);
+    const c = t % 8, robot = Math.floor(t / 8) % 2;
+    const x = c < 0.8 ? 160 - 59 * (1 - (1 - c / 0.8) ** 3) : c > 7.2 ? 101 + 69 * ((c - 7.2) / 0.8) ** 3 : 101;
+    if (robot === 0) eleBot(x, 0, { spin: x * 0.64, rsl: Math.floor(B) % 2 === 0 });
+    else defBot(x, 0, { dir: -1, spin: x * 0.64, glint: (t * 0.5) % 1, rsl: Math.floor(B + 1) % 2 === 0 });
+    if (state.who === 'old') person(32, Math.floor(t / 2) % 2 ? -0.5 : 0, OLD_COACH);
+    else {
+      screen();
+      drawHero(64, 132, { ...pose, hair: state.hair });
+    }
+    screen();
+    if (t % 1 < 0.65) text('PRESS START', 128, 98, { align: 'center', color: C.white, outline: C.ink });
+    text('©2026 STRATEGY TRAINING', 128, 135, { align: 'center', color: C.steel2 });
+
+    useContext(all.g);
+    screen();
+    backdrop(168, 100, 94);
+    ['curtain', 'swept', 'ponytail'].forEach((hair, i) => drawHero(30 + i * 56, 94, { ...pose, hair }));
+  }
+
+  function frame(now) {
+    draw(now / 1000);
+    if (state.idle) requestAnimationFrame(frame);
+  }
+  function redraw() {
+    if (!state.idle) draw(0);
+  }
+
+  function press(attr, value) {
+    for (const b of document.querySelectorAll(`[data-${attr}]`)) b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
+  }
+  document.getElementById('hair').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-hair]');
+    if (!b) return;
+    state.hair = b.dataset.hair;
+    try { localStorage.setItem('hero-hair', state.hair); } catch {}
+    press('hair', state.hair);
+    redraw();
+  });
+  for (const b of document.querySelectorAll('[data-who]')) {
+    b.addEventListener('click', () => {
+      state.who = b.dataset.who;
+      press('who', state.who);
+      redraw();
+    });
+  }
+  const idleButton = document.getElementById('idle');
+  idleButton.addEventListener('click', () => {
+    state.idle = !state.idle;
+    idleButton.setAttribute('aria-pressed', String(state.idle));
+    if (state.idle) requestAnimationFrame(frame);
+    else redraw();
+  });
+  idleButton.setAttribute('aria-pressed', String(state.idle));
+  press('hair', state.hair);
+  fit();
+  if (state.idle) requestAnimationFrame(frame);
+  else draw(0);
+</script>
+</body>
+</html>
