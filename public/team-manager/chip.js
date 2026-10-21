@@ -226,7 +226,6 @@ export class Chip {
         this.tone(t, 0.6, 2400, { wave: 'p12', slide: 600, vol: 0.08 });
         this.noise(t, 0.6, { vol: 0.06, hz: 5000, sweep: 1500 });
       },
-      chime: () => [0, 1, 2, 3].forEach((i) => this.tone(t + i * 0.05, 0.12, [1568, 2093, 2637, 3136][i], { wave: 'p12', vol: 0.05, decay: true })),
       whoosh: () => this.noise(t, 0.45, { vol: 0.22, type: 'bandpass', hz: 400, sweep: 3500, q: 1.2 }),
       whip: () => this.noise(t, 0.7, { vol: 0.25, type: 'bandpass', hz: 300, sweep: 4000, q: 1.5 }),
       skid: () => this.noise(t, 0.3, { vol: 0.16, type: 'bandpass', hz: 1500, sweep: 700, q: 3 }),
@@ -236,8 +235,6 @@ export class Chip {
         this.tone(t, 0.12, 140, { wave: 'p50', slide: 60, vol: 0.25, decay: true });
         this.noise(t, 0.12, { vol: 0.3, type: 'lowpass', hz: 900 });
       },
-      blip: () => this.tone(t, 0.05, 1320, { wave: 'p25', vol: 0.08 }),
-      light: () => this.tone(t, 0.09, 1760, { wave: 'p12', vol: 0.06, decay: true }),
       rev: () => {
         this.tone(t, 0.7, 48, { wave: 'saw', slide: 75, vol: 0.12 });
         this.noise(t, 0.6, { vol: 0.08, type: 'lowpass', hz: 300 });
@@ -266,188 +263,205 @@ export class Chip {
       pop3: () => this.noise(t, 0.25, { vol: 0.25, type: 'highpass', hz: 2000 }),
       cursor: () => this.tone(t, 0.04, 1760, { wave: 'p50', vol: 0.07 }),
       select: () => [0, 0.06].forEach((d, i) => this.tone(t + d, 0.06, [1319, 1976][i], { wave: 'p50', vol: 0.07 })),
-      type: () => this.tone(t, 0.02, 880, { wave: 'p50', vol: 0.03 }),
     };
     S[name]?.();
   }
 }
 
 // ---- Score ----
-// Notes are "name:beats", r = rest. Bars are 4 beats; | is only for reading.
+// Written like an old handheld RPG score: a melody you can hum on top, a second voice harmonizing under it,
+// a walking bass, and simple march drums. It follows the picture bar by bar:
+//   bars 1-2   the logo: a twinkle up with the shooting star, then a swell into the drums
+//   bars 3-4   the theme, in C, as the camera tilts down to the rocket
+//   bars 5-6   the melody climbs with each elevator stage and lands on the hatch
+//   bars 7-8   minor and low for the defender; a sting for each close-up
+//   bars 9-10  a run up into the hit, the spin, the sprint
+//   bars 11-13 the climb: one step higher every two beats over a held bass note, a snare roll, the buzzer
+//   bars 14-16 up a key to D for the win; the top note lands with the banner
+// The title screen then loops the full theme in D (16 bars, with a middle section that climbs back to it).
+
 const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
 const midi = (n) => {
   const m = /^([A-G]#?)(\d)$/.exec(n);
   return NOTE[m[1]] + (Number(m[2]) + 1) * 12;
 };
 const hz = (m) => 440 * 2 ** ((m - 69) / 12);
+/** "E5:1 r:.5 G5:.5" -> [{ b, d, m }], beats from the start of the bar. */
 function line(src) {
   const out = [];
   let b = 0;
-  for (const tok of src.split(/\s+/).filter((s) => s && s !== '|')) {
+  for (const tok of src.split(/\s+/).filter(Boolean)) {
     const [n, d] = tok.split(':');
     if (n !== 'r') out.push({ b, d: Number(d), m: midi(n) });
     b += Number(d);
   }
   return out;
 }
-const CHORDS = {
-  Em: ['E', 'G', 'B'], C: ['C', 'E', 'G'], D: ['D', 'F#', 'A'], B: ['B', 'D#', 'F#'], Am: ['A', 'C', 'E'],
-  E: ['E', 'G#', 'B'], 'C#m': ['C#', 'E', 'G#'], A: ['A', 'C#', 'E'],
-};
-const pc = (n) => NOTE[n];
+// Chords: 'C', 'Am', 'G7', 'F#m', 'C/G' (after the slash: the bass note).
+const QUALITY = { '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10] };
+function chord(name) {
+  const [top, slash] = name.split('/');
+  const [, root, q] = /^([A-G]#?)(.*)$/.exec(top);
+  return { tones: QUALITY[q].map((i) => (NOTE[root] + i) % 12), bass: 36 + NOTE[slash ?? root] };
+}
 
-// Drum patterns, 16 steps per bar.
+const SCALE = [0, 2, 4, 5, 7, 9, 11];
+/**
+ * The second voice's note under melody note m: a chord tone a third to a sixth below when the melody sits on
+ * the chord, otherwise the note a third below in the key, so passing notes move in parallel thirds.
+ */
+function harmony(m, tones, key) {
+  const k = NOTE[key], deg = SCALE.indexOf((m - k + 120) % 12);
+  if (!tones.includes(m % 12) && deg >= 0) {
+    const below = SCALE[(deg + 5) % 7];
+    return m - ((((m - k) % 12) - below + 12) % 12 || 12);
+  }
+  for (let h = m - 3; h >= m - 9; h--) if (tones.includes(h % 12)) return h;
+  return null;
+}
+
+// Drums, 16 steps a bar. In 'roll' and 'build' the snare gets louder as the bar goes on.
 const DRUMS = {
-  main: { k: 'x.......x.x.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' },
-  half: { k: 'x.........x.....', s: '........x.......', h: 'xxxxxxxxxxxxxxxx' },
+  march: { k: 'x.......x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' },
+  turn: { k: 'x.......x.......', s: '....x.......x.xx', h: 'x.x.x.x.x.x.x...' },
+  half: { k: 'x.........x.....', s: '........x.......', h: 'x...x...x...x...' },
   pulse: { k: 'x...x...x...x...', s: '................', h: '................' },
-  roll: { k: 'x...x...x...x...', s: '..x...x...x.xxxx', h: '..x...x...x.....' },
-  fill: { k: 'x...............', s: '............xxxx', h: '................' },
+  roll: { k: 'x...x...x...x...', s: '..x...x.x.x.xxxx', h: '................', cresc: true },
+  build: { k: '................', s: '........x.x.xxxx', h: '................', cresc: true },
+  fill: { k: 'x.......x.......', s: '........x...xxxx', h: 'x.x.x.x.........' },
+  end: { k: 'x...............', s: '............xxxx', h: '................', cresc: true },
 };
 
-// The intro, one section per shot. Section lengths in beats must match the shots in intro.js.
-const SECTIONS = [
-  { name: 'logo', chords: ['Em', 'Em'], arp: 'slow', drums: null },
-  { name: 'rocket', chords: ['Em', 'C'], drums: 'main', lead: 'E5:1 B4:.5 E5:.5 G5:1 F#5:.5 E5:.5 | G5:1.5 A5:.5 G5:1 E5:1' },
-  { name: 'lift', chords: ['D', 'B'], drums: 'main', lead: 'F#5:1 D5:.5 F#5:.5 A5:1 G5:.5 F#5:.5 | B5:1.5 A5:.5 G5:.5 F#5:.5 D#5:1' },
-  { name: 'pan', chords: ['Am', 'Em'], drums: 'half', bass: 'stab', lead: 'A4:.5 A4:.5 C5:.5 A4:.5 E5:1 D#5:1 | E5:.5 E5:.5 G5:.5 E5:.5 B5:1 A#5:.5 B5:.5' },
-  { name: 'clash', chords: ['C', 'D'], drums: 'main', lead: 'G5:.5 G5:.5 r:1 E5:.5 G5:.5 C6:1 | B5:.5 A5:.5 B5:.5 A5:.5 F#5:.5 A5:.5 D6:1' },
-  { name: 'hab', chords: ['B', 'B', 'E'], drums: ['pulse', 'roll', 'fill'], bass: 'pedal', arp: 'none', lead: 'B4:2 C5:2 | C#5:2 D#5:2 | E5:1 r:1.5 B4:.5 C#5:.5 D#5:.5' },
-  { name: 'win', chords: ['A', 'B', 'E'], drums: 'main', lead: 'E5:.5 A5:.5 C#6:1 B5:.5 A5:.5 B5:.5 C#6:.5 | F#5:.5 B5:.5 D#6:1 C#6:.5 B5:.5 C#6:.5 D#6:.5 | E6:4' },
+// The intro, bar by bar (16 bars = 64 beats, matching the shots in intro.js).
+//   ch: chord per bar or per half bar; bass: walk | hold | pedal | riff | stab; vol: lead volume.
+const INTRO = [
+  { ch: ['C'], lead: 'r:.5 C5:.25 E5:.25 G5:.25 C6:.25 E6:1.5 D6:.5 C6:.5', bass: 'hold', vol: 0.09, wave: 'p12', echo: true, harm: false },
+  { ch: ['F', 'G'], lead: 'A5:2 G5:2', bass: 'hold', drums: 'build', vol: 0.11 },
+  { ch: ['C'], lead: 'G4:.5 C5:.5 E5:.5 G5:.5 C6:1.5 B5:.5', drums: 'march', crash: [0] },
+  { ch: ['Am', 'G'], lead: 'A5:.75 G5:.25 E5:.5 C5:.5 D5:1.5 r:.5', drums: 'turn' },
+  { ch: ['F', 'G'], lead: 'C5:.25 D5:.25 E5:.25 F5:.25 A5:1 E5:.25 F5:.25 G5:.25 A5:.25 B5:1', drums: 'march' },
+  { ch: ['C', 'E7'], lead: 'C6:2 B5:.5 G#5:.5 E5:.5 D5:.5', drums: 'turn', crash: [0], sparkle: [[0.5, 'E6'], [0.75, 'G6'], [1, 'C7']] },
+  { ch: ['Am'], lead: 'E4:.25 E4:.25 r:.5 E4:.25 E4:.25 r:.5 F4:.5 E4:.5 D#4:.5 E4:.5', bass: 'riff', drums: 'half', wave: 'p50', harm: false, crash: [0] },
+  { ch: ['F', 'E'], lead: 'F5:.75 E5:.25 D#5:1 E5:.5 G#5:.5 B5:1', bass: 'stab', drums: 'half', stabs: [[0, ['F4', 'A4', 'C5']], [2, ['E4', 'G#4', 'B4']]] },
+  { ch: ['Am'], lead: 'A4:.25 B4:.25 C5:.25 D5:.25 E5:.25 F5:.25 G#5:.25 A5:.25 A5:.5 r:.5 E5:.25 A5:.25 C6:.25 E6:.25', drums: 'march', crash: [2] },
+  { ch: ['C', 'G'], lead: 'G5:.5 C6:.5 B5:.25 C6:.25 D6:.5 E6:1 D6:.5 B5:.5', drums: 'turn' },
+  { ch: ['C/G', 'Dm/G'], lead: 'C5:.5 D5:.5 E5:1 D5:.5 E5:.5 F5:1', bass: 'pedal', drums: 'pulse', vol: 0.1 },
+  { ch: ['Em/G', 'G7'], lead: 'E5:.5 F5:.5 G5:1 F5:.5 G5:.5 A5:.5 B5:.5', bass: 'pedal', drums: 'roll', vol: 0.12 },
+  { ch: ['C', 'A7'], lead: 'C6:2 A4:.25 C#5:.25 E5:.25 G5:.25 A5:.25 C#6:.25 E6:.5', drums: 'fill', crash: [0], vol: 0.14 },
+  { ch: ['D'], lead: 'A4:.5 D5:.5 F#5:.5 A5:.5 D6:1.5 C#6:.5', drums: 'march', crash: [0], vol: 0.14, key: 'D' },
+  { ch: ['G', 'A'], lead: 'G5:.5 B5:.5 D6:1 A5:.5 C#6:.5 E6:1', drums: 'turn', vol: 0.14, key: 'D' },
+  { ch: ['D'], lead: 'F#6:3 r:1', bass: 'hold', drums: 'end', crash: [0], vol: 0.14, key: 'D' },
 ];
-const TITLE = {
-  chords: ['E', 'C#m', 'A', 'B', 'E', 'C#m', 'A', 'E'],
-  split: { 6: ['A', 'B'] },
-  lead:
-    'B4:.5 E5:.5 G#5:1 F#5:.5 E5:.5 F#5:1 | G#5:1.5 E5:.5 C#5:1 E5:1 | A5:1 G#5:.5 F#5:.5 E5:1 C#5:.5 E5:.5 | F#5:2 D#5:1 B4:1 | ' +
-    'B4:.5 E5:.5 G#5:1 B5:.5 G#5:.5 B5:1 | C#6:1.5 B5:.5 G#5:1 E5:1 | A5:1 C#6:1 B5:1 D#6:1 | E6:2 B5:1 G#5:1',
-};
-export const INTRO_BEATS = SECTIONS.reduce((n, s) => n + s.chords.length * 4, 0);
-export const TITLE_LOOP = TITLE.chords.length * 4;
+// The title theme, in D. Bars 1-8 state it; bars 9-16 climb E, F#, G, A and fall back into it.
+const TITLE = [
+  { ch: ['D'], lead: 'A4:.5 D5:.5 F#5:.5 A5:.5 D6:1.5 C#6:.5', crash: [0] },
+  { ch: ['Bm'], lead: 'B5:.75 A5:.25 F#5:.5 D5:.5 F#5:2' },
+  { ch: ['G'], lead: 'G5:.75 F#5:.25 G5:.5 B5:.5 D6:1 B5:.5 G5:.5' },
+  { ch: ['A'], lead: 'A5:2.5 r:.5 E4:.25 F#4:.25 G4:.25 G#4:.25', drums: 'turn' },
+  { ch: ['D'], lead: 'A4:.5 D5:.5 F#5:.5 A5:.5 D6:1.5 E6:.5' },
+  { ch: ['Bm'], lead: 'F#6:1.5 E6:.5 D6:.5 B5:.5 D6:1' },
+  { ch: ['G', 'A'], lead: 'G5:.5 B5:.5 D6:1 E6:.5 F#6:.5 E6:.5 C#6:.5' },
+  { ch: ['D', 'B7'], lead: 'D6:2 B5:.5 A5:.5 F#5:.5 D#5:.5', drums: 'turn' },
+  { ch: ['Em'], lead: 'E5:.5 G5:.5 B5:1.5 A5:.5 G5:1' },
+  { ch: ['F#m'], lead: 'F#5:.5 A5:.5 C#6:1.5 B5:.5 A5:1' },
+  { ch: ['G'], lead: 'G5:.5 B5:.5 D6:1.5 C#6:.5 B5:1' },
+  { ch: ['A7'], lead: 'A5:.5 C#6:.5 E6:.5 G6:.5 E6:.5 C#6:.5 A5:.5 E5:.5', drums: 'roll' },
+  { ch: ['Bm'], lead: 'F#6:2 E6:1 D6:1', crash: [0] },
+  { ch: ['G'], lead: 'D6:1.5 B5:.5 G5:1 D6:1' },
+  { ch: ['Em'], lead: 'E6:1.5 D6:.5 B5:1 G5:1' },
+  { ch: ['A'], lead: 'A5:2.5 r:.5 E4:.25 F#4:.25 G4:.25 G#4:.25', drums: 'fill' },
+];
+export const INTRO_BEATS = INTRO.length * 4;
+export const TITLE_LOOP = TITLE.length * 4;
 
 // Sound effects in each shot, in beats from the start of that shot (kept here so they line up with the music).
 const SFX = {
-  logo: [[0.5, 'star'], [1.6, 'chime'], [3, 'chime']],
+  logo: [[0.5, 'star']],
   rocket: [[3.4, 'whoosh'], [5, 'skid']],
-  lift: [[0.25, 'pop'], [2, 'pop2'], [4, 'clunk'], [4.5, 'light'], [4.75, 'light'], [5, 'light']],
-  pan: [[0.4, 'whip'], [2.6, 'rev'], [4.5, 'glint'], [6.2, 'rev'], [7.3, 'glint']],
+  lift: [[0.25, 'pop'], [2, 'pop2'], [4, 'clunk']],
+  pan: [[0.4, 'whip'], [2.6, 'rev'], [4.5, 'glint'], [7.3, 'glint']],
   clash: [[0.2, 'rev'], [2, 'impact'], [3, 'spin'], [5, 'whoosh'], [6.5, 'alarm']],
   hab: [[0.8, 'skid'], [1, 'whine'], [3.8, 'clunk'], [6.5, 'whine'], ...[1, 2, 3, 4, 5, 6, 7].map((b) => [b, 'tick']), [8, 'buzzer'], [8.5, 'slam']],
-  win: [[0, 'slam'], [0.25, 'slam'], [2, 'pop3'], [4, 'whoosh'], [8, 'chime']],
+  win: [[0, 'slam'], [0.25, 'slam'], [2, 'pop3'], [4, 'whoosh']],
 };
+const SHOT_STARTS = { logo: 0, rocket: 8, lift: 16, pan: 24, clash: 32, hab: 40, win: 52 };
 
-/** Events for one section: [{ b (beats from section start), play(chip, time) }]. */
-function sectionEvents(sec) {
+/** Turn bars into events [{ b (beats), play(chip, time) }]. */
+function render(bars, o = {}) {
   const ev = [];
   const at = (b, play) => ev.push({ b, play });
-  const bars = sec.chords;
-  bars.forEach((name, bar) => {
-    const ch = CHORDS[name], root = pc(ch[0]), b0 = bar * 4;
-    const rootM = 36 + root; // C2..B2
+  bars.forEach((bar, i) => {
+    const b0 = i * 4;
+    const segs = bar.ch.map((name, j) => ({ ...chord(name), from: (j * 4) / bar.ch.length, len: 4 / bar.ch.length }));
+    const chordAt = (b) => segs.findLast((s) => b >= s.from) ?? segs[0];
+    const next = bars[i + 1] ?? o.wrap;
+    const nextBass = next ? chord(next.ch[0]).bass : segs[0].bass;
+    const vol = bar.vol ?? o.vol ?? 0.13;
+
+    // Lead, with a delayed vibrato on long notes, and a second voice under it.
+    for (const n of line(bar.lead)) {
+      at(b0 + n.b, (c, t) => c.tone(t, BEAT * n.d * 0.92, hz(n.m), { wave: bar.wave ?? 'p25', vol, vib: n.d >= 1 }));
+      if (bar.echo) at(b0 + n.b + 0.75, (c, t) => c.tone(t, BEAT * n.d * 0.8, hz(n.m), { wave: 'p12', vol: vol * 0.35, decay: true }));
+      if (bar.harm === false || n.d < 0.5) continue;
+      const h = harmony(n.m, chordAt(n.b).tones, bar.key ?? o.key);
+      if (h) at(b0 + n.b, (c, t) => c.tone(t, BEAT * n.d * 0.92, hz(h), { wave: 'p50', vol: vol * 0.38 }));
+    }
+
     // Bass.
-    for (let i = 0; i < 8; i++) {
-      const b = b0 + i / 2;
-      if (sec.bass === 'pedal') at(b, (c, t) => c.tone(t, BEAT * 0.4, hz(i % 2 ? 47 : 35), { wave: 'tri', vol: 0.4 }));
-      else if (sec.bass === 'stab') {
-        if (i % 2 === 0 || i === 7) at(b, (c, t) => c.tone(t, BEAT * 0.3, hz(rootM - (i === 7 ? 1 : 0)), { wave: 'tri', vol: 0.42 }));
-      } else if (sec.name !== 'logo' && !(sec.name === 'hab' && bar === 2 && i > 0)) {
-        const m = rootM + (i % 2 ? 12 : 0);
-        at(b, (c, t) => c.tone(t, BEAT * 0.42, hz(m), { wave: 'tri', vol: 0.4 }));
+    segs.forEach((s, j) => {
+      const r = s.bass, f = r + 7;
+      const after = segs[j + 1]?.bass ?? nextBass;
+      const approach = after % 12 === r % 12 ? r + 12 : after - 1;
+      const style = bar.bass ?? 'walk';
+      const eighth = (k, m, len = 0.42, v = 0.4) => at(b0 + s.from + k / 2, (c, t) => c.tone(t, BEAT * len, hz(m), { wave: 'tri', vol: v }));
+      if (style === 'hold') at(b0 + s.from, (c, t) => c.tone(t, BEAT * s.len * 0.95, hz(r), { wave: 'tri', vol: 0.28 }));
+      else if (style === 'stab') for (let k = 0; k < s.len * 2; k += 2) eighth(k, r, 0.3, 0.45);
+      else {
+        const pattern = {
+          walk: s.len === 4 ? [r, r + 12, f, r + 12, r, r + 12, f, approach] : [r, r + 12, f, approach],
+          pedal: [r, r + 12, r, r + 12, r, r + 12, r, r + 12],
+          riff: [r, r, r + 12, r, r, r + 12, r + 1, r],
+        }[style];
+        pattern.slice(0, s.len * 2).forEach((m, k) => eighth(k, m));
       }
-    }
-    // Arpeggios: 16ths, chord tones up and down.
-    const tones = [ch[0], ch[1], ch[2]].map((n) => 60 + pc(n));
-    tones.sort((a, b) => a - b);
-    const arp = [tones[0], tones[1], tones[2], tones[0] + 12, tones[2], tones[1]];
-    if (sec.arp === 'slow') {
-      for (let i = 0; i < 8; i++) {
-        const m = arp[i % 6];
-        at(b0 + i / 2, (c, t) => {
-          c.tone(t, BEAT * 0.45, hz(m), { wave: 'p12', vol: 0.07, decay: true });
-          c.tone(t + BEAT * 0.75, BEAT * 0.45, hz(m), { wave: 'p12', vol: 0.025, decay: true });
-        });
-      }
-    } else if (sec.arp !== 'none' && !(sec.name === 'hab')) {
-      for (let i = 0; i < 16; i++) at(b0 + i / 4, (c, t) => c.tone(t, BEAT * 0.22, hz(arp[i % 6]), { wave: 'p12', vol: 0.035 }));
-    }
+    });
+
     // Drums.
-    const pat = DRUMS[Array.isArray(sec.drums) ? sec.drums[bar] : sec.drums];
+    const pat = DRUMS[bar.drums ?? o.drums];
     if (pat) {
-      for (let i = 0; i < 16; i++) {
-        const b = b0 + i / 4;
-        if (pat.k[i] === 'x') at(b, (c, t) => c.kick(t));
-        if (pat.s[i] === 'x') at(b, (c, t) => c.snare(t, sec.name === 'hab' && bar === 1 ? 0.12 + i * 0.015 : 0.32));
-        if (pat.h[i] === 'x') at(b, (c, t) => c.hat(t, pat === DRUMS.half ? 0.04 : 0.07));
+      for (let k = 0; k < 16; k++) {
+        const b = b0 + k / 4, rise = pat.cresc ? 0.1 + (k / 16) * 0.3 : 0.3;
+        if (pat.k[k] === 'x') at(b, (c, t) => c.kick(t, 0.5));
+        if (pat.s[k] === 'x') at(b, (c, t) => c.snare(t, rise));
+        if (pat.h[k] === 'x') at(b, (c, t) => c.hat(t, 0.05));
       }
+    }
+    for (const b of bar.crash ?? []) at(b0 + b, (c, t) => c.crash(t, 0.18));
+    // Extras: twinkles and chord stings.
+    for (const [b, n] of bar.sparkle ?? []) at(b0 + b, (c, t) => c.tone(t, BEAT * 0.6, hz(midi(n)), { wave: 'p12', vol: 0.07, decay: true }));
+    for (const [b, notes] of bar.stabs ?? []) {
+      for (const n of notes) at(b0 + b, (c, t) => c.tone(t, BEAT * 0.7, hz(midi(n)), { wave: 'p50', vol: 0.06, decay: true }));
     }
   });
-  // Long pad and a reverse cymbal into the drums.
-  if (sec.name === 'logo') {
-    at(0, (c, t) => c.tone(t, BEAT * 8, hz(52), { wave: 'tri', vol: 0.18, vib: true }));
-    at(6, (c, t) => c.noise(t, BEAT * 2, { vol: 0.22, hz: 2500, swell: true }));
-  }
-  // Lead, doubled by a quieter detuned voice.
-  for (const n of line(sec.lead ?? '')) {
-    at(n.b, (c, t) => {
-      const long = n.d >= 1;
-      c.tone(t, BEAT * n.d * 0.92, hz(n.m), { wave: 'p25', vol: 0.13, vib: long });
-      c.tone(t, BEAT * n.d * 0.92, hz(n.m), { wave: 'p12', vol: 0.045, detune: 9 });
-    });
-  }
-  // Crashes on the big moments.
-  const crashes = { rocket: [0], lift: [4], pan: [0], clash: [2], hab: [8], win: [0, 8] }[sec.name] ?? [];
-  for (const b of crashes) at(b, (c, t) => c.crash(t));
-  for (const [b, name] of SFX[sec.name] ?? []) at(b, (c, t) => c.sfx(name, t));
   return ev;
 }
 
 /** All intro events with absolute beats, sorted. */
 export function introScore() {
-  const ev = [];
-  let b0 = 0;
-  for (const sec of SECTIONS) {
-    for (const e of sectionEvents(sec)) ev.push({ b: b0 + e.b, play: e.play });
-    b0 += sec.chords.length * 4;
-  }
+  const ev = render(INTRO, { drums: null, key: 'C', wrap: TITLE[0] });
+  for (const [shot, list] of Object.entries(SFX)) for (const [b, name] of list) ev.push({ b: SHOT_STARTS[shot] + b, play: (c, t) => c.sfx(name, t) });
+  // A rising noise swell under bar 2, into the drums.
+  ev.push({ b: 5, play: (c, t) => c.noise(t, BEAT * 3, { vol: 0.2, hz: 2500, swell: true }) });
   return ev.sort((a, b) => a.b - b.b);
 }
 
-/** One pass of the title loop, beats from its start. */
+/** One pass of the title loop, beats from its start. The first pass also thumps when the logo lands. */
 export function titleScore(first) {
-  const ev = [];
-  const at = (b, play) => ev.push({ b, play });
-  TITLE.chords.forEach((name, bar) => {
-    const halves = TITLE.split[bar] ?? [name, name];
-    halves.forEach((hn, half) => {
-      const ch = CHORDS[hn], root = pc(ch[0]), rootM = 36 + root;
-      const tones = ch.map((n) => 60 + pc(n)).sort((a, b) => a - b);
-      const arp = [tones[0], tones[1], tones[2], tones[0] + 12, tones[2], tones[1]];
-      for (let i = 0; i < 4; i++) {
-        const b = bar * 4 + half * 2 + i / 2;
-        const m = rootM + (i % 2 ? 12 : 0);
-        at(b, (c, t) => c.tone(t, BEAT * 0.42, hz(m), { wave: 'tri', vol: 0.4 }));
-      }
-      for (let i = 0; i < 8; i++) at(bar * 4 + half * 2 + i / 4, (c, t) => c.tone(t, BEAT * 0.22, hz(arp[i % 6]), { wave: 'p12', vol: 0.03 }));
-    });
-    const pat = DRUMS.main;
-    for (let i = 0; i < 16; i++) {
-      const b = bar * 4 + i / 4;
-      if (pat.k[i] === 'x') at(b, (c, t) => c.kick(t, 0.45));
-      if (pat.s[i] === 'x') at(b, (c, t) => c.snare(t, 0.26));
-      if (pat.h[i] === 'x') at(b, (c, t) => c.hat(t, 0.05));
-    }
-  });
-  for (const n of line(TITLE.lead)) {
-    at(n.b, (c, t) => {
-      c.tone(t, BEAT * n.d * 0.92, hz(n.m), { wave: 'p25', vol: 0.12, vib: n.d >= 1 });
-      c.tone(t, BEAT * n.d * 0.92, hz(n.m), { wave: 'p12', vol: 0.04, detune: 9 });
-    });
-  }
+  const ev = render(TITLE, { drums: 'march', vol: 0.13, key: 'D', wrap: TITLE[0] });
   if (first) {
-    at(0.5, (c, t) => c.sfx('slam', t));
-    at(0.5, (c, t) => c.crash(t, 0.25));
+    ev.push({ b: 0.5, play: (c, t) => c.sfx('slam', t) });
+    ev.push({ b: 0.5, play: (c, t) => c.crash(t, 0.22) });
   }
-  at(0, (c, t) => c.crash(t, 0.12));
   return ev.sort((a, b) => a.b - b.b);
 }
 
