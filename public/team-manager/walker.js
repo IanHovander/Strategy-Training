@@ -7,7 +7,7 @@
 // Other people use the same rig with their own look (colours and hand-drawn heads); see bleachers.js.
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
-export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1 };
+export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 1 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
 export const FOOT_X = 18, FOOT_Y = 52;
@@ -255,6 +255,9 @@ const GAITS = {
   cheer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 165, elbow: 12, lean: 0, flight: 0 },
   // At the driver station: standing, both hands out in front on a controller.
   drive: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 22, elbow: 62, lean: 3, flight: 0 },
+  // Celebrating on their feet: both arms thrown up, leaning back. Up and a little forward, so from the side the arms
+  // show in front of the face instead of hiding behind the head.
+  celebrate: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 140, elbow: 15, lean: -14, flight: 0 },
 };
 
 function pose(dirIndex, gait, phase, look) {
