@@ -1,0 +1,298 @@
+// The pits' cut scene: 38.4 seconds, plus however long the words take to read. Saturday morning in the row of pits. 5026's
+// robot is getting its last fix when the pit announcer calls match 44; the strategist arrives with the plan on her
+// board, gives it to the drive team, and the robot rolls out down the aisle to the queue. Then she's yours to walk.
+//   B0 open          the left end of the hall fades in under the place card: the SPARE PARTS counter, 3000's empty pit
+//                    (its robot's on the field for match 42) and 8192 at work; the safety advisor standing watch and
+//                    two students from other rows walking the aisle
+//   B1 down the row  a slow pan along the row, past busy pits and empty ones, to 5026: Noor and the teammate kneeling
+//                    at the robot with a drill, Eli the driver waiting in the aisle, Ms. Kowalski by the chest
+//   B2 the call      over the speakers: match 43 should be queuing, match 44 to the queue
+//   B3 she arrives   the teammate gets up and steps out to the front of the pit while Noor finishes a last bolt; the
+//                    strategist walks in from the left, and Eli comes over to meet her
+//   B4a-d the plan   a hard cut to a close-up at twice the size, one page each so the phone shows who's talking: the
+//                    robot's ready, the driver asks, she gives him the plan, he reads it back. Everyone's whole head is
+//                    between the film bar and the dialog box, the three who speak down to the chest
+//   B5 rolling out   a hard cut back: the robot rolls out of the pit on its cart and away down the aisle to the right,
+//                    Noor getting up to push it and Eli leading, the strategist stepping back to let it by, the camera
+//                    going with it toward the end of the hall; the IN QUEUE / MATCH 44 board, folded against the table
+//                    behind the robot, shows as it goes, and the teammate picks it up, turns it round and stands it on
+//                    5026's spot, and goes over to the battery cart; as she starts pushing Noor calls ahead: robot
+//                    coming through (the beat has words, so the first presses of A go on them, not on skipping it)
+//   B6 pit duty      back to our pit, the strategist turning to the teammate: she's staying with it, and the safety
+//                    advisor is watching
+//   B7 hand over     the film bars go and she turns to you: the walking part's first frame exactly (END)
+//
+// It's drawn the way every cut scene is (stage.js): the place card, film bars and fades are stage.js's, the camera moves
+// are eased pans and hard cuts like the intro's, the close-up zooms by a whole number, and every frame is a pure function
+// of the beat's time t (and c.T, seconds into the whole cut scene, for everything that goes on in the background). The
+// hall, the furniture and the robots on their carts are the set's (set.js), and the people are people.js's, drawn with
+// its folk() and drawFolk(); the scene passes them in as `world`, so this file only arranges them. The cut scene draws
+// 5026's crew itself (the strategist, Noor, Eli, the teammate and Ms. Kowalski) and the robot while it's rolling, and
+// leaves the teammate and Kowalski out of folk(). The aisle's walkers (the safety advisor and the two from other rows)
+// are the cut scene's too in the opening, on paths of their own that drop behind the pan, and they stay away from the
+// call on, so nobody blinks out, the jump in c.T after a long read never shows, and the aisle is clear for the robot. Nothing moves in a say beat once its time is up: its t runs on while the
+// words are read, so people arrive and turn before then and hold still after.
+//
+//   END                 where she is and what the view is on the cut scene's last frame: the walking part starts there
+//   makeCutscene(world) the beats; world = { drawWorld, drawCartBot, drawFolk, folk, LOOKS } (set.js and people.js)
+
+import { lerp, seg, easeInOut } from '../pixel.js';
+import { placeCard, bars, cover, along, dirToward } from '../stage.js';
+import { TEAMMATE_NAME } from '../cast.js';
+import { SCRIPT } from './lines.js';
+
+/** Her and the view when the cut scene ends, which is where the walking part begins. */
+export const END = { hero: { x: 572, y: 108, dir: 0 }, view: { x: 444, y: 0 } };
+
+// ---- 5026's pit ----
+// Where everyone is when the pan gets there: Noor kneeling left of the robot with the drill, the teammate kneeling at
+// its front corner, Eli the driver waiting in the aisle, Ms. Kowalski beside the tool chest. The robot's cart stands at
+// CART. When the strategist arrives the teammate gets up and steps out to the front of the pit (MATE_UP), and Eli comes
+// over (ELI_PLAN): the strategist (HERO_PLAN) and Eli face each other across the front of the pit for the plan, with
+// nobody's head behind anybody else's and Eli clear of the robot's number. Noor stays down at the robot, listening,
+// till it rolls.
+const CART = [616, 90];
+const NOOR = [585, 90], MATE = [640, 98], MATE_UP = [640, 104], ELI = [666, 110], MS_K = [648, 88];
+const ELI_PLAN = [601, 102], HERO_PLAN = [565, 100];
+/** Eli's way over to her: along the front of the pit, in front of the teammate. */
+const ELI_OVER = [ELI, [622, 110], ELI_PLAN];
+/**
+ * As the robot goes, the teammate steps out of its way, out into the aisle in front of 1357's side drape (MATE_ASIDE),
+ * her head clear of Ms. Kowalski's behind her and of 1357's Oscar's; once it's gone she steps into its spot (MATE_SET),
+ * picks the board up off the table and stands it up there, then goes over to the battery cart, where she stays on pit
+ * duty clear of the board (MATE_END: people.js has her there for the walking part).
+ */
+const MATE_ASIDE = [656, 106], MATE_SET = [630, 92], MATE_END = [588, 92];
+const HERO = [END.hero.x, END.hero.y];
+// Her walk in from off the left of the screen. The robot's way to the queue: out of the pit to the middle of the aisle,
+// then right, along the aisle and off the end of the hall, from ROLL_AT seconds into B5. Noor gets up from GET_UP on
+// (rising: bent over, then standing) and pushes it from PUSH pixels behind its middle (her hands on its handle), walking beside it on
+// the way out of the pit. Eli sets off first and walks ahead of it, out of its way on a slant in front of it and then a
+// cart's length ahead along the aisle (LEAD). The strategist steps back to HERO, where the walking part starts, to let
+// it by.
+const WALK_IN = [[424, 120], HERO_PLAN];
+const ROLL = [CART, [616, 122], [880, 122]];
+const ROLL_AT = 0.55, GET_UP = 0.15;
+const PUSH = 26;
+/** 5026's board in B5, as set.js draws it, until each moment: folded on the table, picked up, turned round, standing. */
+const BOARD = [[3.0, 'empty'], [3.2, 'lift'], [3.4, 'turn']];
+const NOOR_OUT = [NOOR, [CART[0] - PUSH, 122], [880 - PUSH, 122]];
+const LEAD = [ELI_PLAN, [640, 120], [680, 124], [900, 124]];
+
+/** Getting up from kneeling, t seconds after starting to: bent over for a moment first, so nobody pops upright. */
+const rising = (t) => (t < 0.2 ? 'lean' : 'stand');
+
+// Who the cut scene draws itself, and who walks the aisle (there for the opening, gone by the call).
+const OWN = ['teammate', 'kowalski'];
+const AISLE = ['pass1', 'pass2', 'nadia'];
+
+// ---- The camera ----
+const ROW = { x: 0, y: 0, s: 1 };
+const PIT = { x: END.view.x, y: 0, s: 1 };
+// The plan, at twice the size: every head clears the top film bar (Ms. Kowalski's, the highest, by a pixel), the three
+// who speak show down to the waist above the dialog box, and the strategist stands clear of the name tag's corner. Its
+// edges fall between faces: Lena's (people.js has her at the laptop far enough left) and 1357's Oscar's are both just
+// out of the frame.
+const CLOSE = { x: 537, y: 34, s: 2 };
+const B2 = 16.5; // when the call comes, in cut scene seconds: the pan down the row is over
+const B5_END = 556; // where the pan after the robot stops: she's still whole at the left edge
+/** A gentler ease than easeInOut for the long pan: the busy pits in the middle of the row don't rush past. */
+const glide = (u) => u * u * (3 - 2 * u);
+/** The pan down the row, t seconds into it. */
+const rowX = (t) => Math.round(lerp(0, PIT.x, glide(seg(t, 0.4, 11.4))));
+
+// ---- Poses ----
+const mod = (a, n) => ((a % n) + n) % n;
+/** Someone holding still: standing, or kneeling or leaning at a frame of that gait. */
+const still = ([x, y], dir, look, gait = 'stand', frame = 0) => ({ x, y, dir, gait, frame, look });
+/** Someone walking a path with stage.js's along(): their feet step with the distance (drawFolk's frameOf). */
+const walking = (a, look) => ({ x: Math.round(a.x), y: Math.round(a.y), dir: a.dir, gait: a.gait, dist: a.dist, look });
+/**
+ * The same in a gait stage.js has no stride for (push, carry): its frame from the distance, as the walk's, and frame 0
+ * (standing still in that pose) before and after.
+ */
+const stepping = (a, gait, look) => ({
+  x: Math.round(a.x), y: Math.round(a.y), dir: a.dir, gait, frame: a.gait === 'stand' ? 0 : Math.floor(a.dist / 3.2) % 8, look,
+});
+/** Kneeling at the robot with the drill: bursts of drilling and a rest, like people.js's kneelers, in a phase of its own. */
+const drilling = (T, phase) => {
+  const k = mod(T + phase * 3.6, 3.6);
+  return k < 2.4 ? Math.floor(k * 5) % 4 : 0;
+};
+/** The direction from one spot to another, the way stage.js turns her to talk to someone. */
+const toward = ([x0, y0], [x1, y1]) => dirToward(x1 - x0, (y1 - y0) / 0.8);
+
+/** The beats of the cut scene, drawn with world = { drawWorld, drawCartBot, drawFolk, folk, LOOKS }. */
+export function makeCutscene(world) {
+  const { drawWorld, drawCartBot, drawFolk, folk, LOOKS } = world;
+
+  // The aisle in the opening: the safety advisor stands watch by the counter, clear of 3000's board, looking round; one
+  // passer-by comes in from the right and goes off to the left, in front of her, the other comes in from the left and
+  // walks on to the right, slower than the pan, which leaves them behind. They walk paths of their own here (people.js's loops would still be on the screen
+  // when the pan stops), at people.js's pace, and from the call on the aisle is clear.
+  const aisle = (T) => (T >= B2 ? [] : [
+    still([104, 108], [0, 1, 7][Math.floor(T / 0.85) % 3], LOOKS.nadia),
+    walking(along([[300, 120], [-30, 120]], T, 'walk', 30), LOOKS.pass2),
+    walking(along([[-30, 128], [900, 128]], T - 2.4, 'walk', 30), LOOKS.pass1),
+  ]);
+  /** Everyone else in the pits at T: the crews at work and, in the opening, the aisle's walkers. */
+  const others = (T, opening = false) => [...folk(T, { except: [...OWN, ...AISLE] }), ...(opening ? aisle(T) : [])];
+
+  // 5026 at work on the robot, as the pan finds them and through the call.
+  const atWork = (T) => [
+    still(NOOR, 2, LOOKS.noor, 'kneel', drilling(T, 0.15)),
+    still(MATE, 5, LOOKS.teammate, 'kneel', drilling(T, 0.6)),
+    still(ELI, 7, LOOKS.eli),
+    still(MS_K, 7, LOOKS.kowalski),
+  ];
+  // Everyone gathered round the robot with her for the plan: they've turned to her.
+  const gathered = [
+    still(HERO_PLAN, toward(HERO_PLAN, ELI_PLAN), LOOKS.hero),
+    still(NOOR, toward(NOOR, HERO_PLAN), LOOKS.noor, 'kneel'),
+    still(MATE_UP, toward(MATE_UP, HERO_PLAN), LOOKS.teammate),
+    still(ELI_PLAN, toward(ELI_PLAN, HERO_PLAN), LOOKS.eli),
+    still(MS_K, toward(MS_K, HERO_PLAN), LOOKS.kowalski),
+  ];
+
+  /** One frame: the hall from view, everyone in it sorted in by their feet, and the film bars. */
+  function shoot(g, T, view, people, o = {}) {
+    const more = people.map((p) => ({ y: p.y, draw: () => drawFolk(g, view, p) }));
+    drawWorld(g, view, T, { more: [...(o.cart ? [o.cart] : []), ...more], pit5026: o.pit5026 ?? 'robot' });
+    bars(o.bars ?? 1);
+  }
+
+  // The plan, a page a beat: who says it and who the phone shows. 6060's student leaning on their robot, just behind
+  // the strategist, has turned a little further in to it for the close-up, so her face isn't pressed to the back of the
+  // strategist's head.
+  const busy = (T) => others(T).map((p) => (p.id === 'raven2' ? { ...p, dir: 5 } : p));
+  const plan = SCRIPT.ready.map((page, i) => ({
+    dur: 0.4,
+    // The first page after a beat at the cut; the rest straight away, so the box stays up from one speaker to the next.
+    say: { name: page.name, tag: page.tag, look: [LOOKS.teammate, LOOKS.eli, LOOKS.hero, LOOKS.eli][i], at: i === 0 ? 0.15 : 0, lines: [page] },
+    draw(g, t, c) {
+      shoot(g, c.T, CLOSE, [...busy(c.T), ...gathered]);
+    },
+  }));
+
+  return [
+    // B0 open: the left end of the hall fades in, the bars come in and the place card slides through.
+    {
+      dur: 4.5,
+      draw(g, t, c) {
+        shoot(g, c.T, ROW, [...others(c.T, true), ...atWork(c.T)], { bars: seg(t, 0, 0.6) });
+        placeCard(t - 0.3, 'THE PITS', 'SATURDAY - QUALIFICATIONS');
+        cover(1 - seg(t, 0, 0.8));
+      },
+    },
+    // B1 down the row: past 8192, 7777 (Kai minding the pit), 4000, 2468 (in the queue) and 6060 to 5026.
+    {
+      dur: 12,
+      draw(g, t, c) {
+        shoot(g, c.T, { ...ROW, x: rowX(t) }, [...others(c.T, true), ...atWork(c.T)]);
+      },
+    },
+    // B2 the call, over the speakers. 5026 keeps working.
+    {
+      dur: 3,
+      say: { name: 'PIT ANNOUNCER', look: LOOKS.tomas, at: 0.4, lines: SCRIPT.call },
+      draw(g, t, c) {
+        shoot(g, c.T, PIT, [...others(c.T), ...atWork(c.T)]);
+      },
+    },
+    // B3 she arrives: the teammate gets up and steps out to the front of the pit, Eli looks round for her and comes over
+    // to meet her, and she walks in and stops at the front of the pit. Noor finishes the last bolt and, kneeling, turns
+    // to listen as she gets there; so do the others.
+    {
+      dur: 5,
+      draw(g, t, c) {
+        const up = t >= 0.3, here = t >= 4;
+        const a = along(WALK_IN, t - 0.3);
+        // Eli sets off to meet her once she's well on her way, and turns to her as soon as he's there.
+        const eli = along(ELI_OVER, t - 2.6);
+        const mate = !up ? still(MATE, 5, LOOKS.teammate, 'kneel', drilling(c.T, 0.6))
+          : t < 0.8 ? still(MATE, rising(t - 0.3) === 'lean' ? 5 : 6, LOOKS.teammate, rising(t - 0.3))
+            : t < 1.4 ? walking(along([MATE, MATE_UP], t - 0.8), LOOKS.teammate)
+              : still(MATE_UP, here ? toward(MATE_UP, HERO_PLAN) : 6, LOOKS.teammate);
+        shoot(g, c.T, PIT, [
+          ...others(c.T),
+          walking(a, LOOKS.hero),
+          here ? still(NOOR, toward(NOOR, HERO_PLAN), LOOKS.noor, 'kneel') : still(NOOR, 2, LOOKS.noor, 'kneel', drilling(c.T, 0.15)),
+          mate,
+          eli.gait === 'walk' ? walking(eli, LOOKS.eli) : t < 2.6 ? still(ELI, up ? 6 : 7, LOOKS.eli) : still(ELI_PLAN, toward(ELI_PLAN, HERO_PLAN), LOOKS.eli),
+          still(MS_K, toward(MS_K, HERO_PLAN), LOOKS.kowalski),
+        ]);
+      },
+    },
+    // B4a-d the plan, close up.
+    ...plan,
+    // B5 rolling out. The board, folded against the table behind the robot, shows as the robot goes; the teammate
+    // bends over it and it stands on its legs on the empty spot. The pan stops where the strategist is still whole at
+    // the left edge; the robot carries on out of the right of the screen.
+    {
+      dur: 9,
+      // Noor calls ahead as she gets up to push it, and the words go by themselves. They give A something to do: the
+      // first presses bring the words on and put them away without cutting the beat short (stage.js), and only a press
+      // after that skips on, so someone tapping A to read on still sees the robot out in the aisle and on its way. They're
+      // gone about 4 seconds in, before the robot's halfway down the screen, so the box never hides it leaving.
+      say: { name: 'NOOR, 5026 OPERATOR', look: LOOKS.noor, at: 0.3, auto: true, lines: SCRIPT.through },
+      draw(g, t, c) {
+        const view = { ...PIT, x: Math.round(lerp(PIT.x, B5_END, easeInOut(seg(t, 1.2, 5.5)))) };
+        const cart = along(ROLL, t - ROLL_AT);
+        const x = Math.round(cart.x), y = Math.round(cart.y);
+        const noor = along(NOOR_OUT, t - ROLL_AT);
+        // She steps back out of the way and watches it go.
+        const hero = t < 0.8 ? walking(along([HERO_PLAN, HERO], t - 0.4), LOOKS.hero) : still(HERO, 2, LOOKS.hero);
+        // Noor gets up, then walks it out of the pit beside it and pushes it down the aisle.
+        const up = rising(t - GET_UP);
+        const pusher = t < GET_UP ? still(NOOR, toward(NOOR, HERO_PLAN), LOOKS.noor, 'kneel')
+          : t < ROLL_AT ? still(NOOR, up === 'lean' ? toward(NOOR, HERO_PLAN) : 2, LOOKS.noor, up)
+            : noor.dist < 40 ? walking(noor, LOOKS.noor) : stepping(noor, 'push', LOOKS.noor);
+        // The teammate steps out of its way and watches it go, steps into the spot, bends to the folded board, lifts
+        // it, turns it round and stands it up on its legs (BOARD), then goes over to the battery cart and watches the
+        // robot down the aisle.
+        const aside = along([MATE_UP, MATE_ASIDE], t), set = along([MATE_ASIDE, MATE_SET], t - 1.7), off = along([MATE_SET, MATE_END], t - 3.7);
+        const mate = t < 1.7 ? (aside.gait === 'walk' ? walking(aside, LOOKS.teammate) : still(MATE_ASIDE, t < 1 ? 6 : 7, LOOKS.teammate))
+          : t < 2.8 ? (set.gait === 'walk' ? walking(set, LOOKS.teammate) : still(MATE_SET, 6, LOOKS.teammate))
+            : t < 3.6 ? still(MATE_SET, 6, LOOKS.teammate, 'lean', t < 3.15 ? 0 : 1)
+              : off.gait === 'walk' ? walking(off, LOOKS.teammate) : still(MATE_END, t < 3.7 ? 6 : 2, LOOKS.teammate);
+        shoot(g, c.T, view, [
+          ...others(c.T),
+          hero,
+          pusher,
+          walking(along(LEAD, t - 0.1), LOOKS.eli),
+          mate,
+          still(MS_K, t < 0.8 ? toward(MS_K, HERO_PLAN) : 2, LOOKS.kowalski),
+        ], {
+          pit5026: BOARD.find(([until]) => t < until)?.[1] ?? 'sign',
+          cart: { y, draw: () => drawCartBot(x, y, { bot: 'ele', num: '5026', team: 'blue', handle: -1 }) },
+        });
+      },
+    },
+    // B6 pit duty: back to our pit, and she and the teammate turn to each other.
+    {
+      dur: 2.5,
+      say: { name: TEAMMATE_NAME, look: LOOKS.teammate, at: 1.7, lines: SCRIPT.duty },
+      draw(g, t, c) {
+        const view = { ...PIT, x: Math.round(lerp(B5_END, PIT.x, easeInOut(seg(t, 0, 1.6)))) };
+        shoot(g, c.T, view, [
+          ...others(c.T),
+          still(HERO, t < 1 ? 2 : toward(HERO, MATE_END), LOOKS.hero),
+          still(MATE_END, t < 1 ? 2 : toward(MATE_END, HERO), LOOKS.teammate),
+          still(MS_K, t < 0.6 ? 2 : 7, LOOKS.kowalski),
+        ], { pit5026: 'sign' });
+      },
+    },
+    // B7 hand over: the bars go, and she and the teammate turn to you.
+    {
+      dur: 0.8,
+      draw(g, t, c) {
+        shoot(g, c.T, PIT, [
+          ...others(c.T),
+          still(HERO, t < 0.3 ? toward(HERO, MATE_END) : END.hero.dir, LOOKS.hero),
+          still(MATE_END, t < 0.3 ? toward(MATE_END, HERO) : 0, LOOKS.teammate),
+          still(MS_K, 7, LOOKS.kowalski),
+        ], { pit5026: 'sign', bars: 1 - seg(t, 0, 0.6) });
+      },
+    },
+  ];
+}

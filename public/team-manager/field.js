@@ -374,7 +374,7 @@ const SIGN = { x: 24, y: 130 };
 const TABLE = { x0: WORLD_W - 120, x1: WORLD_W - 56, y: 102 };
 const RESET = { x: WORLD_W - 92, y: 132 };
 
-function robotCart(x, y, draw) {
+export function robotCart(x, y, draw) {
   // A low dolly on casters, the robot riding on its deck.
   rect(x - 19, y - 12, 38, 10, C.ink);
   rect(x - 18, y - 11, 36, 6, '#4b3a2a');

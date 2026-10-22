@@ -7,7 +7,9 @@
 // Other people use the same rig with their own look (colours and hand-drawn heads); see bleachers.js.
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
-export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 2, steer: 1, phone: 1 };
+export const FRAMES = {
+  stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 2, steer: 1, phone: 1, kneel: 4, lean: 2, carry: 8, push: 8,
+};
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
 export const FOOT_X = 18, FOOT_Y = 52;
@@ -151,6 +153,12 @@ const PAL = {
   print: '#fff4ee',
   pad: ['#141519', '#23252c', '#3a3d48'],
   hem: ['#6b0f1b', '#a1172a', '#d3212f'],
+  // Props for the pits' gaits: an FRC battery (a black case, its red lead and white label) and a yellow drill.
+  battery: ['#141519', '#23252c', '#3a3d48'],
+  drill: ['#a3650a', '#ffc61a', '#fff17a'],
+  chuck: ['#3f4761', '#7882a3', '#c4cbe0'],
+  lead: '#d3212f',
+  label: '#e8ecf5',
 };
 /**
  * Her look. Others pass their own: { id, pal (as PAL), heads ({ s: rows, ... }), headPal, board }, and if they like
@@ -271,6 +279,23 @@ const GAITS = {
     hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 0, elbow: 125, inward: -5, lean: 0, flight: 0,
     held: { at: [0, 33.4, 5.6], half: [1.5, 2.6, 0.3] },
   },
+  // The pits: working on a robot. kneel: one knee down beside a robot on its cart, hands on its frame about 20 px up,
+  // the drill in the right hand (four frames: the drilling loop). lean: bent over at the hips, hands resting on a robot
+  // or a laptop 20-26 px up (two frames: typing). carry: the walk with a battery held at the waist in both hands. push:
+  // the walk with both hands on a cart's handle about 26 px up. carry and push step like the walk, but stage.js's
+  // STRIDE has only walk and run, so callers pass frame = Math.floor(dist / 3.2) % 8, and frame 0 when they stop: it's
+  // standing still, legs together. Fields only these use, each off unless set: legsAt (each leg, left then right, as
+  // [hip, knee]), armsAt (each arm as [angle, elbow, inward]), work (degrees each arm moves out and back over the frames),
+  // still (frame 0 stands), back (the body sits this far back of the floor point, so a kneeler's shadow is under the
+  // knee and the foot) and prop ('battery' or 'drill').
+  kneel: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, elbow: 0, lean: 18, flight: 0,
+    legsAt: [[0, 92], [88, 88]], armsAt: [[62, 38, -0.6], [66, 34, -0.6]], work: [0, -10], back: 3, prop: 'drill' },
+  lean: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, elbow: 0, lean: 28, flight: 0,
+    legsAt: [[9, 4], [9, 4]], armsAt: [[46, 22, 0], [46, 22, 0]], work: [-6, 6], back: 3 },
+  carry: { hip: 24, hipBias: 0, knee: 42, kneeBase: 4, arm: 0, elbow: 0, lean: -3, flight: 0,
+    armsAt: [[15, 39, -3.1], [15, 39, -3.1]], still: true, prop: 'battery' },
+  push: { hip: 24, hipBias: 0, knee: 42, kneeBase: 4, arm: 0, elbow: 0, lean: 8, flight: 0,
+    armsAt: [[11, 99, -1.2], [11, 99, -1.2]], still: true },
 };
 
 function pose(dirIndex, gait, phase, look) {
@@ -286,8 +311,10 @@ function pose(dirIndex, gait, phase, look) {
   const legs = [-1, 1].map((side) => {
     const q = phase + (side < 0 ? 0 : 0.5);
     const s2 = Math.sin(2 * Math.PI * q), c2 = Math.cos(2 * Math.PI * q);
-    const hip = g.hipBias + g.hip * s2;
-    const knee = g.kneeBase + g.knee * Math.max(0, Math.cos(2 * Math.PI * q + (gait === 'run' ? 0.7 : 0.35))) ** 1.3;
+    let hip = g.hipBias + g.hip * s2;
+    let knee = g.kneeBase + g.knee * Math.max(0, Math.cos(2 * Math.PI * q + (gait === 'run' ? 0.7 : 0.35))) ** 1.3;
+    if (g.legsAt) [hip, knee] = g.legsAt[side < 0 ? 0 : 1];
+    if (g.still && phase === 0) [hip, knee] = [g.hipBias, g.kneeBase];
     const [tf, tu] = swing(hip), [sf, su] = swing(hip - knee);
     return { side, hip, knee, tf, tu, sf, su, c2 };
   });
@@ -296,9 +323,10 @@ function pose(dirIndex, gait, phase, look) {
   const lift = gait === 'run' ? g.flight * Math.max(0, Math.sin(4 * Math.PI * (phase + 0.06))) : 0;
   const base = Math.round((hipY + lift) * 2) / 2;
   const parts = [];
+  const ahead = -(g.back ?? 0); // how far the body sits ahead of the floor point: a kneeler sits back of it
 
   for (const l of legs) {
-    const hipP = at(l.side * 2.5, base, 0);
+    const hipP = at(l.side * 2.5, base, ahead);
     const kneeP = add(hipP, at(0, l.tu * THIGH, l.tf * THIGH));
     const ankle = add(kneeP, at(0, l.su * SHIN, l.sf * SHIN));
     const group = l.side < 0 ? 'legL' : 'legR';
@@ -317,7 +345,7 @@ function pose(dirIndex, gait, phase, look) {
   const lean = rad(g.lean);
   const body = (r, u, f) => {
     const du = u - base;
-    return at(r, base + du * Math.cos(lean), f + du * Math.sin(lean));
+    return at(r, base + du * Math.cos(lean), f + du * Math.sin(lean) + ahead);
   };
   const axesLean = [R, norm(at(0, Math.cos(lean), Math.sin(lean))), norm(at(0, -Math.sin(lean), Math.cos(lean)))];
   const torsoY = (u) => base + (u - 23);
@@ -342,28 +370,39 @@ function pose(dirIndex, gait, phase, look) {
   const inward = g.inward ?? (gait === 'drive' ? -2.6 : 0);
   for (const side of [-1, 1]) {
     const tucked = gait === 'run' && side < 0 && look.board;
-    const a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
-    const e = tucked ? 70 : g.elbow;
+    let a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
+    let e = tucked ? 70 : g.elbow, inner = inward;
+    if (g.armsAt) [a, e, inner = 0] = g.armsAt[side < 0 ? 0 : 1];
+    if (g.work) a += (g.work[side < 0 ? 0 : 1] * (1 - Math.cos(2 * Math.PI * phase))) / 2;
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
     const [uf, uu] = swing(a), [ff, fu] = swing(a + e);
     // Longer arms let raised fists clear the big head; spread swings them out to the sides, into a V.
     const reach = g.reach ?? 1, so = Math.sin(rad(g.spread ?? 0)), co = Math.cos(rad(g.spread ?? 0));
     const elbowP = add(shoulder, at(side * (0.9 + so * 7.0 * reach), uu * 7.0 * reach * co, uf * 7.0 * reach));
-    const wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inward) + so * 6.0 * reach), fu * 6.0 * reach * co, ff * 6.0 * reach));
+    const wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inner) + so * 6.0 * reach), fu * 6.0 * reach * co, ff * 6.0 * reach));
     const group = side < 0 ? 'armL' : 'armR';
     const long = look.sleeves === 'long';
     parts.push(capsule(shoulder, elbowP, 1.45, (h) => (long || h.local[0] < 0.42 ? 'shirt' : 'skin'), group));
     parts.push(capsule(elbowP, wrist, 1.25, (h) => (!long ? 'skin' : h.local[0] > 0.8 ? 'hem' : 'shirt'), group));
     parts.push(ellipsoid(wrist, [R, U, F], [1.35, 1.35, 1.35], () => 'skin', group));
-    if (side < 0 && look.board) {
+    if (side < 0 && look.board && !g.armsAt) {
       // The whiteboard: hanging from her hand at a walk, under her arm at a run. It faces out to her side.
       const c = tucked ? body(-5.6, torsoY(30.4), 0.6) : add(wrist, at(-0.4, -2.6, 0.6));
       parts.push(box(c, [R, U, F], [0.35, 2.4, 3.1], () => 'board', 'board'));
     }
+    if (side > 0 && g.prop === 'drill') {
+      // A cordless drill in the fist, pointing ahead: the yellow body over the hand, the steel chuck at its nose.
+      parts.push(box(add(wrist, at(0, 1.6, 0.2)), [R, U, F], [0.8, 1.1, 1.9], () => 'drill', 'prop'));
+      parts.push(box(add(wrist, at(0, 1.7, 2.7)), [R, U, F], [0.55, 0.6, 0.6], () => 'chuck', 'prop'));
+    }
   }
   if (gait === 'drive') parts.push(box(body(0, torsoY(28.4), 8.2), axesLean, [3.8, 0.9, 1.7], () => 'pad', 'pad'));
   if (g.held) parts.push(box(body(g.held.at[0], torsoY(g.held.at[1]), g.held.at[2]), axesLean, g.held.half, () => g.held.mat ?? 'pad', 'pad'));
-  return { parts, head, axes: axesLean, R, U, F, chest: body(0, torsoY(33.2), 0.2), base };
+  // An FRC battery held out in front at the waist: about 7 inches square, and a little thicker than its 3 inches so it
+  // shows from the side.
+  const battery = g.prop === 'battery' ? body(0, torsoY(27.4), 6.6) : null;
+  if (battery) parts.push(box(battery, axesLean, [2.5, 2.1, 1.7], () => 'battery', 'prop'));
+  return { parts, head, axes: axesLean, R, U, F, chest: body(0, torsoY(33.2), 0.2), base, battery };
 }
 
 // ---- Rendering ----
@@ -447,6 +486,11 @@ function render(dirIndex, gait, phase, look) {
   if (look.badge && dot(Fh, TO_CAMERA) > 0.3) {
     const [bx, by] = project(printAt(1)).map(Math.round);
     for (const [dx, dy, w, h, col] of look.badge) paint(bx + dx, by + dy, w, h, col, 'shirt');
+  }
+  // The battery's red lead on its top and its white label, wherever they show.
+  if (rig.battery) {
+    plot(add(rig.battery, mul(Uh, 1.6)), 1, 1, PAL.lead, 'battery');
+    plot(rig.battery, 2, 1, PAL.label, 'battery');
   }
   // The head, drawn by hand for this direction, over the neck and shoulders.
   const [hx, hy] = project(rig.head);
