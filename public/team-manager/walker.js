@@ -7,7 +7,7 @@
 // Other people use the same rig with their own look (colours and hand-drawn heads); see bleachers.js.
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
-export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 1 };
+export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 2 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
 export const FOOT_X = 18, FOOT_Y = 52;
@@ -255,13 +255,15 @@ const GAITS = {
   cheer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 165, elbow: 12, lean: 0, flight: 0 },
   // At the driver station: standing, both hands out in front on a controller.
   drive: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 22, elbow: 62, lean: 3, flight: 0 },
-  // Celebrating on their feet: both arms thrown up, leaning back. Up and a little forward, so from the side the arms
-  // show in front of the face instead of hiding behind the head.
-  celebrate: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 140, elbow: 15, lean: -14, flight: 0 },
+  // Celebrating on their feet, pumping their fists: thrown up and forward past the brow, then pulled back down to the
+  // chin. Forward of straight up, so from the side the fists show in front of the face instead of behind the head.
+  celebrate: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, lean: -4, flight: 0, keys: [{ armUp: 125, elbow: 20 }, { armUp: 40, elbow: 105 }] },
 };
 
 function pose(dirIndex, gait, phase, look) {
-  const g = GAITS[gait];
+  // A gait with keys holds a different pose on each of its frames.
+  const spec = GAITS[gait], keys = spec.keys;
+  const g = keys ? { ...spec, ...keys[Math.round(phase * keys.length) % keys.length] } : spec;
   const th = rad(dirIndex * 45);
   const F = [Math.sin(th), 0, Math.cos(th)], U = [0, 1, 0], R = [-Math.cos(th), 0, Math.sin(th)];
   const at = (r, u, f) => add(add(mul(R, r), mul(U, u)), mul(F, f));
