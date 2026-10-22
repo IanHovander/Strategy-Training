@@ -17,7 +17,9 @@
 //                         with everything else. s.talk is the conversation going on, if any (s.talk.person: with whom).
 //   move(x, y, dx, dy)    where a step from (x, y) by (dx, dy) ends up, as [x, y]: walls, tables and people stop her.
 //   people                who she can talk to: { name, x, y, lines, look }, (x, y) their feet and lines a conversation
-//                         (talk.js). The bubble shows over the closest one within 14 pixels across and 10 deep.
+//                         (talk.js). The bubble shows over the closest one within 14 pixels across and 10 deep (reach
+//                         and reachY change that, per person). faceGait, if they aren't standing, is how the phone
+//                         shows them while you talk (faceDy moves that picture down, for the shorter poses).
 // and, if it needs them:
 //   cutscene              a list of beats (below). Without one the scene starts with her walking.
 //   look                  who you steer (HERO_LOOK, the strategist, if not given)
@@ -29,11 +31,13 @@
 //   update(dt, s)         instead of walking: the stick is s.stick() ({ x, y, mag }) and s.me is yours to move or not.
 //                         For a scene with no room to walk (the van): the stick picks who to talk to.
 //   hint, note            the phone's hint line and the note under the controls, if the usual ones don't fit
+//   status(s)             the phone's status line under her name, if not STANDING, WALKING N and so on
 //
 // A cut scene is a list of beats. Each is { dur, draw(g, t, c) }: draw the whole screen t seconds into the beat; c.T is
 // seconds into the cut scene and c.k is t / dur (0 to 1). A beat can say something: say: { name, lines, at, auto, tag,
-// look } types the pages in lines (a conversation, as in talk.js; name says who, for the pages that don't) into the
-// dialog box from `at` seconds into the beat, and the phone shows `look` (a walker look) as the one talking. Then the
+// look, faceGait } types the pages in lines (a conversation, as in talk.js; name says who, for the pages that don't)
+// into the dialog box from `at` seconds into the beat, and the phone shows `look` (a walker look, in faceGait if they
+// aren't standing) as the one talking; a page of the form { name, lines, look, faceGait } shows its own speaker. Then the
 // beat waits at its end until it's been read: A finishes the typing, turns the page and, after the last page, moves on.
 // With auto the pages turn by themselves (A still hurries them). While a beat waits, t runs on past dur, so hold still
 // past it. A beat without words moves on after dur, or straight away on A. SKIP (or Esc) ends the cut scene.
@@ -151,8 +155,7 @@ const markup = (scene) => `
       <div class="pad" tabindex="0" role="application" aria-label="Movement stick. Drag, or use the arrow keys and Shift.">
         <div class="ring"></div>
         <div class="ring walk"></div>
-        <span class="zone run">RUN</span>
-        <span class="zone walk">WALK</span>
+        ${scene.update ? '' : '<span class="zone run">RUN</span>\n        <span class="zone walk">WALK</span>'}
         <div class="knob"></div>
       </div>
     </div>
@@ -264,7 +267,7 @@ export function runScene(scene) {
     let best = null, bestD = Infinity;
     for (const p of scene.people ?? []) {
       const dx = Math.abs(p.x - s.me.x), dy = Math.abs(p.y - s.me.y);
-      if (dx < (p.reach ?? 14) && dy < 10 && dx + dy < bestD) [best, bestD] = [p, dx + dy];
+      if (dx < (p.reach ?? 14) && dy < (p.reachY ?? 10) && dx + dy < bestD) [best, bestD] = [p, dx + dy];
     }
     return best;
   }
@@ -345,15 +348,19 @@ export function runScene(scene) {
   function drawPhone() {
     fg.clearRect(0, 0, CELL_W, CELL_H);
     const talking = s.talk?.person;
-    const speaker = s.mode === 'cut' ? beats[s.cut.i].say?.look : talking?.look;
-    if (speaker) {
-      const gait = talking?.faceGait ?? 'stand';
-      fg.drawImage(walkerFrame(0, gait, 0, speaker), 0, gait === 'sit' ? 6 : 0);
+    // Who to show: whoever says the page on screen (its own look, or the beat's), or whoever she's talking to.
+    const say = s.mode === 'cut' ? beats[s.cut.i].say : null;
+    const page = say && s.cut.conv ? s.cut.conv.pages[s.cut.conv.page] : null;
+    const who = say ? (page && !Array.isArray(page) && page.look ? page : say) : talking;
+    if (who?.look) {
+      const gait = who.faceGait ?? 'stand';
+      fg.drawImage(walkerFrame(0, gait, 0, who.look), 0, who.faceDy ?? (gait === 'sit' ? 6 : 0));
     } else fg.drawImage(walkerFrame(s.me.dir, s.me.gait, frameOf(s.me), look), 0, 0);
 
     const me = s.me;
     const mode = s.mode === 'cut' ? 'CUT SCENE' : talking ? talking.name
-      : me.gait === 'stand' || !STRIDE[me.gait] ? 'STANDING' : `${me.gait === 'run' ? 'RUNNING' : 'WALKING'} ${DIRS[me.dir].toUpperCase()}`;
+      : scene.status?.(s) ?? (STRIDE[me.gait] ? `${me.gait === 'run' ? 'RUNNING' : 'WALKING'} ${DIRS[me.dir].toUpperCase()}`
+        : me.gait === 'sit' ? 'SITTING' : 'STANDING');
     set('mode', mode, (v) => ($('.mode').textContent = v));
     set('who', s.mode === 'cut' ? scene.name : talking ? 'TALKING TO' : HERO_NAME, (v) => ($('.whoname').textContent = v));
     const label = s.mode === 'cut' || s.talk ? 'NEXT' : s.near ? `TALK TO ${s.near.name.split(',')[0]}` : 'NOBODY NEARBY';
