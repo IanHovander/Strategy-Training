@@ -341,8 +341,9 @@ function hatchRun(t, alliance, num, perSecond, offset) {
   };
 }
 
-function robots(t) {
-  const blue = hatchRun(t, 'blue', '5026', 1 / 14, 0), red = hatchRun(t, 'red', '4000', 1 / 16, 0.4);
+/** teams: the numbers on the blue elevator, the red elevator, the blue arm and the red defender. */
+function robots(t, teams = ['5026', '4000', '3000', '7777']) {
+  const blue = hatchRun(t, 'blue', teams[0], 1 / 14, 0), red = hatchRun(t, 'red', teams[1], 1 / 16, 0.4);
   const p = cycle(t, 1 / 17, 0.3);
   const depot = [FIELD.x0 + 50, 22], ship = [SHIP.x0 - 26, 13.5];
   const blueRocket = ROCKETS[0].x;
@@ -354,12 +355,12 @@ function robots(t) {
       // A blue partner with cargo: from the near depot to the cargo ship's front bays, arm down to pick up, up to score.
       {
         x: depot[0] + p.a * (ship[0] - depot[0]), y: floorY(depot[1] + p.a * (ship[1] - depot[1])),
-        draw: (x, y) => armBot(x, y, { team: 'blue', num: '3000', dir: p.out ? 1 : -1, spin: x * 0.64, angle: 0.9 - 1.15 * p.a, ball: p.out }),
+        draw: (x, y) => armBot(x, y, { team: 'blue', num: teams[2], dir: p.out ? 1 : -1, spin: x * 0.64, angle: 0.9 - 1.15 * p.a, ball: p.out }),
       },
       // 7777, playing defence in front of the blue rocket's scoring side.
       {
         x: blueRocket - 38 + Math.sin(t * 0.6) * 20, y: floorY(6.5 + Math.cos(t * 0.8) * 1.2),
-        draw: (x, y) => defBot(x, y, { dir: Math.cos(t * 0.6) >= 0 ? 1 : -1, spin: x * 0.64, glint: (t * 0.5) % 1, num: '7777', rsl: rsl(t, 1) }),
+        draw: (x, y) => defBot(x, y, { dir: Math.cos(t * 0.6) >= 0 ? 1 : -1, spin: x * 0.64, glint: (t * 0.5) % 1, num: teams[3], rsl: rsl(t, 1) }),
       },
     ],
   };
@@ -396,7 +397,8 @@ function queueSign() {
   text('QUEUE', x + 1, y - 34, { font: 3, color: C.ink, align: 'center' });
 }
 
-function scoringTable() {
+/** score: [blue, red], up on the two monitors. */
+function scoringTable(score = [41, 38]) {
   const { x0, x1, y } = TABLE, top = y - 20, back = top - 7;
   rect(x0 - 1, back - 1, x1 - x0 + 2, y - back + 2, C.ink);
   rect(x0, back, x1 - x0, 7, '#3a3d48');
@@ -405,7 +407,7 @@ function scoringTable() {
   rect(x0, top, x1 - x0, 1, '#3a3d48');
   text('SCORING', (x0 + x1) / 2, top + 8, { font: 3, color: C.steel2, align: 'center' });
   // The score on two monitors facing the crowd, and a laptop.
-  [['41', C.blue1, x0 + 14], ['38', C.red1, x0 + 34]].forEach(([n, c, mx]) => {
+  [[String(score[0]), C.blue1, x0 + 14], [String(score[1]), C.red1, x0 + 34]].forEach(([n, c, mx]) => {
     rect(mx - 1, back - 2, 2, 4, C.ink);
     rect(mx - 9, back - 15, 18, 13, C.ink);
     rect(mx - 8, back - 14, 16, 11, c);
@@ -435,9 +437,9 @@ function resetCart() {
 }
 
 // ---- Where people can stand ----
-const WALK_Y = [56, 64]; // the walkway, behind the far wall
-const OPEN_Y = [56, 134]; // the floor past the ends
-const EDGE = FIELD.x0 - STATION - 8; // as close to the driver stations as anyone else gets
+export const WALK_Y = [56, 64]; // the walkway, behind the far wall
+export const OPEN_Y = [56, 134]; // the floor past the ends
+export const EDGE = FIELD.x0 - STATION - 8; // as close to the driver stations as anyone else gets
 const inEnd = (x) => x <= EDGE || x >= WORLD_W - EDGE;
 const BLOCKS = [
   ...QUEUE.map((q) => ({ x0: q.x - 19, x1: q.x + 19, y0: q.y - 9, y1: q.y })),
@@ -445,7 +447,7 @@ const BLOCKS = [
   { x0: TABLE.x0, x1: TABLE.x1, y0: TABLE.y - 7, y1: TABLE.y },
   { x0: RESET.x - 17, x1: RESET.x + 17, y0: RESET.y - 8, y1: RESET.y },
 ];
-const blocked = (x, y) => BLOCKS.some((b) => x > b.x0 - 5 && x < b.x1 + 5 && y > b.y0 - 2 && y < b.y1 + 2);
+export const blocked = (x, y) => BLOCKS.some((b) => x > b.x0 - 5 && x < b.x1 + 5 && y > b.y0 - 2 && y < b.y1 + 2);
 /** Step someone at (x, y) by (dx, dy): along, then across, each as far as the walkway or the open floor allows. */
 export function move(x, y, dx, dy) {
   let nx = Math.max(10, Math.min(WORLD_W - 10, x + dx));
@@ -462,11 +464,13 @@ export function move(x, y, dx, dy) {
  * field's own 144 rows). o.who: screen rectangles { x0, x1, y1 } of anyone on the walkway, so a rocket in front of them
  * goes see-through. o.more: people and anything else standing on the floor, to sort in with the rest, as
  * { y: floor line, draw() }. o.robots: false for an empty field (the hatches and cargo already scored stay);
- * o.ends: false to leave out the queue, the scoring table and the reset cart past the ends.
+ * o.ends: false to leave out the queue, the scoring table and the reset cart past the ends. For another field than the
+ * arena's: o.teams, the numbers on the blue elevator, the red elevator, the blue arm and the red defender; o.queue, on
+ * the arm and the elevator waiting on their carts; o.score, [blue, red] on the scoring table's monitors.
  */
 export function drawFieldLive(g, camX, t, o = {}) {
   const who = o.who ?? [], camY = o.camY ?? 0;
-  const { fill, bots } = robots(o.robots === false ? 0 : t);
+  const { fill, bots } = robots(o.robots === false ? 0 : t, o.teams);
   const things = [
     { y: FIELD.y0, draw: () => sideWall(0, GATE) },
     ...ROCKETS.map((r) => ({
@@ -482,7 +486,7 @@ export function drawFieldLive(g, camX, t, o = {}) {
     ]),
     { y: floorY(SHIP.z1), draw: cargoShip },
     ...(o.robots === false ? [] : bots).map((r) => ({ y: r.y, draw: () => r.draw(r.x, r.y) })),
-    ...(o.ends === false ? [] : ends()),
+    ...(o.ends === false ? [] : ends(o.queue, o.score)),
     ...(o.more ?? []),
     { y: FIELD.y1 + 1, draw: () => sideWall(27) },
   ];
@@ -496,16 +500,16 @@ export function drawFieldLive(g, camX, t, o = {}) {
 }
 
 /** The queue, its sign, the scoring table and the reset cart, past the ends of the field. */
-function ends() {
+function ends(queue = QUEUE.map((q) => q.num), score) {
   return [
-    ...QUEUE.map((q) => ({
+    ...QUEUE.map((q, i) => ({
       y: q.y,
       draw: () => robotCart(q.x, q.y, (x, y) => (q.bot === 'arm'
-        ? armBot(x, y, { team: 'blue', num: q.num, angle: -1.25, ball: false })
-        : eleBot(x, y, { team: 'blue', num: q.num, rsl: false }))),
+        ? armBot(x, y, { team: 'blue', num: queue[i], angle: -1.25, ball: false })
+        : eleBot(x, y, { team: 'blue', num: queue[i], rsl: false }))),
     })),
     { y: SIGN.y, draw: queueSign },
-    { y: TABLE.y, draw: scoringTable },
+    { y: TABLE.y, draw: () => scoringTable(score) },
     { y: RESET.y, draw: resetCart },
   ];
 }
