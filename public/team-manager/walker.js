@@ -9,7 +9,7 @@
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
 export const FRAMES = {
   stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, armsUp: 1, drive: 1, celebrate: 2, steer: 1, phone: 1, kneel: 4, lean: 2, carry: 8,
-  push: 8,
+  push: 8, floor: 1, floorClap: 2, floorCheer: 1, clap: 2, hooray: 1, gesture: 1,
 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
@@ -299,7 +299,22 @@ const GAITS = {
     armsAt: [[15, 39, -3.1], [15, 39, -3.1]], still: true, prop: 'battery' },
   push: { hip: 24, hipBias: 0, knee: 42, kneeBase: 4, arm: 0, elbow: 0, lean: 8, flight: 0,
     armsAt: [[11, 99, -1.2], [11, 99, -1.2]], still: true },
+  // On the grass, cross-legged (floor: the hips' height): knees out, shins crossed in front, hands on the knees, the
+  // board on her lap. Seated she claps (clap: how far each hand is from her middle, apart then together) or cheers.
+  // Cheering, sitting or standing, the arms go up in a V that clears the head from every side (splay: degrees they lean
+  // out; splayReach: how much longer they reach; armNear: seen side on, the nearer arm's angle, forward past the face).
+  floor: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, armUp: 20, elbow: 45, lean: 0, flight: 0, floor: 1.92, board: 'lap' },
+  floorClap: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, armUp: 35, elbow: 115, lean: 0, flight: 0, floor: 1.92, clap: [3, 1.35], board: 'lap' },
+  floorCheer: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, armUp: 168, elbow: 8, lean: 0, flight: 0, floor: 1.92, board: 'lap', splay: 24, splayReach: 1.3, armNear: 140 },
+  // Standing in front of the team (flat: feet flat, as in stand): clapping with the board tucked under her arm, both
+  // arms up (the board held up in one hand, if she has it), and making a point with her right hand (armR, elbowR, handR:
+  // that arm's own angles, and how far out the hand is).
+  clap: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 35, elbow: 115, lean: 0, flight: 0, clap: [3, 1.35], board: 'tuck', flat: true },
+  hooray: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 168, elbow: 8, lean: 0, flight: 0, board: 'up', flat: true, splay: 24, splayReach: 1.3, armNear: 140 },
+  gesture: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, elbow: 10, armR: 35, elbowR: 80, handR: 8.6, lean: 0, flight: 0, flat: true },
 };
+// Seated on the grass she turns about the middle of her lap, this far in front of her hips.
+const LAP = 5;
 
 function pose(dirIndex, gait, phase, look) {
   // A gait with keys holds a different pose on each of its frames.
@@ -324,11 +339,29 @@ function pose(dirIndex, gait, phase, look) {
   const THIGH = 9.6, SHIN = 9.2, ANKLE = 1.4;
   const hipY = Math.max(...legs.map((l) => -(l.tu * THIGH + l.su * SHIN))) + ANKLE;
   const lift = gait === 'run' ? g.flight * Math.max(0, Math.sin(4 * Math.PI * (phase + 0.06))) : 0;
-  const base = Math.round((hipY + lift) * 2) / 2;
+  const base = g.floor ?? Math.round((hipY + lift) * 2) / 2;
   const parts = [];
   const ahead = -(g.back ?? 0); // how far the body sits ahead of the floor point: a kneeler sits back of it
 
-  for (const l of legs) {
+  // Cross-legged on the grass: thighs out to the sides and forward, nearly level; the shins fold back in and cross in
+  // front of her, the right one in front (its knee further forward); each shoe is tucked out of sight under the other
+  // knee, turned across.
+  if (g.floor) {
+    for (const side of [-1, 1]) {
+      const front = side > 0;
+      const hipP = at(side * 2.5, base + 0.4, 1.2);
+      const kneeP = at(side * 6.8, base + 1.0, front ? 8.9 : 7.4);
+      const ankle = at(-side * 2.2, 1.75, front ? 7.9 : 3.4);
+      // The shin folds back over the thigh, so it's a part of its own: ink where it crosses in front.
+      const group = side < 0 ? 'legL' : 'legR', shin = side < 0 ? 'shinL' : 'shinR';
+      parts.push(capsule(hipP, kneeP, 2.2, () => 'jeans', group));
+      parts.push(capsule(kneeP, ankle, 1.85, (h) => (h.local[0] > 0.82 ? 'cuff' : 'jeans'), shin));
+      parts.push(capsule(ankle, add(ankle, mul(norm(sub(ankle, kneeP)), 0.6)), 1.3, () => (side < 0 ? 'sockL' : 'sockR'), shin));
+      const fwd = norm(at(-side * 0.8, 0, front ? -0.75 : 0.3)), across = norm(at(front ? 0.75 : -0.3, 0, -side * 0.8));
+      const footC = add(ankle, mul(fwd, 1.3));
+      parts.push(ellipsoid(footC, [across, U, fwd], [1.6, 1.2, 2.6], (h) => (h.local[1] < -0.45 ? 'sole' : 'shoe'), shin));
+    }
+  } else for (const l of legs) {
     const hipP = at(l.side * 2.5, base, ahead);
     const kneeP = add(hipP, at(0, l.tu * THIGH, l.tf * THIGH));
     const ankle = add(kneeP, at(0, l.su * SHIN, l.sf * SHIN));
@@ -337,7 +370,7 @@ function pose(dirIndex, gait, phase, look) {
     parts.push(capsule(kneeP, ankle, 1.85, (h) => (h.local[0] > 0.82 ? 'cuff' : 'jeans'), group));
     parts.push(capsule(ankle, add(ankle, at(0, 1.1, 0)), 1.3, () => (l.side < 0 ? 'sockL' : 'sockR'), group));
     // The shoe points along her heading, tipping down a little as the foot leaves the ground.
-    const tip = gait === 'stand' ? 0 : Math.max(0, -(l.hip - l.knee) * 0.4);
+    const tip = gait === 'stand' || g.flat ? 0 : Math.max(0, -(l.hip - l.knee) * 0.4);
     const fwd = norm(at(0, -Math.sin(rad(tip)), Math.cos(rad(tip))));
     const upv = norm(at(0, Math.cos(rad(tip)), Math.sin(rad(tip))));
     const footC = add(add(ankle, mul(fwd, 1.3)), at(0, -0.35, 0));
@@ -373,24 +406,59 @@ function pose(dirIndex, gait, phase, look) {
   const s2 = Math.sin(2 * Math.PI * phase);
   const inward = g.inward ?? (gait === 'drive' ? -2.6 : 0);
   const outS = Math.sin(rad(g.armOut ?? 0)), outC = Math.cos(rad(g.armOut ?? 0));
+  // Clapping, each hand is g.clap[frame] from her middle (apart, then together) and its elbow comes in with it. Making
+  // a point, her right hand swings out to g.handR.
+  const clap = g.clap?.[phase < 0.5 ? 0 : 1];
   for (const side of [-1, 1]) {
     const tucked = gait === 'run' && side < 0 && look.board;
-    let a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
-    let e = tucked ? 70 : g.elbow, inner = inward;
+    const right = side > 0 && g.armR !== undefined, holds = side < 0 && look.board && g.board === 'down';
+    // Seen side on, a raised V lines up behind the head: the arm nearer you comes forward instead (armNear).
+    const nearer = g.armNear !== undefined && side * R[2] > 0.9;
+    let a = right ? g.armR : holds ? 0 : nearer ? g.armNear : g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
+    let e = right ? g.elbowR : holds ? GAITS.stand.elbow : tucked ? 70 : g.elbow, inner = inward;
     if (g.armsAt) [a, e, inner = 0] = g.armsAt[side < 0 ? 0 : 1];
     if (g.work) a += (g.work[side < 0 ? 0 : 1] * (1 - Math.cos(2 * Math.PI * phase))) / 2;
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
     const [uf, uu] = swing(a), [ff, fu] = swing(a + e);
     // Longer arms let raised fists clear the big head; spread and armOut swing them out to the sides, into a V.
     const reach = g.reach ?? 1, so = Math.sin(rad(g.spread ?? 0)), co = Math.cos(rad(g.spread ?? 0));
-    const elbowP = add(shoulder, at(side * (0.9 + so * 7.0 * reach + uu * 7.0 * outS), uu * 7.0 * reach * co * outC, uf * 7.0 * reach));
-    const wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inner) + so * 6.0 * reach + fu * 6.0 * outS), fu * 6.0 * reach * co * outC, ff * 6.0 * reach));
+    let elbowP = add(shoulder, at(side * (0.9 + so * 7.0 * reach + uu * 7.0 * outS), uu * 7.0 * reach * co * outC, uf * 7.0 * reach));
+    let wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inner) + so * 6.0 * reach + fu * 6.0 * outS), fu * 6.0 * reach * co * outC, ff * 6.0 * reach));
+    if (clap !== undefined) {
+      const inE = clap + 2.6 - 5.3, upper = Math.sqrt(49 - inE * inE), fore = Math.sqrt(36 - 2.6 * 2.6);
+      elbowP = add(shoulder, at(side * inE, uu * upper, uf * upper));
+      wrist = add(elbowP, at(-side * 2.6, fu * fore, ff * fore));
+    } else if (right && g.handR !== undefined) {
+      // Her elbow is 6.2 out from her middle; the forearm keeps its length.
+      const across = g.handR - 6.2, len = Math.sqrt(36 - across * across);
+      wrist = add(elbowP, at(side * across, fu * len, ff * len));
+    } else if (g.splay && !holds) {
+      // Cheering, the raised arms lean out to the sides in a V (splay degrees) and reach a little further (splayReach),
+      // so the hands come up clear of the big hand-drawn head, which is drawn over everything, from every side.
+      const sp = rad(g.splay) * side, k = g.splayReach ?? 1;
+      const out = (v) => {
+        const r = dot(v, R), u = dot(v, U), f = dot(v, F);
+        return at((r * Math.cos(sp) + u * Math.sin(sp)) * k, (u * Math.cos(sp) - r * Math.sin(sp)) * k, f * k);
+      };
+      const upper = out(sub(elbowP, shoulder)), fore = out(sub(wrist, elbowP));
+      elbowP = add(shoulder, upper);
+      wrist = add(elbowP, fore);
+    }
     const group = side < 0 ? 'armL' : 'armR';
     const long = look.sleeves === 'long';
     parts.push(capsule(shoulder, elbowP, 1.45, (h) => (long || h.local[0] < 0.42 ? 'shirt' : 'skin'), group));
     parts.push(capsule(elbowP, wrist, 1.25, (h) => (!long ? 'skin' : h.local[0] > 0.8 ? 'hem' : 'shirt'), group));
     parts.push(ellipsoid(wrist, [R, U, F], [1.35, 1.35, 1.35], () => 'skin', group));
-    if (side < 0 && look.board && !g.armsAt) {
+    if (side < 0 && look.board && (g.board === 'lap' || g.board === 'tuck')) {
+      // Some gaits say where the board goes: across her lap on the grass, or tucked under her arm to clap. ('down': that
+      // arm stays down holding it, as in stand.)
+      const lap = g.board === 'lap';
+      const c = lap ? at(0, 4.1, 5.2) : body(-5.6, torsoY(30.4), 0.6);
+      parts.push(box(c, [R, U, F], lap ? [3.1, 0.35, 2.4] : [0.35, 2.4, 3.1], () => 'board', 'board'));
+    } else if (side < 0 && look.board && g.board === 'up') {
+      // Held up in the raised hand, its face to the front.
+      parts.push(box(add(wrist, at(0, 2.6, 0)), [R, U, F], [3.1, 2.4, 0.35], () => 'board', 'board'));
+    } else if (side < 0 && look.board && !g.armsAt) {
       // The whiteboard: hanging from her hand at a walk, under her arm at a run. It faces out to her side.
       const c = tucked ? body(-5.6, torsoY(30.4), 0.6) : add(wrist, at(-0.4, -2.6, 0.6));
       parts.push(box(c, [R, U, F], [0.35, 2.4, 3.1], () => 'board', 'board'));
@@ -407,6 +475,12 @@ function pose(dirIndex, gait, phase, look) {
   // shows from the side.
   const battery = g.prop === 'battery' ? body(0, torsoY(27.4), 6.6) : null;
   if (battery) parts.push(box(battery, axesLean, [2.5, 2.1, 1.7], () => 'battery', 'prop'));
+  if (g.floor) {
+    // Seated, her place on the ground is the middle of her lap: everything moves back by LAP.
+    const back = mul(F, -LAP);
+    for (const s of parts) for (const k of ['a', 'b', 'c']) if (s[k]) s[k] = add(s[k], back);
+    return { parts, head: add(head, back), axes: axesLean, R, U, F, chest: add(body(0, torsoY(33.2), 0.2), back), base, battery };
+  }
   return { parts, head, axes: axesLean, R, U, F, chest: body(0, torsoY(33.2), 0.2), base, battery };
 }
 
