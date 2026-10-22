@@ -7,7 +7,7 @@
 // Other people use the same rig with their own look (colours and hand-drawn heads); see bleachers.js.
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
-export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 2 };
+export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 2, steer: 1, phone: 1 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
 export const FOOT_X = 18, FOOT_Y = 52;
@@ -265,6 +265,12 @@ const GAITS = {
       { armUp: 130, elbow: 40, reach: 1.3, spread: 35, lean: -2, kneeBase: 18, hipBias: 10 },
     ],
   },
+  // Seated at a steering wheel (hands forward on its rim), or over a phone held in both hands (held: a box in the hands).
+  steer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 45, elbow: 77, inward: -0.5, lean: 0, flight: 0 },
+  phone: {
+    hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 0, elbow: 125, inward: -5, lean: 0, flight: 0,
+    held: { at: [0, 33.4, 5.6], half: [1.5, 2.6, 0.3] },
+  },
 };
 
 function pose(dirIndex, gait, phase, look) {
@@ -333,7 +339,7 @@ function pose(dirIndex, gait, phase, look) {
   // Arms swing against the legs. Running, her left arm holds the board tucked against her side. Driving, both hands
   // come in to the controller.
   const s2 = Math.sin(2 * Math.PI * phase);
-  const inward = gait === 'drive' ? -2.6 : 0;
+  const inward = g.inward ?? (gait === 'drive' ? -2.6 : 0);
   for (const side of [-1, 1]) {
     const tucked = gait === 'run' && side < 0 && look.board;
     const a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
@@ -356,6 +362,7 @@ function pose(dirIndex, gait, phase, look) {
     }
   }
   if (gait === 'drive') parts.push(box(body(0, torsoY(28.4), 8.2), axesLean, [3.8, 0.9, 1.7], () => 'pad', 'pad'));
+  if (g.held) parts.push(box(body(g.held.at[0], torsoY(g.held.at[1]), g.held.at[2]), axesLean, g.held.half, () => g.held.mat ?? 'pad', 'pad'));
   return { parts, head, axes: axesLean, R, U, F, chest: body(0, torsoY(33.2), 0.2), base };
 }
 
