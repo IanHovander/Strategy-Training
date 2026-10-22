@@ -1,14 +1,15 @@
-// The bleachers beside the practice field: aluminium tiers, the crowd on them, and the people you can stop and talk to.
-// Everyone is drawn with the walker's rig (walker.js) in their own look, seated, with a hand-drawn head. The world is
-// two screens wide: the field on the left (x 0-256) and the stands on the right (x 256-512).
+// The bleachers along the field's far side: aluminium tiers, the crowd on them, and the people you can stop and talk to.
+// Everyone is drawn with the walker's rig (walker.js) in their own look, seated, with a hand-drawn head. Below the stands
+// runs the walkway, the closest a strategist gets to the field (field.js): a volunteer minds the gate.
 
 import { C, useContext, screen, fill, text, rnd } from './pixel.js';
 import { HERO_LOOK, drawWalker } from './walker.js';
 
 // Where the tiers' footboards are, front row first; each row sits 14 pixels higher than the one in front of it.
-const TIERS = [66, 52, 38, 24];
-export const STANDS = { x0: 262, x1: 506, front: 68 };
-const AISLE = { x0: 378, x1: 390 };
+const TIERS = [48, 34, 20];
+const AISLES = [[96, 106], [170, 180]];
+/** Where feet can go on the walkway between the stands and the field's far wall. */
+export const WALKWAY = { x0: 8, x1: 248, y0: 56, y1: 64 };
 
 // ---- Looks ----
 const BASE = { k: C.ink, E: '#3a2218', w: '#e6ddd4', M: '#8f4636', T: '#f6f1ea', m: '#c97a70' };
@@ -126,10 +127,11 @@ const HAIR = {
 };
 const skinBody = (k) => ({ skin: [SKIN[k].d, SKIN[k].s, SKIN[k].S] });
 
-// The people you can talk to sit in the front two rows. Lines are pages of up to two lines, 38 characters each.
+// The people you can talk to: the front row, and the volunteer at the gate. Lines are pages of up to two lines, 38
+// characters each.
 export const PEOPLE = [
   {
-    id: 'rosa', name: 'ROSA, 5026 PARENT', x: 292, tier: 0,
+    id: 'rosa', name: 'ROSA, 5026 PARENT', x: 16, tier: 0,
     look: look('rosa', { ...skinBody('brown'), shirt: tones.shirtRed }, HEADS.curls, { ...SKIN.brown, ...HAIR.brown }),
     lines: [
       ['YOU ARE ON 5026? MY KID BUILT', 'THAT ELEVATOR. TWO STAGES!'],
@@ -137,7 +139,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'adeyemi', name: 'MR. ADEYEMI, MENTOR', x: 338, tier: 0,
+    id: 'adeyemi', name: 'MR. ADEYEMI, MENTOR', x: 76, tier: 0,
     look: look('adeyemi', { ...skinBody('deep'), shirt: tones.shirtBlue, jeans: tones.khaki, cuff: tones.khaki, print: null }, HEADS.glasses,
       { ...SKIN.deep, ...HAIR.grey, q: '#aab2c8' }),
     lines: [
@@ -146,7 +148,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'milo', name: 'MILO, AGE 9', x: 422, tier: 0,
+    id: 'milo', name: 'MILO, AGE 9', x: 192, tier: 0,
     look: look('milo', { ...skinBody('light'), shirt: tones.shirtWhite, print: '#d3212f' }, HEADS.cap,
       { ...SKIN.light, ...HAIR.chestnut, c: '#1d55e8', C: '#4a90ff', D: '#0a237a' }),
     lines: [
@@ -155,7 +157,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'juno', name: 'JUNO, SCOUTING FOR 7777', x: 470, tier: 0,
+    id: 'juno', name: 'JUNO, SCOUTING FOR 7777', x: 232, tier: 0,
     look: look('juno', { ...skinBody('tan'), shirt: tones.shirtYellow, jeans: tones.black, cuff: tones.black, print: C.ink }, HEADS.bun,
       { ...SKIN.tan, ...HAIR.black }),
     lines: [
@@ -164,12 +166,21 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'dani', name: 'DANI, 5026 ALUM', x: 360, tier: 1,
+    id: 'dani', name: 'DANI, 5026 ALUM', x: 138, tier: 0,
     look: look('dani', { ...skinBody('fair'), shirt: tones.hoodie, print: '#d3212f' }, HEADS.bob,
       { ...SKIN.fair, ...HAIR.black, r: '#d3212f', R: '#ff6a55' }),
     lines: [
       ['WE NEVER MADE HAB 3 IN MY YEAR.', "YOU'RE LIVING THE DREAM."],
       ['SCOUT EVERYONE. THE BEST PICKS', 'ARE NEVER THE FLASHIEST ROBOTS.'],
+    ],
+  },
+  {
+    id: 'sam', name: 'SAM, FIELD VOLUNTEER', x: 44, y: 61, standing: true,
+    look: look('sam', { ...skinBody('tan'), shirt: tones.shirtGreen, jeans: tones.khaki, cuff: tones.khaki, print: '#ffc61a' }, HEADS.cap,
+      { ...SKIN.tan, ...HAIR.black, c: '#1d5e3a', C: '#2e8b57', D: '#0b2a1a' }),
+    lines: [
+      ['SORRY, THE FIELD IS DRIVE TEAMS', 'ONLY. NOT EVEN STRATEGISTS.'],
+      ['THE STANDS ARE THE BEST SEAT FOR', 'SCOUTING ANYWAY. GO GET THEM.'],
     ],
   },
 ];
@@ -180,9 +191,9 @@ const FAN_HEADS = [
   ['curls', 'black'], ['bob', 'auburn'], ['cap', 'blonde'], ['bun', 'brown'], ['glasses', 'chestnut'], ['curls', 'chestnut'], ['bob', 'brown'],
 ];
 const SEATS = [
-  [1, 286], [1, 318], [1, 412], [1, 446], [1, 490],
-  [2, 276], [2, 306], [2, 342], [2, 404], [2, 436], [2, 468], [2, 498],
-  [3, 290], [3, 326], [3, 360], [3, 418], [3, 452], [3, 484],
+  [0, 36], [0, 56], [0, 118], [0, 158], [0, 212],
+  [1, 24], [1, 44], [1, 64], [1, 84], [1, 118], [1, 140], [1, 160], [1, 192], [1, 214], [1, 236],
+  [2, 14], [2, 34], [2, 54], [2, 74], [2, 116], [2, 136], [2, 156], [2, 190], [2, 210], [2, 230], [2, 250],
 ];
 const SKINS = Object.keys(SKIN);
 const FANS = SEATS.map(([tier, x], i) => {
@@ -197,91 +208,75 @@ const FANS = SEATS.map(([tier, x], i) => {
     }),
   };
 });
-const EVERYONE = [...PEOPLE, ...FANS];
+const SEATED = [...PEOPLE.filter((p) => !p.standing), ...FANS];
+/** People standing on the walkway, to be drawn in depth order with her. */
+export const STANDING = PEOPLE.filter((p) => p.standing);
 
 // ---- Drawing ----
-/** The arena floor and the field's side wall, which has a gate in it. */
-export const GATE = { x: 254, y0: 98, y1: 126 };
-export function drawFloor(g, camX) {
-  const ox = 256 - camX;
+/** The walkway: concrete between the front row and the field's far wall, with a yellow edge line. */
+export function drawWalkway(g) {
   g.fillStyle = '#353a4c';
-  g.fillRect(ox, 0, 256, 144);
-  for (let i = 0; i < 700; i++) {
+  g.fillRect(0, TIERS[0] + 2, 256, 64 - TIERS[0]);
+  for (let i = 0; i < 260; i++) {
     g.fillStyle = rnd(i + 7) < 0.5 ? '#3b4154' : '#30354a';
-    g.fillRect(ox + Math.floor(rnd(i + 3000) * 256), Math.floor(rnd(i + 4000) * 144), 1, 1);
+    g.fillRect(Math.floor(rnd(i + 3000) * 256), TIERS[0] + 2 + Math.floor(rnd(i + 4000) * (64 - TIERS[0])), 1, 1);
   }
-  // A walkway stripe in front of the stands.
   g.fillStyle = '#ffc61a';
-  g.fillRect(ox + 6, 74, 250, 1);
-  // The field wall: clear panels on posts, with the gate open between them.
-  const wx = GATE.x - camX;
-  for (const [y0, y1] of [[34, GATE.y0], [GATE.y1, 144]]) {
-    g.fillStyle = 'rgba(168, 210, 255, 0.35)';
-    g.fillRect(wx - 1, y0, 3, y1 - y0);
-    g.fillStyle = '#c4cbe0';
-    g.fillRect(wx - 1, y0, 3, 1);
-    g.fillStyle = '#5d6580';
-    for (let y = y0; y < y1; y += 16) g.fillRect(wx - 1, y, 3, 2);
-  }
-  g.fillStyle = '#0b0d17';
-  g.fillRect(wx - 2, GATE.y0, 5, 2);
-  g.fillRect(wx - 2, GATE.y1 - 2, 5, 2);
+  g.fillRect(0, 65, 256, 1);
 }
 
 /** Sitting or, now and then, cheering. */
 function gaitOf(p, t) {
-  const every = 5 + rnd(p.x) * 6, phase = (t + rnd(p.x + 1) * 9) % every;
+  const every = 5 + rnd(p.x + p.tier * 7) * 6, phase = (t + rnd(p.x + 1) * 9) % every;
   return phase < 0.5 ? 'cheer' : 'sit';
 }
 
-export function drawStands(g, camX, t, talkingTo) {
-  const ox = -camX;
-  const x0 = STANDS.x0 + ox, w = STANDS.x1 - STANDS.x0;
-  if (x0 > 256 || x0 + w < 0) return;
+export function drawStands(g, t, talkingTo) {
   g.fillStyle = '#10142c';
-  g.fillRect(x0, 0, w, TIERS[0] + 2);
+  g.fillRect(0, 0, 256, TIERS[0] + 2);
   for (let tier = TIERS.length - 1; tier >= 0; tier--) {
     const y = TIERS[tier];
     // Seat plank, the shadow under it, then the footboard.
-    g.fillStyle = '#c4cbe0'; g.fillRect(x0, y - 12, w, 1);
-    g.fillStyle = '#9aa3bd'; g.fillRect(x0, y - 11, w, 2);
-    g.fillStyle = '#5d6580'; g.fillRect(x0, y - 9, w, 1);
-    g.fillStyle = '#1a1f38'; g.fillRect(x0, y - 8, w, 7);
-    g.fillStyle = '#aab2c8'; g.fillRect(x0, y - 1, w, 2);
-    g.fillStyle = '#4b5269'; g.fillRect(x0, y + 1, w, 1);
-    // The aisle's steps, with their yellow nosing.
-    g.fillStyle = '#7882a3'; g.fillRect(AISLE.x0 + ox, y - 12, AISLE.x1 - AISLE.x0, 13);
-    g.fillStyle = '#ffc61a'; g.fillRect(AISLE.x0 + ox, y - 1, AISLE.x1 - AISLE.x0, 1);
-    g.fillStyle = '#ffc61a'; g.fillRect(AISLE.x0 + ox, y - 12, AISLE.x1 - AISLE.x0, 1);
-    for (const p of EVERYONE) {
-      if (p.tier !== tier || p.x + ox < -20 || p.x + ox > 276) continue;
-      drawWalker(g, p.x + ox, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t), 0, p.look);
+    g.fillStyle = '#c4cbe0'; g.fillRect(0, y - 12, 256, 1);
+    g.fillStyle = '#9aa3bd'; g.fillRect(0, y - 11, 256, 2);
+    g.fillStyle = '#5d6580'; g.fillRect(0, y - 9, 256, 1);
+    g.fillStyle = '#1a1f38'; g.fillRect(0, y - 8, 256, 7);
+    g.fillStyle = '#aab2c8'; g.fillRect(0, y - 1, 256, 2);
+    g.fillStyle = '#4b5269'; g.fillRect(0, y + 1, 256, 1);
+    // The aisles' steps, with their yellow nosing.
+    for (const [x0, x1] of AISLES) {
+      g.fillStyle = '#7882a3'; g.fillRect(x0, y - 12, x1 - x0, 13);
+      g.fillStyle = '#ffc61a'; g.fillRect(x0, y - 1, x1 - x0, 1);
+      g.fillRect(x0, y - 12, x1 - x0, 1);
+    }
+    for (const p of SEATED) {
+      if (p.tier === tier) drawWalker(g, p.x, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t), 0, p.look);
     }
   }
-  // Posts at the ends.
-  g.fillStyle = '#0b0d17';
-  g.fillRect(x0 - 3, 0, 3, STANDS.front);
-  g.fillRect(x0 + w, 0, 3, STANDS.front);
 }
 
+/** Someone standing on the walkway. */
+export const drawStanding = (g, p) => drawWalker(g, p.x, p.y, 0, 'stand', 0, p.look);
+
+const feetOf = (p) => (p.standing ? p.y : TIERS[p.tier]);
 /** The person in reach of someone standing at (x, y) on the walkway, if any. */
 export function inReach(x, y) {
-  if (y > STANDS.front + 20) return null;
-  let best = null;
+  let best = null, bestD = Infinity;
   for (const p of PEOPLE) {
     const d = Math.abs(p.x - x);
-    if (d < 14 && (!best || d < Math.abs(best.x - x))) best = p;
+    const close = p.standing ? d < 14 && Math.abs(p.y - y) < 8 : d < 11;
+    if (close && d < bestD) [best, bestD] = [p, d];
   }
   return best;
 }
 /** Where they are, for turning to face them. */
-export const seatOf = (p) => ({ x: p.x, y: TIERS[p.tier] - 10 });
+export const seatOf = (p) => ({ x: p.x, y: feetOf(p) - 10 });
 
 /** A speech bubble with A in it over someone you can talk to. */
-export function drawPrompt(g, p, camX, t) {
+export function drawPrompt(g, p, t) {
   useContext(g);
   screen();
-  const x = p.x - camX, y = TIERS[p.tier] - 44 + (Math.floor(t * 3) % 2);
+  const x = p.x + 11, y = Math.max(1, feetOf(p) - (p.standing ? 50 : 41)) + (Math.floor(t * 3) % 2);
   fill(x - 5, y, 11, 10, C.ink);
   fill(x - 4, y + 1, 9, 8, C.white);
   fill(x - 1, y + 10, 3, 1, C.ink);

@@ -1,8 +1,8 @@
-// The main character at full height: a high-school drive coach, an Asian girl looking right at you with a small,
-// real smile, shoulder-length near-black hair parted at the side, the team's red 5026 shirt tucked into high-waisted
-// jeans, rolled cuffs over mismatched socks and canvas sneakers. She stands three-quarters on with her weight on one
-// leg, a hand on that hip and the other shoulder up. The drive team's whiteboard hangs from her other hand, tilted
-// away from her side and wiped clean, the marker swinging under it on a cord.
+// The main character at full height: the team's high-school strategist, an Asian girl looking right at you with a
+// small, real smile, shoulder-length near-black hair parted at the side, the team's red 5026 shirt tucked into
+// high-waisted jeans, rolled cuffs over mismatched socks and canvas sneakers. She stands three-quarters on with her
+// weight on one leg, a hand on that hip and the other shoulder up. The drive team's whiteboard hangs from her other
+// hand, tilted away from her side and wiped clean, the marker swinging under it on a cord.
 //
 // The other sprites are built from rectangles at the camera's scale. This one is drawn pixel by pixel at the canvas's
 // own resolution, so the face can have real features: draw it with the camera at scale 1. One letter per pixel,

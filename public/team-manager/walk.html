@@ -94,20 +94,20 @@
 <body>
 <div class="page">
   <h1>Blue Banner: on the move</h1>
-  <p class="intro">Our drive coach walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. Walk her through the gate to the bleachers and talk to the people in the stands.</p>
+  <p class="intro">Our strategist walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. She's not on the drive team, so the field is off limits; walk the front of the bleachers and talk to the people in the stands.</p>
 
   <section class="card" aria-labelledby="play-h">
     <h2 id="play-h">Try it</h2>
     <div class="play">
       <div class="tv">
         <span class="label">BIG SCREEN</span>
-        <div class="view"><canvas id="tv" width="256" height="144" aria-label="The practice field and the bleachers beside it, with the drive coach you're steering"></canvas></div>
+        <div class="view"><canvas id="tv" width="256" height="144" aria-label="The 2019 field with the bleachers along its far side, and the strategist you're steering on the walkway between them"></canvas></div>
       </div>
       <div class="phone" aria-label="Phone controller">
         <div class="status"><span>9:41</span><b>● 5026</b></div>
         <div class="who">
           <canvas id="face" width="36" height="56" aria-hidden="true"></canvas>
-          <div><strong id="who">DRIVE COACH</strong><span id="mode" role="status">STANDING</span></div>
+          <div><strong id="who">STRATEGIST</strong><span id="mode" role="status">STANDING</span></div>
         </div>
         <p id="said" class="line" aria-live="polite" hidden></p>
         <div class="padwrap">
@@ -126,7 +126,7 @@
         <p class="hint">Drag the stick, tap A to talk</p>
       </div>
     </div>
-    <p class="note">Push the stick a little to walk, all the way to run. The gate in the field wall on the right leads to the bleachers; stand by someone in the stands and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
+    <p class="note">Push the stick a little to walk, all the way to run. Stand by someone in the front row, or the volunteer at the gate, and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
   </section>
 
   <section class="card" aria-labelledby="sheet-h">
@@ -144,16 +144,18 @@
       <li><b>Walking:</b> eight frames a stride, arms swinging against her legs, the board hanging from her left hand.</li>
       <li><b>Running:</b> eight frames, leaning in, knees high, arms pumping, the board tucked under her arm so it doesn't flap.</li>
       <li><b>No sliding feet:</b> the animation steps with the distance she covers, so her stride matches her speed.</li>
-      <li><b>The stands:</b> everyone in the bleachers is the same rig, seated, in their own clothes with their own hand-drawn head, and they cheer now and then. Five of them have something to say: a 5026 parent, a mentor, a nine-year-old fan, a scout from 7777 and a 5026 alum.</li>
+      <li><b>The stands:</b> everyone in the bleachers is the same rig, seated, in their own clothes with their own hand-drawn head, and they cheer now and then. Five in the front row have something to say: a 5026 parent, a mentor, a 5026 alum, a nine-year-old fan and a scout from 7777. The volunteer at the gate has something to say too.</li>
+      <li><b>The field:</b> the 2019 game, long side to you: both HABs with all three levels against the driver stations, the cargo ship with hatches and cargo in its bays, four rockets on the side walls, loading stations, depots, the tape, and four robots at work.</li>
     </ul>
   </section>
   <p class="foot">The walking sprite lives in walker.js; the full-height portrait on the title screen is hero.js.</p>
 </div>
 <script type="module">
-  import { useContext, camera, fill, rnd } from './pixel.js';
-  import { eleBot } from './sprites.js';
   import { DIRS, CELL_W, CELL_H, walkerFrame, drawWalker } from './walker.js';
-  import { GATE, drawFloor, drawStands, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText } from './bleachers.js';
+  import { makeField, drawFieldLive } from './field.js';
+  import {
+    WALKWAY, STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText,
+  } from './bleachers.js';
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const ctx = (id) => {
@@ -174,36 +176,11 @@
   }
   new ResizeObserver(fit).observe(document.querySelector('.page'));
 
-  // ---- The practice field ----
-  const FLOOR = (() => {
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 144;
-    const g = c.getContext('2d');
-    g.fillStyle = '#2b2e3a'; g.fillRect(0, 0, 256, 144);
-    for (let i = 0; i < 900; i++) {
-      g.fillStyle = rnd(i) < 0.5 ? '#30333f' : '#272a35';
-      g.fillRect(Math.floor(rnd(i + 1000) * 256), Math.floor(rnd(i + 2000) * 144), 1, 1);
-    }
-    // Field tape and the HAB along the top wall.
-    g.fillStyle = '#e8ecf5';
-    g.fillRect(0, 34, 256, 1);
-    g.fillRect(128, 34, 1, 110);
-    g.fillStyle = '#4a90ff';
-    g.fillRect(0, 98, 256, 1);
-    g.fillStyle = '#0a237a'; g.fillRect(70, 6, 116, 28);
-    g.fillStyle = '#1d55e8'; g.fillRect(72, 8, 112, 24);
-    g.fillStyle = '#4a90ff'; g.fillRect(102, 10, 52, 18);
-    g.fillStyle = '#a8d2ff'; g.fillRect(102, 10, 52, 1);
-    g.fillStyle = '#0b0d17'; g.fillRect(0, 0, 256, 4);
-    return c;
-  })();
-  const ROBOT = { x: 206, y: 70 };
-  // The world is two screens wide: the field, then the bleachers past its side wall.
-  const WORLD_W = 512;
-  const BOUNDS = { x0: 12, x1: 500, y1: 140, fieldTop: 44, walkwayTop: 78 };
+  // ---- The field, drawn once ----
+  const FIELD_ART = makeField();
 
   // ---- Her state ----
-  const me = { x: 70, y: 96, dir: 0, gait: 'stand', dist: 0 };
+  const me = { x: 128, y: 60, dir: 0, gait: 'stand', dist: 0 };
   const SPEED = { walk: 34, run: 78 };
   const STRIDE = { walk: 3.2, run: 6 }; // pixels of travel per animation frame
   const input = { x: 0, y: 0, keys: new Set() };
@@ -230,12 +207,9 @@
       me.dir = dirToward(s.x, s.y);
       me.gait = s.mag < 0.68 ? 'walk' : 'run';
       const a = (me.dir * Math.PI) / 4, v = SPEED[me.gait] * dt;
-      let nx = Math.max(BOUNDS.x0, Math.min(BOUNDS.x1, me.x + Math.sin(a) * v));
-      let ny = Math.min(BOUNDS.y1, me.y + Math.cos(a) * v * 0.8);
-      // The field wall can only be crossed at the gate.
-      const crossing = (me.x < GATE.x) !== (nx < GATE.x);
-      if (crossing && !(ny > GATE.y0 + 3 && ny < GATE.y1 - 1)) nx = me.x;
-      ny = Math.max(nx > GATE.x ? BOUNDS.walkwayTop : BOUNDS.fieldTop, ny);
+      // The walkway is as far as she goes: the field is for drive teams.
+      const nx = Math.max(WALKWAY.x0, Math.min(WALKWAY.x1, me.x + Math.sin(a) * v));
+      const ny = Math.max(WALKWAY.y0, Math.min(WALKWAY.y1, me.y + Math.cos(a) * v * 0.8));
       me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
       me.x = nx;
       me.y = ny;
@@ -243,30 +217,28 @@
     near = talk ? null : inReach(me.x, me.y);
   }
 
-  const camX = () => Math.max(0, Math.min(WORLD_W - 256, Math.round(me.x) - 128));
+
 
   const frameOf = () => (me.gait === 'stand' ? 0 : Math.floor(me.dist / STRIDE[me.gait]));
 
   function drawTV(t) {
-    const g = tv.g, cx = camX();
-    g.drawImage(FLOOR, -cx, 0);
-    drawFloor(g, cx);
-    drawStands(g, cx, t, talk?.person);
-    // Her shadow, then her and the robot in depth order.
+    const g = tv.g;
+    g.drawImage(FIELD_ART, 0, 0);
+    drawStands(g, t, talk?.person);
+    drawWalkway(g);
+    // Her shadow, then her and anyone else on the walkway, back to front.
     const meDraw = () => {
-      const x = Math.round(me.x) - cx, y = Math.round(me.y);
+      const x = Math.round(me.x), y = Math.round(me.y);
       g.fillStyle = 'rgba(5, 6, 13, 0.45)';
       g.fillRect(x - 6, y - 1, 12, 3);
       g.fillRect(x - 4, y - 2, 8, 5);
       drawWalker(g, x, y, me.dir, me.gait, frameOf());
     };
-    const robotDraw = () => {
-      useContext(g);
-      camera(cx, 0, 1);
-      eleBot(ROBOT.x, ROBOT.y, { spin: 0, rsl: Math.floor(t * 2.5) % 2 === 0 });
-    };
-    if (me.y < ROBOT.y) { meDraw(); robotDraw(); } else { robotDraw(); meDraw(); }
-    if (near) drawPrompt(g, near, cx, t);
+    [...STANDING.map((p) => ({ y: p.y, draw: () => drawStanding(g, p) })), { y: me.y, draw: meDraw }]
+      .sort((a, b) => a.y - b.y).forEach((d) => d.draw());
+    // The rockets stand up in front of the walkway; the robots go about their match.
+    drawFieldLive(g, t);
+    if (near) drawPrompt(g, near, t);
     if (talk) drawDialog(g, talk, t);
   }
 
@@ -291,7 +263,7 @@
     const mode = talk ? talk.person.name : me.gait === 'stand' ? 'STANDING' : `${me.gait === 'run' ? 'RUNNING' : 'WALKING'} ${DIRS[me.dir].toUpperCase()}`;
     if (mode !== lastMode) {
       document.getElementById('mode').textContent = lastMode = mode;
-      document.getElementById('who').textContent = talk ? 'TALKING TO' : 'DRIVE COACH';
+      document.getElementById('who').textContent = talk ? 'TALKING TO' : 'STRATEGIST';
     }
     const label = talk ? 'NEXT' : near ? `TALK TO ${near.name.split(',')[0]}` : 'NOBODY NEARBY';
     if (label !== lastTalk) {
