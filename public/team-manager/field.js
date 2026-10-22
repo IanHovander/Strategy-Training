@@ -184,7 +184,7 @@ const SHIP_FILL = {
 };
 
 /** A hatch panel face-on: the yellow disc with its six-inch hole, which shows the cargo if there's any behind it. */
-function hatchFaceOn(cx, cy, full) {
+export function hatchFaceOn(cx, cy, full) {
   disk(cx, cy, 7, C.ink);
   disk(cx, cy, 6, C.yel1);
   rect(cx - 4, cy - 4, 3, 2, C.yel2);
@@ -253,7 +253,7 @@ const HATCH_UP = [13, 31, 50], CARGO_UP = [18, 37, 56], HULL = 64, CONE = 9;
 const coneW = (i) => Math.max(1, Math.round(14 * Math.sin(((i + 1) / CONE) * (Math.PI / 2)) ** 0.75));
 
 /** A hatch panel on an angled face: an upright yellow ellipse with its hole, like the intro draws it edge-on. */
-function hatchOnFace(cx, cy) {
+export function hatchOnFace(cx, cy) {
   rect(cx - 2, cy - 7, 5, 14, C.ink);
   rect(cx - 3, cy - 5, 7, 10, C.ink);
   rect(cx - 2, cy - 6, 5, 12, C.yel1);

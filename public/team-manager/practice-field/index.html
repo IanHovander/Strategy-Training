@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Practice Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: practice field</h1>
+  <p class="intro">Back at school, in the cafeteria after the last bell. The lunch tables are folded against the wall, and team 5026 has taped grey carpet over the tiles and built half a 2019 field on it from plywood and 2x4s. The late sun streams in through the tall windows while the robot runs timed hatch cycles and the mentor calls out the times. The cut scene follows the light down onto the field for one timed cycle. Then it's yours to walk: round the field, never across it, because the carpet is off limits while the robot is running. Talk to the drive team, the scouts, the programmer, the battery captain and the custodian, who wants his tables back.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div id="stage"></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it's made</h2>
+    <ul>
+      <li><b>The room:</b> the cafeteria is seen the way the arena is: its long back wall faces you and the floor recedes from it, at 8 pixels to the foot along and 2.75 to the foot of depth. The wall is painted block over a teal tile wainscot, kept dim like the arena's stands so the people and the field stand out against it. Along it: the hallway doors under an EXIT sign, six tall windows with posters and a clock reading 4:40 between them, the team's red 5026 banner over two folded lunch tables, the serving line with its shutter down, and two vending machines. Out on the floor are the programmer's table with a laptop, the scouting table with pizza boxes, and the custodian's cart.</li>
+      <li><b>The sunlight:</b> the sun is low behind the wall, in the first window. Through the glass the sky comes in flat bands with a checkerboard dither between them, over the trees and the school's other wing in silhouette. Each window throws its own six panes onto the floor, sheared to the right and squashed, hard-edged, with the frame bars as shadow lines and a bright rim on the side toward the sun. The patches relight whatever is under them, tiles, carpet and tape alike, lifting each well over halfway to the sun's gold, so the carpet comes out a light warm gold that still shows its speckle and its tape. Each window's shaft is one flat band of the same gold light from under the sill down to its patch, painted on the wall and the floor so it never tints what stands in it, with dust drifting down through it.</li>
+      <li><b>The homemade field:</b> the blue half of the arena's 2019 field, the same size and in the same places, built the way teams build practice fields: three rolls of carpet with duct tape over the seams, white tape lines laid by hand, a plywood rocket with velcro hatch ports, half a plywood cargo ship, a HAB of plywood and 2x4s, a loading station, and a driver station of 2x4 posts with plywood across the bottom three feet, 5026 painted on it, and clear polycarbonate above so the drivers can see the field, drawn clear like the arena's field walls so you see the drive team through it. The hatch panels and cargo are the real yellow and orange ones. Beside it is the team's gear: a battery cart with its chargers blinking, a hatch rack, a basket of cargo, a red tool chest, and a rolling whiteboard with the week's cycle times.</li>
+      <li><b>The robot's timed cycles:</b> 5026's elevator robot from the intro, on blue practice bumpers. It takes a hatch through the loading station's slot, spins round, runs along the far wall to the rocket, lifts and places the hatch on level 2, then lowers, spins and runs back, and the next cycle goes to level 3. Its runs are eased, its wheels turn with the distance it covers, and its signal light blinks while it's enabled. Between reps, while it waits at the station, a student runs on from by the folded tables, pulls the hatch back off the rocket and runs back off the carpet before it moves again.</li>
+      <li><b>The people:</b> everyone is the same rig as the strategist, in their own clothes with their own hand-drawn head: the teammate as drive coach, a driver and an operator on controllers and the human player holding the next hatch, all behind the station wall; the mentor in a teal polo with her stopwatch and the scouting lead with her tablet, and another scout with a tablet at the far table; the programmer at his laptop; the battery captain at the cart; the safety captain just in front of the carpet's tape; and the custodian by his cart. Ten of them have something to say, about timing cycles, splitting the drive team's work, lining up on the rocket's angled faces, battery care, scouting your own practice, staying off the carpet, and the e-stop. While you talk to someone at the front of the room, the camera eases down so both faces stay clear of the dialog box.</li>
+      <li><b>The cut scene:</b> it fades in on the sun in the window and slides down the light onto the field. The drive team gets ready, the operator enables the robot and the mentor counts it down, the robot runs one timed hatch cycle, the camera cuts back to the station as it comes home, and the mentor calls out the time. The drive team cheers with their arms up in a V, the custodian has a word about the tables, and the strategist runs in through the hallway doors as the mentor calls the time over to her. She answers from the edge of the field, where you take over.</li>
+    </ul>
+  </section>
+  <p class="foot">The field's pieces follow field.js, the robot and the game pieces are sprites.js's, and the people are walker.js with cast.js looks, all shared with the arena; this scene's own modules are in the practice-field folder. The controller, the camera and the talking are stage.js, shared by every scene.</p>
+</div>
+<script type="module" src="./scene.js"></script>
+</body>
+</html>

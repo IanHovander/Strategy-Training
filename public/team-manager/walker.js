@@ -8,7 +8,8 @@
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
 export const FRAMES = {
-  stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1, celebrate: 2, steer: 1, phone: 1, kneel: 4, lean: 2, carry: 8, push: 8,
+  stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, armsUp: 1, drive: 1, celebrate: 2, steer: 1, phone: 1, kneel: 4, lean: 2, carry: 8,
+  push: 8,
 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
@@ -261,6 +262,8 @@ const GAITS = {
   // On a bleacher bench: thighs forward, shins down, hands on knees; cheering puts both arms up.
   sit: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, elbow: 55, lean: 0, flight: 0 },
   cheer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 165, elbow: 12, lean: 0, flight: 0 },
+  // On their feet cheering: standing, both arms up and out in a V, the hands clear of the head.
+  armsUp: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 172, armOut: 28, elbow: 0, lean: 0, flight: 0 },
   // At the driver station: standing, both hands out in front on a controller.
   drive: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 22, elbow: 62, lean: 3, flight: 0 },
   // Celebrating on their feet, pumping their fists: both arms thrown up and out in a V at the top of each jump, then
@@ -365,9 +368,11 @@ function pose(dirIndex, gait, phase, look) {
   const head = body(0, torsoY(43.8), 0.35);
 
   // Arms swing against the legs. Running, her left arm holds the board tucked against her side. Driving, both hands
-  // come in to the controller.
+  // come in to the controller. A gait with armOut (degrees, none if it isn't set) also swings both arms out to the
+  // side, so arms held high make a V with the hands clear of the head.
   const s2 = Math.sin(2 * Math.PI * phase);
   const inward = g.inward ?? (gait === 'drive' ? -2.6 : 0);
+  const outS = Math.sin(rad(g.armOut ?? 0)), outC = Math.cos(rad(g.armOut ?? 0));
   for (const side of [-1, 1]) {
     const tucked = gait === 'run' && side < 0 && look.board;
     let a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
@@ -376,10 +381,10 @@ function pose(dirIndex, gait, phase, look) {
     if (g.work) a += (g.work[side < 0 ? 0 : 1] * (1 - Math.cos(2 * Math.PI * phase))) / 2;
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
     const [uf, uu] = swing(a), [ff, fu] = swing(a + e);
-    // Longer arms let raised fists clear the big head; spread swings them out to the sides, into a V.
+    // Longer arms let raised fists clear the big head; spread and armOut swing them out to the sides, into a V.
     const reach = g.reach ?? 1, so = Math.sin(rad(g.spread ?? 0)), co = Math.cos(rad(g.spread ?? 0));
-    const elbowP = add(shoulder, at(side * (0.9 + so * 7.0 * reach), uu * 7.0 * reach * co, uf * 7.0 * reach));
-    const wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inner) + so * 6.0 * reach), fu * 6.0 * reach * co, ff * 6.0 * reach));
+    const elbowP = add(shoulder, at(side * (0.9 + so * 7.0 * reach + uu * 7.0 * outS), uu * 7.0 * reach * co * outC, uf * 7.0 * reach));
+    const wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inner) + so * 6.0 * reach + fu * 6.0 * outS), fu * 6.0 * reach * co * outC, ff * 6.0 * reach));
     const group = side < 0 ? 'armL' : 'armR';
     const long = look.sleeves === 'long';
     parts.push(capsule(shoulder, elbowP, 1.45, (h) => (long || h.local[0] < 0.42 ? 'shirt' : 'skin'), group));
