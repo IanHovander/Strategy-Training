@@ -255,12 +255,15 @@ const GAITS = {
   cheer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 165, elbow: 12, lean: 0, flight: 0 },
   // At the driver station: standing, both hands out in front on a controller.
   drive: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 22, elbow: 62, lean: 3, flight: 0 },
-  // Celebrating on their feet, pumping their fists: thrown up, arms straight, leaning back, then yanked back down in
-  // front of the shoulders as they land, knees bent. The arms go up well forward of straight up: the head is drawn over
-  // everything, so from the side fists straight up would hide behind it, and these show out in front of the brow.
+  // Celebrating on their feet, pumping their fists: both arms thrown up and out in a V at the top of each jump, then
+  // pulled in, elbows bent, as they land, knees bent. reach lengthens the arms so the fists clear the big head; turned
+  // three-quarters to you (sw or se) both arms show.
   celebrate: {
     hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, lean: -4, flight: 0,
-    keys: [{ armUp: 140, elbow: 0, lean: -12 }, { armUp: 40, elbow: 110, kneeBase: 24, hipBias: 12 }],
+    keys: [
+      { armUp: 168, elbow: 8, reach: 1.35, spread: 30, lean: -6 },
+      { armUp: 130, elbow: 40, reach: 1.3, spread: 35, lean: -2, kneeBase: 18, hipBias: 10 },
+    ],
   },
 };
 
@@ -337,8 +340,10 @@ function pose(dirIndex, gait, phase, look) {
     const e = tucked ? 70 : g.elbow;
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
     const [uf, uu] = swing(a), [ff, fu] = swing(a + e);
-    const elbowP = add(shoulder, at(side * 0.9, uu * 7.0, uf * 7.0));
-    const wrist = add(elbowP, at(side * (tucked ? -0.8 : 0.3 + inward), fu * 6.0, ff * 6.0));
+    // Longer arms let raised fists clear the big head; spread swings them out to the sides, into a V.
+    const reach = g.reach ?? 1, so = Math.sin(rad(g.spread ?? 0)), co = Math.cos(rad(g.spread ?? 0));
+    const elbowP = add(shoulder, at(side * (0.9 + so * 7.0 * reach), uu * 7.0 * reach * co, uf * 7.0 * reach));
+    const wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inward) + so * 6.0 * reach), fu * 6.0 * reach * co, ff * 6.0 * reach));
     const group = side < 0 ? 'armL' : 'armR';
     const long = look.sleeves === 'long';
     parts.push(capsule(shoulder, elbowP, 1.45, (h) => (long || h.local[0] < 0.42 ? 'shirt' : 'skin'), group));

@@ -303,8 +303,8 @@ export function hab(x3, o = {}) {
   // The drive team, facing the field, back to front: the coach a step behind, part out of the shot, and two drivers
   // side by side at the shelf, close to the glass. The far driver stands a little nearer the wall, so from here only
   // their hair, the front of their face and their hands show past the near driver; the rest of them is hidden behind.
-  // At the buzzer they all jump, fists thrown up at the top of each jump and pumped down, knees bent, as they land, each
-  // to their own beat (the two drivers half a beat apart, so their fists don't pile up).
+  // At the buzzer they all turn three-quarters to us, still toward the field, and jump: arms thrown up in a V at the top
+  // of each jump, pulled in as they land, each to their own beat. The frame's edge cuts off most of the coach.
   // On the shelf, against the wall and between the two drivers, the emergency stop (a red button on a yellow box), and
   // after the buzzer their controllers, put down on either side of it, lit along the top.
   const sx = wx + 6;
@@ -325,16 +325,16 @@ export function hab(x3, o = {}) {
     () => o.cheer && pad(sx + 5, 0),
   ];
   const team = [
-    { x: wx + 38, y: -2, look: COACH, jump: 0.8, coach: true },
-    { x: wx + 18, y: -1, look: DRIVERS[1], jump: Math.PI / 2, then: shelf.slice(0, 2) },
-    { x: wx + 21, y: 0, look: DRIVERS[0], jump: 0, then: shelf.slice(2) },
+    { x: wx + 31, y: -2, look: COACH, jump: 0.8, coach: true },
+    { x: wx + 15, y: -1, look: DRIVERS[1], jump: Math.PI / 2, then: shelf.slice(0, 2) },
+    { x: wx + 18, y: 0, look: DRIVERS[0], jump: 0, then: shelf.slice(2) },
   ];
   for (const p of team) shadow(p.x, p.y);
   for (const p of team) {
     const up = Math.abs(Math.sin((o.t ?? 0) * Math.PI + p.jump)), high = up > 0.5;
     // Landing, knees bent, they sink a unit lower.
     const bob = o.cheer ? Math.max(0, Math.round(up * 4) - (high ? 0 : 1)) : 0;
-    rigPerson(p.x, p.y - bob, 'w', o.cheer ? 'celebrate' : p.coach ? 'stand' : 'drive', p.look, high ? 0 : 1);
+    rigPerson(p.x, p.y - bob, o.cheer ? 'sw' : 'w', o.cheer ? 'celebrate' : p.coach ? 'stand' : 'drive', p.look, high ? 0 : 1);
     for (const draw of p.then ?? []) draw();
   }
   // The near end of the shelf, a foot deep at 3 ft, on its bracket: in front of the drivers, like a console.
