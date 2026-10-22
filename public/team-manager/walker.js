@@ -150,8 +150,13 @@ const PAL = {
   board: ['#9aa3bd', '#c9d0de', '#e3e7f0'],
   print: '#fff4ee',
   pad: ['#141519', '#23252c', '#3a3d48'],
+  hem: ['#6b0f1b', '#a1172a', '#d3212f'],
 };
-/** Her look. Others pass their own: { id, pal (as PAL), heads ({ s: rows, ... }), headPal, board }. */
+/**
+ * Her look. Others pass their own: { id, pal (as PAL), heads ({ s: rows, ... }), headPal, board }, and if they like
+ * hoodie (a pullover: down over the hips, ribbed hem, the hood round the neck), sleeves: 'long', and badge (rectangles
+ * [dx, dy, w, h, colour] painted on the chest when it's toward you, from its middle, in place of the print).
+ */
 export const HERO_LOOK = { id: 'hero', pal: PAL, heads: HEADS, headPal: HEAD_PAL, board: true };
 
 // ---- Vectors ----
@@ -298,10 +303,17 @@ function pose(dirIndex, gait, phase, look) {
   };
   const axesLean = [R, norm(at(0, Math.cos(lean), Math.sin(lean))), norm(at(0, -Math.sin(lean), Math.cos(lean)))];
   const torsoY = (u) => base + (u - 23);
-  parts.push(ellipsoid(body(0, torsoY(24.4), 0), axesLean, [4.7, 3.3, 3.0], () => 'jeans', 'torso'));
-  parts.push(ellipsoid(body(0, torsoY(28.6), 0.1), axesLean, [4.1, 3.9, 2.75], (h) => (h.local[1] < -0.6 ? 'jeans' : 'shirt'), 'torso'));
+  const hoodie = !!look.hoodie;
+  const hips = (h) => (!hoodie || h.local[1] < -0.3 ? 'jeans' : h.local[1] < 0.05 ? 'hem' : 'shirt');
+  parts.push(ellipsoid(body(0, torsoY(24.4), 0), axesLean, [4.7, 3.3, 3.0], hips, 'torso'));
+  parts.push(ellipsoid(body(0, torsoY(28.6), 0.1), axesLean, [4.1, 3.9, 2.75], (h) => (h.local[1] < -0.6 && !hoodie ? 'jeans' : 'shirt'), 'torso'));
   parts.push(ellipsoid(body(0, torsoY(33.2), 0.2), axesLean, [5.0, 4.4, 3.1], () => 'shirt', 'torso'));
   for (const side of [-1, 1]) parts.push(ellipsoid(body(side * 4.6, torsoY(35.8), 0), axesLean, [2.0, 1.9, 2.0], () => 'shirt', 'torso'));
+  if (hoodie) {
+    // The hood: bunched round the neck, and hanging down the back.
+    parts.push(ellipsoid(body(0, torsoY(36.9), -0.9), axesLean, [3.6, 1.5, 2.9], () => 'shirt', 'torso'));
+    parts.push(ellipsoid(body(0, torsoY(34.4), -2.9), axesLean, [3.1, 2.7, 0.9], () => 'shirt', 'torso'));
+  }
   parts.push(capsule(body(0, torsoY(36.2), -0.3), body(0, torsoY(39.6), -0.1), 1.45, () => 'skin', 'head'));
 
   const head = body(0, torsoY(43.8), 0.35);
@@ -311,7 +323,7 @@ function pose(dirIndex, gait, phase, look) {
   const s2 = Math.sin(2 * Math.PI * phase);
   const inward = gait === 'drive' ? -2.6 : 0;
   for (const side of [-1, 1]) {
-    const tucked = gait === 'run' && side < 0;
+    const tucked = gait === 'run' && side < 0 && look.board;
     const a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
     const e = tucked ? 70 : g.elbow;
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
@@ -319,8 +331,9 @@ function pose(dirIndex, gait, phase, look) {
     const elbowP = add(shoulder, at(side * 0.9, uu * 7.0, uf * 7.0));
     const wrist = add(elbowP, at(side * (tucked ? -0.8 : 0.3 + inward), fu * 6.0, ff * 6.0));
     const group = side < 0 ? 'armL' : 'armR';
-    parts.push(capsule(shoulder, elbowP, 1.45, (h) => (h.local[0] < 0.42 ? 'shirt' : 'skin'), group));
-    parts.push(capsule(elbowP, wrist, 1.25, () => 'skin', group));
+    const long = look.sleeves === 'long';
+    parts.push(capsule(shoulder, elbowP, 1.45, (h) => (long || h.local[0] < 0.42 ? 'shirt' : 'skin'), group));
+    parts.push(capsule(elbowP, wrist, 1.25, (h) => (!long ? 'skin' : h.local[0] > 0.8 ? 'hem' : 'shirt'), group));
     parts.push(ellipsoid(wrist, [R, U, F], [1.35, 1.35, 1.35], () => 'skin', group));
     if (side < 0 && look.board) {
       // The whiteboard: hanging from her hand at a walk, under her arm at a run. It faces out to her side.
@@ -394,9 +407,7 @@ function render(dirIndex, gait, phase, look) {
     }
   }
   // The shirt print, on the chest or the back, whichever is toward you.
-  const plot = (p, w, h, col, onMat) => {
-    const [x, y] = project(p);
-    const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
+  const paint = (x0, y0, w, h, col, onMat) => {
     for (let yy = y0; yy < y0 + h; yy++) {
       for (let xx = x0; xx < x0 + w; xx++) {
         const i = yy * W + xx;
@@ -404,10 +415,18 @@ function render(dirIndex, gait, phase, look) {
       }
     }
   };
+  const plot = (p, w, h, col, onMat) => {
+    const [x, y] = project(p);
+    paint(Math.round(x - w / 2), Math.round(y - h / 2), w, h, col, onMat);
+  };
   const [, Uh, Fh] = rig.axes;
   const printAt = (sideSign) => add(rig.chest, add(mul(Fh, 3.2 * sideSign), mul(Uh, 0.6)));
   if (PAL.print && dot(Fh, TO_CAMERA) > 0.3) plot(printAt(1), 4, 2, PAL.print, 'shirt');
   if (PAL.print && dot(mul(Fh, -1), TO_CAMERA) > 0.3) plot(printAt(-1), 4, 2, PAL.print, 'shirt');
+  if (look.badge && dot(Fh, TO_CAMERA) > 0.3) {
+    const [bx, by] = project(printAt(1)).map(Math.round);
+    for (const [dx, dy, w, h, col] of look.badge) paint(bx + dx, by + dy, w, h, col, 'shirt');
+  }
   // The head, drawn by hand for this direction, over the neck and shoulders.
   const [hx, hy] = project(rig.head);
   const hx0 = Math.round(hx) - HEAD_X, hy0 = Math.round(hy) - HEAD_Y;
