@@ -458,13 +458,15 @@ export function move(x, y, dx, dy) {
 }
 
 /**
- * Everything that stands up, back to front, seen through a camera at camX. o.who: screen rectangles { x0, x1, y1 }
- * of anyone on the walkway, so a rocket in front of them goes see-through. o.more: people and anything else standing on
- * the floor, to sort in with the rest, as { y: floor line, draw() }.
+ * Everything that stands up, back to front, seen through a camera at camX (and camY, if the view isn't level with the
+ * field's own 144 rows). o.who: screen rectangles { x0, x1, y1 } of anyone on the walkway, so a rocket in front of them
+ * goes see-through. o.more: people and anything else standing on the floor, to sort in with the rest, as
+ * { y: floor line, draw() }. o.robots: false for an empty field (the hatches and cargo already scored stay);
+ * o.ends: false to leave out the queue, the scoring table and the reset cart past the ends.
  */
 export function drawFieldLive(g, camX, t, o = {}) {
-  const who = o.who ?? [];
-  const { fill, bots } = robots(t);
+  const who = o.who ?? [], camY = o.camY ?? 0;
+  const { fill, bots } = robots(o.robots === false ? 0 : t);
   const things = [
     { y: FIELD.y0, draw: () => sideWall(0, GATE) },
     ...ROCKETS.map((r) => ({
@@ -479,7 +481,23 @@ export function drawFieldLive(g, camX, t, o = {}) {
       ...[0, 9, 18, 27].map((z, i, zs) => ({ y: floorY(z), draw: () => stanchion(a, z, zs[i - 1]) })),
     ]),
     { y: floorY(SHIP.z1), draw: cargoShip },
-    ...bots.map((r) => ({ y: r.y, draw: () => r.draw(r.x, r.y) })),
+    ...(o.robots === false ? [] : bots).map((r) => ({ y: r.y, draw: () => r.draw(r.x, r.y) })),
+    ...(o.ends === false ? [] : ends()),
+    ...(o.more ?? []),
+    { y: FIELD.y1 + 1, draw: () => sideWall(27) },
+  ];
+  useContext(g);
+  for (const p of things.sort((p, q) => p.y - q.y)) {
+    camera(camX, camY, 1);
+    const hides = p.span && who.some((w) => w.x1 > p.span[0] - camX && w.x0 < p.span[1] - camX && w.y1 > p.top - camY);
+    if (hides) withAlpha(0.35, p.draw);
+    else p.draw();
+  }
+}
+
+/** The queue, its sign, the scoring table and the reset cart, past the ends of the field. */
+function ends() {
+  return [
     ...QUEUE.map((q) => ({
       y: q.y,
       draw: () => robotCart(q.x, q.y, (x, y) => (q.bot === 'arm'
@@ -489,14 +507,5 @@ export function drawFieldLive(g, camX, t, o = {}) {
     { y: SIGN.y, draw: queueSign },
     { y: TABLE.y, draw: scoringTable },
     { y: RESET.y, draw: resetCart },
-    ...(o.more ?? []),
-    { y: FIELD.y1 + 1, draw: () => sideWall(27) },
   ];
-  useContext(g);
-  for (const p of things.sort((p, q) => p.y - q.y)) {
-    camera(camX, 0, 1);
-    const hides = p.span && who.some((w) => w.x1 > p.span[0] - camX && w.x0 < p.span[1] - camX && w.y1 > p.top);
-    if (hides) withAlpha(0.35, p.draw);
-    else p.draw();
-  }
 }

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Scenes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="./stage.css">
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .grid a { color: inherit; text-decoration: none; }
+  .grid a .card { height: 100%; align-content: start; }
+  .grid a:hover .card, .grid a:focus-visible .card { border-color: var(--blue); }
+  .grid a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .grid h2 { color: var(--gold); }
+  .grid p { margin: 0; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: scenes</h1>
+  <p class="intro">Every place in the season so far. Each one opens on a cut scene, then hands you the strategist to walk around and talk to people, steered from the phone beside the big screen.</p>
+  <div class="grid">
+    <a href="./pits/"><section class="card"><h2>The pits</h2><p>A row of team pits at an event: some crews working on their robots, other pits empty while their robot is in the queue or out on the field.</p></section></a>
+    <a href="./alliance-selection/"><section class="card"><h2>Alliance selection</h2><p>The eight alliance captains out on the field, the team representatives waiting by it, and the MC on roller blades explaining how picking works.</p></section></a>
+    <a href="./team-meeting/"><section class="card"><h2>Team meeting</h2><p>The team in a circle on the grass outside, in team merch, while the co-captains give shout-outs and say what's coming up.</p></section></a>
+    <a href="./van/"><section class="card"><h2>The van</h2><p>Eight on the road to the event: a mentor driving, a student navigating, two rows of three behind. The camera runs front to back, then you talk.</p></section></a>
+    <a href="./practice-field/"><section class="card"><h2>Practice field</h2><p>Half a field built in the school cafeteria, with sunlight coming through the windows.</p></section></a>
+    <a href="./worlds/"><section class="card"><h2>World Championship</h2><p>Eight division fields side by side in one hall, all built from the same field art as the arena.</p></section></a>
+    <a href="./walk.html"><section class="card"><h2>The arena</h2><p>The walkway between the bleachers and the 2019 field, with the queue and the scoring table past the ends.</p></section></a>
+    <a href="./"><section class="card"><h2>The intro</h2><p>The opening sizzle reel and the title screen.</p></section></a>
+  </div>
+  <p class="foot">Characters: <a href="./hero.html">the strategist</a> and <a href="./teammate.html">the teammate</a>. The scenes share stage.js (the controller, the camera, talking and the cut scene clock) and cast.js (how everyone else is put together).</p>
+</div>
+</body>
+</html>

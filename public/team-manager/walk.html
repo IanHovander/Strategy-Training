@@ -8,87 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="./stage.css">
 <style>
-  /* The night-arena look of the intro, with a phone in hand: big screen on the left, controller on the right. */
-  :root {
-    --bg: #0b0f24; --panel: #141a3a; --line: #29336a; --text: #e8ecff; --muted: #9aa6d6;
-    --gold: #ffc61a; --blue: #4a90ff; --red: #d3212f; --ink: #0b0d17; --well: #070a1a; --button: #1d2550;
-    --phone: #05070f; --screen: #10163a;
-    --pixel: "Press Start 2P", ui-monospace, Menlo, Consolas, monospace;
-    --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    color-scheme: dark;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--body);
-    padding-block: 28px 48px;
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-  }
-  .page { max-width: 980px; margin: 0 auto; display: grid; gap: 18px; }
-  h1 { font: 18px/1.5 var(--pixel); color: var(--gold); margin: 0; text-wrap: balance; }
-  h2 { font: 12px/1.6 var(--pixel); margin: 0; }
-  .intro, .note, .foot { margin: 0; max-width: 64ch; color: var(--muted); }
-  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 4px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
-  .play { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
-  @media (max-width: 760px) { .play { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
-  .tv { display: grid; gap: 8px; min-width: 0; width: 100%; }
-  .view { display: grid; place-items: center; background: var(--well); border: 2px solid var(--ink); padding: 10px 0; min-width: 0; overflow: hidden; }
-  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
-  .label { font: 10px/1.6 var(--pixel); color: var(--muted); letter-spacing: 0.04em; }
-
-  /* The phone. */
-  .phone {
-    width: 300px; max-width: 100%; aspect-ratio: 9 / 17; background: var(--phone); border-radius: 36px; padding: 14px;
-    border: 2px solid #232a4d; box-shadow: 0 0 0 6px #10142c, 0 18px 40px rgba(0, 0, 0, 0.5);
-    display: flex; flex-direction: column; gap: 10px; touch-action: none; user-select: none; -webkit-user-select: none;
-  }
-  .status { display: flex; justify-content: space-between; font: 9px/1 var(--pixel); color: var(--muted); padding: 6px 10px 0; }
-  .status b { color: var(--red); font-weight: 400; }
-  .who { display: flex; align-items: center; gap: 10px; background: var(--screen); border-radius: 18px; padding: 10px 12px; }
-  .who canvas { width: 36px; height: 56px; flex: none; }
-  .who div { display: grid; gap: 4px; min-width: 0; }
-  .who strong { font: 10px/1.4 var(--pixel); color: var(--text); font-weight: 400; }
-  #mode { font: 10px/1.4 var(--pixel); color: var(--gold); }
-  .padwrap { flex: 1; display: grid; place-items: center; background: var(--screen); border-radius: 22px; min-height: 0; }
-  .line { margin: 0; background: var(--screen); border-radius: 14px; padding: 10px 12px; font-size: 14px; line-height: 1.45; color: var(--text); }
-  #pad { position: relative; width: min(220px, 70vw); aspect-ratio: 1; border-radius: 50%; cursor: grab; touch-action: none; }
-  #pad:focus-visible { outline: 2px solid var(--gold); outline-offset: 6px; }
-  .ring { position: absolute; border-radius: 50%; inset: 0; border: 2px dashed #3a4789; }
-  .ring.walk { inset: 22%; border-style: solid; border-color: #2c376f; background: rgba(74, 144, 255, 0.08); }
-  .zone { position: absolute; left: 50%; transform: translateX(-50%); font: 8px/1 var(--pixel); color: var(--muted); pointer-events: none; }
-  .zone.walk { top: 25%; }
-  .zone.run { top: 5%; color: var(--gold); }
-  #knob {
-    position: absolute; left: 50%; top: 50%; width: 30%; aspect-ratio: 1; border-radius: 50%;
-    transform: translate(-50%, -50%); background: radial-gradient(circle at 35% 30%, #ff6a55, #d3212f 55%, #6b0f1b);
-    border: 2px solid var(--ink); box-shadow: 0 4px 0 #3d0710; pointer-events: none;
-  }
-  .hint { margin: 0; text-align: center; font-size: 12px; color: var(--muted); padding-bottom: 6px; }
-  .actions { display: flex; align-items: center; justify-content: center; gap: 12px; }
-  #talk {
-    width: 58px; height: 58px; border-radius: 50%; border: 2px solid var(--ink); padding: 0; cursor: pointer; touch-action: manipulation;
-    background: radial-gradient(circle at 35% 30%, #8fbcff, #1d55e8 55%, #0a237a); box-shadow: 0 4px 0 #061445;
-    font: 16px/1 var(--pixel); color: var(--text);
-  }
-  #talk:disabled { filter: saturate(0.2) brightness(0.55); cursor: default; }
-  #talk:not(:disabled):active { transform: translateY(2px); box-shadow: 0 2px 0 #061445; }
-  #talk:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
-  #talk-label { font: 9px/1.4 var(--pixel); color: var(--muted); min-width: 13ch; }
-
-  /* On a phone, the page is the controller: no pretend phone around it, and the stick sits right under the screen. */
-  @media (max-width: 760px) {
-    .phone { width: 100%; aspect-ratio: auto; border-radius: 18px; box-shadow: none; padding: 10px; gap: 8px; }
-    .status, .hint { display: none; }
-    .padwrap { padding: 14px 0; }
-    #pad { width: min(170px, 48vw); }
-  }
-
   .dirs { display: grid; grid-template-columns: repeat(8, 1fr); text-align: center; font: 9px/1.4 var(--pixel); color: var(--muted); }
   .rows { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
-  ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 64ch; }
-  li b { color: var(--text); }
-  @media (prefers-reduced-motion: reduce) { #knob { transition: none; } }
 </style>
 </head>
 <body>
@@ -98,35 +21,7 @@
 
   <section class="card" aria-labelledby="play-h">
     <h2 id="play-h">Try it</h2>
-    <div class="play">
-      <div class="tv">
-        <span class="label">BIG SCREEN</span>
-        <div class="view"><canvas id="tv" width="256" height="144" aria-label="Part of the 2019 field with the bleachers along its far side, and the strategist you're steering on the walkway between them; the view follows her"></canvas></div>
-      </div>
-      <div class="phone" aria-label="Phone controller">
-        <div class="status"><span>9:41</span><b>● 5026</b></div>
-        <div class="who">
-          <canvas id="face" width="36" height="56" aria-hidden="true"></canvas>
-          <div><strong id="who">STRATEGIST</strong><span id="mode" role="status">STANDING</span></div>
-        </div>
-        <p id="said" class="line" aria-live="polite" hidden></p>
-        <div class="padwrap">
-          <div id="pad" tabindex="0" role="application" aria-label="Movement stick. Drag, or use the arrow keys and Shift.">
-            <div class="ring"></div>
-            <div class="ring walk"></div>
-            <span class="zone run">RUN</span>
-            <span class="zone walk">WALK</span>
-            <div id="knob"></div>
-          </div>
-        </div>
-        <div class="actions">
-          <button id="talk" type="button" disabled aria-describedby="talk-label"><span>A</span></button>
-          <span id="talk-label">NOBODY NEARBY</span>
-        </div>
-        <p class="hint">Drag the stick, tap A to talk</p>
-      </div>
-    </div>
-    <p class="note">Push the stick a little to walk, all the way to run; the view follows her down the field. Stand by someone in the front row, the volunteer at the gate, the queuer or the scorekeeper, and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
+    <div id="stage"></div>
   </section>
 
   <section class="card" aria-labelledby="sheet-h">
@@ -153,203 +48,64 @@
       <li><b>Behind the glass:</b> the walkway is past the field's far wall, so her feet show through its clear panels, and a rocket she walks behind turns see-through so you never lose her.</li>
     </ul>
   </section>
-  <p class="foot">The walking sprite lives in walker.js; the full-height portrait on the title screen is hero.js.</p>
+  <p class="foot">The walking sprite lives in walker.js and the full-height portrait on the title screen is hero.js. The controller, the camera and the talking are stage.js, shared by every scene.</p>
 </div>
 <script type="module">
-  import { DIRS, CELL_W, CELL_H, walkerFrame, drawWalker } from './walker.js';
+  import { DIRS, CELL_W, CELL_H, walkerFrame } from './walker.js';
   import { WORLD_W, FIELD, makeFloor, move, drawFieldLive } from './field.js';
-  import {
-    STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText,
-  } from './bleachers.js';
+  import { PEOPLE, STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt } from './bleachers.js';
+  import { runScene } from './stage.js';
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const ctx = (id) => {
-    const canvas = document.getElementById(id);
-    const g = canvas.getContext('2d');
-    g.imageSmoothingEnabled = false;
-    return { canvas, g };
-  };
-  const tv = ctx('tv'), sheet = ctx('sheet'), face = ctx('face');
-
-  // Whole-number zoom for the pixel canvases.
-  function fit() {
-    for (const { canvas } of [tv, sheet]) {
-      const room = canvas.parentElement.clientWidth - 4;
-      const s = Math.max(1, Math.min(4, Math.floor(room / canvas.width)));
-      canvas.style.width = `${canvas.width * s}px`;
-    }
-  }
-  new ResizeObserver(fit).observe(document.querySelector('.page'));
-
-  // ---- The field's floor, drawn once ----
+  // The people in the front row are sitting down: the phone shows them that way.
+  for (const p of PEOPLE) p.faceGait = p.standing ? 'stand' : 'sit';
   const FLOOR = makeFloor();
 
-  // ---- Her state ----
-  const me = { x: FIELD.x0 + 88, y: 60, dir: 0, gait: 'stand', dist: 0 };
-  const SPEED = { walk: 34, run: 78 };
-  const STRIDE = { walk: 3.2, run: 6 }; // pixels of travel per animation frame
-  const input = { x: 0, y: 0, keys: new Set() };
-  let talk = null; // the conversation going on, if any
-  let near = null; // who she could talk to right now
+  runScene({
+    name: 'THE ARENA',
+    label: "Part of the 2019 field with the bleachers along its far side, and the strategist you're steering on the walkway between them; the view follows her",
+    note: 'Push the stick a little to walk, all the way to run; the view follows her down the field. Stand by someone in the front row, the volunteer at the gate, the queuer or the scorekeeper, and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.',
+    world: { w: WORLD_W, h: 144 },
+    start: { x: FIELD.x0 + 88, y: 60, dir: 0 },
+    // The walkway and the floor past the ends are as far as she goes: the field is for drive teams.
+    move,
+    people: PEOPLE,
+    reach: (s) => inReach(s.me.x, s.me.y),
+    faceTo: seatOf,
+    prompt: (g, view, p, t) => drawPrompt(g, view.x, p, t),
+    draw(g, view, t, s) {
+      const camX = view.x, x = Math.round(s.me.x) - camX, y = Math.round(s.me.y);
+      g.drawImage(FLOOR, -camX, 0);
+      drawStands(g, camX, t, s.talk?.person);
+      drawWalkway(g, camX);
+      // Her and everyone else standing, sorted in with the field, its walls and everything past its ends.
+      const standing = STANDING.filter((p) => Math.abs(p.x - camX - 128) < 150).map((p) => ({ y: p.y, draw: () => drawStanding(g, camX, p) }));
+      drawFieldLive(g, camX, t, { who: [{ x0: x - 8, x1: x + 8, y1: y }], more: [...standing, s.player] });
+    },
+  });
 
-  function stick() {
-    // The phone stick wins; otherwise the keyboard.
-    if (!input.x && !input.y && input.keys.size) {
-      const x = (input.keys.has('right') ? 1 : 0) - (input.keys.has('left') ? 1 : 0);
-      const y = (input.keys.has('down') ? 1 : 0) - (input.keys.has('up') ? 1 : 0);
-      return { x, y, mag: x || y ? (input.keys.has('shift') ? 1 : 0.5) : 0 };
-    }
-    return { x: input.x, y: input.y, mag: Math.min(1, Math.hypot(input.x, input.y)) };
+  // ---- All eight directions ----
+  const sheet = document.getElementById('sheet'), sg = sheet.getContext('2d');
+  sg.imageSmoothingEnabled = false;
+  function fitSheet() {
+    const room = sheet.parentElement.clientWidth - 4;
+    sheet.style.width = `${sheet.width * Math.max(1, Math.min(4, Math.floor(room / sheet.width)))}px`;
   }
-
-  const dirToward = (dx, dy) => ((Math.round((Math.atan2(dx, dy) * 180) / Math.PI / 45) % 8) + 8) % 8;
-
-  function step(dt) {
-    const s = stick();
-    if (talk || s.mag < 0.2) {
-      me.gait = 'stand';
-    } else {
-      me.dir = dirToward(s.x, s.y);
-      me.gait = s.mag < 0.68 ? 'walk' : 'run';
-      const a = (me.dir * Math.PI) / 4, v = SPEED[me.gait] * dt;
-      // The walkway and the floor past the ends are as far as she goes: the field is for drive teams.
-      const [nx, ny] = move(me.x, me.y, Math.sin(a) * v, Math.cos(a) * v * 0.8);
-      me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
-      me.x = nx;
-      me.y = ny;
-    }
-    near = talk ? null : inReach(me.x, me.y);
-  }
-  // The view keeps her in the middle, until it reaches an end of the field.
-  const cameraX = () => Math.round(Math.max(0, Math.min(WORLD_W - 256, me.x - 128)));
-  const frameOf = () => (me.gait === 'stand' ? 0 : Math.floor(me.dist / STRIDE[me.gait]));
-
-  function drawTV(t) {
-    const g = tv.g, camX = cameraX();
-    const x = Math.round(me.x) - camX, y = Math.round(me.y);
-    g.drawImage(FLOOR, -camX, 0);
-    drawStands(g, camX, t, talk?.person);
-    drawWalkway(g, camX);
-    // Her (with her shadow) and everyone else standing, sorted in with the field, its walls and everything past its ends.
-    const meDraw = () => {
-      g.fillStyle = 'rgba(5, 6, 13, 0.45)';
-      g.fillRect(x - 6, y - 1, 12, 3);
-      g.fillRect(x - 4, y - 2, 8, 5);
-      drawWalker(g, x, y, me.dir, me.gait, frameOf());
-    };
-    const standing = STANDING.filter((p) => Math.abs(p.x - camX - 128) < 150).map((p) => ({ y: p.y, draw: () => drawStanding(g, camX, p) }));
-    drawFieldLive(g, camX, t, { who: [{ x0: x - 8, x1: x + 8, y1: y }], more: [...standing, { y: me.y, draw: meDraw }] });
-    if (near) drawPrompt(g, camX, near, t);
-    if (talk) drawDialog(g, talk, t);
-  }
-
-  function drawSheet(t) {
-    const g = sheet.g;
-    g.fillStyle = '#11184a';
-    g.fillRect(0, 0, sheet.canvas.width, sheet.canvas.height);
-    g.fillStyle = '#0d1338';
-    g.fillRect(0, CELL_H, sheet.canvas.width, CELL_H);
-    const tick = reduceMotion ? 0 : t;
+  new ResizeObserver(fitSheet).observe(document.querySelector('.page'));
+  function drawSheet(now) {
+    const t = reduceMotion ? 0 : now / 1000;
+    sg.fillStyle = '#11184a';
+    sg.fillRect(0, 0, sheet.width, sheet.height);
+    sg.fillStyle = '#0d1338';
+    sg.fillRect(0, CELL_H, sheet.width, CELL_H);
     DIRS.forEach((d, i) => {
-      g.drawImage(walkerFrame(d, 'walk', Math.floor(tick * 10)), i * CELL_W, 0);
-      g.drawImage(walkerFrame(d, 'run', Math.floor(tick * 14)), i * CELL_W, CELL_H);
+      sg.drawImage(walkerFrame(d, 'walk', Math.floor(t * 10)), i * CELL_W, 0);
+      sg.drawImage(walkerFrame(d, 'run', Math.floor(t * 14)), i * CELL_W, CELL_H);
     });
+    requestAnimationFrame(drawSheet);
   }
-
-  let lastMode = '', lastTalk = '';
-  const talkButton = document.getElementById('talk'), talkLabel = document.getElementById('talk-label');
-  function drawPhone() {
-    face.g.clearRect(0, 0, CELL_W, CELL_H);
-    face.g.drawImage(talk ? walkerFrame(0, 'sit', 0, talk.person.look) : walkerFrame(me.dir, me.gait, frameOf()), 0, talk ? 6 : 0);
-    const mode = talk ? talk.person.name : me.gait === 'stand' ? 'STANDING' : `${me.gait === 'run' ? 'RUNNING' : 'WALKING'} ${DIRS[me.dir].toUpperCase()}`;
-    if (mode !== lastMode) {
-      document.getElementById('mode').textContent = lastMode = mode;
-      document.getElementById('who').textContent = talk ? 'TALKING TO' : 'STRATEGIST';
-    }
-    const label = talk ? 'NEXT' : near ? `TALK TO ${near.name.split(',')[0]}` : 'NOBODY NEARBY';
-    if (label !== lastTalk) {
-      talkLabel.textContent = lastTalk = label;
-      talkButton.disabled = !talk && !near;
-    }
-  }
-
-  // ---- Talking ----
-  function pressA() {
-    const now = performance.now() / 1000;
-    if (talk) {
-      if (!advance(talk, now)) talk = null;
-    } else if (near) {
-      const seat = seatOf(near);
-      me.dir = dirToward(seat.x - me.x, seat.y - me.y);
-      talk = { person: near, page: 0, start: now, full: false };
-      near = null;
-    } else {
-      return;
-    }
-    const said = document.getElementById('said');
-    said.textContent = talk ? dialogText(talk) : '';
-    said.hidden = !talk;
-  }
-  talkButton.addEventListener('click', pressA);
-
-  let last = performance.now();
-  function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    step(dt);
-    drawTV(now / 1000);
-    drawSheet(now / 1000);
-    drawPhone();
-    requestAnimationFrame(frame);
-  }
-
-  // ---- The stick ----
-  const pad = document.getElementById('pad'), knob = document.getElementById('knob');
-  let dragging = null;
-  function moveStick(e) {
-    const r = pad.getBoundingClientRect();
-    const radius = r.width / 2;
-    let x = (e.clientX - r.left - radius) / radius, y = (e.clientY - r.top - radius) / radius;
-    const m = Math.hypot(x, y);
-    if (m > 1) { x /= m; y /= m; }
-    input.x = x; input.y = y;
-    knob.style.left = `${50 + x * 50}%`;
-    knob.style.top = `${50 + y * 50}%`;
-  }
-  function release() {
-    dragging = null;
-    input.x = input.y = 0;
-    knob.style.left = knob.style.top = '50%';
-    pad.style.cursor = 'grab';
-  }
-  pad.addEventListener('pointerdown', (e) => {
-    dragging = e.pointerId;
-    pad.setPointerCapture(e.pointerId);
-    pad.style.cursor = 'grabbing';
-    moveStick(e);
-    e.preventDefault();
-  });
-  pad.addEventListener('pointermove', (e) => { if (e.pointerId === dragging) moveStick(e); });
-  pad.addEventListener('pointerup', release);
-  pad.addEventListener('pointercancel', release);
-
-  const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ShiftLeft: 'shift', ShiftRight: 'shift' };
-  addEventListener('keydown', (e) => {
-    if ((e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') && !e.repeat && e.target.tagName !== 'BUTTON') {
-      pressA();
-      e.preventDefault();
-      return;
-    }
-    const k = KEYS[e.code];
-    if (!k) return;
-    input.keys.add(k);
-    if (k !== 'shift') e.preventDefault();
-  });
-  addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (k) input.keys.delete(k); });
-  addEventListener('blur', () => input.keys.clear());
-
-  fit();
-  requestAnimationFrame(frame);
+  fitSheet();
+  requestAnimationFrame(drawSheet);
 </script>
 </body>
 </html>
