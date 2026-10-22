@@ -4,10 +4,10 @@
 // (hero.js), since that's where the likeness lives. Frames are made the first time they're drawn, then cached.
 //
 // The camera looks down at 20 degrees. Directions turn clockwise from facing you: s, se, e, ne, n, nw, w, sw.
-// Other people use the same rig with their own look (colours and a hand-drawn head); see bleachers.js.
+// Other people use the same rig with their own look (colours and hand-drawn heads); see bleachers.js.
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
-export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1 };
+export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, drive: 1 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
 export const FOOT_X = 18, FOOT_Y = 52;
@@ -116,7 +116,8 @@ const HEADS = {
 };
 // Facing left you see her swept side: the bangs come down over the near half of her forehead, the part is away from you.
 const mirror = (rows) => rows.map((r) => [...r].reverse().join(''));
-function leftFacing(src, rows) {
+/** A head turned the other way: mirrored, with the light kept on the upper left. rows: hand fixes, by row number. */
+export function leftFacing(src, rows = {}) {
   const out = mirror(src).map((r) => [...r]);
   // Keep the light on the upper left: the hair's shine stays where the source had it.
   out.forEach((r, y) => r.forEach((ch, x) => {
@@ -148,6 +149,7 @@ const PAL = {
   sole: ['#4b5269', '#7882a3', '#7882a3'],
   board: ['#9aa3bd', '#c9d0de', '#e3e7f0'],
   print: '#fff4ee',
+  pad: ['#141519', '#23252c', '#3a3d48'],
 };
 /** Her look. Others pass their own: { id, pal (as PAL), heads ({ s: rows, ... }), headPal, board }. */
 export const HERO_LOOK = { id: 'hero', pal: PAL, heads: HEADS, headPal: HEAD_PAL, board: true };
@@ -246,6 +248,8 @@ const GAITS = {
   // On a bleacher bench: thighs forward, shins down, hands on knees; cheering puts both arms up.
   sit: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, elbow: 55, lean: 0, flight: 0 },
   cheer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 165, elbow: 12, lean: 0, flight: 0 },
+  // At the driver station: standing, both hands out in front on a controller.
+  drive: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 22, elbow: 62, lean: 3, flight: 0 },
 };
 
 function pose(dirIndex, gait, phase, look) {
@@ -302,8 +306,10 @@ function pose(dirIndex, gait, phase, look) {
 
   const head = body(0, torsoY(43.8), 0.35);
 
-  // Arms swing against the legs. Running, her left arm holds the board tucked against her side.
+  // Arms swing against the legs. Running, her left arm holds the board tucked against her side. Driving, both hands
+  // come in to the controller.
   const s2 = Math.sin(2 * Math.PI * phase);
+  const inward = gait === 'drive' ? -2.6 : 0;
   for (const side of [-1, 1]) {
     const tucked = gait === 'run' && side < 0;
     const a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
@@ -311,7 +317,7 @@ function pose(dirIndex, gait, phase, look) {
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
     const [uf, uu] = swing(a), [ff, fu] = swing(a + e);
     const elbowP = add(shoulder, at(side * 0.9, uu * 7.0, uf * 7.0));
-    const wrist = add(elbowP, at(side * (tucked ? -0.8 : 0.3), fu * 6.0, ff * 6.0));
+    const wrist = add(elbowP, at(side * (tucked ? -0.8 : 0.3 + inward), fu * 6.0, ff * 6.0));
     const group = side < 0 ? 'armL' : 'armR';
     parts.push(capsule(shoulder, elbowP, 1.45, (h) => (h.local[0] < 0.42 ? 'shirt' : 'skin'), group));
     parts.push(capsule(elbowP, wrist, 1.25, () => 'skin', group));
@@ -322,6 +328,7 @@ function pose(dirIndex, gait, phase, look) {
       parts.push(box(c, [R, U, F], [0.35, 2.4, 3.1], () => 'board', 'board'));
     }
   }
+  if (gait === 'drive') parts.push(box(body(0, torsoY(28.4), 8.2), axesLean, [3.8, 0.9, 1.7], () => 'pad', 'pad'));
   return { parts, head, axes: axesLean, R, U, F, chest: body(0, torsoY(33.2), 0.2), base };
 }
 

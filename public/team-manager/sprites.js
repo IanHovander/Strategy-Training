@@ -162,7 +162,7 @@ export function defBot(x, y, o = {}) {
 
 /**
  * A robot with a pivoting arm and a ball intake, for the title screen line-up.
- * o: dir, angle (radians, 0 = arm straight forward), team, num, spin.
+ * o: dir, angle (radians, 0 = arm straight forward), team, num, spin, ball (false: the intake is empty).
  */
 export function armBot(x, y, o = {}) {
   const f = frame(x, y, o.dir ?? 1);
@@ -192,7 +192,7 @@ export function armBot(x, y, o = {}) {
   part(f, ex - 4, ey - 4, 9, 9, C.ink);
   part(f, ex - 3, ey - 3, 7, 7, C.steel1);
   const bx = f.x + f.d * (ex + 1);
-  cargo(Math.round(bx), f.y + ey + 1, 4);
+  if (o.ball !== false) cargo(Math.round(bx), f.y + ey + 1, 4);
 }
 
 // ---- The 2019 field ----

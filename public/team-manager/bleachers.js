@@ -1,17 +1,16 @@
-// The bleachers along the field's far side: aluminium tiers, the crowd on them, and the people you can stop and talk to.
-// Everyone is drawn with the walker's rig (walker.js) in their own look, seated, with a hand-drawn head. Below the stands
-// runs the walkway, the closest a strategist gets to the field (field.js): a volunteer minds the gate. The drive teams
-// stand in their driver stations at either end. Everything is in world pixels, seen through a camera at camX.
+// The people: the bleachers along the field's far side, aluminium tiers and the crowd on them, and everyone you can
+// stop and talk to. Everyone is drawn with the walker's rig (walker.js) in their own look, with hand-drawn heads from the
+// front and the side. Below the stands runs the walkway, the closest a strategist gets to the field (field.js), where a
+// volunteer minds the gate. The drive teams stand at their stations; past the ends of the field a queuer runs the queue
+// and the scorekeeper sits at the scoring table. Everything is in world pixels, seen through a camera at camX.
 
 import { C, useContext, screen, fill, text, rnd } from './pixel.js';
-import { HERO_LOOK, drawWalker } from './walker.js';
-import { WORLD_W, FIELD, GATE, floorY } from './field.js';
+import { HERO_LOOK, drawWalker, leftFacing } from './walker.js';
+import { WORLD_W, FIELD, STATION, GATE, floorY } from './field.js';
 
 // Where the tiers' footboards are, front row first; each row sits 14 pixels higher than the one in front of it.
 const TIERS = [48, 34, 20];
-const AISLES = [[118, 128], [240, 250], [384, 394]];
-/** Where feet can go on the walkway between the stands and the field's far wall. */
-export const WALKWAY = { x0: FIELD.x0 + 20, x1: FIELD.x1 - 20, y0: 56, y1: 64 };
+const AISLES = [-70, 66, 166, 282, 362, 492].map((dx) => [FIELD.x0 + dx, FIELD.x0 + dx + 10]);
 
 // ---- Looks ----
 const BASE = { k: C.ink, E: '#3a2218', w: '#e6ddd4', M: '#8f4636', T: '#f6f1ea', m: '#c97a70' };
@@ -23,8 +22,9 @@ const tones = {
   shirtPurple: ['#3e2a6e', '#5b3fa0', '#8a6ad0'], shirtOrange: ['#a3460a', '#ff7a1c', '#ffb46a'],
   khaki: ['#7a6a48', '#a8946a', '#c9b88e'], black: ['#141519', '#23252c', '#3a3d48'],
 };
+/** A look: body colours over hers, a head drawn three ways (the template's name), and its colours. */
 function look(id, body, head, headPal) {
-  return { id, pal: { ...HERO_LOOK.pal, ...body }, heads: { s: head }, headPal: { ...BASE, ...headPal }, board: false };
+  return { id, pal: { ...HERO_LOOK.pal, ...body }, heads: { s: HEADS[head], e: SIDE[head], w: SIDE_LEFT[head] }, headPal: { ...BASE, ...headPal }, board: false };
 }
 
 const HEADS = {
@@ -115,6 +115,96 @@ const HEADS = {
   ],
 };
 
+// The same heads in profile, facing right (the drivers, turned to the field); facing left is the mirror.
+const SIDE = {
+  curls: [
+    '..kk.kkkk.kk....',
+    '.khhkhHHhkhhk...',
+    'khHhhhhhhhhhhk..',
+    'khhhhhhhhhhhhhk.',
+    'kghhhhhhhhhhhhk.',
+    'kghhhhhhhhhhsSk.',
+    'kghhhhhhhhsggsk.',
+    'kghhhhkssssggsk.',
+    'kghhhkdssswEssk.',
+    'kghhhkssessssdk.',
+    'kghhhhksssMTTk..',
+    'kghhhhhkssssmk..',
+    '.kghhhhkkssssk..',
+    '.kgk.kk..kkkk...',
+    '..k.............',
+  ],
+  glasses: [
+    '................',
+    '....kkkkkkk.....',
+    '...khHHhhhhkk...',
+    '..khHhhhhhhhhk..',
+    '.kghhhhhhhhhhhk.',
+    '.kghhhhhhhhhsSk.',
+    '.kghhhhhhhsssgk.',
+    '.kghhhkqqqqqqqk.',
+    '.kghhkdsssqwEqsk',
+    '.kghhkssssqqqqdk',
+    '.kghhhksssssssk.',
+    '..kghhkssssMMsk.',
+    '..kgghksssssmk..',
+    '...kkkkksssdk...',
+    '.......kkkkk....',
+  ],
+  cap: [
+    '................',
+    '....kkkkkk......',
+    '...kcCCCccck....',
+    '..kcCcccccccck..',
+    '..kcccccccccck..',
+    '..kDDDDDDDDDDDDk',
+    '..khhhhhhssskkk.',
+    '.kghhhksssssgsk.',
+    '.kghhkdssswEssk.',
+    '.kghhksssssssdk.',
+    '.kghhkesssssssk.',
+    '..kghhksssMTsk..',
+    '...kghkssssmk...',
+    '....kkksssdk....',
+    '.......kkkk.....',
+  ],
+  bun: [
+    '..kkk...........',
+    '.khHhk.kkkkk....',
+    '.khhhkkhHHhhkk..',
+    '..kkkhHhhhhhhhk.',
+    '...khhhhhhhhhhk.',
+    '..kghhhhhhhhhsSk',
+    '..kghhhhhhhsggsk',
+    '..kghhhkssssggsk',
+    '..kghhkdssswEssk',
+    '..kghhkssessssdk',
+    '..kghhhksssMMMk.',
+    '...kghhkssssmk..',
+    '....kkkkssssk...',
+    '........kkkk....',
+    '................',
+  ],
+  bob: [
+    '......kkkk......',
+    '...kkhHHhhkk....',
+    '..khHhhhhhhrk...',
+    '.khHhhhhhhhrRk..',
+    'kghhhhhhhhhrRhk.',
+    'kghhhhhhhhhrrsk.',
+    'kghhhhhhhhhsggk.',
+    'kghhhhhhkssssgk.',
+    'kghhhhhhkdswEsk.',
+    'kghhhhhhksssssdk',
+    'kghhhhhhksssMMk.',
+    'kghhhhhhkssssmk.',
+    'kgggggggkkssk...',
+    '.kkkkkkkk.kk....',
+    '................',
+  ],
+};
+const SIDE_LEFT = Object.fromEntries(Object.entries(SIDE).map(([k, rows]) => [k, leftFacing(rows)]));
+
 const SKIN = {
   deep: skinPal('#5a3826', '#6e4630', '#8a5a3c', '#8a4a3a'),
   brown: skinPal('#9a6440', '#b9805a', '#d39b72', '#d9826c'),
@@ -133,16 +223,16 @@ const skinBody = (k) => ({ skin: [SKIN[k].d, SKIN[k].s, SKIN[k].S] });
 // characters each.
 export const PEOPLE = [
   {
-    id: 'rosa', name: 'ROSA, 5026 PARENT', x: 70, tier: 0,
-    look: look('rosa', { ...skinBody('brown'), shirt: tones.shirtRed }, HEADS.curls, { ...SKIN.brown, ...HAIR.brown }),
+    id: 'rosa', name: 'ROSA, 5026 PARENT', x: FIELD.x0 + 30, tier: 0,
+    look: look('rosa', { ...skinBody('brown'), shirt: tones.shirtRed }, 'curls', { ...SKIN.brown, ...HAIR.brown }),
     lines: [
       ['YOU ARE ON 5026? MY KID BUILT', 'THAT ELEVATOR. TWO STAGES!'],
       ["I DON'T KNOW ALL THE RULES, BUT I", 'KNOW EXACTLY WHEN TO SCREAM.'],
     ],
   },
   {
-    id: 'adeyemi', name: 'MR. ADEYEMI, MENTOR', x: 150, tier: 0,
-    look: look('adeyemi', { ...skinBody('deep'), shirt: tones.shirtBlue, jeans: tones.khaki, cuff: tones.khaki, print: null }, HEADS.glasses,
+    id: 'adeyemi', name: 'MR. ADEYEMI, MENTOR', x: FIELD.x0 + 110, tier: 0,
+    look: look('adeyemi', { ...skinBody('deep'), shirt: tones.shirtBlue, jeans: tones.khaki, cuff: tones.khaki, print: null }, 'glasses',
       { ...SKIN.deep, ...HAIR.grey, q: '#aab2c8' }),
     lines: [
       ['DEFENSE WINS ELIMINATIONS. WATCH', 'WHO PLAYS IT IN QUALS.'],
@@ -150,8 +240,8 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'milo', name: 'MILO, AGE 9', x: 372, tier: 0,
-    look: look('milo', { ...skinBody('light'), shirt: tones.shirtWhite, print: '#d3212f' }, HEADS.cap,
+    id: 'milo', name: 'MILO, AGE 9', x: FIELD.x0 + 332, tier: 0,
+    look: look('milo', { ...skinBody('light'), shirt: tones.shirtWhite, print: '#d3212f' }, 'cap',
       { ...SKIN.light, ...HAIR.chestnut, c: '#1d55e8', C: '#4a90ff', D: '#0a237a' }),
     lines: [
       ['IS THAT YOUR ROBOT? IT CLIMBED SO', 'HIGH!'],
@@ -159,8 +249,8 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'juno', name: 'JUNO, SCOUTING FOR 7777', x: 434, tier: 0,
-    look: look('juno', { ...skinBody('tan'), shirt: tones.shirtYellow, jeans: tones.black, cuff: tones.black, print: C.ink }, HEADS.bun,
+    id: 'juno', name: 'JUNO, SCOUTING FOR 7777', x: FIELD.x0 + 394, tier: 0,
+    look: look('juno', { ...skinBody('tan'), shirt: tones.shirtYellow, jeans: tones.black, cuff: tones.black, print: C.ink }, 'bun',
       { ...SKIN.tan, ...HAIR.black }),
     lines: [
       ['HATCH ON LEVEL 3 IN UNDER TEN', 'SECONDS. YES, I WROTE THAT DOWN.'],
@@ -168,8 +258,8 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'dani', name: 'DANI, 5026 ALUM', x: 268, tier: 0,
-    look: look('dani', { ...skinBody('fair'), shirt: tones.hoodie, print: '#d3212f' }, HEADS.bob,
+    id: 'dani', name: 'DANI, 5026 ALUM', x: FIELD.x0 + 228, tier: 0,
+    look: look('dani', { ...skinBody('fair'), shirt: tones.hoodie, print: '#d3212f' }, 'bob',
       { ...SKIN.fair, ...HAIR.black, r: '#d3212f', R: '#ff6a55' }),
     lines: [
       ['WE NEVER MADE HAB 3 IN MY YEAR.', "YOU'RE LIVING THE DREAM."],
@@ -178,11 +268,29 @@ export const PEOPLE = [
   },
   {
     id: 'sam', name: 'SAM, FIELD VOLUNTEER', x: GATE.x1 + 4, y: 61, standing: true,
-    look: look('sam', { ...skinBody('tan'), shirt: tones.shirtGreen, jeans: tones.khaki, cuff: tones.khaki, print: '#ffc61a' }, HEADS.cap,
+    look: look('sam', { ...skinBody('tan'), shirt: tones.shirtGreen, jeans: tones.khaki, cuff: tones.khaki, print: '#ffc61a' }, 'cap',
       { ...SKIN.tan, ...HAIR.black, c: '#1d5e3a', C: '#2e8b57', D: '#0b2a1a' }),
     lines: [
       ['SORRY, THE FIELD IS DRIVE TEAMS', 'ONLY. NOT EVEN STRATEGISTS.'],
       ['THE STANDS ARE THE BEST SEAT FOR', 'SCOUTING ANYWAY. GO GET THEM.'],
+    ],
+  },
+  {
+    id: 'priya', name: 'PRIYA, QUEUER', x: 28, y: 84, standing: true,
+    look: look('priya', { ...skinBody('brown'), shirt: tones.shirtOrange, jeans: tones.black, cuff: tones.black, print: C.ink }, 'bun',
+      { ...SKIN.brown, ...HAIR.black }),
+    lines: [
+      ['MATCH 43 IS QUEUING. THOSE TWO ARE', 'UP NEXT, THEN 5026 RIGHT AFTER.'],
+      ['TELL YOUR DRIVE TEAM THE PLAN', 'BEFORE THEY GET HERE, NOT AFTER.'],
+    ],
+  },
+  {
+    id: 'gus', name: 'GUS, SCOREKEEPER', x: WORLD_W - 57, y: 96, standing: true,
+    look: look('gus', { ...skinBody('fair'), shirt: tones.hoodie, jeans: tones.black, cuff: tones.black, print: null }, 'glasses',
+      { ...SKIN.fair, ...HAIR.grey, q: '#aab2c8' }),
+    lines: [
+      ['BLUE 41, RED 38. THE CLIMBS AT THE', 'END SWING MORE MATCHES THAN YOU THINK.'],
+      ['WANT THE BREAKDOWN? HATCHES, CARGO,', 'CLIMBS, FOULS. IT IS ALL ON MY SCREEN.'],
     ],
   },
 ];
@@ -199,7 +307,7 @@ function stranger(i, shirt = SHIRTS[i % SHIRTS.length]) {
   const [headName, hairName] = FAN_HEADS[i % FAN_HEADS.length];
   const skinName = SKINS[(i * 3 + 1) % SKINS.length];
   const [c, Cc, D] = CAPS[i % 3];
-  return look(`fan${i}-${shirt[1]}`, { ...skinBody(skinName), shirt, print: null }, HEADS[headName], {
+  return look(`fan${i}-${shirt[1]}`, { ...skinBody(skinName), shirt, print: null }, headName, {
     ...SKIN[skinName], ...HAIR[hairName], q: '#aab2c8', r: HAIR[hairName].h, R: HAIR[hairName].H, c, C: Cc, D,
   });
 }
@@ -214,17 +322,19 @@ TIERS.forEach((_, tier) => {
   }
 });
 const SEATED = [...PEOPLE.filter((p) => !p.standing), ...FANS];
-/** People standing on the walkway, to be drawn in depth order with her. */
-export const STANDING = PEOPLE.filter((p) => p.standing);
-
-// The drivers at their stations, behind the alliance walls, in their teams' shirts.
+// The drivers at their stations, behind the alliance walls, in their teams' shirts and turned to the field, controllers
+// up; and in the queue, a drive team member behind each robot.
 const DRIVE_SHIRTS = { blue: [tones.shirtRed, tones.shirtBlue, tones.shirtWhite], red: [tones.shirtYellow, tones.shirtOrange, tones.shirtGreen] };
-/** Everyone standing in a driver station, to be sorted in with the field by their feet. */
-export const DRIVERS = ['blue', 'red'].flatMap((alliance, a) =>
-  [4.5, 13.5, 22.5].map((z, station) => ({
-    id: `driver${a}${station}`, x: alliance === 'blue' ? 20 : WORLD_W - 20, y: Math.round(floorY(z)),
-    look: stranger(a * 3 + station + 3, DRIVE_SHIRTS[alliance][station]),
-  })));
+const CREW = [
+  ...['blue', 'red'].flatMap((alliance, a) => [4.5, 13.5, 22.5].map((z, station) => ({
+    id: `driver${a}${station}`, x: alliance === 'blue' ? FIELD.x0 - 18 : FIELD.x1 + 18, y: Math.round(floorY(z)),
+    dir: alliance === 'blue' ? 2 : 6, gait: 'drive', look: stranger(a * 3 + station + 3, DRIVE_SHIRTS[alliance][station]),
+  }))),
+  { id: 'queue0', x: 70, y: 104, look: stranger(9, tones.shirtPurple) },
+  { id: 'queue1', x: 100, y: 102, look: stranger(12, tones.shirtGreen) },
+];
+/** Everyone standing up, to be sorted in with the field by their feet. */
+export const STANDING = [...PEOPLE.filter((p) => p.standing), ...CREW];
 
 // ---- Drawing ----
 /** The walkway: concrete between the front row and the field's far wall, with a yellow edge line. */
@@ -237,8 +347,9 @@ export function drawWalkway(g, camX) {
     g.fillStyle = rnd(i + 7) < 0.5 ? '#3b4154' : '#30354a';
     g.fillRect(x, TIERS[0] + 2 + Math.floor(rnd(i + 4000) * (64 - TIERS[0])), 1, 1);
   }
+  // The yellow line runs along the field and the driver stations; past them the floor opens out.
   g.fillStyle = '#ffc61a';
-  g.fillRect(0, 65, 256, 1);
+  g.fillRect(FIELD.x0 - STATION - camX, 65, FIELD.x1 - FIELD.x0 + 2 * STATION, 1);
 }
 
 /** Sitting or, now and then, cheering. */
@@ -273,8 +384,8 @@ export function drawStands(g, camX, t, talkingTo) {
   }
 }
 
-/** Someone standing on the walkway or in a driver station. */
-export const drawStanding = (g, camX, p) => drawWalker(g, p.x - camX, p.y, 0, 'stand', 0, p.look);
+/** Someone standing: facing you unless they're turned somewhere, and just standing unless they're driving. */
+export const drawStanding = (g, camX, p) => drawWalker(g, p.x - camX, p.y, p.dir ?? 0, p.gait ?? 'stand', 0, p.look);
 
 const feetOf = (p) => (p.standing ? p.y : TIERS[p.tier]);
 /** The person in reach of someone standing at (x, y) on the walkway, if any. */

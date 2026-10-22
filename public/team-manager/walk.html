@@ -94,7 +94,7 @@
 <body>
 <div class="page">
   <h1>Blue Banner: on the move</h1>
-  <p class="intro">Our strategist walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. She's not on the drive team, so the field is off limits; walk the front of the bleachers, the length of the field, and talk to the people in the stands.</p>
+  <p class="intro">Our strategist walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. She's not on the drive team, so the field is off limits: walk the front of the bleachers the length of the field and talk to the people in the stands, or carry on past either end to the queue and the scoring table.</p>
 
   <section class="card" aria-labelledby="play-h">
     <h2 id="play-h">Try it</h2>
@@ -126,7 +126,7 @@
         <p class="hint">Drag the stick, tap A to talk</p>
       </div>
     </div>
-    <p class="note">Push the stick a little to walk, all the way to run; the view follows her down the field. Stand by someone in the front row, or the volunteer at the gate, and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
+    <p class="note">Push the stick a little to walk, all the way to run; the view follows her down the field. Stand by someone in the front row, the volunteer at the gate, the queuer or the scorekeeper, and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
   </section>
 
   <section class="card" aria-labelledby="sheet-h">
@@ -145,7 +145,11 @@
       <li><b>Running:</b> eight frames, leaning in, knees high, arms pumping, the board tucked under her arm so it doesn't flap.</li>
       <li><b>No sliding feet:</b> the animation steps with the distance she covers, so her stride matches her speed.</li>
       <li><b>The stands:</b> everyone in the bleachers is the same rig, seated, in their own clothes with their own hand-drawn head, and they cheer now and then. Five in the front row have something to say: a 5026 parent, a mentor, a 5026 alum, a nine-year-old fan and a scout from 7777. The volunteer at the gate has something to say too.</li>
-      <li><b>The field:</b> the 2019 game at the same scale as the people, 8 pixels to the foot, so it's two screens long and the view scrolls with her. Long side to you: both HABs with all three levels, the drive teams at their stations, loading stations in the corners, depots, the cargo ship with hatches and cargo in its bays, a rocket on the far wall in each half, the alignment tape, and four robots running cycles, the intro's own sprites.</li>
+      <li><b>The field:</b> the 2019 game at the same scale as the people, 8 pixels to the foot, so it's two screens long and the view scrolls with her. Long side to you: both HABs with all three levels, loading stations in the corners, depots, the alignment tape, and four robots running cycles, the intro's own sprites.</li>
+      <li><b>The cargo ship:</b> two halves joined at the centre line, three bays a side in each, a hatch port 19 inches up and the cargo opening above its lip. Hatch panels show their six-inch hole, with orange behind it where there's cargo, and from above you can see into every bay.</li>
+      <li><b>The rockets:</b> the intro's rocket turned to face you: silver hull, alliance bands, nose cone and skirt, round cargo ports up the middle and hatch ports on the angled faces. 5026 brings hatches from the loading station and lifts them to level 2, then level 3.</li>
+      <li><b>The drive teams:</b> one at each station, turned to the field with their controllers up, with heads drawn in profile.</li>
+      <li><b>Past the ends:</b> the arena floor carries on past both driver stations, behind a belt barrier. The blue end has the queue, with the next match's robots on their carts; the red end has the scoring table with the score up, and a reset cart of hatches and cargo.</li>
       <li><b>Behind the glass:</b> the walkway is past the field's far wall, so her feet show through its clear panels, and a rocket she walks behind turns see-through so you never lose her.</li>
     </ul>
   </section>
@@ -153,9 +157,9 @@
 </div>
 <script type="module">
   import { DIRS, CELL_W, CELL_H, walkerFrame, drawWalker } from './walker.js';
-  import { WORLD_W, makeFloor, drawFarWall, drawFieldLive } from './field.js';
+  import { WORLD_W, FIELD, makeFloor, move, drawFieldLive } from './field.js';
   import {
-    WALKWAY, STANDING, DRIVERS, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText,
+    STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText,
   } from './bleachers.js';
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -181,7 +185,7 @@
   const FLOOR = makeFloor();
 
   // ---- Her state ----
-  const me = { x: 128, y: 60, dir: 0, gait: 'stand', dist: 0 };
+  const me = { x: FIELD.x0 + 88, y: 60, dir: 0, gait: 'stand', dist: 0 };
   const SPEED = { walk: 34, run: 78 };
   const STRIDE = { walk: 3.2, run: 6 }; // pixels of travel per animation frame
   const input = { x: 0, y: 0, keys: new Set() };
@@ -208,9 +212,8 @@
       me.dir = dirToward(s.x, s.y);
       me.gait = s.mag < 0.68 ? 'walk' : 'run';
       const a = (me.dir * Math.PI) / 4, v = SPEED[me.gait] * dt;
-      // The walkway is as far as she goes: the field is for drive teams.
-      const nx = Math.max(WALKWAY.x0, Math.min(WALKWAY.x1, me.x + Math.sin(a) * v));
-      const ny = Math.max(WALKWAY.y0, Math.min(WALKWAY.y1, me.y + Math.cos(a) * v * 0.8));
+      // The walkway and the floor past the ends are as far as she goes: the field is for drive teams.
+      const [nx, ny] = move(me.x, me.y, Math.sin(a) * v, Math.cos(a) * v * 0.8);
       me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
       me.x = nx;
       me.y = ny;
@@ -227,21 +230,15 @@
     g.drawImage(FLOOR, -camX, 0);
     drawStands(g, camX, t, talk?.person);
     drawWalkway(g, camX);
-    // Her shadow, then her and anyone else on the walkway, back to front, and the field's far wall in front of them.
+    // Her (with her shadow) and everyone else standing, sorted in with the field, its walls and everything past its ends.
     const meDraw = () => {
       g.fillStyle = 'rgba(5, 6, 13, 0.45)';
       g.fillRect(x - 6, y - 1, 12, 3);
       g.fillRect(x - 4, y - 2, 8, 5);
       drawWalker(g, x, y, me.dir, me.gait, frameOf());
     };
-    [...STANDING.map((p) => ({ y: p.y, draw: () => drawStanding(g, camX, p) })), { y: me.y, draw: meDraw }]
-      .sort((a, b) => a.y - b.y).forEach((d) => d.draw());
-    drawFarWall(g, camX);
-    // The field in front of the walkway: rockets, HABs, the drive teams, the robots going about their match.
-    drawFieldLive(g, camX, t, {
-      who: [{ x0: x - 8, x1: x + 8, y1: y }],
-      more: DRIVERS.filter((p) => Math.abs(p.x - camX - 128) < 150).map((p) => ({ y: p.y, draw: () => drawStanding(g, camX, p) })),
-    });
+    const standing = STANDING.filter((p) => Math.abs(p.x - camX - 128) < 150).map((p) => ({ y: p.y, draw: () => drawStanding(g, camX, p) }));
+    drawFieldLive(g, camX, t, { who: [{ x0: x - 8, x1: x + 8, y1: y }], more: [...standing, { y: me.y, draw: meDraw }] });
     if (near) drawPrompt(g, camX, near, t);
     if (talk) drawDialog(g, talk, t);
   }
