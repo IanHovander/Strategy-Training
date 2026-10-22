@@ -254,34 +254,26 @@ export function rocket(rx, o = {}) {
   });
 }
 
-// The alliance wall, seen end on from the side of the field: 6 ft 6 in tall, a frame a few inches deep holding
-// aluminum diamond plate up to 3 ft and clear polycarbonate above. The drivers' shelf sticks out behind it at 3 ft.
+// The alliance wall, seen end on from the side of the field: 6 ft 6 in tall, aluminum diamond plate up to 3 ft and clear
+// polycarbonate above. The drivers' shelf sticks out behind it at 3 ft.
 const WALL = { top: -52, plate: -24 };
 
 // The 5026 drive team, in safety glasses: two drivers in team shirts, and the coach, a mentor in the team hoodie.
 const restyle = (base, id, hair, body = {}) => ({ ...base, id, pal: { ...base.pal, ...body }, headPal: { ...base.headPal, ...hair } });
-const DRIVERS = [student(4), restyle(student(25), '5026-driver-2', HAIR.auburn)];
+// The far driver stands a little deeper in the shot, so their tee, jeans and glasses are each a step down their ramp
+// (the tee takes the hem's reds), and their hair is black and their skin darker against the near driver's.
+const FAR_DRIVER = restyle(student(25), '5026-driver-2', { ...HAIR.black, q: C.steel2 }, {
+  shirt: ['#6b0f1b', '#a1172a', '#d3212f'], jeans: ['#252e52', '#34416e', '#4a5b92'], cuff: ['#34416e', '#4a5b92', '#6b80b8'],
+});
+const DRIVERS = [student(4), FAR_DRIVER];
 // The coach has a darker skin than the near driver and hair a lighter grey than the crowd's, so even at the edge of
 // the shot they read as someone else, and older.
 const COACH = restyle(student(11, 'hoodie'), '5026-coach', { ...SKIN.deep, ...hairPal('#6a6a72', '#9a9aa4', '#c8c8d0') },
   { ...skinBody('deep'), jeans: tones.khaki, cuff: tones.khaki });
 
-const shaded = new Map();
-/** Someone on the walker's rig, feet at (x, y), scaled with the camera. shade darkens them, for depth. */
-function rigPerson(x, y, dir, gait, look, shade = 0, frame = 0) {
-  const key = `${look.id} ${dir} ${gait} ${frame} ${shade}`;
-  if (!shaded.has(key)) {
-    const src = walkerFrame(dir, gait, frame, look);
-    shaded.set(key, layer(CELL_W, CELL_H, (ctx) => {
-      ctx.drawImage(src, 0, 0);
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.globalAlpha = shade;
-      ctx.fillStyle = C.ink;
-      ctx.fillRect(0, 0, CELL_W, CELL_H);
-    }));
-  }
-  blit(shaded.get(key), Math.round(x) - FOOT_X, Math.round(y) - FOOT_Y);
-}
+/** Someone on the walker's rig, feet at (x, y), scaled with the camera. */
+const rigPerson = (x, y, dir, gait, look, frame = 0) =>
+  blit({ canvas: walkerFrame(dir, gait, frame, look), w: CELL_W, h: CELL_H }, Math.round(x) - FOOT_X, Math.round(y) - FOOT_Y);
 /** A soft shadow on the floor under someone standing at (x, y). */
 const shadow = (x, y) => withAlpha(0.45, () => {
   rect(x - 6, y - 1, 12, 2, '#05060d');
@@ -308,72 +300,71 @@ export function hab(x3, o = {}) {
   rect(x0, HAB.l1 - 1, xw - x0, 3, C.ink);
   rect(x0, HAB.l1, xw - x0, 2, C.steel1);
   for (let x = Math.floor(x0 / 4) * 4; x < xw - 2; x += 4) rect(x + ((x / 4) & 1) * 2, HAB.l1, 1, 1, C.steel2);
-  // On the drivers' shelf: the emergency stop between the two drivers, a red button on a yellow box, and after the
-  // buzzer their controllers, put down on either side of it (top face and front face).
+  // The drive team, facing the field, back to front: the coach a step behind, part out of the shot, and two drivers
+  // side by side at the shelf. The far driver leans in closer to the glass, so from here their face and hands show
+  // just ahead of the near driver's, and the rest of them is behind the near one. At the buzzer they all jump, fists
+  // thrown up at the top of each jump and pumped down as they land, each to their own beat.
+  // On the shelf, against the wall and between the two drivers, the emergency stop (a red button on a yellow box), and
+  // after the buzzer their controllers, put down on either side of it, lit along the top.
+  const sx = wx + 6;
   const pad = (x, y) => {
     rect(x - 1, plate - 4 + y, 6, 4, C.ink);
-    rect(x, plate - 3 + y, 4, 1, C.steel1);
-    rect(x, plate - 2 + y, 4, 1, C.tire);
-    rect(x + 3, plate - 3 + y, 1, 1, C.red1);
+    rect(x, plate - 3 + y, 4, 1, C.steel2);
+    rect(x, plate - 2 + y, 4, 1, C.steel1);
+    rect(x + 1, plate - 3 + y, 1, 1, C.red1);
   };
-  if (o.cheer) pad(wx + 6, -1);
-  rect(wx + 3, plate - 4, 4, 4, C.ink);
-  rect(wx + 4, plate - 3, 2, 2, C.yel1);
-  rect(wx + 3, plate - 5, 4, 2, C.ink);
-  rect(wx + 4, plate - 5, 2, 1, C.red1);
-  if (o.cheer) pad(wx + 8, 0);
-  // The drive team, facing the field, back to front: the coach a step behind, half out of the shot, and two drivers
-  // side by side at the shelf, so from here the far one only shows a little past the near one. At the buzzer they all
-  // jump, fists up at the top of each jump and pulled down as they land. The far driver keeps almost to the near one's
-  // beat, so only a rim of their hair ever shows over the near one's head.
+  const shelf = [
+    () => o.cheer && pad(sx + 3, -1),
+    () => {
+      rect(sx + 1, plate - 4, 4, 4, C.ink);
+      rect(sx + 2, plate - 3, 2, 2, C.yel1);
+      rect(sx + 1, plate - 5, 4, 2, C.ink);
+      rect(sx + 2, plate - 5, 2, 1, C.red1);
+    },
+    () => o.cheer && pad(sx + 5, 0),
+  ];
   const team = [
-    { x: wx + 27, y: -2, look: COACH, shade: 0, jump: 0.8, coach: true },
-    { x: wx + 12, y: -1, look: DRIVERS[1], shade: 0.2, jump: 0.25 },
-    { x: wx + 14, y: 0, look: DRIVERS[0], shade: 0, jump: 0 },
+    { x: wx + 38, y: -2, look: COACH, jump: 0.8, coach: true },
+    { x: wx + 15, y: -1, look: DRIVERS[1], jump: 1.1, then: shelf.slice(0, 2) },
+    { x: wx + 20, y: 0, look: DRIVERS[0], jump: 0, then: shelf.slice(2) },
   ];
   for (const p of team) shadow(p.x, p.y);
   for (const p of team) {
     const up = Math.abs(Math.sin((o.t ?? 0) * Math.PI + p.jump));
     const bob = o.cheer ? Math.round(up * 4) : 0;
-    rigPerson(p.x, p.y - bob, 'w', o.cheer ? 'celebrate' : p.coach ? 'stand' : 'drive', p.look, p.shade, up > 0.5 ? 0 : 1);
+    rigPerson(p.x, p.y - bob, 'w', o.cheer ? 'celebrate' : p.coach ? 'stand' : 'drive', p.look, up > 0.5 ? 0 : 1);
+    for (const draw of p.then ?? []) draw();
   }
   // The near end of the shelf, a foot deep at 3 ft, on its bracket: in front of the drivers, like a console.
-  rect(wx + 3, plate - 1, 10, 4, C.ink);
-  rect(wx + 3, plate, 9, 2, C.steel1);
-  rect(wx + 3, plate, 9, 1, C.steel3);
-  rect(wx + 3, plate + 3, 5, 1, C.ink);
-  rect(wx + 3, plate + 4, 3, 1, C.ink);
-  rect(wx + 3, plate + 5, 1, 1, C.ink);
-  rect(wx + 3, plate + 2, 4, 1, C.steel0);
-  rect(wx + 3, plate + 3, 2, 1, C.steel0);
-  // The wall itself, end on: the frame, with the glass's edge (a pale blue line) above the diamond plate's, which
-  // takes the light on its field side like the rails.
-  rect(wx - 1, top - 1, 5, 1 - top, C.ink);
-  rect(wx, top, 2, -top, C.steel2);
-  rect(wx + 2, top, 1, -top, C.steel1);
-  rect(wx, top, 1, plate - top, C.blue3);
-  rect(wx, plate + 3, 1, -plate - 3, C.steel3);
-  // The rail across the top, and the one where the plate meets the glass.
-  rect(wx - 2, top - 2, 7, 3, C.ink);
-  rect(wx - 1, top - 1, 5, 1, C.steel3);
-  rect(wx - 2, plate - 1, 7, 4, C.ink);
-  rect(wx - 1, plate, 5, 1, C.steel3);
-  rect(wx - 1, plate + 1, 5, 1, C.steel1);
+  rect(sx, plate - 1, 10, 4, C.ink);
+  rect(sx + 1, plate, 8, 2, C.steel1);
+  rect(sx + 1, plate, 8, 1, C.steel3);
+  rect(sx, plate + 3, 5, 1, C.ink);
+  rect(sx, plate + 4, 3, 1, C.ink);
+  rect(sx, plate + 5, 1, 1, C.ink);
+  rect(sx + 1, plate + 2, 3, 1, C.steel0);
+  rect(sx + 1, plate + 3, 1, 1, C.steel0);
+  // The wall itself, end on, the way the arena draws it: a box 9 inches deep in the alliance's blues, lit along its
+  // top and its field side, with a dark line 3 ft up where the diamond plate stops and the glass starts.
+  rect(wx - 1, top - 1, 8, 1 - top, C.ink);
+  rect(wx, top, 6, -top, C.blue1);
+  rect(wx, top, 1, -top, C.blue2);
+  rect(wx, top, 6, 1, C.blue3);
+  rect(wx, plate, 6, 1, C.blue0);
   // The end of the alliance light strip along the top of the plate: lit, it blinks blue on the field side.
   rect(wx - 2, plate, 1, 2, o.glow ? C.blue2 : C.blue0);
   rect(wx - 2, plate, 1, 1, o.glow ? C.blue3 : C.blue1);
   if (o.glow) rect(wx - 3, plate, 1, 2, C.blue2);
-  // On top: the team number sign, a box of its own edge on with the number toward the field, and on a short stem the
+  // On top: the team number sign, a flat panel seen edge on (the number faces the field), and on a short stem the
   // stack light that shows the robot is connected.
-  rect(wx - 1.5, top - 11, 6, 9, C.ink);
-  rect(wx - 0.5, top - 10, 4, 7, '#16204a');
-  rect(wx - 0.5, top - 10, 1, 7, C.blue2);
-  rect(wx - 0.5, top - 10, 4, 1, '#2a3a7a');
-  rect(wx + 1, top - 13, 1, 2, C.ink);
-  rect(wx, top - 18, 3, 5, C.ink);
-  rect(wx + 0.5, top - 17.5, 2, 2, C.blue2);
-  rect(wx + 0.5, top - 17.5, 1, 1, C.blue3);
-  rect(wx + 0.5, top - 15.5, 2, 2, C.org0);
+  rect(wx + 1, top - 11, 4, 11, C.ink);
+  rect(wx + 2, top - 10, 2, 9, '#16204a');
+  rect(wx + 2, top - 10, 1, 9, C.blue2);
+  rect(wx + 2, top - 13, 2, 2, C.ink);
+  rect(wx + 1, top - 19, 4, 6, C.ink);
+  rect(wx + 2, top - 18, 2, 2, C.blue2);
+  rect(wx + 2, top - 18, 1, 1, C.blue3);
+  rect(wx + 2, top - 16, 2, 2, C.org0);
   // Level 3 platform.
   rect(x3 - 1, HAB.l3 - 1, HAB.depth + 2, HAB.l1 - HAB.l3 + 1, C.ink);
   rect(x3, HAB.l3, HAB.depth, HAB.l1 - HAB.l3, C.blue1);

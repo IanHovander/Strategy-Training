@@ -402,7 +402,7 @@ function shotHab(b, B, info) {
   const working = (b > 1 && b < 3) || (b > 3.75 && b < 4.5) || (b > 6 && b < 6.75);
   const jit = working && Math.floor(B * 16) % 2 ? 0.5 : 0;
   const done = b >= 8;
-  const camX = lerp(30, 88, easeOut(seg(b, 0, 1.2)));
+  const camX = lerp(30, 100, easeOut(seg(b, 0, 1.2)));
   const camY = lerp(-64, -72, easeInOut(seg(b, 1, 3)));
   camera(camX, camY, 2, plus(shake(b, 8, 0.5, 2), shake(b, 8.5, 0.4, 3)));
   sky(SKY, 30, B);
