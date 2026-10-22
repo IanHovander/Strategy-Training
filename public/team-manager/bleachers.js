@@ -133,13 +133,24 @@ export function drawWalkway(g, camX) {
   g.fillRect(FIELD.x0 - STATION - camX, 65, FIELD.x1 - FIELD.x0 + 2 * STATION, 1);
 }
 
-/** Sitting or, now and then, cheering. */
-function gaitOf(p, t) {
+/**
+ * Sitting or, now and then, cheering. Given a cheer (0 to 1), about that share of the crowd is on its feet together,
+ * arms pumping: up and down every quarter second or so, each to their own beat. The same people join in first as it
+ * grows, so a swelling cheer spreads through the stands instead of flickering.
+ */
+function gaitOf(p, t, cheer) {
+  if (cheer > 0 && rnd(p.x * 7 + p.tier * 31 + 5) < cheer) {
+    const beat = 0.22 + rnd(p.x + p.tier * 3 + 11) * 0.1;
+    return Math.floor(t / beat + rnd(p.x * 3 + 17) * 2) % 2 ? 'sit' : 'cheer';
+  }
   const every = 5 + rnd(p.x + p.tier * 7) * 6, phase = (t + rnd(p.x + 1) * 9) % every;
   return phase < 0.5 ? 'cheer' : 'sit';
 }
 
-/** The tiers and everyone on them. o.lookOf(p), if given, dresses each seated person p (another crowd in the same seats). */
+/**
+ * The tiers and everyone on them. o.lookOf(p), if given, dresses each seated person p (another crowd in the same seats);
+ * o.cheer, 0 to 1, is the share of the crowd cheering together (see gaitOf).
+ */
 export function drawStands(g, camX, t, talkingTo, o = {}) {
   g.fillStyle = '#10142c';
   g.fillRect(0, 0, 256, TIERS[0] + 2);
@@ -160,7 +171,7 @@ export function drawStands(g, camX, t, talkingTo, o = {}) {
     }
     for (const p of SEATED) {
       if (p.tier === tier && p.x > camX - 20 && p.x < camX + 276) {
-        drawWalker(g, p.x - camX, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t), 0, o.lookOf?.(p) ?? p.look);
+        drawWalker(g, p.x - camX, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t, o.cheer), 0, o.lookOf?.(p) ?? p.look);
       }
     }
   }

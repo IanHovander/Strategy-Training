@@ -5,11 +5,16 @@
 //
 // The camera looks down at 20 degrees. Directions turn clockwise from facing you: s, se, e, ne, n, nw, w, sw.
 // Other people use the same rig with their own look (colours and hand-drawn heads); see bleachers.js.
+//
+// An emcee's kit, for whoever's look asks for it: inline skates in place of shoes (look.skates: a boot up over the
+// ankle, a frame under it and a row of three wheels on the floor, so she stands a little taller), a handheld mic in
+// her right hand (look.mic), and the gaits that go with them: skate (the glide), flair (the stop), emcee (mic to the
+// mouth) and offer (the mic held out to someone).
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
 export const FRAMES = {
   stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, armsUp: 1, drive: 1, celebrate: 2, steer: 1, phone: 1, kneel: 4, lean: 2, carry: 8,
-  push: 8, floor: 1, floorClap: 2, floorCheer: 1, clap: 2, hooray: 1, gesture: 1,
+  push: 8, floor: 1, floorClap: 2, floorCheer: 1, clap: 2, hooray: 1, gesture: 1, skate: 8, flair: 1, emcee: 1, offer: 1,
 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
@@ -165,8 +170,18 @@ const PAL = {
  * Her look. Others pass their own: { id, pal (as PAL), heads ({ s: rows, ... }), headPal, board }, and if they like
  * hoodie (a pullover: down over the hips, ribbed hem, the hood round the neck), sleeves: 'long', and badge (rectangles
  * [dx, dy, w, h, colour] painted on the chest when it's toward you, from its middle, in place of the print).
+ * skates: inline skates (pal.boot, pal.frame, pal.wheel), and mic: a handheld mic in the right hand (pal.mic, the grip,
+ * and pal.micHead).
  */
 export const HERO_LOOK = { id: 'hero', pal: PAL, heads: HEADS, headPal: HEAD_PAL, board: true };
+// The kit's colours, for a look that asks for skates or a mic without giving its own: white boots, steel frames,
+// yellow wheels, a black mic with a steel head.
+const KIT = {
+  boot: ['#b9c0d4', '#e8ecf5', '#ffffff'], frame: ['#3f4761', '#7882a3', '#c4cbe0'], wheel: ['#a3650a', '#ffc61a', '#fff17a'],
+  mic: ['#141519', '#23252c', '#3a3d48'], micHead: ['#7882a3', '#c4cbe0', '#ffffff'],
+};
+/** How much higher she rides on skates: her ankles stand this far above the floor so the wheels are on it. */
+const SKATE_LIFT = 2.8;
 
 // ---- Vectors ----
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -255,6 +270,32 @@ function hitBox(s, o, d) {
 const HIT = { ellipsoid: hitEllipsoid, capsule: hitCapsule, box: hitBox };
 
 // ---- The rig ----
+const mix = (a, b, u) => a + (b - a) * u;
+const ease = (u) => u * u * (3 - 2 * u);
+// The skating stride, one leg's turn (q from 0 to 1, the other leg half a turn behind): half the time it glides under
+// her on a bent knee, then it pushes out to the side and back with the skate turned out, keeping its wheels on the
+// floor (plant), then lifts and swings back in under her.
+function skateLeg(q) {
+  if (q < 0.5) {
+    const k = Math.sin((Math.PI * q) / 0.5);
+    return { hip: 24 + 6 * k, knee: 44 + 10 * k, splay: -3, toe: 8 };
+  }
+  if (q < 0.78) {
+    const u = ease((q - 0.5) / 0.28);
+    return { hip: mix(24, -12, u), knee: mix(44, 4, u), splay: mix(-3, 22, u), toe: mix(8, 34, u), plant: true };
+  }
+  const u = (q - 0.78) / 0.22, e = ease(u);
+  const up = Math.sin(Math.PI * u);
+  return { hip: mix(-12, 24, e), knee: mix(4, 44, e) + 26 * up, splay: mix(22, -3, e), toe: mix(34, 8, e), tip: 10 * up };
+}
+// Arms swing against the legs and out wide, wider still going back.
+function skateArm(phase, side) {
+  const s = Math.sin(2 * Math.PI * phase);
+  return { a: side * 30 * s, e: 30, out: 10 + 26 * Math.max(0, -side * s) };
+}
+// Skates a little apart and turned out, for standing still on them.
+const skateStand = () => ({ hip: 3, knee: 7, splay: 6, toe: 16 });
+
 const GAITS = {
   stand: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, elbow: 10, lean: 0, flight: 0 },
   walk: { hip: 24, hipBias: 0, knee: 42, kneeBase: 4, arm: 20, elbow: 16, lean: 2, flight: 0 },
@@ -312,6 +353,27 @@ const GAITS = {
   clap: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 35, elbow: 115, lean: 0, flight: 0, clap: [3, 1.35], board: 'tuck', flat: true },
   hooray: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 168, elbow: 8, lean: 0, flight: 0, board: 'up', flat: true, splay: 24, splayReach: 1.3, armNear: 140 },
   gesture: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, elbow: 10, armR: 35, elbowR: 80, handR: 8.6, lean: 0, flight: 0, flat: true },
+  // The emcee's, for a look on skates with a mic. These give each limb its own angles: legs(q, side) and arms(phase,
+  // side) as above (splay out to her side, toe turned out, out for an arm raised out to the side), sway(phase) shifts
+  // her over one leg, micTilt tips the mic forward. Gliding: leaning in, swaying over the gliding skate.
+  skate: { lean: 15, legs: skateLeg, arms: skateArm, sway: (phase) => -1.2 * Math.sin(2 * Math.PI * phase) },
+  // The stop with style: her left skate out to the side, the free arm flung up and out, the mic arm out.
+  flair: {
+    lean: -2, sway: () => 0.6,
+    legs: (q, side) => (side < 0 ? { hip: 4, knee: 2, splay: 30, toe: 48, plant: true } : { hip: 10, knee: 16, splay: -4, toe: 10 }),
+    arms: (phase, side) => (side < 0 ? { a: 10, e: 34, out: 116 } : { a: 18, e: 70, out: 26 }),
+  },
+  // Talking to the crowd: mic to her mouth, the free arm out to the side, palm up. The mic arm comes forward with the
+  // forearm tipped in across her, so the mic's head is at the corner of her mouth facing you and under it turned away.
+  emcee: {
+    lean: 0, legs: skateStand, micTilt: 0,
+    arms: (phase, side) => (side > 0 ? { a: 62, e: 104, out: 56 } : { a: 20, e: 52, out: 62 }),
+  },
+  // The mic held straight out at shoulder height, toward whoever she faces.
+  offer: {
+    lean: 0, legs: skateStand, micTilt: 62,
+    arms: (phase, side) => (side > 0 ? { a: 60, e: 58, out: -6 } : { a: -8, e: 18, out: 12 }),
+  },
 };
 // Seated on the grass she turns about the middle of her lap, this far in front of her hips.
 const LAP = 5;
@@ -325,21 +387,31 @@ function pose(dirIndex, gait, phase, look) {
   const at = (r, u, f) => add(add(mul(R, r), mul(U, u)), mul(F, f));
   const swing = (deg) => [Math.sin(rad(deg)), -Math.cos(rad(deg))]; // [forward, up] of a limb hanging at that angle
 
-  // Legs: hip angle forward, knee folding back.
+  // Legs: hip angle forward, knee folding back. A gait with its own legs(q, side) gives each leg's angles itself, and
+  // can splay a leg out to her side, turn its foot out (toe) or tip it (tip).
   const legs = [-1, 1].map((side) => {
     const q = phase + (side < 0 ? 0 : 0.5);
     const s2 = Math.sin(2 * Math.PI * q), c2 = Math.cos(2 * Math.PI * q);
-    let hip = g.hipBias + g.hip * s2;
-    let knee = g.kneeBase + g.knee * Math.max(0, Math.cos(2 * Math.PI * q + (gait === 'run' ? 0.7 : 0.35))) ** 1.3;
+    const own = g.legs?.(q % 1, side);
+    let hip = own ? own.hip : g.hipBias + g.hip * s2;
+    let knee = own ? own.knee : g.kneeBase + g.knee * Math.max(0, Math.cos(2 * Math.PI * q + (gait === 'run' ? 0.7 : 0.35))) ** 1.3;
     if (g.legsAt) [hip, knee] = g.legsAt[side < 0 ? 0 : 1];
     if (g.still && phase === 0) [hip, knee] = [g.hipBias, g.kneeBase];
     const [tf, tu] = swing(hip), [sf, su] = swing(hip - knee);
-    return { side, hip, knee, tf, tu, sf, su, c2 };
+    return { side, hip, knee, tf, tu, sf, su, c2, splay: own?.splay ?? 0, toe: own?.toe ?? 0, tip: own?.tip ?? 0, plant: !!own?.plant };
   });
   const THIGH = 9.6, SHIN = 9.2, ANKLE = 1.4;
-  const hipY = Math.max(...legs.map((l) => -(l.tu * THIGH + l.su * SHIN))) + ANKLE;
+  const legReach = (l) => -(l.tu * THIGH + l.su * SHIN);
+  // A planted leg (a skate pushing off) splays out as far as it takes to keep its foot on the floor.
+  if (legs.some((l) => l.plant)) {
+    const stands = Math.max(...legs.filter((l) => !l.plant).map((l) => legReach(l) * Math.cos(rad(l.splay))));
+    for (const l of legs) if (l.plant && legReach(l) > stands) l.splay = Math.max(l.splay, (Math.acos(stands / legReach(l)) * 180) / Math.PI);
+  }
+  const hipY = Math.max(...legs.map((l) => legReach(l) * (l.splay ? Math.cos(rad(l.splay)) : 1))) + ANKLE;
   const lift = gait === 'run' ? g.flight * Math.max(0, Math.sin(4 * Math.PI * (phase + 0.06))) : 0;
-  const base = g.floor ?? Math.round((hipY + lift) * 2) / 2;
+  const base = g.floor ?? Math.round((hipY + lift + (look.skates ? SKATE_LIFT : 0)) * 2) / 2;
+  // Sideways over one leg, for a gait that sways (skating: over the gliding skate).
+  const sway = g.sway ? g.sway(phase) : 0;
   const parts = [];
   const ahead = -(g.back ?? 0); // how far the body sits ahead of the floor point: a kneeler sits back of it
 
@@ -362,12 +434,32 @@ function pose(dirIndex, gait, phase, look) {
       parts.push(ellipsoid(footC, [across, U, fwd], [1.6, 1.2, 2.6], (h) => (h.local[1] < -0.45 ? 'sole' : 'shoe'), shin));
     }
   } else for (const l of legs) {
-    const hipP = at(l.side * 2.5, base, ahead);
-    const kneeP = add(hipP, at(0, l.tu * THIGH, l.tf * THIGH));
-    const ankle = add(kneeP, at(0, l.su * SHIN, l.sf * SHIN));
+    const hipP = at(l.side * 2.5 + sway, base, ahead);
+    const sp = rad(l.side * l.splay);
+    const limb = (u, f) => (l.splay ? at(-u * Math.sin(sp), u * Math.cos(sp), f) : at(0, u, f));
+    const kneeP = add(hipP, limb(l.tu * THIGH, l.tf * THIGH));
+    const ankle = add(kneeP, limb(l.su * SHIN, l.sf * SHIN));
     const group = l.side < 0 ? 'legL' : 'legR';
     parts.push(capsule(hipP, kneeP, 2.2, () => 'jeans', group));
     parts.push(capsule(kneeP, ankle, 1.85, (h) => (h.local[0] > 0.82 ? 'cuff' : 'jeans'), group));
+    if (look.skates) {
+      // An inline skate: a boot up over the ankle, the frame under it and three wheels in a row on the floor. It points
+      // her way, turned out by toe, its toe dipping by tip as it leaves the floor.
+      const toe = rad(l.side * l.toe), tip = rad(l.tip);
+      const flat = add(mul(F, Math.cos(toe)), mul(R, Math.sin(toe)));
+      const axes = [
+        add(mul(R, Math.cos(toe)), mul(F, -Math.sin(toe))),
+        add(mul(U, Math.cos(tip)), mul(flat, Math.sin(tip))),
+        add(mul(flat, Math.cos(tip)), mul(U, -Math.sin(tip))),
+      ];
+      const on = (u, f) => add(ankle, add(mul(axes[1], u), mul(axes[2], f)));
+      parts.push(capsule(on(-0.3, 0), add(ankle, mul(norm(sub(kneeP, ankle)), 3.0)), 1.95, () => 'boot', group));
+      parts.push(ellipsoid(on(-0.55, 1.0), axes, [1.75, 1.15, 2.8], () => 'boot', group));
+      parts.push(box(on(-1.95, 0.8), axes, [0.95, 0.42, 3.6], () => 'frame', group));
+      // The wheels are a pixel apart, so from the side an ink line falls between them.
+      for (const k of [-1, 0, 1]) parts.push(ellipsoid(on(-3.35, 0.8 + 2.9 * k), axes, [0.8, 0.95, 0.95], () => 'wheel', group));
+      continue;
+    }
     parts.push(capsule(ankle, add(ankle, at(0, 1.1, 0)), 1.3, () => (l.side < 0 ? 'sockL' : 'sockR'), group));
     // The shoe points along her heading, tipping down a little as the foot leaves the ground.
     const tip = gait === 'stand' || g.flat ? 0 : Math.max(0, -(l.hip - l.knee) * 0.4);
@@ -381,7 +473,7 @@ function pose(dirIndex, gait, phase, look) {
   const lean = rad(g.lean);
   const body = (r, u, f) => {
     const du = u - base;
-    return at(r, base + du * Math.cos(lean), f + du * Math.sin(lean) + ahead);
+    return at(r + sway, base + du * Math.cos(lean), f + du * Math.sin(lean) + ahead);
   };
   const axesLean = [R, norm(at(0, Math.cos(lean), Math.sin(lean))), norm(at(0, -Math.sin(lean), Math.cos(lean)))];
   const torsoY = (u) => base + (u - 23);
@@ -414,16 +506,22 @@ function pose(dirIndex, gait, phase, look) {
     const right = side > 0 && g.armR !== undefined, holds = side < 0 && look.board && g.board === 'down';
     // Seen side on, a raised V lines up behind the head: the arm nearer you comes forward instead (armNear).
     const nearer = g.armNear !== undefined && side * R[2] > 0.9;
-    let a = right ? g.armR : holds ? 0 : nearer ? g.armNear : g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
-    let e = right ? g.elbowR : holds ? GAITS.stand.elbow : tucked ? 70 : g.elbow, inner = inward;
+    // A gait with its own arms(phase, side) gives each arm's swing (a), elbow (e) and how far it's raised out to her
+    // side (out), in degrees.
+    const own = g.arms?.(phase, side);
+    let a = own ? own.a : right ? g.armR : holds ? 0 : nearer ? g.armNear : g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
+    let e = own ? own.e : right ? g.elbowR : holds ? GAITS.stand.elbow : tucked ? 70 : g.elbow, inner = inward;
     if (g.armsAt) [a, e, inner = 0] = g.armsAt[side < 0 ? 0 : 1];
     if (g.work) a += (g.work[side < 0 ? 0 : 1] * (1 - Math.cos(2 * Math.PI * phase))) / 2;
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
     const [uf, uu] = swing(a), [ff, fu] = swing(a + e);
     // Longer arms let raised fists clear the big head; spread and armOut swing them out to the sides, into a V.
     const reach = g.reach ?? 1, so = Math.sin(rad(g.spread ?? 0)), co = Math.cos(rad(g.spread ?? 0));
-    let elbowP = add(shoulder, at(side * (0.9 + so * 7.0 * reach + uu * 7.0 * outS), uu * 7.0 * reach * co * outC, uf * 7.0 * reach));
-    let wrist = add(elbowP, at(side * ((tucked ? -0.8 : 0.3 + inner) + so * 6.0 * reach + fu * 6.0 * outS), fu * 6.0 * reach * co * outC, ff * 6.0 * reach));
+    // An arm with its own out is raised that far out to her side, turning about the shoulder.
+    const ab = rad(side * (own?.out ?? 0));
+    const out = (r, u, f) => (ab ? at(r * Math.cos(ab) - u * Math.sin(ab), r * Math.sin(ab) + u * Math.cos(ab), f) : at(r, u, f));
+    let elbowP = add(shoulder, out(side * (0.9 + so * 7.0 * reach + uu * 7.0 * outS), uu * 7.0 * reach * co * outC, uf * 7.0 * reach));
+    let wrist = add(elbowP, out(side * ((tucked ? -0.8 : 0.3 + inner) + so * 6.0 * reach + fu * 6.0 * outS), fu * 6.0 * reach * co * outC, ff * 6.0 * reach));
     if (clap !== undefined) {
       const inE = clap + 2.6 - 5.3, upper = Math.sqrt(49 - inE * inE), fore = Math.sqrt(36 - 2.6 * 2.6);
       elbowP = add(shoulder, at(side * inE, uu * upper, uf * upper));
@@ -436,11 +534,11 @@ function pose(dirIndex, gait, phase, look) {
       // Cheering, the raised arms lean out to the sides in a V (splay degrees) and reach a little further (splayReach),
       // so the hands come up clear of the big hand-drawn head, which is drawn over everything, from every side.
       const sp = rad(g.splay) * side, k = g.splayReach ?? 1;
-      const out = (v) => {
+      const splayed = (v) => {
         const r = dot(v, R), u = dot(v, U), f = dot(v, F);
         return at((r * Math.cos(sp) + u * Math.sin(sp)) * k, (u * Math.cos(sp) - r * Math.sin(sp)) * k, f * k);
       };
-      const upper = out(sub(elbowP, shoulder)), fore = out(sub(wrist, elbowP));
+      const upper = splayed(sub(elbowP, shoulder)), fore = splayed(sub(wrist, elbowP));
       elbowP = add(shoulder, upper);
       wrist = add(elbowP, fore);
     }
@@ -467,6 +565,13 @@ function pose(dirIndex, gait, phase, look) {
       // A cordless drill in the fist, pointing ahead: the yellow body over the hand, the steel chuck at its nose.
       parts.push(box(add(wrist, at(0, 1.6, 0.2)), [R, U, F], [0.8, 1.1, 1.9], () => 'drill', 'prop'));
       parts.push(box(add(wrist, at(0, 1.7, 2.7)), [R, U, F], [0.55, 0.6, 0.6], () => 'chuck', 'prop'));
+    }
+    if (side > 0 && look.mic) {
+      // The mic stands up out of her right fist, tipped forward by the gait's micTilt (most of the way over unless it
+      // says), so it shows past her hand: the grip, then the head.
+      const tilt = rad(g.micTilt ?? 50), up = add(mul(U, Math.cos(tilt)), mul(F, Math.sin(tilt)));
+      parts.push(capsule(add(wrist, mul(up, 0.8)), add(wrist, mul(up, 2.9)), 0.65, () => 'mic', 'mic'));
+      parts.push(ellipsoid(add(wrist, mul(up, 3.8)), [R, U, F], [1.1, 1.1, 1.1], () => 'micHead', 'mic'));
     }
   }
   if (gait === 'drive') parts.push(box(body(0, torsoY(28.4), 8.2), axesLean, [3.8, 0.9, 1.7], () => 'pad', 'pad'));
@@ -516,7 +621,7 @@ function render(dirIndex, gait, phase, look) {
   }
   // Colours.
   const color = new Array(W * H).fill(null);
-  for (let i = 0; i < W * H; i++) if (matBuf[i]) color[i] = PAL[matBuf[i]][shadeBuf[i]];
+  for (let i = 0; i < W * H; i++) if (matBuf[i]) color[i] = (PAL[matBuf[i]] ?? KIT[matBuf[i]])[shadeBuf[i]];
   // Ink where one part passes in front of another, and around the outside.
   const ink = new Array(W * H).fill(false);
   for (let py = 0; py < H; py++) {
@@ -571,6 +676,13 @@ function render(dirIndex, gait, phase, look) {
     plot(add(rig.battery, mul(Uh, 1.6)), 1, 1, PAL.lead, 'battery');
     plot(rig.battery, 2, 1, PAL.label, 'battery');
   }
+  // A mic (and the hand holding it) up in front of her face stays in front of the head, outlined against it.
+  const front = look.mic ? new Uint8Array(W * H) : null;
+  if (front) {
+    const face = dot(rig.head, VIEW) + 60 - 3.5;
+    for (let i = 0; i < W * H; i++) if ((groupBuf[i] === 'mic' || groupBuf[i] === 'armR') && depthBuf[i] < face) front[i] = 1;
+  }
+  const before = front && out.slice();
   // The head, drawn by hand for this direction, over the neck and shoulders.
   const [hx, hy] = project(rig.head);
   const hx0 = Math.round(hx) - HEAD_X, hy0 = Math.round(hy) - HEAD_Y;
@@ -578,6 +690,12 @@ function render(dirIndex, gait, phase, look) {
     const px = hx0 + x, py = hy0 + y;
     if (ch !== '.' && px >= 0 && py >= 0 && px < W && py < H) out[py * W + px] = look.headPal[ch];
   }));
+  if (front) {
+    for (let i = 0; i < W * H; i++) {
+      if (front[i]) out[i] = before[i];
+      else if (out[i] !== before[i] && [1, -1, W, -W].some((d) => front[i + d])) out[i] = PAL.ink;
+    }
+  }
   return out;
 }
 

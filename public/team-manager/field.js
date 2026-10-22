@@ -108,11 +108,19 @@ function sideWall(z, gate) {
     rect(x - 1, y - 1, 2, WALL_H + 1, C.steel2);
   }
   if (!gate) return;
-  // The gate: a gap in the panels, posts either side, and a yellow and black chain across.
+  // The gate: a gap in the panels, posts either side, and a yellow and black chain across. Open (gate.open), the chain
+  // is unhooked and hangs down the right-hand post, the rest of it lying in a heap at its foot.
   const gw = gate.x1 - gate.x0;
   for (const px of [gate.x0 - 2, gate.x1]) {
     rect(px, y - 3, 3, WALL_H + 3, C.ink);
     rect(px + 1, y - 2, 1, WALL_H + 1, C.steel3);
+  }
+  if (gate.open) {
+    const fy = floorY(z);
+    for (let j = 4; j < fy - y - 1; j += 2) rect(gate.x1 - 1, y + j, 1, 2, (j / 2) % 2 ? C.ink : C.yel1);
+    rect(gate.x1 - 2, fy - 1, 2, 1, C.yel1);
+    rect(gate.x1 - 4, fy - 1, 2, 1, C.ink);
+    return;
   }
   for (let i = 0; i < gw; i += 2) rect(gate.x0 + i, y + 4 + (i > 2 && i < gw - 4 ? 1 : 0), 2, 1, (i / 2) % 2 ? C.yel1 : C.ink);
 }
@@ -466,7 +474,8 @@ export function move(x, y, dx, dy) {
  * { y: floor line, draw() }. o.robots: false for an empty field (the hatches and cargo already scored stay);
  * o.ends: false to leave out the queue, the scoring table and the reset cart past the ends. For another field than the
  * arena's: o.teams, the numbers on the blue elevator, the red elevator, the blue arm and the red defender; o.queue, on
- * the arm and the elevator waiting on their carts; o.score, [blue, red] on the scoring table's monitors.
+ * the arm and the elevator waiting on their carts; o.score, [blue, red] on the scoring table's monitors. o.nearGate:
+ * { x0, x1, open } puts a gate in the near wall too, like the far wall's (open: its chain unhooked and hanging).
  */
 export function drawFieldLive(g, camX, t, o = {}) {
   const who = o.who ?? [], camY = o.camY ?? 0;
@@ -488,7 +497,7 @@ export function drawFieldLive(g, camX, t, o = {}) {
     ...(o.robots === false ? [] : bots).map((r) => ({ y: r.y, draw: () => r.draw(r.x, r.y) })),
     ...(o.ends === false ? [] : ends(o.queue, o.score)),
     ...(o.more ?? []),
-    { y: FIELD.y1 + 1, draw: () => sideWall(27) },
+    { y: FIELD.y1 + 1, draw: () => sideWall(27, o.nearGate) },
   ];
   useContext(g);
   for (const p of things.sort((p, q) => p.y - q.y)) {

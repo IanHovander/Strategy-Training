@@ -1,0 +1,145 @@
+// Where everything in the alliance selection scene stands, and who's who, so the set, the people, the cut scene and
+// the scene module all agree. World pixels, as in the arena (field.js): x along the field, y down the screen. The top
+// 144 rows are the arena's own (the stands, the walkway behind the far wall, the field); below the field's near wall
+// the floor carries on to the bottom of the world, and that's where the team reps wait their turn. It's only as deep as
+// the waiting reps need: walking about down there, the view stops 64 rows down (WORLD.h - 144), so the faces along the
+// line stay in frame over her head.
+
+import { WORLD_W, FIELD } from '../field.js';
+import { HERO_NAME } from '../cast.js';
+
+export const WORLD = { w: WORLD_W, h: 208 };
+/** The scene's own floor starts here, at the field's near wall (FIELD.y1 is 142.25), and runs to the bottom. */
+export const NEAR_TOP = 142;
+
+// ---- On the field ----
+/**
+ * Eight spots across the front of the field, 1 at the blue (left) end, with room in the middle for the mic: the speaker
+ * stands left of it and the MC right of it, so the right half sits a little closer together (34 apart, not 36) to keep
+ * captain 5 clear of the MC's elbow.
+ */
+export const SPOTS = [252, 288, 324, 360, 430, 464, 498, 532];
+export const LINE_Y = 120;
+/**
+ * Captain i (0 to 7) stands on spot i; their picks close in behind, the first on the left, the second on the right, so
+ * each alliance reads as a group of three with clear floor before the next. The picks stand as far back as the cargo
+ * ship allows (its floor line is 111.45), 8 rows behind their captain, so their faces show over the captain's head.
+ */
+export const capSpot = (i) => ({ x: SPOTS[i], y: LINE_Y });
+export const pickSpot = (i, k) => ({ x: SPOTS[i] + (k === 1 ? -7 : 7), y: LINE_Y - 8 });
+/**
+ * Each spot's numbered sign: the floor line its post stands on, at the picks' own (it sorts in just behind them, in
+ * front of the cargo ship), and how far right of its captain the post stands, so it rises from between heads.
+ */
+export const SIGN_Y = LINE_Y - 8;
+export const SIGN_POST = 4;
+/**
+ * The top row of the signs' panels: low enough that the picks' hair (their heads' top row is 46 above their feet) comes
+ * over the panel's bottom two rows, so once the alliance is standing at it the post is hidden behind them and the panel
+ * reads as held up just behind their heads, with no stick coming down into anyone's. The number stays clear above.
+ */
+export const SIGN_TOP = SIGN_Y - 46 - 11;
+/** The microphone on its stand in the middle of the field. Whoever's speaking stands just behind it, facing you. */
+export const MIC = { x: FIELD.mid, y: 128 };
+export const AT_MIC = { x: FIELD.mid - 11, y: 125 };
+/**
+ * Where the MC waits between picks: on the stand's other side, clear of it (her outline 5 pixels from its foot), a step
+ * in front of the line, turned three-quarters to the mic. Feet at 128 or less stay clear of the near wall's rail.
+ */
+export const MC_HOME = { x: FIELD.mid + 19, y: 127, dir: 7 };
+/**
+ * The open strip of field in front of the line, where the MC skates and, once it's over, she walks. It stops short of
+ * the corner depots and loading stations at both ends, so she always stands in front of them.
+ */
+export const BAND = { x0: 194, x1: WORLD.w - 194, y0: 121, y1: 140 };
+/** The line itself: walkable for her once it's over, between the people standing in it. */
+export const LINE_AREA = { x0: 236, x1: 548, y0: 110, y1: 121 };
+/**
+ * Where she stands as walking starts: two steps out in front of the line, between Alliance One and her own captain,
+ * on the open strip in front of their feet, so she can walk off either way at once.
+ */
+export const START = { x: (SPOTS[0] + SPOTS[1]) / 2, y: LINE_Y + 14, dir: 0 };
+
+// ---- The gate ----
+/** The opening in the near wall, left of the mic. Open: its chain hangs off one post. */
+export const NEAR_GATE = { x0: 336, x1: 352, open: true };
+/** Anyone going on or off the field passes these two points: just outside the gate, and just inside. */
+export const GATE_OUT = { x: 344, y: 152 };
+export const GATE_IN = { x: 344, y: 134 };
+
+// ---- In front of the field ----
+/** The reps' waiting area, left of the gate behind a taped line, with its sign. */
+export const WAIT = { x0: 192, x1: 384, tapeY: 158 };
+export const REPS_SIGN = { x: 160, y: 172 };
+/**
+ * The n-th place in the waiting crowd: 0 is the front corner by the gate (hers), then three rows of eleven. Hers stands
+ * 36 pixels right of the crowd's right-hand column, so the MC passing between them has room on both sides.
+ */
+export function waitSlot(n) {
+  if (n === 0) return { x: 392, y: 162 };
+  const i = n - 1, row = Math.floor(i / 11);
+  return { x: 356 - (i % 11) * 15 - (row % 2) * 7, y: 166 + row * 9 };
+}
+/** The queuer beside the waiting area, and the field volunteer at the gate. */
+export const PRIYA_AT = { x: 186, y: 162, dir: 2 };
+export const SAM_AT = { x: 364, y: 150, dir: 6 };
+/** Where Sam steps aside to while 9152's rep, and later the MC and she, go through the gate. */
+export const SAM_ASIDE = { x: 322, y: 150, dir: 2 };
+/** The head referee, on the open floor right of the gate, waiting to brief the captains once it's over. */
+export const REF_AT = { x: 520, y: 166, dir: 7 };
+/**
+ * Once it's over: where the backup teams gather round the queuer, the best-ranked four in the front row turned
+ * three-quarters to you, the back row to her; the top backup, Gabe, a step out in front of the rest beside her, so he
+ * can be walked straight up to and his face shows over her head. Then where 6038's rep stands alone.
+ */
+export const backupSpot = (k) => (k === 0
+  ? { x: 200, y: 176, dir: 7 }
+  : { x: 206 + (k % 4) * 16, y: 171 - Math.floor(k / 4) * 9, dir: k < 4 ? 7 : 6 });
+export const DECLINED_AT = { x: 304, y: 168, dir: 4 };
+/** The audience display past the red end, showing the alliances: its middle, and the floor line of its feet. */
+export const BOARD = { x: 720, y: 118 };
+/** The belt barrier along the bottom of the world (its floor line), and as far down as anyone walks. */
+export const BARRIER_Y = 204;
+export const WALK_MAX_Y = 198;
+
+// ---- Motion ----
+/** The MC's skating speed in pixels a second (stage.js SPEED: walking 34, running 78). */
+export const SKATE_SPEED = 80;
+
+// ---- Who's who ----
+export const MC_NAME = 'MC ROBIN';
+/** Every team at the event in qualification rank order, with its student rep's first name. 5026's rep is the strategist. */
+export const RANKED = [
+  { num: '4000', rep: 'MAYA' }, { num: '2468', rep: 'THEO' }, { num: '3000', rep: 'LENA' }, { num: '1357', rep: 'RAFA' },
+  { num: '7777', rep: 'KIT' }, { num: '6417', rep: 'NOOR' }, { num: '8086', rep: 'BEN' }, { num: '5940', rep: 'ADA' },
+  { num: '9152', rep: 'IKE' }, { num: '6038', rep: 'ZOE' }, { num: '5026', rep: null }, { num: '8812', rep: 'OMAR' },
+  { num: '7040', rep: 'JUN' }, { num: '6612', rep: 'BELLA' }, { num: '8248', rep: 'MILES' }, { num: '9785', rep: 'SOFIA' },
+  { num: '6017', rep: 'DEV' }, { num: '7311', rep: 'HANA' }, { num: '2202', rep: 'LUCA' }, { num: '4471', rep: 'AMIR' },
+  { num: '5518', rep: 'CLEO' }, { num: '8590', rep: 'NICO' }, { num: '3141', rep: 'PIA' }, { num: '6060', rep: 'REX' },
+  { num: '9001', rep: 'TESS' }, { num: '4321', rep: 'GABE' }, { num: '2718', rep: 'IVY' }, { num: '1618', rep: 'OSCAR' },
+  { num: '1492', rep: 'MEI' }, { num: '2048', rep: 'FINN' }, { num: '3690', rep: 'KAI' }, { num: '1776', rep: 'ELLA' },
+  { num: '7007', rep: 'RUBY' },
+];
+export const rankOf = (num) => RANKED.findIndex((t) => t.num === num) + 1;
+/** A rep's name tag in the dialog box: 'MAYA, 4000', or the strategist's. */
+export const repTag = (num) => (num === '5026' ? HERO_NAME : `${RANKED.find((t) => t.num === num).rep}, ${num}`);
+/** The top eight as the MC calls them out, seeds 1 to 8. */
+export const FIRST_CAPTAINS = ['4000', '2468', '3000', '1357', '7777', '6417', '8086', '5940'];
+/**
+ * The alliances once both rounds are done: [captain, first pick, second pick]. 4000 picked 2468, a captain, so 3000 to
+ * 5940 each moved up a spot and 9152, ranked ninth, became captain 8. 6038 turned down 7777 in round one.
+ */
+export const ALLIANCES = [
+  ['4000', '2468', '9001'], ['3000', '5026', '6060'], ['1357', '8812', '3141'], ['7777', '7040', '8590'],
+  ['6417', '6612', '5518'], ['8086', '8248', '4471'], ['5940', '9785', '2202'], ['9152', '6017', '7311'],
+];
+/** Turned down an invitation: nobody else may pick them, and they can't be a backup. */
+export const DECLINED = ['6038'];
+/** The backup pool: the eight best-ranked teams left that didn't decline, called in by rank. */
+export const BACKUPS = ['4321', '2718', '1618', '1492', '2048', '3690', '1776', '7007'];
+/** Who stands where in the waiting crowd as the scene opens: WAITING[n] is in waitSlot(n). */
+export const WAITING = [
+  '5026', '4000', '2468', '3000', '1357', '7777', '6417', '8086', '5940', '9152', '6038',
+  '8812', '7040', '6612', '8248', '9785', '6017', '7311', '2202', '4471', '5518', '8590',
+  '3141', '6060', '9001', '4321', '2718', '1618', '1492', '2048', '3690', '1776', '7007',
+];
