@@ -39,9 +39,9 @@
 
   /* The phone. */
   .phone {
-    width: min(300px, 100%); aspect-ratio: 9 / 17; background: var(--phone); border-radius: 36px; padding: 14px;
+    width: 300px; max-width: 100%; aspect-ratio: 9 / 17; background: var(--phone); border-radius: 36px; padding: 14px;
     border: 2px solid #232a4d; box-shadow: 0 0 0 6px #10142c, 0 18px 40px rgba(0, 0, 0, 0.5);
-    display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; touch-action: none; user-select: none; -webkit-user-select: none;
+    display: flex; flex-direction: column; gap: 10px; touch-action: none; user-select: none; -webkit-user-select: none;
   }
   .status { display: flex; justify-content: space-between; font: 9px/1 var(--pixel); color: var(--muted); padding: 6px 10px 0; }
   .status b { color: var(--red); font-weight: 400; }
@@ -50,7 +50,8 @@
   .who div { display: grid; gap: 4px; min-width: 0; }
   .who strong { font: 10px/1.4 var(--pixel); color: var(--text); font-weight: 400; }
   #mode { font: 10px/1.4 var(--pixel); color: var(--gold); }
-  .padwrap { display: grid; place-items: center; background: var(--screen); border-radius: 22px; min-height: 0; }
+  .padwrap { flex: 1; display: grid; place-items: center; background: var(--screen); border-radius: 22px; min-height: 0; }
+  .line { margin: 0; background: var(--screen); border-radius: 14px; padding: 10px 12px; font-size: 14px; line-height: 1.45; color: var(--text); }
   #pad { position: relative; width: min(220px, 70vw); aspect-ratio: 1; border-radius: 50%; cursor: grab; touch-action: none; }
   #pad:focus-visible { outline: 2px solid var(--gold); outline-offset: 6px; }
   .ring { position: absolute; border-radius: 50%; inset: 0; border: 2px dashed #3a4789; }
@@ -64,12 +65,23 @@
     border: 2px solid var(--ink); box-shadow: 0 4px 0 #3d0710; pointer-events: none;
   }
   .hint { margin: 0; text-align: center; font-size: 12px; color: var(--muted); padding-bottom: 6px; }
+  .actions { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  #talk {
+    width: 58px; height: 58px; border-radius: 50%; border: 2px solid var(--ink); padding: 0; cursor: pointer; touch-action: manipulation;
+    background: radial-gradient(circle at 35% 30%, #8fbcff, #1d55e8 55%, #0a237a); box-shadow: 0 4px 0 #061445;
+    font: 16px/1 var(--pixel); color: var(--text);
+  }
+  #talk:disabled { filter: saturate(0.2) brightness(0.55); cursor: default; }
+  #talk:not(:disabled):active { transform: translateY(2px); box-shadow: 0 2px 0 #061445; }
+  #talk:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+  #talk-label { font: 9px/1.4 var(--pixel); color: var(--muted); min-width: 13ch; }
+
   /* On a phone, the page is the controller: no pretend phone around it, and the stick sits right under the screen. */
   @media (max-width: 760px) {
     .phone { width: 100%; aspect-ratio: auto; border-radius: 18px; box-shadow: none; padding: 10px; gap: 8px; }
     .status, .hint { display: none; }
     .padwrap { padding: 14px 0; }
-    #pad { width: min(190px, 56vw); }
+    #pad { width: min(170px, 48vw); }
   }
 
   .dirs { display: grid; grid-template-columns: repeat(8, 1fr); text-align: center; font: 9px/1.4 var(--pixel); color: var(--muted); }
@@ -82,21 +94,22 @@
 <body>
 <div class="page">
   <h1>Blue Banner: on the move</h1>
-  <p class="intro">Our drive coach walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller.</p>
+  <p class="intro">Our drive coach walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. Walk her through the gate to the bleachers and talk to the people in the stands.</p>
 
   <section class="card" aria-labelledby="play-h">
     <h2 id="play-h">Try it</h2>
     <div class="play">
       <div class="tv">
         <span class="label">BIG SCREEN</span>
-        <div class="view"><canvas id="tv" width="256" height="144" aria-label="The practice field, with the drive coach you're steering"></canvas></div>
+        <div class="view"><canvas id="tv" width="256" height="144" aria-label="The practice field and the bleachers beside it, with the drive coach you're steering"></canvas></div>
       </div>
       <div class="phone" aria-label="Phone controller">
         <div class="status"><span>9:41</span><b>● 5026</b></div>
         <div class="who">
           <canvas id="face" width="36" height="56" aria-hidden="true"></canvas>
-          <div><strong>DRIVE COACH</strong><span id="mode" role="status">STANDING</span></div>
+          <div><strong id="who">DRIVE COACH</strong><span id="mode" role="status">STANDING</span></div>
         </div>
+        <p id="said" class="line" aria-live="polite" hidden></p>
         <div class="padwrap">
           <div id="pad" tabindex="0" role="application" aria-label="Movement stick. Drag, or use the arrow keys and Shift.">
             <div class="ring"></div>
@@ -106,10 +119,14 @@
             <div id="knob"></div>
           </div>
         </div>
-        <p class="hint">Drag the stick</p>
+        <div class="actions">
+          <button id="talk" type="button" disabled aria-describedby="talk-label"><span>A</span></button>
+          <span id="talk-label">NOBODY NEARBY</span>
+        </div>
+        <p class="hint">Drag the stick, tap A to talk</p>
       </div>
     </div>
-    <p class="note">Push the stick a little to walk, all the way to run. On a keyboard: arrow keys or WASD, hold Shift to run.</p>
+    <p class="note">Push the stick a little to walk, all the way to run. The gate in the field wall on the right leads to the bleachers; stand by someone in the stands and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
   </section>
 
   <section class="card" aria-labelledby="sheet-h">
@@ -127,6 +144,7 @@
       <li><b>Walking:</b> eight frames a stride, arms swinging against her legs, the board hanging from her left hand.</li>
       <li><b>Running:</b> eight frames, leaning in, knees high, arms pumping, the board tucked under her arm so it doesn't flap.</li>
       <li><b>No sliding feet:</b> the animation steps with the distance she covers, so her stride matches her speed.</li>
+      <li><b>The stands:</b> everyone in the bleachers is the same rig, seated, in their own clothes with their own hand-drawn head, and they cheer now and then. Five of them have something to say: a 5026 parent, a mentor, a nine-year-old fan, a scout from 7777 and a 5026 alum.</li>
     </ul>
   </section>
   <p class="foot">The walking sprite lives in walker.js; the full-height portrait on the title screen is hero.js.</p>
@@ -134,7 +152,8 @@
 <script type="module">
   import { useContext, camera, fill, rnd } from './pixel.js';
   import { eleBot } from './sprites.js';
-  import { DIRS, FRAMES, CELL_W, CELL_H, walkerFrame, drawWalker } from './walker.js';
+  import { DIRS, CELL_W, CELL_H, walkerFrame, drawWalker } from './walker.js';
+  import { GATE, drawFloor, drawStands, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText } from './bleachers.js';
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const ctx = (id) => {
@@ -179,13 +198,17 @@
     return c;
   })();
   const ROBOT = { x: 206, y: 70 };
-  const BOUNDS = { x0: 12, x1: 244, y0: 44, y1: 140 };
+  // The world is two screens wide: the field, then the bleachers past its side wall.
+  const WORLD_W = 512;
+  const BOUNDS = { x0: 12, x1: 500, y1: 140, fieldTop: 44, walkwayTop: 78 };
 
   // ---- Her state ----
   const me = { x: 70, y: 96, dir: 0, gait: 'stand', dist: 0 };
   const SPEED = { walk: 34, run: 78 };
   const STRIDE = { walk: 3.2, run: 6 }; // pixels of travel per animation frame
   const input = { x: 0, y: 0, keys: new Set() };
+  let talk = null; // the conversation going on, if any
+  let near = null; // who she could talk to right now
 
   function stick() {
     // The phone stick wins; otherwise the keyboard.
@@ -197,40 +220,54 @@
     return { x: input.x, y: input.y, mag: Math.min(1, Math.hypot(input.x, input.y)) };
   }
 
+  const dirToward = (dx, dy) => ((Math.round((Math.atan2(dx, dy) * 180) / Math.PI / 45) % 8) + 8) % 8;
+
   function step(dt) {
     const s = stick();
-    if (s.mag < 0.2) {
+    if (talk || s.mag < 0.2) {
       me.gait = 'stand';
-      return;
+    } else {
+      me.dir = dirToward(s.x, s.y);
+      me.gait = s.mag < 0.68 ? 'walk' : 'run';
+      const a = (me.dir * Math.PI) / 4, v = SPEED[me.gait] * dt;
+      let nx = Math.max(BOUNDS.x0, Math.min(BOUNDS.x1, me.x + Math.sin(a) * v));
+      let ny = Math.min(BOUNDS.y1, me.y + Math.cos(a) * v * 0.8);
+      // The field wall can only be crossed at the gate.
+      const crossing = (me.x < GATE.x) !== (nx < GATE.x);
+      if (crossing && !(ny > GATE.y0 + 3 && ny < GATE.y1 - 1)) nx = me.x;
+      ny = Math.max(nx > GATE.x ? BOUNDS.walkwayTop : BOUNDS.fieldTop, ny);
+      me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
+      me.x = nx;
+      me.y = ny;
     }
-    me.dir = ((Math.round((Math.atan2(s.x, s.y) * 180) / Math.PI / 45) % 8) + 8) % 8;
-    me.gait = s.mag < 0.68 ? 'walk' : 'run';
-    const a = (me.dir * Math.PI) / 4, v = SPEED[me.gait] * dt;
-    const nx = Math.max(BOUNDS.x0, Math.min(BOUNDS.x1, me.x + Math.sin(a) * v));
-    const ny = Math.max(BOUNDS.y0, Math.min(BOUNDS.y1, me.y + Math.cos(a) * v * 0.8));
-    me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
-    me.x = nx;
-    me.y = ny;
+    near = talk ? null : inReach(me.x, me.y);
   }
+
+  const camX = () => Math.max(0, Math.min(WORLD_W - 256, Math.round(me.x) - 128));
 
   const frameOf = () => (me.gait === 'stand' ? 0 : Math.floor(me.dist / STRIDE[me.gait]));
 
   function drawTV(t) {
-    const g = tv.g;
-    g.drawImage(FLOOR, 0, 0);
+    const g = tv.g, cx = camX();
+    g.drawImage(FLOOR, -cx, 0);
+    drawFloor(g, cx);
+    drawStands(g, cx, t, talk?.person);
     // Her shadow, then her and the robot in depth order.
     const meDraw = () => {
+      const x = Math.round(me.x) - cx, y = Math.round(me.y);
       g.fillStyle = 'rgba(5, 6, 13, 0.45)';
-      g.fillRect(Math.round(me.x) - 6, Math.round(me.y) - 1, 12, 3);
-      g.fillRect(Math.round(me.x) - 4, Math.round(me.y) - 2, 8, 5);
-      drawWalker(g, me.x, me.y, me.dir, me.gait, frameOf());
+      g.fillRect(x - 6, y - 1, 12, 3);
+      g.fillRect(x - 4, y - 2, 8, 5);
+      drawWalker(g, x, y, me.dir, me.gait, frameOf());
     };
     const robotDraw = () => {
       useContext(g);
-      camera(0, 0, 1);
+      camera(cx, 0, 1);
       eleBot(ROBOT.x, ROBOT.y, { spin: 0, rsl: Math.floor(t * 2.5) % 2 === 0 });
     };
     if (me.y < ROBOT.y) { meDraw(); robotDraw(); } else { robotDraw(); meDraw(); }
+    if (near) drawPrompt(g, near, cx, t);
+    if (talk) drawDialog(g, talk, t);
   }
 
   function drawSheet(t) {
@@ -246,13 +283,41 @@
     });
   }
 
-  let lastMode = '';
+  let lastMode = '', lastTalk = '';
+  const talkButton = document.getElementById('talk'), talkLabel = document.getElementById('talk-label');
   function drawPhone() {
     face.g.clearRect(0, 0, CELL_W, CELL_H);
-    face.g.drawImage(walkerFrame(me.dir, me.gait, frameOf()), 0, 0);
-    const mode = me.gait === 'stand' ? 'STANDING' : `${me.gait === 'run' ? 'RUNNING' : 'WALKING'} ${DIRS[me.dir].toUpperCase()}`;
-    if (mode !== lastMode) document.getElementById('mode').textContent = lastMode = mode;
+    face.g.drawImage(talk ? walkerFrame(0, 'sit', 0, talk.person.look) : walkerFrame(me.dir, me.gait, frameOf()), 0, talk ? 6 : 0);
+    const mode = talk ? talk.person.name : me.gait === 'stand' ? 'STANDING' : `${me.gait === 'run' ? 'RUNNING' : 'WALKING'} ${DIRS[me.dir].toUpperCase()}`;
+    if (mode !== lastMode) {
+      document.getElementById('mode').textContent = lastMode = mode;
+      document.getElementById('who').textContent = talk ? 'TALKING TO' : 'DRIVE COACH';
+    }
+    const label = talk ? 'NEXT' : near ? `TALK TO ${near.name.split(',')[0]}` : 'NOBODY NEARBY';
+    if (label !== lastTalk) {
+      talkLabel.textContent = lastTalk = label;
+      talkButton.disabled = !talk && !near;
+    }
   }
+
+  // ---- Talking ----
+  function pressA() {
+    const now = performance.now() / 1000;
+    if (talk) {
+      if (!advance(talk, now)) talk = null;
+    } else if (near) {
+      const seat = seatOf(near);
+      me.dir = dirToward(seat.x - me.x, seat.y - me.y);
+      talk = { person: near, page: 0, start: now, full: false };
+      near = null;
+    } else {
+      return;
+    }
+    const said = document.getElementById('said');
+    said.textContent = talk ? dialogText(talk) : '';
+    said.hidden = !talk;
+  }
+  talkButton.addEventListener('click', pressA);
 
   let last = performance.now();
   function frame(now) {
@@ -297,6 +362,11 @@
 
   const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ShiftLeft: 'shift', ShiftRight: 'shift' };
   addEventListener('keydown', (e) => {
+    if ((e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') && !e.repeat && e.target.tagName !== 'BUTTON') {
+      pressA();
+      e.preventDefault();
+      return;
+    }
     const k = KEYS[e.code];
     if (!k) return;
     input.keys.add(k);

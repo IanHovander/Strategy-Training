@@ -4,9 +4,10 @@
 // (hero.js), since that's where the likeness lives. Frames are made the first time they're drawn, then cached.
 //
 // The camera looks down at 20 degrees. Directions turn clockwise from facing you: s, se, e, ne, n, nw, w, sw.
+// Other people use the same rig with their own look (colours and a hand-drawn head); see bleachers.js.
 
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
-export const FRAMES = { stand: 1, walk: 8, run: 8 };
+export const FRAMES = { stand: 1, walk: 8, run: 8, sit: 1, cheer: 1 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
 export const FOOT_X = 18, FOOT_Y = 52;
@@ -148,6 +149,8 @@ const PAL = {
   board: ['#9aa3bd', '#c9d0de', '#e3e7f0'],
   print: '#fff4ee',
 };
+/** Her look. Others pass their own: { id, pal (as PAL), heads ({ s: rows, ... }), headPal, board }. */
+export const HERO_LOOK = { id: 'hero', pal: PAL, heads: HEADS, headPal: HEAD_PAL, board: true };
 
 // ---- Vectors ----
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -240,9 +243,12 @@ const GAITS = {
   stand: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, elbow: 10, lean: 0, flight: 0 },
   walk: { hip: 24, hipBias: 0, knee: 42, kneeBase: 4, arm: 20, elbow: 16, lean: 2, flight: 0 },
   run: { hip: 38, hipBias: 6, knee: 95, kneeBase: 18, arm: 42, elbow: 88, lean: 11, flight: 1.4 },
+  // On a bleacher bench: thighs forward, shins down, hands on knees; cheering puts both arms up.
+  sit: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, elbow: 55, lean: 0, flight: 0 },
+  cheer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 165, elbow: 12, lean: 0, flight: 0 },
 };
 
-function pose(dirIndex, gait, phase) {
+function pose(dirIndex, gait, phase, look) {
   const g = GAITS[gait];
   const th = rad(dirIndex * 45);
   const F = [Math.sin(th), 0, Math.cos(th)], U = [0, 1, 0], R = [-Math.cos(th), 0, Math.sin(th)];
@@ -300,7 +306,7 @@ function pose(dirIndex, gait, phase) {
   const s2 = Math.sin(2 * Math.PI * phase);
   for (const side of [-1, 1]) {
     const tucked = gait === 'run' && side < 0;
-    const a = tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2;
+    const a = g.armUp ?? (tucked ? -10 + 8 * s2 : (side < 0 ? -1 : 1) * g.arm * s2);
     const e = tucked ? 70 : g.elbow;
     const shoulder = body(side * 5.3, torsoY(35.6), -0.1);
     const [uf, uu] = swing(a), [ff, fu] = swing(a + e);
@@ -310,7 +316,7 @@ function pose(dirIndex, gait, phase) {
     parts.push(capsule(shoulder, elbowP, 1.45, (h) => (h.local[0] < 0.42 ? 'shirt' : 'skin'), group));
     parts.push(capsule(elbowP, wrist, 1.25, () => 'skin', group));
     parts.push(ellipsoid(wrist, [R, U, F], [1.35, 1.35, 1.35], () => 'skin', group));
-    if (side < 0) {
+    if (side < 0 && look.board) {
       // The whiteboard: hanging from her hand at a walk, under her arm at a run. It faces out to her side.
       const c = tucked ? body(-5.6, torsoY(30.4), 0.6) : add(wrist, at(-0.4, -2.6, 0.6));
       parts.push(box(c, [R, U, F], [0.35, 2.4, 3.1], () => 'board', 'board'));
@@ -320,8 +326,9 @@ function pose(dirIndex, gait, phase) {
 }
 
 // ---- Rendering ----
-function render(dirIndex, gait, phase) {
-  const rig = pose(dirIndex, gait, phase);
+function render(dirIndex, gait, phase, look) {
+  const PAL = look.pal;
+  const rig = pose(dirIndex, gait, phase, look);
   const W = CELL_W, H = CELL_H;
   const matBuf = new Array(W * H).fill(null), shadeBuf = new Uint8Array(W * H), depthBuf = new Float32Array(W * H).fill(Infinity);
   const groupBuf = new Array(W * H).fill(null);
@@ -392,27 +399,27 @@ function render(dirIndex, gait, phase) {
   };
   const [, Uh, Fh] = rig.axes;
   const printAt = (sideSign) => add(rig.chest, add(mul(Fh, 3.2 * sideSign), mul(Uh, 0.6)));
-  if (dot(Fh, TO_CAMERA) > 0.3) plot(printAt(1), 4, 2, PAL.print, 'shirt');
-  if (dot(mul(Fh, -1), TO_CAMERA) > 0.3) plot(printAt(-1), 4, 2, PAL.print, 'shirt');
-  // Her head, drawn by hand for this direction, over the neck and shoulders.
+  if (PAL.print && dot(Fh, TO_CAMERA) > 0.3) plot(printAt(1), 4, 2, PAL.print, 'shirt');
+  if (PAL.print && dot(mul(Fh, -1), TO_CAMERA) > 0.3) plot(printAt(-1), 4, 2, PAL.print, 'shirt');
+  // The head, drawn by hand for this direction, over the neck and shoulders.
   const [hx, hy] = project(rig.head);
   const hx0 = Math.round(hx) - HEAD_X, hy0 = Math.round(hy) - HEAD_Y;
-  HEADS[DIRS[dirIndex]].forEach((row, y) => [...row].forEach((ch, x) => {
+  (look.heads[DIRS[dirIndex]] ?? look.heads.s).forEach((row, y) => [...row].forEach((ch, x) => {
     const px = hx0 + x, py = hy0 + y;
-    if (ch !== '.' && px >= 0 && py >= 0 && px < W && py < H) out[py * W + px] = HEAD_PAL[ch];
+    if (ch !== '.' && px >= 0 && py >= 0 && px < W && py < H) out[py * W + px] = look.headPal[ch];
   }));
   return out;
 }
 
 const cache = new Map();
-/** One frame as a canvas. gait: 'stand', 'walk' or 'run'; frame counts from 0 (wraps). */
-export function walkerFrame(dir, gait, frame = 0) {
+/** One frame as a canvas. gait: one of FRAMES' keys; frame counts from 0 (wraps); look defaults to her. */
+export function walkerFrame(dir, gait, frame = 0, look = HERO_LOOK) {
   const d = typeof dir === 'number' ? ((dir % 8) + 8) % 8 : DIRS.indexOf(dir);
   const n = FRAMES[gait];
   const f = ((frame % n) + n) % n;
-  const key = `${d} ${gait} ${f}`;
+  const key = `${look.id} ${d} ${gait} ${f}`;
   if (!cache.has(key)) {
-    const pixels = render(d, gait, f / n);
+    const pixels = render(d, gait, f / n, look);
     const canvas = document.createElement('canvas');
     canvas.width = CELL_W;
     canvas.height = CELL_H;
@@ -427,7 +434,7 @@ export function walkerFrame(dir, gait, frame = 0) {
   return cache.get(key);
 }
 
-/** Draw her standing on (x, y) in canvas pixels. */
-export function drawWalker(g, x, y, dir, gait, frame) {
-  g.drawImage(walkerFrame(dir, gait, frame), Math.round(x) - FOOT_X, Math.round(y) - FOOT_Y);
+/** Draw someone (her, unless another look is given) with their feet on (x, y) in canvas pixels. */
+export function drawWalker(g, x, y, dir, gait, frame, look = HERO_LOOK) {
+  g.drawImage(walkerFrame(dir, gait, frame, look), Math.round(x) - FOOT_X, Math.round(y) - FOOT_Y);
 }
