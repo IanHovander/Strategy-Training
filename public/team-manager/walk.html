@@ -94,14 +94,14 @@
 <body>
 <div class="page">
   <h1>Blue Banner: on the move</h1>
-  <p class="intro">Our strategist walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. She's not on the drive team, so the field is off limits; walk the front of the bleachers and talk to the people in the stands.</p>
+  <p class="intro">Our strategist walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. She's not on the drive team, so the field is off limits; walk the front of the bleachers, the length of the field, and talk to the people in the stands.</p>
 
   <section class="card" aria-labelledby="play-h">
     <h2 id="play-h">Try it</h2>
     <div class="play">
       <div class="tv">
         <span class="label">BIG SCREEN</span>
-        <div class="view"><canvas id="tv" width="256" height="144" aria-label="The 2019 field with the bleachers along its far side, and the strategist you're steering on the walkway between them"></canvas></div>
+        <div class="view"><canvas id="tv" width="256" height="144" aria-label="Part of the 2019 field with the bleachers along its far side, and the strategist you're steering on the walkway between them; the view follows her"></canvas></div>
       </div>
       <div class="phone" aria-label="Phone controller">
         <div class="status"><span>9:41</span><b>● 5026</b></div>
@@ -126,7 +126,7 @@
         <p class="hint">Drag the stick, tap A to talk</p>
       </div>
     </div>
-    <p class="note">Push the stick a little to walk, all the way to run. Stand by someone in the front row, or the volunteer at the gate, and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
+    <p class="note">Push the stick a little to walk, all the way to run; the view follows her down the field. Stand by someone in the front row, or the volunteer at the gate, and press A. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.</p>
   </section>
 
   <section class="card" aria-labelledby="sheet-h">
@@ -145,16 +145,17 @@
       <li><b>Running:</b> eight frames, leaning in, knees high, arms pumping, the board tucked under her arm so it doesn't flap.</li>
       <li><b>No sliding feet:</b> the animation steps with the distance she covers, so her stride matches her speed.</li>
       <li><b>The stands:</b> everyone in the bleachers is the same rig, seated, in their own clothes with their own hand-drawn head, and they cheer now and then. Five in the front row have something to say: a 5026 parent, a mentor, a 5026 alum, a nine-year-old fan and a scout from 7777. The volunteer at the gate has something to say too.</li>
-      <li><b>The field:</b> the 2019 game, long side to you: both HABs with all three levels against the driver stations, the cargo ship with hatches and cargo in its bays, four rockets on the side walls, loading stations, depots, the tape, and four robots at work.</li>
+      <li><b>The field:</b> the 2019 game at the same scale as the people, 8 pixels to the foot, so it's two screens long and the view scrolls with her. Long side to you: both HABs with all three levels, the drive teams at their stations, loading stations in the corners, depots, the cargo ship with hatches and cargo in its bays, a rocket on the far wall in each half, the alignment tape, and four robots running cycles, the intro's own sprites.</li>
+      <li><b>Behind the glass:</b> the walkway is past the field's far wall, so her feet show through its clear panels, and a rocket she walks behind turns see-through so you never lose her.</li>
     </ul>
   </section>
   <p class="foot">The walking sprite lives in walker.js; the full-height portrait on the title screen is hero.js.</p>
 </div>
 <script type="module">
   import { DIRS, CELL_W, CELL_H, walkerFrame, drawWalker } from './walker.js';
-  import { makeField, drawFieldLive } from './field.js';
+  import { WORLD_W, makeFloor, drawFarWall, drawFieldLive } from './field.js';
   import {
-    WALKWAY, STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText,
+    WALKWAY, STANDING, DRIVERS, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt, drawDialog, advance, dialogText,
   } from './bleachers.js';
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -176,8 +177,8 @@
   }
   new ResizeObserver(fit).observe(document.querySelector('.page'));
 
-  // ---- The field, drawn once ----
-  const FIELD_ART = makeField();
+  // ---- The field's floor, drawn once ----
+  const FLOOR = makeFloor();
 
   // ---- Her state ----
   const me = { x: 128, y: 60, dir: 0, gait: 'stand', dist: 0 };
@@ -216,29 +217,32 @@
     }
     near = talk ? null : inReach(me.x, me.y);
   }
-
-
-
+  // The view keeps her in the middle, until it reaches an end of the field.
+  const cameraX = () => Math.round(Math.max(0, Math.min(WORLD_W - 256, me.x - 128)));
   const frameOf = () => (me.gait === 'stand' ? 0 : Math.floor(me.dist / STRIDE[me.gait]));
 
   function drawTV(t) {
-    const g = tv.g;
-    g.drawImage(FIELD_ART, 0, 0);
-    drawStands(g, t, talk?.person);
-    drawWalkway(g);
-    // Her shadow, then her and anyone else on the walkway, back to front.
+    const g = tv.g, camX = cameraX();
+    const x = Math.round(me.x) - camX, y = Math.round(me.y);
+    g.drawImage(FLOOR, -camX, 0);
+    drawStands(g, camX, t, talk?.person);
+    drawWalkway(g, camX);
+    // Her shadow, then her and anyone else on the walkway, back to front, and the field's far wall in front of them.
     const meDraw = () => {
-      const x = Math.round(me.x), y = Math.round(me.y);
       g.fillStyle = 'rgba(5, 6, 13, 0.45)';
       g.fillRect(x - 6, y - 1, 12, 3);
       g.fillRect(x - 4, y - 2, 8, 5);
       drawWalker(g, x, y, me.dir, me.gait, frameOf());
     };
-    [...STANDING.map((p) => ({ y: p.y, draw: () => drawStanding(g, p) })), { y: me.y, draw: meDraw }]
+    [...STANDING.map((p) => ({ y: p.y, draw: () => drawStanding(g, camX, p) })), { y: me.y, draw: meDraw }]
       .sort((a, b) => a.y - b.y).forEach((d) => d.draw());
-    // The rockets stand up in front of the walkway; the robots go about their match.
-    drawFieldLive(g, t);
-    if (near) drawPrompt(g, near, t);
+    drawFarWall(g, camX);
+    // The field in front of the walkway: rockets, HABs, the drive teams, the robots going about their match.
+    drawFieldLive(g, camX, t, {
+      who: [{ x0: x - 8, x1: x + 8, y1: y }],
+      more: DRIVERS.filter((p) => Math.abs(p.x - camX - 128) < 150).map((p) => ({ y: p.y, draw: () => drawStanding(g, camX, p) })),
+    });
+    if (near) drawPrompt(g, camX, near, t);
     if (talk) drawDialog(g, talk, t);
   }
 

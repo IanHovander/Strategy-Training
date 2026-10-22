@@ -1,15 +1,17 @@
 // The bleachers along the field's far side: aluminium tiers, the crowd on them, and the people you can stop and talk to.
 // Everyone is drawn with the walker's rig (walker.js) in their own look, seated, with a hand-drawn head. Below the stands
-// runs the walkway, the closest a strategist gets to the field (field.js): a volunteer minds the gate.
+// runs the walkway, the closest a strategist gets to the field (field.js): a volunteer minds the gate. The drive teams
+// stand in their driver stations at either end. Everything is in world pixels, seen through a camera at camX.
 
 import { C, useContext, screen, fill, text, rnd } from './pixel.js';
 import { HERO_LOOK, drawWalker } from './walker.js';
+import { WORLD_W, FIELD, GATE, floorY } from './field.js';
 
 // Where the tiers' footboards are, front row first; each row sits 14 pixels higher than the one in front of it.
 const TIERS = [48, 34, 20];
-const AISLES = [[96, 106], [170, 180]];
+const AISLES = [[118, 128], [240, 250], [384, 394]];
 /** Where feet can go on the walkway between the stands and the field's far wall. */
-export const WALKWAY = { x0: 8, x1: 248, y0: 56, y1: 64 };
+export const WALKWAY = { x0: FIELD.x0 + 20, x1: FIELD.x1 - 20, y0: 56, y1: 64 };
 
 // ---- Looks ----
 const BASE = { k: C.ink, E: '#3a2218', w: '#e6ddd4', M: '#8f4636', T: '#f6f1ea', m: '#c97a70' };
@@ -131,7 +133,7 @@ const skinBody = (k) => ({ skin: [SKIN[k].d, SKIN[k].s, SKIN[k].S] });
 // characters each.
 export const PEOPLE = [
   {
-    id: 'rosa', name: 'ROSA, 5026 PARENT', x: 16, tier: 0,
+    id: 'rosa', name: 'ROSA, 5026 PARENT', x: 70, tier: 0,
     look: look('rosa', { ...skinBody('brown'), shirt: tones.shirtRed }, HEADS.curls, { ...SKIN.brown, ...HAIR.brown }),
     lines: [
       ['YOU ARE ON 5026? MY KID BUILT', 'THAT ELEVATOR. TWO STAGES!'],
@@ -139,7 +141,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'adeyemi', name: 'MR. ADEYEMI, MENTOR', x: 76, tier: 0,
+    id: 'adeyemi', name: 'MR. ADEYEMI, MENTOR', x: 150, tier: 0,
     look: look('adeyemi', { ...skinBody('deep'), shirt: tones.shirtBlue, jeans: tones.khaki, cuff: tones.khaki, print: null }, HEADS.glasses,
       { ...SKIN.deep, ...HAIR.grey, q: '#aab2c8' }),
     lines: [
@@ -148,7 +150,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'milo', name: 'MILO, AGE 9', x: 192, tier: 0,
+    id: 'milo', name: 'MILO, AGE 9', x: 372, tier: 0,
     look: look('milo', { ...skinBody('light'), shirt: tones.shirtWhite, print: '#d3212f' }, HEADS.cap,
       { ...SKIN.light, ...HAIR.chestnut, c: '#1d55e8', C: '#4a90ff', D: '#0a237a' }),
     lines: [
@@ -157,7 +159,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'juno', name: 'JUNO, SCOUTING FOR 7777', x: 232, tier: 0,
+    id: 'juno', name: 'JUNO, SCOUTING FOR 7777', x: 434, tier: 0,
     look: look('juno', { ...skinBody('tan'), shirt: tones.shirtYellow, jeans: tones.black, cuff: tones.black, print: C.ink }, HEADS.bun,
       { ...SKIN.tan, ...HAIR.black }),
     lines: [
@@ -166,7 +168,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'dani', name: 'DANI, 5026 ALUM', x: 138, tier: 0,
+    id: 'dani', name: 'DANI, 5026 ALUM', x: 268, tier: 0,
     look: look('dani', { ...skinBody('fair'), shirt: tones.hoodie, print: '#d3212f' }, HEADS.bob,
       { ...SKIN.fair, ...HAIR.black, r: '#d3212f', R: '#ff6a55' }),
     lines: [
@@ -175,7 +177,7 @@ export const PEOPLE = [
     ],
   },
   {
-    id: 'sam', name: 'SAM, FIELD VOLUNTEER', x: 44, y: 61, standing: true,
+    id: 'sam', name: 'SAM, FIELD VOLUNTEER', x: GATE.x1 + 4, y: 61, standing: true,
     look: look('sam', { ...skinBody('tan'), shirt: tones.shirtGreen, jeans: tones.khaki, cuff: tones.khaki, print: '#ffc61a' }, HEADS.cap,
       { ...SKIN.tan, ...HAIR.black, c: '#1d5e3a', C: '#2e8b57', D: '#0b2a1a' }),
     lines: [
@@ -185,41 +187,55 @@ export const PEOPLE = [
   },
 ];
 
-// The rest of the crowd, filling the rows around them. Nobody here needs to talk.
+// The rest of the crowd, filling the rows around them. Nobody here needs to talk. Fourteen looks go round, so the
+// rig only has to draw fourteen strangers.
 const SHIRTS = [tones.shirtGreen, tones.shirtPurple, tones.shirtOrange, tones.shirtBlue, tones.shirtWhite, tones.shirtRed, tones.hoodie];
 const FAN_HEADS = [
   ['curls', 'black'], ['bob', 'auburn'], ['cap', 'blonde'], ['bun', 'brown'], ['glasses', 'chestnut'], ['curls', 'chestnut'], ['bob', 'brown'],
 ];
-const SEATS = [
-  [0, 36], [0, 56], [0, 118], [0, 158], [0, 212],
-  [1, 24], [1, 44], [1, 64], [1, 84], [1, 118], [1, 140], [1, 160], [1, 192], [1, 214], [1, 236],
-  [2, 14], [2, 34], [2, 54], [2, 74], [2, 116], [2, 136], [2, 156], [2, 190], [2, 210], [2, 230], [2, 250],
-];
 const SKINS = Object.keys(SKIN);
-const FANS = SEATS.map(([tier, x], i) => {
+const CAPS = [['#d3212f', '#ff6a55', '#6b0f1b'], ['#2e8b57', '#5cc38a', '#1d5e3a'], ['#1d55e8', '#4a90ff', '#0a237a']];
+function stranger(i, shirt = SHIRTS[i % SHIRTS.length]) {
   const [headName, hairName] = FAN_HEADS[i % FAN_HEADS.length];
   const skinName = SKINS[(i * 3 + 1) % SKINS.length];
-  const capColors = [['#d3212f', '#ff6a55', '#6b0f1b'], ['#2e8b57', '#5cc38a', '#1d5e3a'], ['#1d55e8', '#4a90ff', '#0a237a']][i % 3];
-  return {
-    id: `fan${i}`, x, tier,
-    look: look(`fan${i}`, { ...skinBody(skinName), shirt: SHIRTS[i % SHIRTS.length], print: null }, HEADS[headName], {
-      ...SKIN[skinName], ...HAIR[hairName], q: '#aab2c8', r: HAIR[hairName].h, R: HAIR[hairName].H,
-      c: capColors[0], C: capColors[1], D: capColors[2],
-    }),
-  };
+  const [c, Cc, D] = CAPS[i % 3];
+  return look(`fan${i}-${shirt[1]}`, { ...skinBody(skinName), shirt, print: null }, HEADS[headName], {
+    ...SKIN[skinName], ...HAIR[hairName], q: '#aab2c8', r: HAIR[hairName].h, R: HAIR[hairName].H, c, C: Cc, D,
+  });
+}
+const FAN_LOOKS = Array.from({ length: 14 }, (_, i) => stranger(i));
+// A seat every 20 pixels or so down each row, leaving the aisles clear and room around the people with something to say.
+const FANS = [];
+TIERS.forEach((_, tier) => {
+  for (let x = 12 + tier * 7; x < WORLD_W - 8; x += 18 + Math.floor(rnd(x * 3 + tier) * 8)) {
+    if (AISLES.some(([a, b]) => x > a - 8 && x < b + 8)) continue;
+    if (tier === 0 && PEOPLE.some((p) => !p.standing && Math.abs(p.x - x) < 20)) continue;
+    FANS.push({ id: `fan${FANS.length}`, x, tier, look: FAN_LOOKS[(FANS.length * 5 + tier) % FAN_LOOKS.length] });
+  }
 });
 const SEATED = [...PEOPLE.filter((p) => !p.standing), ...FANS];
 /** People standing on the walkway, to be drawn in depth order with her. */
 export const STANDING = PEOPLE.filter((p) => p.standing);
 
+// The drivers at their stations, behind the alliance walls, in their teams' shirts.
+const DRIVE_SHIRTS = { blue: [tones.shirtRed, tones.shirtBlue, tones.shirtWhite], red: [tones.shirtYellow, tones.shirtOrange, tones.shirtGreen] };
+/** Everyone standing in a driver station, to be sorted in with the field by their feet. */
+export const DRIVERS = ['blue', 'red'].flatMap((alliance, a) =>
+  [4.5, 13.5, 22.5].map((z, station) => ({
+    id: `driver${a}${station}`, x: alliance === 'blue' ? 20 : WORLD_W - 20, y: Math.round(floorY(z)),
+    look: stranger(a * 3 + station + 3, DRIVE_SHIRTS[alliance][station]),
+  })));
+
 // ---- Drawing ----
 /** The walkway: concrete between the front row and the field's far wall, with a yellow edge line. */
-export function drawWalkway(g) {
+export function drawWalkway(g, camX) {
   g.fillStyle = '#353a4c';
   g.fillRect(0, TIERS[0] + 2, 256, 64 - TIERS[0]);
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 520; i++) {
+    const x = Math.floor(rnd(i + 3000) * WORLD_W) - camX;
+    if (x < 0 || x >= 256) continue;
     g.fillStyle = rnd(i + 7) < 0.5 ? '#3b4154' : '#30354a';
-    g.fillRect(Math.floor(rnd(i + 3000) * 256), TIERS[0] + 2 + Math.floor(rnd(i + 4000) * (64 - TIERS[0])), 1, 1);
+    g.fillRect(x, TIERS[0] + 2 + Math.floor(rnd(i + 4000) * (64 - TIERS[0])), 1, 1);
   }
   g.fillStyle = '#ffc61a';
   g.fillRect(0, 65, 256, 1);
@@ -231,7 +247,7 @@ function gaitOf(p, t) {
   return phase < 0.5 ? 'cheer' : 'sit';
 }
 
-export function drawStands(g, t, talkingTo) {
+export function drawStands(g, camX, t, talkingTo) {
   g.fillStyle = '#10142c';
   g.fillRect(0, 0, 256, TIERS[0] + 2);
   for (let tier = TIERS.length - 1; tier >= 0; tier--) {
@@ -245,18 +261,20 @@ export function drawStands(g, t, talkingTo) {
     g.fillStyle = '#4b5269'; g.fillRect(0, y + 1, 256, 1);
     // The aisles' steps, with their yellow nosing.
     for (const [x0, x1] of AISLES) {
-      g.fillStyle = '#7882a3'; g.fillRect(x0, y - 12, x1 - x0, 13);
-      g.fillStyle = '#ffc61a'; g.fillRect(x0, y - 1, x1 - x0, 1);
-      g.fillRect(x0, y - 12, x1 - x0, 1);
+      g.fillStyle = '#7882a3'; g.fillRect(x0 - camX, y - 12, x1 - x0, 13);
+      g.fillStyle = '#ffc61a'; g.fillRect(x0 - camX, y - 1, x1 - x0, 1);
+      g.fillRect(x0 - camX, y - 12, x1 - x0, 1);
     }
     for (const p of SEATED) {
-      if (p.tier === tier) drawWalker(g, p.x, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t), 0, p.look);
+      if (p.tier === tier && p.x > camX - 20 && p.x < camX + 276) {
+        drawWalker(g, p.x - camX, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t), 0, p.look);
+      }
     }
   }
 }
 
-/** Someone standing on the walkway. */
-export const drawStanding = (g, p) => drawWalker(g, p.x, p.y, 0, 'stand', 0, p.look);
+/** Someone standing on the walkway or in a driver station. */
+export const drawStanding = (g, camX, p) => drawWalker(g, p.x - camX, p.y, 0, 'stand', 0, p.look);
 
 const feetOf = (p) => (p.standing ? p.y : TIERS[p.tier]);
 /** The person in reach of someone standing at (x, y) on the walkway, if any. */
@@ -273,10 +291,10 @@ export function inReach(x, y) {
 export const seatOf = (p) => ({ x: p.x, y: feetOf(p) - 10 });
 
 /** A speech bubble with A in it over someone you can talk to. */
-export function drawPrompt(g, p, t) {
+export function drawPrompt(g, camX, p, t) {
   useContext(g);
   screen();
-  const x = p.x + 11, y = Math.max(1, feetOf(p) - (p.standing ? 50 : 41)) + (Math.floor(t * 3) % 2);
+  const x = p.x - camX + 11, y = Math.max(1, feetOf(p) - (p.standing ? 50 : 41)) + (Math.floor(t * 3) % 2);
   fill(x - 5, y, 11, 10, C.ink);
   fill(x - 4, y + 1, 9, 8, C.white);
   fill(x - 1, y + 10, 3, 1, C.ink);
