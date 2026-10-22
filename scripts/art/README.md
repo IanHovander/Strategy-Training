@@ -38,6 +38,14 @@ Drawn from a photo, from curves rather than by hand, so it's tuned by changing s
 `build.py` runs all three and writes `teammate.js`. Along the way it leaves `teammate.txt` (the portrait as a grid) and
 `walking_heads.json` next to them; they're rebuilt every time, so they aren't kept in git.
 
+## Norbert
+
+The team mascot, a plush penguin in a cat-ear headband with a pink bow and "26" on one ear. `norbert/norbert.txt`
+is his sprite as a grid, in the same format as the strategist's, a bit over half the height of the people. It was
+mapped pixel by pixel from a photo, then drawn over by hand: the eyes, the bow, the left ear, the "26" and the toes.
+The game doesn't use him yet; `public/team-manager/assets/norbert.png` is the same sprite as an image, saved for later.
+If you edit the grid, export the PNG again.
+
 ## Previewing
 
 ```sh
