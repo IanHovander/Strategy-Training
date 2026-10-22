@@ -11,7 +11,7 @@ import { drawBubble } from './talk.js';
 import { WORLD_W, FIELD, STATION, GATE, floorY } from './field.js';
 
 // Where the tiers' footboards are, front row first; each row sits 14 pixels higher than the one in front of it.
-const TIERS = [48, 34, 20];
+export const TIERS = [48, 34, 20];
 const AISLES = [-70, 66, 166, 282, 362, 492].map((dx) => [FIELD.x0 + dx, FIELD.x0 + dx + 10]);
 
 // The people you can talk to: the front row, and the volunteer at the gate. Lines are pages of up to two lines, 38
@@ -139,7 +139,8 @@ function gaitOf(p, t) {
   return phase < 0.5 ? 'cheer' : 'sit';
 }
 
-export function drawStands(g, camX, t, talkingTo) {
+/** The tiers and everyone on them. o.lookOf(p), if given, dresses each seated person p (another crowd in the same seats). */
+export function drawStands(g, camX, t, talkingTo, o = {}) {
   g.fillStyle = '#10142c';
   g.fillRect(0, 0, 256, TIERS[0] + 2);
   for (let tier = TIERS.length - 1; tier >= 0; tier--) {
@@ -159,7 +160,7 @@ export function drawStands(g, camX, t, talkingTo) {
     }
     for (const p of SEATED) {
       if (p.tier === tier && p.x > camX - 20 && p.x < camX + 276) {
-        drawWalker(g, p.x - camX, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t), 0, p.look);
+        drawWalker(g, p.x - camX, y, 0, p === talkingTo ? 'sit' : gaitOf(p, t), 0, o.lookOf?.(p) ?? p.look);
       }
     }
   }

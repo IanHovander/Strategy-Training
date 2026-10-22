@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner World Championship</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: World Championship</h1>
+  <p class="intro">Houston, and the biggest week of the season: eight division fields side by side in one hall, a match playing on every one of them. The cut scene scans the whole row, from Archimedes at one end to Newton at the other, where 5026's robot waits in the queue. Then it's yours to walk: along the walkways in front of the stands and through the aisles between the divisions, scouting the other seven fields and talking to teams from around the world.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div id="stage"></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it's made</h2>
+    <ul>
+      <li><b>Eight fields, one field:</b> every division is the arena's own field, floor, robots and bleachers, drawn by the same field.js and sprites.js as the walkabout, so when the arena's field or robots get better, all eight fields do too. Each division gets its own team numbers on the robots and the carts in its queue, its own score on the scoring table, and its own match clock, out of step with the others, so no two fields show the same moment.</li>
+      <li><b>The curtains:</b> between one division's stands and the next hangs a black pipe-and-drape curtain, lit from the upper left like everything else. On each hang the division's sign, a blue banner like the one the game is named for, and its big screen showing that field's live score, the match clock and the qualification match number.</li>
+      <li><b>The truss and lights:</b> up in the dark a lighting truss runs the length of the hall, with a lamp every 32 pixels. In the cut scene they come on left to right and throw the intro's flat spot cones down over the stands.</li>
+      <li><b>The crowd:</b> teams sit together at Championship, so each division's stands are cut into blocks between the aisle stairs, some a mix of people, some one team all in its shirt: teal, pink, lime, maroon, yellow, purple. Newton's first block is 5026's own section in the red tee, with families in the front row.</li>
+      <li><b>The crews:</b> drive teams at both stations of every field in their teams' shirts, a team member waiting with each robot in the queue, a queuer in orange and a scorekeeper at the table, and people standing about in the aisles.</li>
+      <li><b>The people to talk to:</b> the teammate and Newton's queuer by 5026's robot; a scout from Monterrey and a parent from Sao Paulo in the front rows; students from Istanbul, Sydney and Shenzhen in the aisles; a button trader; the info desk and a field reset volunteer. Between them: alliances of four at Championship, the eight division winners meeting on Einstein, pit scouting against match scouting, the ranking points for a rocket and for the HAB, the sandstorm, the Rookie All-Star award, shipping a robot across an ocean, and trading buttons.</li>
+      <li><b>The hall:</b> concrete end walls with EXIT signs, the floor carrying on past both end fields, a yellow sign pointing the way to Einstein, and two tables on the floor: one covered in buttons to trade, and the info desk.</li>
+    </ul>
+  </section>
+  <p class="foot">The art is the 2019 game, Deep Space; the eight divisions are the Championship's since 2023 (in 2019 Houston had six). The fields are field.js, the crowd bleachers.js and the people walker.js, all shared with the arena; this scene's own modules are in the worlds folder. The controller, the camera and the talking are stage.js, shared by every scene.</p>
+</div>
+<script type="module" src="./scene.js"></script>
+</body>
+</html>
