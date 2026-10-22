@@ -255,10 +255,13 @@ const GAITS = {
   cheer: { hip: 0, hipBias: 85, knee: 0, kneeBase: 90, arm: 0, armUp: 165, elbow: 12, lean: 0, flight: 0 },
   // At the driver station: standing, both hands out in front on a controller.
   drive: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, armUp: 22, elbow: 62, lean: 3, flight: 0 },
-  // Celebrating on their feet, pumping their fists: thrown up and forward past the brow, then yanked back down, elbows
-  // at their sides and fists in front of the chest. Forward of straight up, so from the side the fists show in front of
-  // the face instead of behind the head.
-  celebrate: { hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, lean: -4, flight: 0, keys: [{ armUp: 125, elbow: 20 }, { armUp: 10, elbow: 110 }] },
+  // Celebrating on their feet, pumping their fists: thrown up, arms straight, leaning back, then yanked back down in
+  // front of the shoulders as they land, knees bent. The arms go up well forward of straight up: the head is drawn over
+  // everything, so from the side fists straight up would hide behind it, and these show out in front of the brow.
+  celebrate: {
+    hip: 0, hipBias: 0, knee: 0, kneeBase: 2, arm: 0, lean: -4, flight: 0,
+    keys: [{ armUp: 140, elbow: 0, lean: -12 }, { armUp: 40, elbow: 110, kneeBase: 24, hipBias: 12 }],
+  },
 };
 
 function pose(dirIndex, gait, phase, look) {

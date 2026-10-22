@@ -403,7 +403,7 @@ function shotHab(b, B, info) {
   const jit = working && Math.floor(B * 16) % 2 ? 0.5 : 0;
   const done = b >= 8;
   const camX = lerp(30, 100, easeOut(seg(b, 0, 1.2)));
-  const camY = lerp(-64, -72, easeInOut(seg(b, 1, 3)));
+  const camY = lerp(-64, -70, easeInOut(seg(b, 1, 3)));
   camera(camX, camY, 2, plus(shake(b, 8, 0.5, 2), shake(b, 8.5, 0.4, 3)));
   sky(SKY, 30, B);
   arena(crowd(B), CARPET);
@@ -421,7 +421,7 @@ function shotHab(b, B, info) {
   if (!done && left > 0 && left <= 3) {
     const pop = (secs - left) * secLen; // seconds since this number came up
     screen();
-    text(String(secs), 32, pop < 0.12 ? 22 : 26, {
+    text(String(secs), 24, pop < 0.12 ? 6 : 10, {
       scale: pop < 0.12 ? 7 : 6, align: 'center', color: pop < 0.05 ? C.white : C.red2, outline: C.ink, shadow: C.red0, sx: 2, sy: 2,
     });
   }

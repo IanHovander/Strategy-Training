@@ -301,9 +301,10 @@ export function hab(x3, o = {}) {
   rect(x0, HAB.l1, xw - x0, 2, C.steel1);
   for (let x = Math.floor(x0 / 4) * 4; x < xw - 2; x += 4) rect(x + ((x / 4) & 1) * 2, HAB.l1, 1, 1, C.steel2);
   // The drive team, facing the field, back to front: the coach a step behind, part out of the shot, and two drivers
-  // side by side at the shelf. The far driver leans in closer to the glass, so from here their face and hands show
-  // just ahead of the near driver's, and the rest of them is behind the near one. At the buzzer they all jump, fists
-  // thrown up at the top of each jump and pumped down as they land, each to their own beat.
+  // side by side at the shelf, close to the glass. The far driver stands a little nearer the wall, so from here only
+  // their hair, the front of their face and their hands show past the near driver; the rest of them is hidden behind.
+  // At the buzzer they all jump, fists thrown up at the top of each jump and pumped down, knees bent, as they land, each
+  // to their own beat (the two drivers half a beat apart, so their fists don't pile up).
   // On the shelf, against the wall and between the two drivers, the emergency stop (a red button on a yellow box), and
   // after the buzzer their controllers, put down on either side of it, lit along the top.
   const sx = wx + 6;
@@ -325,14 +326,15 @@ export function hab(x3, o = {}) {
   ];
   const team = [
     { x: wx + 38, y: -2, look: COACH, jump: 0.8, coach: true },
-    { x: wx + 15, y: -1, look: DRIVERS[1], jump: 1.1, then: shelf.slice(0, 2) },
-    { x: wx + 20, y: 0, look: DRIVERS[0], jump: 0, then: shelf.slice(2) },
+    { x: wx + 18, y: -1, look: DRIVERS[1], jump: Math.PI / 2, then: shelf.slice(0, 2) },
+    { x: wx + 21, y: 0, look: DRIVERS[0], jump: 0, then: shelf.slice(2) },
   ];
   for (const p of team) shadow(p.x, p.y);
   for (const p of team) {
-    const up = Math.abs(Math.sin((o.t ?? 0) * Math.PI + p.jump));
-    const bob = o.cheer ? Math.round(up * 4) : 0;
-    rigPerson(p.x, p.y - bob, 'w', o.cheer ? 'celebrate' : p.coach ? 'stand' : 'drive', p.look, up > 0.5 ? 0 : 1);
+    const up = Math.abs(Math.sin((o.t ?? 0) * Math.PI + p.jump)), high = up > 0.5;
+    // Landing, knees bent, they sink a unit lower.
+    const bob = o.cheer ? Math.max(0, Math.round(up * 4) - (high ? 0 : 1)) : 0;
+    rigPerson(p.x, p.y - bob, 'w', o.cheer ? 'celebrate' : p.coach ? 'stand' : 'drive', p.look, high ? 0 : 1);
     for (const draw of p.then ?? []) draw();
   }
   // The near end of the shelf, a foot deep at 3 ft, on its bracket: in front of the drivers, like a console.
@@ -345,26 +347,25 @@ export function hab(x3, o = {}) {
   rect(sx + 1, plate + 2, 3, 1, C.steel0);
   rect(sx + 1, plate + 3, 1, 1, C.steel0);
   // The wall itself, end on, the way the arena draws it: a box 9 inches deep in the alliance's blues, lit along its
-  // top and its field side, with a dark line 3 ft up where the diamond plate stops and the glass starts.
+  // top and its field side (down to level 3, which hides the rest), with a dark line 3 ft up where the diamond plate
+  // stops and the glass starts. Above it, the pale edge of the clear polycarbonate on the drivers' side.
   rect(wx - 1, top - 1, 8, 1 - top, C.ink);
   rect(wx, top, 6, -top, C.blue1);
-  rect(wx, top, 1, -top, C.blue2);
+  rect(wx, top, 1, HAB.l3 - 1 - top, C.blue2);
   rect(wx, top, 6, 1, C.blue3);
-  rect(wx, plate, 6, 1, C.blue0);
-  // The end of the alliance light strip along the top of the plate: lit, it blinks blue on the field side.
-  rect(wx - 2, plate, 1, 2, o.glow ? C.blue2 : C.blue0);
-  rect(wx - 2, plate, 1, 1, o.glow ? C.blue3 : C.blue1);
-  if (o.glow) rect(wx - 3, plate, 1, 2, C.blue2);
-  // On top: the team number sign, a flat panel seen edge on (the number faces the field), and on a short stem the
-  // stack light that shows the robot is connected.
-  rect(wx + 1, top - 11, 4, 11, C.ink);
-  rect(wx + 2, top - 10, 2, 9, '#16204a');
-  rect(wx + 2, top - 10, 1, 9, C.blue2);
-  rect(wx + 2, top - 13, 2, 2, C.ink);
-  rect(wx + 1, top - 19, 4, 6, C.ink);
-  rect(wx + 2, top - 18, 2, 2, C.blue2);
-  rect(wx + 2, top - 18, 1, 1, C.blue3);
-  rect(wx + 2, top - 16, 2, 2, C.org0);
+  withAlpha(0.5, () => rect(wx + 5, top + 1, 1, plate - top - 1, C.blue3));
+  // The 3 ft line is the end of the alliance light strip along the top of the plate: lit, it blinks.
+  rect(wx, plate, 6, 1, o.glow ? C.blue3 : C.blue0);
+  if (o.glow) rect(wx, plate + 1, 6, 1, C.blue2);
+  // On top: the team number sign, a flat panel seen edge on (the number faces the field), and sitting on it the stack
+  // light that shows the robot is connected.
+  rect(wx + 1, top - 5, 4, 5, C.ink);
+  rect(wx + 2, top - 4, 2, 3, '#16204a');
+  rect(wx + 2, top - 4, 1, 3, C.blue2);
+  rect(wx + 1, top - 8, 4, 4, C.ink);
+  rect(wx + 2, top - 7, 2, 1, C.blue2);
+  rect(wx + 2, top - 7, 1, 1, C.blue3);
+  rect(wx + 2, top - 6, 2, 1, C.org0);
   // Level 3 platform.
   rect(x3 - 1, HAB.l3 - 1, HAB.depth + 2, HAB.l1 - HAB.l3 + 1, C.ink);
   rect(x3, HAB.l3, HAB.depth, HAB.l1 - HAB.l3, C.blue1);
