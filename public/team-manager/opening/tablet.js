@@ -7,14 +7,27 @@
 // average (the biggest number on the screen: the tempting one), one short note, and its ten qualification matches as
 // a strip of boxes, Friday's seven then Saturday morning's three. A blank box is a match nobody scored.
 //
-//   drawTablet({ t, left, on, hint, thought, glow })   the tablet: t seconds since the clock slammed in, left the
-//                                                      seconds on the clock, on the card the cursor's on (-1: none)
-//   drawConfirm(team, choice, k)                       "5026 RESPECTFULLY INVITES TEAM ..." over it, INVITE or BACK
+//   drawTablet({ t, left, on, hint, thought, glow, drag })
+//                                                      the tablet: t seconds since the clock slammed in, left the
+//                                                      seconds on the clock, on the card the cursor's on (-1: none);
+//                                                      drag: a card picked up off the tablet (below)
+//   drawConfirm(team, choice, k, pressed)              "5026 RESPECTFULLY INVITES TEAM ..." over it, INVITE or BACK
+//                                                      (pressed: the one held down under a finger)
 //   drawAccept(team, t)                                "6834 ACCEPTS!", t seconds in
 //   drawResult(team, good, t, { glow })                the bet log's stamp, the reveal and the one line to remember
 //   drawRewind(k)                                      the tape running back over the tablet, k from 0 to 1
 //   drawContinued(t)                                   the end of what's built: TO BE CONTINUED
 //   clockText(seconds)                                 0:45
+//
+// Where things are, for taps (pick.js): every rectangle here is the one it's drawn in, so a tap lands on what it shows.
+//   cardRect(i, on)     team i's card ({ x, y, w, h }; on: lifted the two pixels the cursor lifts it)
+//   PINNED              her robot's row: drop a card on it to invite that team
+//   CONFIRM, buttonRect(i)   the invite's box, and its INVITE (0) and BACK (1) buttons
+//   hintRects(hint)     the hint line's ◀ and ▶ and its A: ... ({ left, right, act }), a little bigger than drawn
+//   inRect(r, x, y)     whether (x, y) is in r
+// A card being dragged (drag: { i, x, y, over, k }) is drawn lifted where the finger has it, top left at (x, y), with a
+// shadow under it and a dotted gap where it came from; over: it's over her robot's row, which lights up to take it. k,
+// from 0 to 1, is how far it's lifted (it settles back into its gap with k going down, after a drop anywhere else).
 
 import { W, H, C, screen, fill, text, measure, withAlpha, dither, clamp, rnd } from '../pixel.js';
 import { drawHud } from './norbert-held.js';
@@ -119,9 +132,28 @@ function dayLabels(x, y, { w, gap = 1, split = 3 }) {
   text('SAT', x + fri + gap + split + Math.floor(sat / 2), y, { font: 3, align: 'center', color: C.steel2 });
 }
 
-// ---- The tablet ----
-const CARD = { y: 60, w: 116, h: 66 };
+// ---- Where things are ----
+export const CARD = { y: 60, w: 116, h: 66 };
 const cardX = (i) => 8 + i * (CARD.w + 8);
+export const cardRect = (i, on = false) => ({ x: cardX(i), y: CARD.y - (on ? 2 : 0), w: CARD.w, h: CARD.h });
+export const PINNED = { x: 8, y: 37, w: W - 16, h: 20 };
+export const CONFIRM = { x: 24, y: 42, w: 208, h: 74 };
+export const buttonRect = (i) => ({ x: W / 2 - 74 + i * 78, y: CONFIRM.y + 47, w: 70, h: 15 });
+export const inRect = (r, x, y) => !!r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+/** The hint line's baseline, and where its parts go: ◀ ▶ at x, the words after them, A: ... at ax. */
+const HINT_Y = 134;
+function hintLayout([move, act]) {
+  const a = `A: ${act}`, wm = measure(move, { font: 3 }) + 12, wa = measure(a, { font: 3 }), total = wm + 16 + wa;
+  const x = Math.round(W / 2 - total / 2);
+  return { x, move, a, ax: x + wm + 16, wa };
+}
+/** The hint line's ◀, ▶ and A: ..., for a finger: the arrows a box each either side of the gap between them. */
+export function hintRects(hint) {
+  const { x, ax, wa } = hintLayout(hint), y = HINT_Y - 4, h = 13;
+  return { left: { x: x - 6, y, w: 10, h }, right: { x: x + 4, y, w: 10, h }, act: { x: ax - 4, y, w: wa + 8, h } };
+}
+
+// ---- The tablet ----
 const STRIP = { w: 9, h: 9, gap: 1, split: 3 };
 
 function header(t, left) {
@@ -155,9 +187,9 @@ function pinned() {
   dayLabels(sx, y + 14, STRIP);
 }
 
-/** One team's card: number, the big average, the note, the ten matches. on: the cursor's on it. */
-function card(team, i, on, t) {
-  const x = cardX(i), y = CARD.y - (on ? 2 : 0), { w, h } = CARD;
+/** One team's card: number, the big average, the note, the ten matches. on: the cursor's on it. (x, y): its top left. */
+function card(team, on, t, x, y) {
+  const { w, h } = CARD;
   fill(x, y, w, h, on ? C.night2 : C.night1);
   if (on) {
     frame(x - 1, y - 1, w + 2, h + 2, C.ink);
@@ -173,52 +205,80 @@ function card(team, i, on, t) {
   dayLabels(x + 7, y + 58, STRIP);
 }
 
-/** The hint line at the bottom: ◀ ▶ CHOOSE   A PICK, or her thought, in its place, after a rewind. */
-function hintLine(hint, thought) {
-  const y = 134;
+/** The hint line at the bottom: ◀ ▶ CHOOSE   A PICK, or her thought, in its place, after a rewind (color: its own). */
+function hintLine(hint, thought, color = C.blue3) {
+  const y = HINT_Y;
   if (thought) {
-    text(thought, W / 2, y - 1, { align: 'center', color: C.blue3 });
+    text(thought, W / 2, y - 1, { align: 'center', color });
     return;
   }
-  const [move, act] = hint;
-  const a = `A: ${act}`, m = `${move}`;
-  const wm = measure(m, { font: 3 }) + 12, wa = measure(a, { font: 3 }), total = wm + 16 + wa;
-  let x = Math.round(W / 2 - total / 2);
+  const { x, move, a, ax } = hintLayout(hint);
   arrow(x, y, -1, C.steel3);
   arrow(x + 5, y, 1, C.steel3);
-  text(m, x + 12, y, { font: 3, color: C.steel3 });
-  x += wm + 16;
-  text(a, x, y, { font: 3, color: C.yel2 });
+  text(move, x + 12, y, { font: 3, color: C.steel3 });
+  text(a, ax, y, { font: 3, color: C.yel2 });
 }
 
-export function drawTablet({ t = 1, left = PICK_CLOCK, on = 0, hint = ['CHOOSE', 'PICK'], thought = null, glow = 0 } = {}) {
+/** Her robot's row lit up to take a card dropped on it: a yellow frame, blinking, and INVITE on a tag at its right. */
+function pinnedTakes(t) {
+  const { x, y, w, h } = PINNED;
+  frame(x - 1, y - 1, w + 2, h + 2, C.ink);
+  frame(x, y, w, h, t % 0.5 < 0.3 ? C.yel1 : C.yel2, 2);
+}
+
+/** A card lifted off the tablet where the finger has it: its gap left dotted, a shadow under it, it on top. */
+function lifted(team, i, d, t) {
+  const home = cardRect(i), k = clamp(d.k ?? 1, 0, 1);
+  const x = Math.round(home.x + (d.x - home.x) * k), y = Math.round(home.y + (d.y - home.y) * k);
+  const up = Math.round(3 * k); // how far over its shadow it rides
+  withAlpha(0.55, () => fill(x + up, y + up + 1, CARD.w, CARD.h, C.ink));
+  card(team, true, t, x, y);
+  return { x, y };
+}
+
+export function drawTablet({ t = 1, left = PICK_CLOCK, on = 0, hint = ['CHOOSE', 'PICK'], thought = null, glow = 0, drag = null } = {}) {
   screen();
   fill(0, 0, W, H, C.night0);
   for (let x = 4; x < W; x += 12) fill(x, 30, 1, H - 30, '#0d1133');
   header(t, left);
   pinned();
-  TEAMS.forEach((team, i) => card(team, i, i === on, t));
-  hintLine(hint, thought);
+  TEAMS.forEach((team, i) => {
+    if (drag?.i !== i) return card(team, i === on, t, cardX(i), CARD.y - (i === on ? 2 : 0));
+    // Picked up: a dotted gap where it was.
+    const { x, y, w, h } = cardRect(i);
+    dotted(x, y, w, h, C.steel1);
+  });
+  if (drag) {
+    const team = TEAMS[drag.i];
+    if (drag.over) pinnedTakes(t);
+    // While it's up, the hint line says what to do with it.
+    if ((drag.k ?? 1) >= 1) {
+      hintLine(null, drag.over ? `LET GO TO INVITE ${team.num}` : 'DRAG IT UP TO YOUR ROBOT TO INVITE', drag.over ? C.yel2 : C.blue3);
+    } else hintLine(hint, thought);
+    lifted(team, drag.i, drag, t);
+  } else hintLine(hint, thought);
   drawHud({ glow });
 }
 
 /** "5026 RESPECTFULLY INVITES TEAM 6834..." over the tablet, with INVITE and BACK. choice: 0 INVITE, 1 BACK. */
-export function drawConfirm(team, choice, k) {
+export function drawConfirm(team, choice, k, pressed = -1) {
   screen();
   withAlpha(0.75, () => fill(0, 35, W, H - 35, C.ink));
-  const x = 24, y = 42, w = 208, h = 74;
+  const { x, y, w, h } = CONFIRM;
   fill(x, y, w, h, C.night1);
   frame(x - 1, y - 1, w + 2, h + 2, C.ink);
   frame(x, y, w, h, C.yel1, 2);
   text(`${OURS} RESPECTFULLY INVITES`, W / 2, y + 9, { align: 'center', color: C.white });
   text(`TEAM ${team.num}`, W / 2, y + 21, { scale: 2, align: 'center', color: C.yel2, outline: C.ink });
   ['INVITE', 'BACK'].forEach((label, i) => {
-    const bx = W / 2 - 74 + i * 78, by = y + 47, bw = 70, bh = 15, on = i === choice;
+    const { x: bx, y: by0, w: bw, h: bh } = buttonRect(i), on = i === choice;
+    // Held down under a finger, it's pushed in: a pixel lower, in its darker yellow, no blink.
+    const down = i === pressed, by = by0 + (down ? 1 : 0);
     if (on) {
-      fill(bx, by, bw, bh, k % 0.9 < 0.6 ? C.yel1 : C.yel2);
+      fill(bx, by, bw, bh, down ? C.yel0 : k % 0.9 < 0.6 ? C.yel1 : C.yel2);
       frame(bx - 1, by - 1, bw + 2, bh + 2, C.ink);
     } else frame(bx, by, bw, bh, C.steel2);
-    text(label, bx + bw / 2, by + 4, { align: 'center', color: on ? C.ink : C.steel3 });
+    text(label, bx + bw / 2, by + 4, { align: 'center', color: on ? (down ? C.white : C.ink) : C.steel3 });
   });
 }
 

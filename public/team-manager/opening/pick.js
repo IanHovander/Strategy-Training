@@ -16,8 +16,23 @@
 //             "...DIDN'T THIS JUST HAPPEN?"
 //   end       TO BE CONTINUED: the quarterfinals aren't built yet.
 //
+// Taps and drags on the screen (pointPick, the scene's pointer()): everything on the tablet that looks pressable is.
+//   browse    a tap on a card picks it: the cursor goes to it and the invite comes up, as A on it would. One tap, not a
+//             tap to choose and another to pick: the invite is already the step that asks "are you sure?" (and backs
+//             out with BACK), so a second tap would only be a second confirmation of the same thing. Or pick a card up
+//             and drag it: it lifts off the tablet and follows the finger, leaving a dotted gap; held over her robot's
+//             row, the row lights up, and let go there, that team's invite comes up. Let go anywhere else and it
+//             settles back into its gap (the cursor stays on it). The hint line's ◀ and ▶ move the cursor; its
+//             "A: PICK" picks.
+//   confirm   INVITE and BACK are buttons: pressed in under the finger, they act when it lets go on them (slide off to
+//             change your mind; slide onto the other to choose it). A tap anywhere else does nothing: the choice is
+//             on the buttons.
+//   accept, result, rewind, end
+//             a tap is A (stage.js does that for a tap the scene doesn't take).
+// Off the picture (the bars beside it) a tap is A, as stage.js has it everywhere.
+//
 // scene.js wires it to the stage: startPick() when the cut scene ends, updatePick() every frame (the stick), pressPick()
-// on A, drawPickScreen() to draw, pickLabel() and pickStatus() for the phone.
+// on A, pointPick() for taps and drags, drawPickScreen() to draw, pickLabel() and pickStatus() for the phone.
 //
 //   drawPick(t, left)   the tablet as the pick begins, for the cut scene's last beat: t seconds since it came up (for the
 //                       clock's slam), left the seconds on the clock
@@ -25,7 +40,11 @@
 
 import { clamp } from '../pixel.js';
 import { TEAMS, RIGHT } from './teams.js';
-import { PICK_CLOCK, drawTablet, drawConfirm, drawAccept, drawResult, drawRewind, drawContinued } from './tablet.js';
+import { W, H } from '../pixel.js';
+import {
+  PICK_CLOCK, drawTablet, drawConfirm, drawAccept, drawResult, drawRewind, drawContinued,
+  cardRect, PINNED, buttonRect, hintRects, inRect,
+} from './tablet.js';
 
 export { PICK_CLOCK };
 
@@ -33,10 +52,15 @@ export { PICK_CLOCK };
 const GUARD = 0.25, ACCEPT = 1.8, REWIND = 1.6, THOUGHT = 3.5;
 /** The stick: how far it has to go to count, and how soon holding it moves again. */
 const DEAD = 0.35, REPEAT = 0.45;
+/** A finger: how far (pixels) it moves before a press on a card is a drag, and seconds a dropped card takes to settle. */
+const SLOP = 3, SETTLE = 0.18;
 
 const P = {
   phase: 'browse', t0: 0, clock0: null, left: PICK_CLOCK, on: 0, choice: 0, picked: null,
   rewinds: 0, rewoundAt: null, held: 0, heldAt: 0, slam: 1,
+  // A finger on the screen: a card picked up (drag), a card settling back after a drop elsewhere (settle), the
+  // invite's button held down (pressed: 0 INVITE, 1 BACK, -1 none).
+  drag: null, settle: null, pressed: -1,
 };
 const nowS = () => performance.now() / 1000;
 const leftAt = (now) => PICK_CLOCK - (now - P.clock0);
@@ -44,6 +68,8 @@ const good = () => P.picked?.num === RIGHT;
 function go(phase, now) {
   P.phase = phase;
   P.t0 = now;
+  // A finger still down from before lets go of whatever it held.
+  Object.assign(P, { drag: null, settle: null, pressed: -1 });
 }
 
 /**
@@ -51,7 +77,7 @@ function go(phase, now) {
  * first time, the cut scene's last beat has already slammed it in.
  */
 export function startPick(now = nowS(), { slam = false } = {}) {
-  Object.assign(P, { clock0: now, on: 0, choice: 0, picked: null, held: 0, slam: slam ? 0 : 1 });
+  Object.assign(P, { clock0: now, on: 0, choice: 0, picked: null, held: 0, slam: slam ? 0 : 1, drag: null, settle: null, pressed: -1 });
   go('browse', now);
 }
 
@@ -63,7 +89,7 @@ export function updatePick(dt, stick, now = nowS()) {
   const d = st.mag < DEAD ? 0 : Math.sign(ax);
   if (d && (d !== P.held || now - P.heldAt > REPEAT)) {
     P.heldAt = now;
-    if (P.phase === 'browse') P.on = clamp(P.on + d, 0, TEAMS.length - 1);
+    if (P.phase === 'browse' && !P.drag) P.on = clamp(P.on + d, 0, TEAMS.length - 1);
     else if (P.phase === 'confirm') P.choice = clamp(P.choice + d, 0, 1);
   }
   P.held = d;
@@ -107,6 +133,100 @@ export function pressPick(now = nowS()) {
   }
 }
 
+/**
+ * A finger on the screen (stage.js's pointer: 'down', then 'move', 'up' or 'cancel'), at (x, y) in screen pixels. True
+ * from 'down' if the pick takes it; false leaves it to stage.js, which makes a tap A.
+ */
+export function pointPick(type, x, y, now = nowS()) {
+  if (P.clock0 == null) startPick(now);
+  const onScreen = x >= 0 && x < W && y >= 0 && y < H;
+  if (type === 'down') {
+    P.drag = null;
+    P.pressed = -1;
+    if (!onScreen) return false;
+    if (P.phase === 'browse') return downBrowse(x, y, now);
+    if (P.phase === 'confirm') {
+      P.pressed = [0, 1].find((i) => inRect(buttonRect(i), x, y)) ?? -1;
+      if (P.pressed >= 0) P.choice = P.pressed;
+      return true;
+    }
+    return false;
+  }
+  if (P.phase === 'confirm' && type !== 'cancel') {
+    // Held on a button: sliding onto the other one chooses it, off both lets go of it; letting go on one presses it.
+    const over = [0, 1].find((i) => inRect(buttonRect(i), x, y)) ?? -1;
+    if (type === 'move') {
+      if (P.pressed >= 0 || over >= 0) P.pressed = over;
+      if (over >= 0) P.choice = over;
+    } else if (type === 'up') {
+      const was = P.pressed;
+      P.pressed = -1;
+      if (was >= 0 && over === was) pressPick(now);
+    }
+    return true;
+  }
+  const d = P.drag;
+  if (!d) {
+    P.pressed = -1;
+    return true;
+  }
+  if (type === 'move') {
+    if (!d.moved && Math.hypot(x - d.sx, y - d.sy) > SLOP) d.moved = true;
+    if (d.moved) {
+      // The card goes where the finger takes it, held where it was picked up, and never wholly off the screen.
+      d.x = clamp(x - d.gx, 8 - CARD_W(), W - 8);
+      d.y = clamp(y - d.gy, 2 - CARD_H(), H - 8);
+      d.over = inRect(PINNED, x, y) || d.y <= PINNED.y + 10;
+    }
+    return true;
+  }
+  P.drag = null;
+  if (P.phase !== 'browse') return true; // A picked while the finger was down
+  if (type === 'up' && (!d.moved || d.over)) {
+    // A tap on a card, or a card let go on her robot: that team's invite.
+    P.on = d.i;
+    pressPick(now);
+  } else if (d.moved) P.settle = { i: d.i, x: d.x, y: d.y, t0: now };
+  return true;
+}
+const CARD_W = () => cardRect(0).w, CARD_H = () => cardRect(0).h;
+/** A finger down on the tablet: on a card (to pick it, or pick it up), on the hint line's ◀ ▶ or A: PICK, or nothing. */
+function downBrowse(x, y, now) {
+  P.settle = null;
+  const i = TEAMS.findIndex((_, k) => inRect(cardRect(k, k === P.on), x, y));
+  if (i >= 0) {
+    const r = cardRect(i);
+    P.on = i;
+    P.drag = { i, sx: x, sy: y, gx: x - r.x, gy: y - r.y, x: r.x, y: r.y, moved: false, over: false };
+    return true;
+  }
+  // The hint line, while it's showing (not while her thought has its place after a rewind).
+  if (!thoughtNow(now)) {
+    const h = hintRects(['CHOOSE', 'PICK']);
+    if (inRect(h.left, x, y)) P.on = clamp(P.on - 1, 0, TEAMS.length - 1);
+    else if (inRect(h.right, x, y)) P.on = clamp(P.on + 1, 0, TEAMS.length - 1);
+    else if (inRect(h.act, x, y)) pressPick(now);
+  }
+  return true;
+}
+/** Her thought after a rewind, while it has the hint line's place. */
+function thoughtNow(now) {
+  const since = P.rewoundAt == null ? Infinity : now - P.rewoundAt;
+  return since < THOUGHT ? '...DIDN\'T THIS JUST HAPPEN?' : null;
+}
+/** What's being dragged, or settling back, for drawTablet. */
+function dragNow(now) {
+  if (P.drag?.moved) return { i: P.drag.i, x: P.drag.x, y: P.drag.y, over: P.drag.over, k: 1 };
+  const st = P.settle;
+  if (!st) return null;
+  const k = 1 - clamp((now - st.t0) / SETTLE, 0, 1);
+  if (k <= 0) {
+    P.settle = null;
+    return null;
+  }
+  return { i: st.i, x: st.x, y: st.y, over: false, k: k * k };
+}
+
 /** What A does now, for the phone's A button; nothing at the end. */
 export function pickLabel() {
   switch (P.phase) {
@@ -128,15 +248,15 @@ export function drawPickScreen(now = nowS()) {
   const t = now - P.t0, sinceClock = now - P.clock0 + P.slam;
   // After a rewind, her thought takes the hint line for a moment, and Norbert's ear dims back down.
   const since = P.rewoundAt == null ? Infinity : now - P.rewoundAt;
-  const thought = since < THOUGHT ? '...DIDN\'T THIS JUST HAPPEN?' : null;
+  const thought = thoughtNow(now);
   const afterglow = clamp(1 - since / 0.8, 0, 1);
   switch (P.phase) {
     case 'browse':
-      drawTablet({ t: sinceClock, left: leftAt(now), on: P.on, thought, glow: afterglow });
+      drawTablet({ t: sinceClock, left: leftAt(now), on: P.on, thought, glow: afterglow, drag: dragNow(now) });
       break;
     case 'confirm':
       drawTablet({ t: sinceClock, left: leftAt(now), on: P.on, hint: ['CHOOSE', P.choice ? 'BACK' : 'INVITE'] });
-      drawConfirm(TEAMS[P.on], P.choice, t);
+      drawConfirm(TEAMS[P.on], P.choice, t, P.pressed);
       break;
     case 'accept':
       drawTablet({ t: 1, left: P.left, on: P.on, hint: ['CHOOSE', 'NEXT'] });

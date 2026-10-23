@@ -189,6 +189,18 @@ function stickDir(st) {
 const FRONT = ['owen', 'adeyemi'];
 const CAM_EASE = 0.4;
 const camMove = { from: FRAME.all.y, to: FRAME.all.y, at: 0 };
+
+/**
+ * Who's in the seat drawn at (x, y) in the cabin's world, for a tap: a head and shoulders over the seat back, from the
+ * top of the head (38 over their feet) down to the seat back in front (13 over them), 10 either side; Tess slumped
+ * where she's slumped. Rows are 26 apart, so these don't overlap; she herself (hero) isn't in PEOPLE.
+ */
+function seatAt(x, y) {
+  return PEOPLE.find((p) => {
+    const [px, py] = p.id === 'tess' ? [p.x + SLUMP.dx, p.y + SLUMP.dy] : [p.x, p.y];
+    return Math.abs(x - px) <= 10 && y >= py - 40 && y <= py - 13;
+  }) ?? null;
+}
 function pickCamera(s) {
   const now = performance.now() / 1000, to = FRONT.includes(s.talk?.person?.id) ? FRAME.frontTalk.y : FRAME.all.y;
   const y = () => Math.round(lerp(camMove.from, camMove.to, easeInOut(seg(now, camMove.at, camMove.at + CAM_EASE))));
@@ -258,6 +270,20 @@ export const scene = {
     picker.held = dir;
   },
   reach: () => byId[picker.id],
+  // A tap on someone in their seat picks them and talks to them, all in one: it makes them the one in reach and leaves
+  // the tap to stage.js, which makes it A. A tap on her own seat does nothing; anywhere else it's A, as stage.js has it
+  // (on to the next page while someone's talking, or a word with whoever's picked).
+  pointer(type, x, y, s) {
+    if (type !== 'down' || s.mode !== 'free' || s.talk) return false;
+    const wx = x + s.view.x, wy = y + s.view.y;
+    if (Math.abs(wx - HX) <= 10 && wy >= HY - 40 && wy <= HY - 13) return true;
+    const p = seatAt(wx, wy);
+    if (p) {
+      picker.id = p.id;
+      s.near = p;
+    }
+    return false;
+  },
   // The bubble beside the picked head, as the arena's stands have it for someone seated (bleachers.js drawPrompt: 11 to
   // the right, 41 up). Heads here are 16 pixels across and only 21 apart, so that only works where nobody sits on that
   // side: the window seats on the right (Bea, Kai, Mr. Adeyemi) have it over their door top, and Owen and Tess by the

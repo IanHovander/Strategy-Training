@@ -2,16 +2,21 @@
 // sends her straight at whoever's tapped, trying spots round them, and straight lines get stuck: behind someone else
 // standing in the way (the team meeting's lawn), round a table or a pit's corner, or where a scene's own reach rule
 // wants her somewhere none of those spots are (in front of someone seated, across a table). This finds her a way: a
-// search over the floor, in steps the scene's own move() allows, to the nearest spot where the scene's reach (or
-// stage.js's 14 across and 10 deep) puts that person in reach, with the corners of the way kept as stops. It hands the
-// stops to stage.js the way its own tap does (s.goal, its spots taken in turn, and she talks to them once they're the
-// one in reach), so the stick still takes over the moment it's pushed.
+// search over the floor (A*, two pixels a step, each step wherever the scene's own move() puts her) to the nearest spot
+// where the scene's reach (or stage.js's 14 across and 10 deep) puts that person in reach, keeping a few pixels off
+// walls and people where it can, with the corners of the way kept as stops. It hands the stops to stage.js the way its
+// own tap does (s.goal, its spots taken in turn, and she talks to them once they're the one in reach), so the stick
+// still takes over the moment it's pushed. A search that finds nothing in a fifth of a second leaves the tap to
+// stage.js, so a tap never holds up the picture for long.
 //
 //   pointer(type, x, y, s) { return type === 'down' && approach(scene, s, x, y); }
 //
-// approach(scene, s, x, y)   (x, y) a tap in screen pixels. True if it was on someone she isn't already in reach of and
+// approach(scene, s, x, y, { walk })
+//                            (x, y) a tap in screen pixels. True if it was on someone she isn't already in reach of and
 //                            it set her off along a way to them; false to leave the tap to stage.js (a floor tap, the way
-//                            out, someone in reach, no way found).
+//                            out, someone in reach, no way found). walk: she mustn't run (the pits' rule), so it takes
+//                            the floor and the way out too (stage.js runs her to anywhere over 72 pixels off), and goes
+//                            in legs short enough to walk.
 //
 // This belongs in stage.js's goTo (it lives here because the scenes' own folders are what this change could touch); the
 // scenes import it from here until it moves.
@@ -19,17 +24,27 @@
 /** stage.js's: the floor recedes, so going down the screen covers more ground than going across. */
 const DEPTH = 0.8;
 /** The search's step, in pixels, and how many spots and milliseconds it takes before giving up. */
-const STEP = 2, MAX_CELLS = 30000, TIME = 160, FAR = 120;
+const STEP = 2, MAX_CELLS = 30000, TIME = 220, FAR = 120;
+/** A frame's walk at 60 frames a second (stage.js SPEED.walk), for following her steps as stage.js takes them. */
+const STRIDE = 34 / 60;
+/** The longest leg she walks rather than runs to (stage.js runs her to a stop further than 72 pixels off). */
+const WALK_LEG = 64;
 
-/** Who's drawn at (x, y) in the world, nearest the front: stage.js's personAt, the same body and bubble boxes. */
+/**
+ * Who's drawn at (x, y) in the world, nearest the front: stage.js's personAt, the same body and bubble boxes, except that
+ * a body beats the edge of the bubble box (it's wider than the bubble), so a tap on the head beside someone's bubble is
+ * on that head.
+ */
 export function personAt(scene, s, x, y) {
-  let best = null, bestY = -Infinity;
+  let best = null, rank = -Infinity;
   for (const p of scene.people ?? []) {
     const at = scene.spriteOf?.(p) ?? p;
     const tall = /sit|floor|kneel/.test(p.gait ?? p.faceGait ?? '') ? 34 : 50;
     const onBody = Math.abs(x - at.x) <= 10 && y >= at.y - tall && y <= at.y + 4;
     const onBubble = s.near === p && Math.abs(x - (at.x + 11)) <= 9 && y >= at.y - 62 && y <= at.y - 40;
-    if ((onBody || onBubble) && at.y > bestY) [best, bestY] = [p, at.y];
+    const onDrawn = s.near === p && Math.abs(x - (at.x + 11)) <= 6 && y >= at.y - 52 && y <= at.y - 37;
+    const r = onDrawn ? 2000 : onBody ? 1000 : onBubble ? 0 : -Infinity;
+    if (r > -Infinity && r + at.y > rank) [best, rank] = [p, r + at.y];
   }
   return best;
 }
@@ -47,18 +62,20 @@ function whoFrom(scene, s, x, y, dir) {
 }
 
 /**
- * Where she gets to heading for (x1, y1) from (x0, y0) the way stage.js walks her to a tap: a pixel and a half a step,
+ * Where she gets to heading for (x1, y1) from (x0, y0) the way stage.js walks her to a tap: a frame's walk a step,
  * turned at the spot each step, wherever move() puts her (some scenes slip her round people). [x, y] once she's within a
  * pixel of it, or null if she stops getting nearer.
  */
 function reaches(scene, x0, y0, x1, y1) {
-  let x = x0, y = y0;
-  for (let i = 0, n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 1.5) + 4; i < n; i++) {
+  let x = x0, y = y0, best = Infinity, since = 0;
+  for (let i = 0, n = Math.ceil(Math.hypot(x1 - x0, (y1 - y0) / DEPTH) / STRIDE) * 2 + 20; i < n; i++) {
     const gx = x1 - x, gy = (y1 - y) / DEPTH, far = Math.hypot(gx, gy);
     if (far < 1) return [x, y];
-    const v = Math.min(1.5, far), [nx, ny] = scene.move(x, y, (gx / far) * v, (gy / far) * v * DEPTH);
-    if (Math.hypot(x1 - nx, (y1 - ny) / DEPTH) > far - 0.2) return null;
-    [x, y] = [nx, ny];
+    // stage.js gives up on a stop she's got no nearer to for half a second: about 30 frames.
+    if (far < best - 0.5) [best, since] = [far, i];
+    else if (i - since > 30) return null;
+    const v = Math.min(STRIDE, far);
+    [x, y] = scene.move(x, y, (gx / far) * v, (gy / far) * v * DEPTH);
   }
   return null;
 }
@@ -84,7 +101,8 @@ function stepFrom(scene, x, y, dx, dy) {
 export function wayTo(scene, s, p) {
   const ww = scene.world?.w ?? 256, wh = scene.world?.h ?? 144, to = scene.spriteOf?.(p) ?? p;
   // Spots on the floor, a step apart (one per cell of a grid on her feet), each where move() really put her, searched
-  // nearest-to-them first (A*: the way so far, plus how far on they still are, counted half again over so it heads for them keenly).
+  // nearest-to-them first (A*: the way so far, plus how far on they still are, counted half again over so it heads
+  // for them keenly).
   const cell = (x, y) => `${Math.round((x - s.me.x) / STEP)},${Math.round((y - s.me.y) / STEP)}`;
   const away = (x, y) => Math.hypot(to.x - x, (to.y - y) / DEPTH), guess = (x, y) => 1.5 * Math.max(0, away(x, y) - 12);
   const start = { x: s.me.x, y: s.me.y, prev: null, g: 0 };
@@ -109,7 +127,13 @@ export function wayTo(scene, s, p) {
       const k = cell(nx, ny);
       if (seen.has(k)) continue;
       seen.add(k);
-      const spot = { x: nx, y: ny, prev: at, g: at.g + Math.hypot(nx - at.x, (ny - at.y) / DEPTH) };
+      // Right up against something costs extra, so the way keeps a few pixels off walls and people where it can: she
+      // counts as at a stop a couple of pixels short of it, and cutting a corner that close would leave her stuck on it.
+      const tight = HUG.some(([ex, ey]) => {
+        const [mx, my] = scene.move(nx, ny, ex, ey);
+        return Math.abs(mx - nx - ex) > 0.01 || Math.abs(my - ny - ey) > 0.01;
+      });
+      const spot = { x: nx, y: ny, prev: at, g: at.g + Math.hypot(nx - at.x, (ny - at.y) / DEPTH) + (tight ? 6 : 0) };
       spot.f = spot.g + guess(nx, ny);
       heap.push(spot);
       // Arriving here she faces the way she came: some scenes' reach looks at that (the pits').
@@ -142,9 +166,15 @@ export function wayTo(scene, s, p) {
     stops.push([spots[b].x, spots[b].y]);
     a = b;
   }
+  // She stops a couple of pixels short of the last stop, so it goes on past the spot by that much: she's there as she
+  // stops (and talks to them the moment they're in reach on the way).
+  const [lx, ly] = stops.at(-1) ?? [best.x, best.y], [px, py] = stops.at(-2) ?? [s.me.x, s.me.y];
+  const d = Math.hypot(lx - px, (ly - py) / DEPTH);
+  if (d > 0) stops[stops.length - 1] = [lx + ((lx - px) / d) * 2, ly + ((ly - py) / d) * 2 * DEPTH];
   return stops;
 }
 
+const HUG = [[3, 0], [-3, 0], [0, 3], [0, -3]];
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 /** A binary heap of spots, the lowest f on top. */
 class Heap {
@@ -179,15 +209,34 @@ class Heap {
   }
 }
 
-export function approach(scene, s, x, y) {
+export function approach(scene, s, x, y, { walk = false } = {}) {
   if (s.mode !== 'free' || s.talk || scene.update || !s.view) return false;
-  const out = s.exitAt;
-  if (out && x >= out.x0 && x <= out.x1 && y >= out.y0 && y <= out.y1) return false;
-  const p = personAt(scene, s, x + s.view.x, y + s.view.y);
-  if (!p || s.near === p) return false;
+  const out = s.exitAt, e = scene.exit, wx = x + s.view.x, wy = y + s.view.y;
+  if (out && x >= out.x0 && x <= out.x1 && y >= out.y0 && y <= out.y1) {
+    // The way out: stage.js's, unless she has to walk it.
+    return walk && !!e && goAlong(s, [[e.x + 6, Math.min(Math.max(s.me.y, e.y0 + 1), e.y1 - 1)]], null, walk);
+  }
+  const p = personAt(scene, s, wx, wy);
+  if (!p) return walk && goAlong(s, [[wx, wy]], null, walk); // the floor: stage.js's, unless she has to walk there
+  if (s.near === p) return false;
   const way = wayTo(scene, s, p);
-  if (!way?.length) return false;
-  const [gx, gy] = way.shift();
-  s.goal = { x: gx, y: gy, person: p, spots: way, best: Infinity, since: performance.now() / 1000 };
+  return way?.length ? goAlong(s, way, p, walk) : walk && goAlong(s, [[p.x, p.y]], p, walk);
+}
+
+/**
+ * Sets her off along stops (stage.js's s.goal, the stops after the first its spots) to talk to p, or just to get there.
+ * walk: no leg longer than stage.js walks rather than runs (72 pixels), for a scene with no running (the pits).
+ */
+function goAlong(s, stops, p, walk) {
+  let from = [s.me.x, s.me.y];
+  const legs = [];
+  for (const to of stops) {
+    const n = walk ? Math.ceil(Math.hypot(to[0] - from[0], (to[1] - from[1]) / DEPTH) / WALK_LEG) : 1;
+    for (let i = 1; i <= n; i++) legs.push([from[0] + ((to[0] - from[0]) * i) / n, from[1] + ((to[1] - from[1]) * i) / n]);
+    from = to;
+  }
+  const [gx, gy] = legs.shift();
+  // stage.js takes the spots in turn only on the way to someone: getting somewhere, a stand-in nobody is in reach of.
+  s.goal = { x: gx, y: gy, person: p ?? { name: '' }, spots: legs, best: Infinity, since: performance.now() / 1000 };
   return true;
 }

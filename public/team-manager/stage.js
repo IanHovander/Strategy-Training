@@ -578,13 +578,14 @@ export function runScene(scene, opts = {}) {
       const tall = /sit|floor|kneel/.test(p.gait ?? p.faceGait ?? '') ? 34 : 50; // seated, they're shorter
       const onBody = Math.abs(x - at.x) <= 10 && y >= at.y - tall && y <= at.y + 4;
       const onBubble = s.near === p && Math.abs(x - (at.x + 11)) <= 9 && y >= at.y - 62 && y <= at.y - 40;
-      if ((onBody || onBubble) && (!best || at.y > (scene.spriteOf?.(best) ?? best).y)) best = p;
+      // Someone's body wins over a bubble (it's wider than it's drawn); then whoever's nearer the front.
+      const score = (onBody ? 1e4 : 0) + at.y;
+      if ((onBody || onBubble) && (!best || score > best.score)) best = { p, score };
     }
-    return best;
+    return best?.p ?? null;
   }
   /** A tap at (x, y) on the screen (see the header): the scene's, someone to talk to, the way out, a spot to walk to, or A. */
   function tap(x, y) {
-    emit('tap', { x, y });
     if (x < 0 || x >= W || y < 0 || y >= H) return pressA();
     if (s.mode !== 'free' || s.talk || scene.update) return pressA();
     const wx = x + s.view.x, wy = y + s.view.y, e = scene.exit, out = s.exitAt;
@@ -698,6 +699,7 @@ export function runScene(scene, opts = {}) {
   surface.addEventListener('pointerdown', (e) => {
     if (e.button > 0 || e.target.closest('.stick, button')) return;
     const [x, y] = toScreen(e);
+    emit('tap', { x, y });
     if (scene.pointer?.('down', x, y, s)) {
       held = e.pointerId;
       surface.setPointerCapture(e.pointerId);
