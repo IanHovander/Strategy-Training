@@ -184,7 +184,7 @@ on Saturday morning, set a little apart so the last four read together. The team
 |---|---|---|
 | **Your robot, 5026** | avg 30 | — |
 | **7461** | **avg 38**, the biggest number on the screen; "BIG. FAST. LOUD FANS." Friday 45, 42, 47, 43, 41, 46; Saturday **31, 27, 30, 28** | Fading: 44 a match on Friday, 29 on Saturday, about two thirds of it. Something's wrong with it, and it hasn't been fixed. |
-| **6834** | avg 35; "NEW INTAKE FRIDAY NIGHT." Friday 27, 30, 28, 31, 29, 29; Saturday **43, 46, 44, 47** | Rising: 29 on Friday, then a new intake, and 45 a match since, more than 7461 ever scored. The right pick. |
+| **6834** | avg 35; "NEW INTAKE FRIDAY NIGHT." Friday 26, 28, 27, 29, 26, 26; Saturday **47, 49, 48, 48** | Rising: 27 on Friday, then a new intake, and 48 a match since, about 10% better than 7461 at its best. The right pick. |
 
 **The trap is that the average hides the trend.** The senior strategist's page is from Friday night, when 7461 really
 was the best robot at the event. On Saturday morning it started limping, and an average over all ten matches still

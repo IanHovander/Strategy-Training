@@ -1,8 +1,8 @@
 // The pick: where the opening hands the player the decision (docs/blue-banner-design.md, section 5, beat 1). Seed 4 is
 // on the clock: 45 seconds, big and red at the top. Under it is the scouting tablet (tablet.js): her robot pinned for
 // reference, and two teams to pick from (teams.js). 7461 shows the biggest average on the screen, 38, but it's
-// fading: 44 a match on Friday, 29 on Saturday morning. 6834 shows 35, but it's rising: 29 on Friday, a new intake
-// Friday night, 45 on Saturday. 6834 is the right pick.
+// fading: 44 a match on Friday, 29 on Saturday morning. 6834 shows 35, but it's rising: 27 on Friday, a new intake
+// Friday night, 48 on Saturday, about a tenth better than 7461 at its best. 6834 is the right pick.
 //
 // What happens, phase by phase:
 //   browse    the clock runs. The stick (or the arrow keys) moves between the cards; A picks the one the cursor's on.

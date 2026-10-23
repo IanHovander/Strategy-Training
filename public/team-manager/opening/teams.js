@@ -3,8 +3,9 @@
 //
 // The tablet is the team's scouting app. Each team has ten qualification matches: six on Friday, four on Saturday
 // morning. 7461 was the best robot at the event on Friday (44 a match) and has been limping since: about two thirds of
-// that on Saturday (29). 6834 was ordinary on Friday (29), put on a new intake Friday night and has scored 45 a match
-// since, better than 7461 ever did. The averages still say 7461, 38 to 35; the last four boxes say 6834, 45 to 29.
+// that on Saturday (29). 6834 was ordinary on Friday (27), put on a new intake Friday night and has scored 48 a match
+// since: about a tenth better than 7461 at its best. The averages still say 7461, 38 to 35; the last four boxes say
+// 6834, 48 to 29.
 // Both strips are on screen, the Saturday boxes set apart, so a careful player can see it, and seeds 1 to 3 passed on
 // the bigger average for a reason.
 //
@@ -28,8 +29,8 @@ export const YOU = { num: OURS, scores: [28, 33, 18, 31, 35, 22, 34, 30, 36, 33]
 export const TEAMS = [
   // Friday: 264 in six, 44. Saturday: 116 in four, 29, two thirds of it. All ten: 38, the biggest average on the screen.
   { num: '7461', note: 'BIG. FAST. LOUD FANS.', scores: [45, 42, 47, 43, 41, 46, 31, 27, 30, 28] },
-  // Friday: 174 in six, 29. Saturday: 180 in four, 45, more than 7461 ever scored. All ten: 35.
-  { num: '6834', note: 'NEW INTAKE FRIDAY NIGHT.', scores: [27, 30, 28, 31, 29, 29, 43, 46, 44, 47] },
+  // Friday: 162 in six, 27. Saturday: 192 in four, 48, about 10% over 7461's Friday 44. All ten: 35.
+  { num: '6834', note: 'NEW INTAKE FRIDAY NIGHT.', scores: [26, 28, 27, 29, 26, 26, 47, 49, 48, 48] },
 ];
 
 export const RIGHT = '6834';
