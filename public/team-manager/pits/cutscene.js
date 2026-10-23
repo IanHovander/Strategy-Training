@@ -56,6 +56,7 @@ import { lerp, seg } from '../pixel.js';
 import { placeCard, bars, cover, along, dirToward, SPEED } from '../stage.js';
 import { TEAMMATE_NAME } from '../cast.js';
 import { SCRIPT } from './lines.js';
+import { WORLD } from './set.js';
 
 /**
  * Where the walking part begins: she comes into the hall along the aisle from off its left edge (scene.js's enter)
@@ -114,8 +115,8 @@ const HERO = [572, 108];
 // and in B6 she steps back to HERO. B5b ends as Noor goes off the right of the screen (ROLL_END), and A doesn't hurry
 // it (its hold is all of it).
 const WALK_IN = [[424, 120], HERO_PLAN];
-const ROLL = [CART, [630, 112], [652, 122], [880, 122]];
-const ROLL_AT = 0.55, GET_UP = 0.15, ROLL_END = 8.7;
+const ROLL = [CART, [630, 112], [652, 122], [904, 122]];
+const ROLL_AT = 0.55, GET_UP = 0.15, ROLL_END = 9.4;
 const PUSH = 26, NOOR_PUSH = [CART[0] - PUSH, CART[1]];
 const NOOR_OUT = ROLL.map(([x, y]) => [x - PUSH, y]);
 const EASE = 0.6;
@@ -124,7 +125,7 @@ const rolled = (t) => (t <= 0 ? 0 : t < EASE ? (t * t) / (2 * EASE) : t - EASE /
 /** 5026's board in B5b, as set.js draws it, until each moment: folded by the table, picked up, turned round, standing. */
 const BOARD = [[LEAN_AT + 0.35, 'empty'], [LEAN_AT + 0.7, 'lift'], [LEAN_AT + 1.05, 'turn']];
 const ELI_GO = [644, 119], ELI_GO_AT = 0.3, LEAD_AT = 0.8;
-const LEAD = [ELI_GO, [670, 124], [900, 124]];
+const LEAD = [ELI_GO, [670, 124], [924, 124]];
 const HERO_ASIDE = [566, 104];
 
 /** Getting up from kneeling, t seconds after starting to: bent over for a moment first, so nobody pops upright. */
@@ -143,12 +144,13 @@ const PIT = { x: 444, y: 0, s: 1 };
 const CLOSE = { x: 537, y: 34, s: 2 };
 const B2 = 16.5; // when the call comes, in cut scene seconds: the pan down the row is over
 /**
- * Where the pan after the robot stops: the end of the hall, the QUEUE sign and the way out on the screen as the robot
- * goes by and out, the strategist (at HERO_ASIDE) just off the left. The pan goes with the cart, from where it starts to PAN_RUN
- * pixels further on, so it never outruns it (its fastest is 0.9 of the cart's pace: the robot always moves forward on
+ * Where the pan after the robot stops: the right edge of the world, so the end of the hall, the QUEUE sign and the way
+ * out (the opening under its steel header) are on the screen as the robot goes by and out through it, the strategist
+ * (at HERO_ASIDE) off the left. The pan goes with the cart, from where it starts to PAN_RUN pixels further on, so
+ * it never outruns it (its fastest is 0.9 of the cart's pace: the robot always moves forward on
  * the screen). B6's pan back takes BACK_PAN seconds, no quicker than the long pan down the row.
  */
-const B5_END = 576, PAN_RUN = 220, BACK_PAN = 3.2;
+const B5_END = WORLD.w - 256, PAN_RUN = 260, BACK_PAN = 3.2;
 /**
  * B7: the fade to black on the pit (from FADE[0] to FADE[1] seconds in), and up again on the near end of the hall (from
  * FADE[2] to FADE[3]), the film bars going over BARS_OFF. A doesn't hurry it (its hold is all of it): the A that closes

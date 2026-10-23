@@ -5,7 +5,7 @@
 //   fields.js    the eight fields, floors and stands, the arena's own (field.js, bleachers.js) laid down at each division
 //   hall.js      the truss and lamps, the curtains with the divisions' signs and big screens, the barriers along their
 //                hems, the end walls and their doorways, two tables
-//   people.js    the crowd, the crews, the people in the aisles, and the twelve she can talk to
+//   people.js    the crowd, the crews, the people in the aisles, and the sixteen she can talk to
 //   cutscene.js  the lights, the tilt, the scan, and the two of them at Newton
 //
 // The way in and out, as every scene in the game has them (entered on the left, left on the right): the cut scene ends
@@ -16,10 +16,7 @@
 // Newton's red end and the info desk, through the doorway in the right wall under its EXIT sign, toward Einstein
 // (stage.js exit, TO EINSTEIN), and fields.js move() lets her through the wall's face only there (the left doorway, under
 // its IN sign, is the way in, not out: she stops at the wall's face). Seated scouts, parents, a coach, a pit crew member
-// and a mentor in the front rows along the way put someone to talk to in reach every ten to fifteen seconds at a run.
-// stage.js draws the exit's label right-aligned over its arrow, so with the camera short of the hall's end, the arrow
-// just in from the right edge, the label would be cut off there ('TO EINSTEI'). The scene's exit holds it back until
-// it fits on the screen (draw()), and the arrow comes in on its own first.
+// and a mentor in the front rows along the way put someone to talk to in reach every ten seconds or so at a run.
 //
 // drawWorld() is the whole hall from a view, back to front: the dark up under the roof, the floors, the stands, the
 // curtains between them, then each field in view with everyone standing on it and past its ends sorted in by their feet,
@@ -41,10 +38,11 @@
 // no earlier in the day than the cut scene would have ended. stage.js doesn't fade a scene in after its cut scene, so
 // the scene does that itself over FADE seconds, while she walks in.
 
-import { W, H, C, useContext, screen, fill, seg } from '../pixel.js';
-import { drawWithShadow, cover } from '../stage.js';
+import { W, H, C, useContext, screen, fill, seg, withAlpha } from '../pixel.js';
+import { drawWithShadow, drawPerson, cover } from '../stage.js';
+import { FIELD, WALK_Y } from '../field.js';
 import { HERO_LOOK } from '../walker.js';
-import { WORLD, START, ENTER, EXIT, DIVISIONS, ox, divisionAt } from './layout.js';
+import { WORLD, START, ENTER, EXIT, DIVISIONS, HOME, INFO_DESK, PITCH, ox, divisionAt } from './layout.js';
 import { setupFields, visibleDivisions, drawFloors, drawStandsAll, drawField, move } from './fields.js';
 import { drawHall, drawGateways, drawUnlit, drawBeams, PROPS, PROP_BLOCKS } from './hall.js';
 import { PEOPLE, BLOCKS, lookOf, standingIn, reach, prompt, faceTo, talkingSeat, warm } from './people.js';
@@ -59,7 +57,33 @@ import { makeCutscene } from './cutscene.js';
  * arm robot where she'd stand inside the robot.
  */
 const QUEUES = DIVISIONS.map((_, k) => ({ x0: ox(k) + 46, x1: ox(k) + 130, y0: 82, y1: 112 }));
-const STOPS = [...BLOCKS, ...PROP_BLOCKS, ...QUEUES];
+/**
+ * Past Newton's red end everyone stands low on the floor, the two beyond its scoring table and the two at the info desk,
+ * so on the way out she passes behind them, along the top of the aisle under the hem's barrier. There her feet keep to
+ * row 77 or above (with move()'s margins: 5 across, 2 deep), two rows over the highest of their heads (the desk's
+ * volunteer's, 46 rows over her feet), from a stride short of the first one's head to the desk's right end, so her
+ * running legs never cross a head: walking along lower down, she slides up to that row as she comes to them, and past
+ * the desk's end the way to the doorway bears down again. Below the lane down to their own footprints (BLOCKS), the
+ * floor is behind them.
+ */
+const LOW_HEADS = { x0: ox(HOME) + 742 - 21, x1: INFO_DESK.x1 - 5, y0: 79, y1: 114, slide: 16 };
+const STOPS = [...BLOCKS, ...PROP_BLOCKS, ...QUEUES, LOW_HEADS];
+
+/**
+ * At each end of a field the walkway runs on behind the alliance wall, the loading station and the drive team, all
+ * standing in front of it and as tall as she is or taller, so walking by there (the last stretch before the way out, at
+ * Newton's red end) she'd be all but hidden for a second. There she shows through them, as anyone on the walkway shows
+ * through a rocket (field.js): drawn again over the field at 65%, the same as what's in front of her at 35%. Where
+ * nothing is in front of her that changes nothing. Local x, from the corner of the field where its robots fetch from the loading station to the end of
+ * the walkway past the driver station, and the blue end mirrored.
+ */
+const BEHIND = { x0: FIELD.x1 - 48, x1: PITCH - FIELD.x0 + 40 + 16 };
+const SHOW_THROUGH = 0.65;
+function behindEnd(x, y) {
+  if (y > WALK_Y[1]) return false;
+  const lx = x - ox(divisionAt(x));
+  return (lx > BEHIND.x0 && lx < BEHIND.x1) || (lx > PITCH - BEHIND.x1 && lx < PITCH - BEHIND.x0);
+}
 
 /** How far either side of their feet someone standing is drawn (walker.js frames, and the shadow under them). */
 const HALF = 9;
@@ -85,7 +109,7 @@ function splitAt(things, k) {
 /**
  * The hall from view { x, y } at world time t. o: lights and beams (the cut scene's lamps, 0 to 1), the talking seat
  * (bleachers.js keeps that person sitting still) and whoever she's talking to (talking, who turns to her), the
- * teammate's { x, y, dir, gait, dist } if not at MATE, and her: the stage's s.player and her x while walking, or hero
+ * teammate's { x, y, dir, gait, dist } if not at MATE, and her: the stage's s.player, her x and s.me while walking, or hero
  * { x, y, dir, gait, dist } in the cut scene.
  */
 function drawWorld(g, view, t, o = {}) {
@@ -118,6 +142,7 @@ function drawWorld(g, view, t, o = {}) {
       .map((p) => (p.cut ? { y: p.y, draw: () => p.draw(lo, hi) } : p));
     drawField(g, view, t, k, { more, hero: at });
   });
+  if (o.me && behindEnd(o.me.x, o.me.y)) withAlpha(SHOW_THROUGH, () => drawPerson(g, view, { ...o.me, look: HERO_LOOK }));
   if ((o.lights ?? 1) < 1) drawUnlit(g, view);
   if (o.beams) drawBeams(g, view, t, o.beams);
 }
@@ -129,8 +154,6 @@ let where = { x: START.x, y: START.y }; // where she is: for the bubble over who
 /** Seconds the hall takes to fade in from the cut scene's black, and when it started (page clock), if it's fading. */
 const FADE = 0.6;
 let fadeFrom = null;
-/** The way out, its label left off while it wouldn't fit on the screen (see above). */
-const exit = { ...EXIT };
 
 export const scene = {
   // The card under the big screen and the phone's title: short enough for one line at phone width (the page's title
@@ -141,7 +164,7 @@ export const scene = {
   world: WORLD,
   start: START,
   enter: ENTER,
-  exit,
+  exit: EXIT,
   move: (x, y, dx, dy) => move(x, y, dx, dy, STOPS),
   people: PEOPLE,
   reach,
@@ -161,9 +184,7 @@ export const scene = {
   },
   draw(g, view, t, s) {
     where = s.me;
-    // The label's right edge, its outline and the arrow's nudge included, is a pixel short of the exit's x (stage.js).
-    exit.label = EXIT.x - view.x <= W ? EXIT.label : null;
-    drawWorld(g, view, t + shift, { player: s.player, playerX: s.me.x, talkingSeat: talkingSeat(s), talking: s.talk?.person });
+    drawWorld(g, view, t + shift, { player: s.player, playerX: s.me.x, me: s.me, talkingSeat: talkingSeat(s), talking: s.talk?.person });
     if (fadeFrom != null) cover(1 - seg(t, fadeFrom, fadeFrom + FADE));
   },
   cutscene,

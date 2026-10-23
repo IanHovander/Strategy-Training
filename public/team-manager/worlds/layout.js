@@ -89,11 +89,14 @@ export const PASSAGE = { y0: DOOR.y0 + 3, y1: DOOR.y1 - DOOR.h - 4 };
 export const START = { x: WALL + 32, y: DOOR.y0 + 11, dir: 2 };
 export const ENTER = [[-20, START.y]];
 /**
- * The way out: on through the right wall's doorway toward Einstein (stage.js exit). Once her feet are in the passage
- * she walks on off the right edge of the picture. fields.js move() lets her past the wall's face only in the passage's
- * rows, and only this far: nothing stands between there and the edge.
+ * The way out: on through the right wall's doorway toward Einstein (stage.js exit). Once her feet are in the passage,
+ * a few pixels short of the wall's face, she walks on off the right edge of the picture. fields.js move() lets her that
+ * far only in the passage's rows: nothing stands between there and the edge. stage.js draws the arrow with its tip just
+ * short of x, so it points into the doorway from the floor in front of it, clear of the wall's steel jamb, and its sign
+ * is low enough that the arrow sits in the passage's lit band and the label over it on the bare floor under the hem's
+ * barrier, not across its posts.
  */
-export const EXIT = { x: WORLD.w - WALL + 4, y0: PASSAGE.y0, y1: PASSAGE.y1, label: 'TO EINSTEIN', sign: { y: DOOR.y0 - 6 } };
+export const EXIT = { x: WORLD.w - WALL - 4, y0: PASSAGE.y0, y1: PASSAGE.y1, label: 'TO EINSTEIN', sign: { y: DOOR.y0 + 4 } };
 /**
  * The signs over the two doorways (hall.js draws them), each out from its wall's face on an arm, at x0 to x0 + w, rows
  * y0 to y0 + h, its wall's steel door frame carried up the corner to the arm, so sign and doorway read as one. Over the
@@ -125,9 +128,10 @@ export const BARRIERS = [
  * front, far enough forward that whoever stands behind one leaves the floor in front of the hem's barrier open.
  */
 export const BUTTON_TABLE = { x0: ox(6) - 44, x1: ox(6) - 4, back: 95, front: 102 };
-// The info desk stands low on the right pad, so the head of whoever works it is under the feet of anyone walking along
-// the top of the aisle there, under the barrier, on the way out.
-export const INFO_DESK = { x0: ox(HOME) + PITCH + 38, x1: ox(HOME) + PITCH + 94, back: 125, front: 131 };
+// The info desk stands low on the right pad, its skirt down on the floor's last row, so the head of whoever works it is
+// under the feet of anyone walking along the top of the aisle there, under the barrier, on the way out (scene.js
+// LOW_HEADS). Nobody stands in front of it: she talks to its volunteer from beside its right end.
+export const INFO_DESK = { x0: ox(HOME) + PITCH + 38, x1: ox(HOME) + PITCH + 94, back: 127, front: 133 };
 
 // ---- The matches ----
 // Every division plays its own qualification matches, out of step with the others: two and a half minutes of play,

@@ -202,7 +202,7 @@ function slideRow(x, nx, y, blocks) {
 export function move(x, y, dx, dy, blocks = []) {
   // Her run reaches sixteen pixels ahead of her feet (the leading leg in its longest stride): far enough from either end
   // wall that it never crosses the wall's edge. Only through the right doorway does she go further, in the passage's
-  // rows, on past the wall's face as far as the way out (layout.js EXIT), and past the face she keeps to those rows. Walking straight right toward the right doorway (from
+  // rows, on up to the wall's face, as far as the way out (layout.js EXIT), and that close to the face she keeps to those rows. Walking straight right toward the right doorway (from
   // STEER, no more than DOOR_SLIDE rows from its passage), she bears toward its middle row at her own pace, as she slides
   // round anything else in her way: so holding right from the start walks her the length of the hall and out through
   // the middle of the doorway.

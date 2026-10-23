@@ -2,7 +2,7 @@
 // front of them by the walker's camera. It's the arena's projection exactly (field.js): 8 pixels to the foot across,
 // 2.75 pixels to the foot of depth (the camera looks down at 20 degrees) and 8 pixels to the foot of height, so the
 // people, the robots and their carts are the same size here as on the field. The hall is 832 pixels long, three and a
-// bit screens, and the view slides along it.
+// bit screens, and the view slides along it; past its right end the world runs on 24 pixels more, the way out.
 //
 // From the back: the hall wall up in the dark with a lighting truss, then 8-foot pipe and drape in the stands' dim navy
 // (pixel.js stand0-2) the length of the row. Each pit is 10 feet square on interlocking foam tiles with a binding in the
@@ -22,8 +22,14 @@
 // the side drapes, from the back as far as the aisle; the aisle runs on past both, out of the hall. You come in along
 // it from the left, from the rest of the hall, and leave along it at the right, to the field: there the arena's light
 // comes in through the opening and lies on the concrete in two hard-edged steps, fanning out from it (the dashed lines
-// pale where it falls on them), and the QUEUE sign stands at the aisle's near edge pointing on. EXIT is the walking
-// part's way out (stage.js scene.exit).
+// pale where it falls on them), and the QUEUE sign stands at the aisle's near edge pointing on. The opening shows above
+// the floor too: past the right end drape the hall wall, its truss and the back drape stop, and the passage beyond is
+// lit by the arena (opening()): a steel door header across its top, the passage wall in the light's two steps, and its
+// floor lit all the way back. EXIT is the walking part's way out (stage.js scene.exit).
+//
+// 1024's battery corner, where their runner goes to and fro between the battery cart and the robot, is taped off on the
+// foam in yellow and black hazard tape (RUN_TAPE): the strategist doesn't walk into it (people.js RUN_LANE), and the
+// tape shows why she stops there.
 //
 // It's drawn like the arena: the floor once into a layer, the hall wall, drapes and banners once into another, then
 // everything that stands up back to front by its floor line, with the people sorted in. Boxes are field.js boxes (the
@@ -37,14 +43,15 @@ import { eleBot, armBot, defBot } from '../sprites.js';
 import { robotCart } from '../field.js';
 import { TEAMS, ROW } from './teams.js';
 
-export const WORLD = { w: 832, h: 144 };
+export const WORLD = { w: 856, h: 144 };
 /** Pixels a foot across, a foot of depth, and the back drape's floor line. */
 export const FT = 8, DEEP = 2.75, BACK = 72;
 /** The floor line this many feet out from the back drape. */
 export const floorY = (z) => BACK + z * DEEP;
 
-/** The end drapes' lines across, left and right: the row of pits is between them. */
-const END_X = [2, 830];
+/** The end drapes' lines across, left and right: the row of pits is between them. The hall's wall and drapes stop at
+ * HALL_W, just past the right one; beyond it is the way out (opening()). */
+const END_X = [2, 830], HALL_W = END_X[1] + 2;
 const CONCRETE = '#353a4c', SPECKS = ['#3b4154', '#30354a']; // the arena's floor (field.js, bleachers.js)
 /**
  * The arena's light on the aisle at the way out, like the sun through the practice field's side doors: two flat steps
@@ -57,17 +64,24 @@ const CONCRETE = '#353a4c', SPECKS = ['#3b4154', '#30354a']; // the arena's floo
  * between the steps.
  */
 const LIGHT = {
-  y0: 101, reach: 46, step: 18, fan: 0.5, speck: 0.025,
+  y0: 101, reach: 70, step: 30, fan: 0.5, speck: 0.025,
   hi: ['#59627c', '#5f6883', '#545c76'], lo: ['#454c63', '#4b5269', '#40475d'],
 };
 /**
- * The way out, for the walking part (stage.js scene.exit): once her feet are past x, anywhere across the aisle, from its
- * back edge (just in front of the right end drape's post, the way she passes every side drape's along the row) to its
- * near edge, she walks on out along it to the field. Behind the aisle, in front of the glasses stand, the floor runs on
- * to the end drape; walking on to the right there takes her down into the aisle and out (move()). The arrow sits low in
- * the aisle's back half, clear of the desk, the glasses stand and the QUEUE sign.
+ * The way out, for the walking part (stage.js scene.exit): once her feet are past x, in the opening past the right end
+ * drape, anywhere across the aisle from a few rows in front of the drape's post (so she passes it with floor between
+ * them, never brushing its foot) to its near edge, she walks on out along it to the field. Behind the aisle, in front of
+ * the glasses stand, the floor runs on to the end drape; walking on to the right there takes her down round the post into
+ * the aisle and out (move()). The arrow sits over the middle of the passage floor, below her head wherever she walks out
+ * along the back of the aisle, clear of the desk, the glasses stand and the QUEUE sign.
  */
-export const EXIT = { x: 818, y0: 100, y1: 138, label: 'TO THE FIELD', sign: { y: 106 } };
+export const EXIT = { x: 842, y0: 103, y1: 138, label: 'TO THE FIELD', sign: { y: 124 } };
+/**
+ * 1024's battery corner, taped off: the tape's outside edges (its left and front strips are where the strategist's feet
+ * stop, people.js RUN_LANE). It runs from in front of the battery cart down to the pit's front edge, and from beside the
+ * robot's cart to the side drape.
+ */
+export const RUN_TAPE = { x0: 220, x1: 253, y0: 79, y1: 98 };
 /** The aisle's dashed lines (the lane, the near edge), and its floor boxes: [x, y, the x their cable runs up to a pit at]. */
 const LANE_Y = 121, EDGE_Y = 140, FLOOR_BOXES = [[278, 112, 300], [692, 113, 676]];
 const INSIDE = '#181b29'; // the dark inside of a bin
@@ -151,16 +165,22 @@ function drawFloor() {
     rect(x0, y0, 1, 8, C.steel2);
     rect(x0 + 40, y0, 1, 8, C.steel2);
   }
+  // 1024's battery corner, taped off in hazard tape two pixels wide: yellow and black in stripes running up to the right,
+  // two pixels each. Its top and right strips are mostly behind the battery cart and the side drape.
+  const T = RUN_TAPE, tapeAt = (x, y) => rect(x, y, 1, 1, ((x + y) >> 1) % 2 ? C.yel1 : C.ink);
+  for (let x = T.x0; x <= T.x1; x++) for (const y of [T.y0, T.y0 + 1, T.y1 - 1, T.y1]) tapeAt(x, y);
+  for (let y = T.y0 + 2; y < T.y1 - 1; y++) for (const x of [T.x0, T.x0 + 1, T.x1 - 1, T.x1]) tapeAt(x, y);
   // The arena's light through the way out, a pixel at a time: which step (u pixels in from the edge, less the fan), and
   // now and then one of its specks.
   const { y0, reach, step, fan, speck, hi, lo } = LIGHT;
   /** Which step of the light (x, y) is in: hi, lo or null (none). */
   const lit = (x, y) => {
+    if (x >= HALL_W) return hi; // the passage beyond the end drape, lit all the way back
     if (y < y0) return null;
     const u = WORLD.w - 1 - x - Math.floor(fan * (y - y0)), even = (x + y) % 2 === 0;
     return u < step ? hi : u < step + 2 ? (even ? lo : hi) : u < reach - 2 ? lo : u < reach && !even ? lo : null;
   };
-  for (let y = y0; y < WORLD.h; y++) {
+  for (let y = BACK; y < WORLD.h; y++) {
     for (let x = WORLD.w - reach - Math.ceil(fan * (WORLD.h - y0)); x < WORLD.w; x++) {
       const tone = lit(x, y);
       if (!tone) continue;
@@ -330,25 +350,78 @@ function monitor(t) {
   if (Math.floor(t * 1.5) % 2 === 0) rect(x + 29, y + 4, 2, 2, C.red1);
 }
 
+/**
+ * The way out above the floor, past the right end drape: the hall wall, its truss and the back drape stop there (an ink
+ * edge down the wall's end), and the passage to the arena beyond is in the arena's light, in LIGHT's two steps of lit
+ * concrete with the checker between them: the dim step up under the header, the bright one lower down where the light
+ * comes in level with the floor, with the arena's stands and field wall dim at the far end. Across its top runs the
+ * opening's header, a steel beam (lit along its top edge, a rivet every few pixels) on the hall wall's line, with the dark
+ * of the roof above it and its shadow below; down its left side, a steel door jamb shows the wall's thickness.
+ */
+function opening() {
+  const x0 = HALL_W, w = WORLD.w - x0, [hi, lo] = [LIGHT.hi[0], LIGHT.lo[0]];
+  rect(x0, 0, w, BACK, C.ink);
+  rect(x0, 13, w, BACK - 13, lo);
+  for (let y = 13; y < BACK; y++) {
+    const k = rnd(y * 17 + 4200);
+    for (let x = x0; x < WORLD.w; x++) {
+      const u = y - 34;
+      if (u >= 2 || (u >= 0 && (x + y) % 2 === 0)) rect(x, y, 1, 1, hi);
+    }
+    if (k < 0.3) rect(x0 + Math.floor(rnd(y * 31 + 4300) * w), y, 1, 1, y >= 36 ? LIGHT.hi[1] : LIGHT.lo[1]);
+  }
+  // The header's shadow on the top of the passage wall, as dark as the hall's own concrete, checkered into the dim step
+  // below it: the light comes in level from beyond, under the header, not down from it.
+  rect(x0, 13, w, 7, CONCRETE);
+  for (let x = x0; x < WORLD.w; x++) if ((x + 20) % 2 === 0) rect(x, 20, 1, 1, CONCRETE);
+  // The arena that way, dim at the far end of the passage, in the bright band: a few tiers of night-blue stands with a
+  // speck of crowd here and there, then the field wall's blue rail, each outlined in ink.
+  rect(x0, 40, w, 1, C.ink);
+  for (let y = 41; y < 48; y++) rect(x0, y, w, 1, y % 2 ? C.night1 : C.night2);
+  for (let x = x0; x < WORLD.w; x++) {
+    for (const y of [42, 44, 46]) if (rnd(x * 7 + y * 13 + 4400) < 0.28) rect(x, y, 1, 1, rnd(x + y * 5 + 4500) < 0.5 ? C.night3 : C.steel1);
+  }
+  rect(x0, 48, w, 1, C.ink);
+  rect(x0, 49, w, 1, C.blue1);
+  rect(x0, 50, w, 1, C.blue0);
+  rect(x0, 51, w, 1, C.ink);
+  // The foot of the passage wall, in shade, where its floor begins.
+  rect(x0, BACK - 2, w, 2, LIGHT.lo[2]);
+  // The header: a steel beam across the top of the opening, outlined in ink.
+  rect(x0, 6, w, 7, C.ink);
+  rect(x0, 7, w, 5, C.steel1);
+  rect(x0, 7, w, 1, C.steel2);
+  rect(x0, 11, w, 1, C.steel0);
+  for (let x = x0 + 3; x < WORLD.w; x += 6) rect(x, 9, 1, 1, C.steel3);
+  // The hall wall's end, an ink edge down past the end drape, and its thickness: a steel door jamb down the left of the
+  // opening from under the header to the floor (a lit highlight line on its left, the lit face, the mid, ink on its right).
+  rect(x0 - 1, 0, 1, BACK, C.ink);
+  rect(x0, 13, 4, BACK - 13, C.ink);
+  rect(x0, 13, 1, BACK - 14, C.steel3);
+  rect(x0 + 1, 13, 1, BACK - 14, C.steel2);
+  rect(x0 + 2, 13, 1, BACK - 14, C.steel1);
+}
+
 function drawBack() {
   // The hall wall up in the dark: a lighting truss with a lamp every so often.
-  rect(0, 0, WORLD.w, 9, C.stand0);
-  rect(0, 1, WORLD.w, 1, C.steel1);
-  rect(0, 4, WORLD.w, 1, C.steel0);
-  for (let x = 0; x < WORLD.w; x += 4) rect(x + ((x >> 2) % 2 ? 2 : 0), (x >> 2) % 2 ? 2 : 3, 1, 1, C.steel0);
-  for (let x = 30; x < WORLD.w; x += 64) {
+  rect(0, 0, HALL_W, 9, C.stand0);
+  rect(0, 1, HALL_W, 1, C.steel1);
+  rect(0, 4, HALL_W, 1, C.steel0);
+  for (let x = 0; x < HALL_W; x += 4) rect(x + ((x >> 2) % 2 ? 2 : 0), (x >> 2) % 2 ? 2 : 3, 1, 1, C.steel0);
+  for (let x = 30; x < HALL_W; x += 64) {
     rect(x - 1, 5, 3, 1, C.ink);
     rect(x, 5, 1, 1, C.yel2);
   }
   // The back drape: dim navy hanging in folds from its pipe, the hem in shade on the floor, from end drape to end drape.
-  rect(0, 9, WORLD.w, 63, C.stand1);
-  for (let x = 3; x < WORLD.w - 2; x += 5 + Math.floor(rnd(x + 40) * 3)) {
+  rect(0, 9, HALL_W, 63, C.stand1);
+  for (let x = 3; x < HALL_W - 2; x += 5 + Math.floor(rnd(x + 40) * 3)) {
     rect(x, 9, 1, 62, C.stand2);
     rect(x + 2, 9, 1, 62, C.stand0);
   }
-  rect(0, 71, WORLD.w, 1, C.stand0);
-  rect(0, 7, WORLD.w, 1, C.steel2);
-  rect(0, 8, WORLD.w, 1, C.ink);
+  rect(0, 71, HALL_W, 1, C.stand0);
+  rect(0, 7, HALL_W, 1, C.steel2);
+  rect(0, 8, HALL_W, 1, C.ink);
+  opening();
   // An upright at every pit's back corner, above its side drape, outlined like the side drape's own post under it.
   for (let k = 0; k <= 8; k++) {
     const x = 96 + 80 * k;
@@ -825,13 +898,15 @@ export function drawWorld(g, view, t, o = {}) {
 // The aisle, and into each pit's open front as far as its robot or its board (as wide as the cart or the board's panel,
 // so nobody slips behind one, not even along the pit's back edge); in front of the counter and the desk at the ends. The
 // side drapes stop anyone crossing from pit to pit. 5026's spot is as it is while you walk: the board. The aisle stops
-// short of each end of the picture: the way out at the right is EXIT's, which stage.js walks her out of by herself. In
-// front of the desk and the glasses stand the floor runs on to the end drape; from there, as from the desk's end, walking
-// on to the right takes her down round into the aisle and out (move()). Out in the aisle the QUEUE sign's post stands in
+// short of each end of the picture: the way out at the right is EXIT's, which stage.js walks her out of by herself. Past
+// the glasses stand (DOOR) only the aisle runs on, from a few rows in front of the end drape's post, so she never brushes
+// its foot. In front of the desk and the glasses stand the floor runs on to the end drape; from there, as from the desk's
+// end, walking on to the right takes her down round into the aisle, clear of the post, and out (move()). Out in the aisle the QUEUE sign's post stands in
 // the way of the rows near its foot, her starting row among them; move() takes her round its front.
-const AISLE = { x0: 10, x1: 822, y0: 100, y1: 138 };
+const AISLE = { x0: 10, x1: 848, y0: 100, y1: 138 }, DOOR = { x: 822, y: EXIT.y0 };
 function open(x, y) {
   if (x < AISLE.x0 || x > AISLE.x1 || y > AISLE.y1) return false;
+  if (x > DOOR.x && y < DOOR.y) return false;
   if (y >= AISLE.y0) return true;
   if (x < 96) return y >= 84 && x <= 90;
   if (x >= 736) return y >= 88 && x >= 742;
@@ -857,6 +932,8 @@ const hits = (bs, x, y) => bs.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.
  * down. And how much further a step goes across than down the screen (stage.js: the floor recedes).
  */
 const ROUND = { y: 5, floor: 8, x: 5 }, DEPTH = 0.8;
+/** Where the corner rule last took her down from while she pushed up-right (move()), for the steps tried from there. */
+let cornered = null;
 
 /**
  * Where a step from (x, y) by (dx, dy) ends up, as [x, y]: along, then across, each as far as the floor allows (like
@@ -865,6 +942,11 @@ const ROUND = { y: 5, floor: 8, x: 5 }, DEPTH = 0.8;
  * a plain step that never goes round anything (scene.js tries straight paths with it).
  */
 export function move(x, y, dx, dy, extra = [], { round = true } = {}) {
+  // Taken down the corner while pushing up and to the right (below): stage.js then also tries an eighth of a turn either
+  // way from the same spot, and the one straight up would win (it's more "up-right" than going down) and lift her back
+  // each frame, so she'd hover against the stand. From the spot the corner just took her down from, straight up is shut.
+  if (cornered && (cornered[0] !== x || cornered[1] !== y)) cornered = null;
+  if (cornered && Math.abs(dx) < 0.01 && dy < 0) return [x, y];
   // Somewhere she shouldn't be (someone stepped into her): let her walk out.
   const free = !open(x, y) || hits(BLOCKS, x, y) || hits(extra, x, y);
   const ok = (px, py) => open(px, py) && (free || (!hits(BLOCKS, px, py) && !hits(extra, px, py)));
@@ -874,9 +956,10 @@ export function move(x, y, dx, dy, extra = [], { round = true } = {}) {
   };
   const [nx] = reach(x, y, dx, 0);
   // Walking on to the right at the desk's end, into the glasses stand, or in front of it into the end drape, she goes on
-  // down round them into the aisle, toward the way out, rather than treading on the spot. Not while she's stepping up:
-  // then she's walking into the corner, and stops in it.
-  const corner = round && dx > 0.01 && dy > -0.01 && nx < x + dx && y < AISLE.y0 && x + dx > GLASSES.x0 - 4;
+  // down round them into the aisle, toward the way out, rather than treading on the spot: also while she's pushing up
+  // and to the right at once (W+D, or a stick pushed toward the arrow), as long as she's going no steeper up than across.
+  // Only straight up is walking into the corner, and stops her in it.
+  const corner = round && dx > 0.01 && dy >= -dx * 1.01 && nx < x + dx && y < DOOR.y && x + dx > GLASSES.x0 - 4;
   // Walking straight along the aisle toward the QUEUE sign's post on a row it stands across (her starting row is one),
   // she bears down round its front, from VEER pixels short of it, and walks on: she passes in front of the sign, never
   // behind its panel with her face hidden, or treading on the spot against the post. If she's against it already, she
@@ -886,6 +969,7 @@ export function move(x, y, dx, dy, extra = [], { round = true } = {}) {
   const veer = round && dx !== 0 && Math.abs(dy) < 0.01 && ahead > -1 && ahead < VEER && hits([POST], POST.x0, y);
   const post = round && dx !== 0 && dy > -0.01 && Math.abs(nx - x) < Math.abs(dx) && hits([POST], x + dx, y);
   const [, ny] = reach(nx, y, 0, corner ? Math.max(dy, dx * 0.8) : post ? Math.max(dy, Math.abs(dx) * 0.8) : veer ? Math.abs(dx) * 0.5 : dy);
+  if (corner && dy < 0) cornered = [x, y];
   if (round && nx === x && ny === y) return roundEnd(ok, x, y, dx, dy, extra) ?? [x, y];
   return [nx, ny];
 }

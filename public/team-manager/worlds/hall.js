@@ -489,21 +489,34 @@ function doorwayArt(x0, side) {
   for (let i = 0; i < 16; i++) {
     rect(x0 + Math.floor(rnd(i + x0 + 840) * WALL), gy + 3 + Math.floor(rnd(i + x0 + 860) * (gh - 3)), 1, 1, CONCOURSE[i % 3 ? 2 : 0]);
   }
-  // The threshold across the opening on the hall's side, in place of the wall's edge: steel, lit on its left.
-  const tx = left ? fx : edge;
-  rect(tx, gy, 4, gh, C.steel2);
-  rect(tx, gy, 1, gh, C.steel3);
-  rect(tx + 3, gy, 1, gh, C.steel1);
-  // The door frame up the corner of the wall behind, lit along its top and its left.
+  // The threshold across the opening on the hall's side, in place of the wall's edge: a low steel plate flat on the
+  // floor, in the frame's dark steel (it faces up, not toward the light, so it reads as lying on the floor, not as a
+  // post), with ink along the side toward the hall where it meets the hall's floor.
+  const tx = left ? x1 - 3 : edge;
+  rect(tx, gy, 3, gh, C.steel1);
+  rect(left ? tx + 2 : tx, gy, 1, gh, C.ink);
+  // The door frame's back post up the corner of the wall behind, from the passage's back floor line, lit along its top
+  // and its left.
   rect(fx, back - 1, 3, h + 1, C.steel1);
   rect(fx, back - 1, 3, 1, C.steel3);
   rect(fx, back, 1, h, C.steel2);
-  // The wall in front: the ink along the back of its cut top, the top lit along that edge, and the frame's foot.
+  // The wall in front: the ink along the back of its cut top, then the cut top itself, three rows lit by the concourse's
+  // light along the edge, a highlight on that edge and ink between it and the rest of the wall's top, as the back
+  // wall's cut face is set off from its top.
+  const lit = left ? '#3f4558' : '#454c61';
   rect(x0, front - 1, WALL, 1, C.ink);
-  rect(x0, front, WALL, 1, '#4a5166');
+  rect(x0, front, WALL, 3, lit);
+  rect(x0, front, WALL, 1, '#59617a');
+  rect(x0, front + 3, WALL, 1, C.ink);
+  for (let i = 0; i < 4; i++) rect(x0 + 2 + Math.floor(rnd(i * 7 + x0 + 90) * (WALL - 6)), front + 1 + (i % 2), 1, 1, WALLS[0]);
   rect(edge, front - 1, 1, 144 - front + 1, C.ink);
-  rect(fx, front, 3, 2, C.steel2);
-  rect(fx, front, 3, 1, C.steel3);
+  // The frame's front post, standing on the floor line in front of the passage as the back post stands on the one
+  // behind it, so it rises over the near wall's cut top: lit on its left and top, ink on its side away from the wall.
+  rect(fx, front - 1, 3, h + 1, C.steel1);
+  rect(fx, front - 1, 3, 1, C.steel3);
+  rect(fx, front, 1, h, C.steel2);
+  rect(left ? fx - 1 : fx + 3, front - 1, 1, h + 1, C.ink);
+  rect(fx, y1, 3, 1, C.ink);
 }
 
 /**
