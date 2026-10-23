@@ -260,15 +260,17 @@ const PICK_CLOCK = 45;
 // say ("you are on the clock", "would you prefer to join or form your own alliance?", "congratulations!", "pick an
 // alliance to cheer on"); the captains' on the invitation teams use; the rules are the 2019 manual's.
 const pages = (...p) => p;
-const chars = (page) => page.join('').length;
+/** A page's letters: a page is two lines, or { name, lines, ... } for a page someone else says (talk.js). */
+const chars = (page) => (Array.isArray(page) ? page : page.lines).join('').length;
 /** How long stage.js takes over a page when the pages turn by themselves: typing at 40 a second, then a pause. */
 const pageTime = (page) => chars(page) / 40 + 1.2 + chars(page) * 0.035;
 /** When page k of a beat's words comes up at that pace, the words starting `at` seconds into the beat. */
 const pageAt = (lines, at, k) => at + lines.slice(0, k).reduce((n, p) => n + pageTime(p), 0);
 
 /**
- * The beats (stage.js), 22 of them: open, mcEnters, welcome, thanks, herTurn, rules, captains, clock1, invite1,
- * joinOrForm, accept1, moveUp, clock2, invite2, mcToHer, accept2, sheRunsOn, later, alliances, backups, applause, out.
+ * The beats (stage.js), 26 of them: open, mcEnters, welcome, thanks, herTurn, rules, roundOne, roundTwo, anyBelow,
+ * turnDown, captains, clock1, invite1, joinOrForm, accept1, moveUp, clock2, invite2, mcToHer, accept2, sheRunsOn,
+ * later, alliances, backups, applause, out.
  */
 export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   const LOOKS = {};
@@ -459,7 +461,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     });
   }
 
-  // 7. captains: Robin calls the top eight out one by one, by seed, and each runs on through the gate to their sign as
+  // 11. captains: Robin calls the top eight out one by one, by seed, and each runs on through the gate to their sign as
   // she calls them, in single file: setting off so as to get there as their number types, but never sooner than
   // CAP_GAP after the one before (the ones for the far side of the mic have the furthest to go, so they come in a
   // little after their names). Right of the mic, they pass in front of it and of Robin. The shot opens low, on the
@@ -500,7 +502,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     say: says('mc', CALL, CALL_AT),
   });
 
-  // 8. clock1: Alliance One's captain walks to the mic, and the clock starts on "you are on the clock": a cut to the
+  // 12. clock1: Alliance One's captain walks to the mic, and the clock starts on "you are on the clock": a cut to the
   // display as it starts counting, Alliance One's row lit, and back as she gets to the mic.
   const firstUp = [pt(capSpot(0)), [SPOTS[0] + 4, PASS], [AT_MIC.x - 8, PASS], pt(AT_MIC)];
   const ON_BOARD = [1.9, 3.5];
@@ -517,10 +519,11 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   const clock1Starts = clock1.say.at + chars(clock1.say.lines[0]) / 40;
   const clock1Left = PICK_CLOCK - (autoEnd(clock1) - clock1Starts);
 
-  // 9. invite1: close on the captain at the mic: Alliance One invites 2468, the clock stops, Robin turns to listen. The
+  // 13. invite1: close on the captain at the mic: Alliance One invites 2468, the clock stops, Robin turns to listen. The
   // shot sits high enough that everyone waiting in front of the field (Sam by the gate, her at the front) is behind the
-  // dialog box, so the words start with the cut; signs 4 and 5 stand whole just under the top film bar.
-  const AT_MIC_SHOT = closeUp(AT_MIC.x - 2, 85);
+  // dialog box, so the words start with the cut; signs 3 to 5 stand whole just under the top film bar, a row of the
+  // field between it and their panels.
+  const AT_MIC_SHOT = closeUp(AT_MIC.x - 2, 84);
   const invite1 = beat({
     name: 'invite1', dur: 2.5,
     moves: mcPose('stand', 7),
@@ -533,7 +536,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   });
   const clockStopped1 = clock1Left - invite1.say.at;
 
-  // 10. joinOrForm: 2468 is a captain, so Robin skates over (in front of the mic and the captain at it, and of 3000's)
+  // 14. joinOrForm: 2468 is a captain, so Robin skates over (in front of the mic and the captain at it, and of 3000's)
   // and holds the mic out to them. She stops nearly level with them, so the mic she holds out comes up by their chin.
   const BY_THEO = [SPOTS[1] + 17, LINE_Y + 2];
   /** Past 3000's captain, a step in front of their feet, before she turns in to 2468. */
@@ -551,7 +554,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     ), 1.0),
   });
 
-  // 11. accept1: close on 2468's captain and Robin, Sam (by the gate) just out of shot to the right.
+  // 15. accept1: close on 2468's captain and Robin.
   beat({
     name: 'accept1', dur: 2.5,
     shot: () => closeUp(SPOTS[1] + 4, 97),
@@ -562,9 +565,9 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     )),
   });
 
-  // 12. moveUp: 2468 steps behind Alliance One's sign as its first pick; captains 3 to 8 each move up a spot, and 9152,
+  // 16. moveUp: 2468 steps behind Alliance One's sign as its first pick; captains 3 to 8 each move up a spot, and 9152,
   // ranked ninth, runs on as the new number eight, once the line has settled: along the empty front row of the waiting
-  // area, through the gate and along in front of the mic, Sam stepping aside from the gate till he's through. Robin
+  // area, through the gate and along in front of the mic (Sam, in the lane, is well out of his way). Robin
   // skates home; Alliance One's captain walks back last, once 9152 is past the mic, so nobody walks along in step in
   // front of anyone and no two people on the move are ever in the same column. The one captain whose step crosses the
   // mic's gap (7777, spot 5 to 4) goes round behind Robin's spot, the mic and the captain still at it, along the picks'
@@ -586,7 +589,6 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   const ikeRun = [[ikeSlot.x, ikeSlot.y], [GATE_OUT.x - 14, ikeSlot.y], pt(GATE_OUT), pt(GATE_IN), [376, FRONT],
     [SPOTS[7], FRONT], [SPOTS[7], 124], pt(capSpot(7))];
   const MAYA0 = reaches(ikeRun, 4, IKE0, 'run') + 0.4;
-  const SAM_BACK = reaches(ikeRun, 3, IKE0, 'run') + 0.1;
   const mayaBack = [pt(AT_MIC), [AT_MIC.x - 6, PASS], [SPOTS[0] + 6, PASS], pt(capSpot(0))];
   beat({
     name: 'moveUp', dur: 6.5,
@@ -596,7 +598,6 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
       ...Object.fromEntries(shifters.map((num, k) => [num, trip(shiftPath(k), t, stepAt(k), 'walk', 0, 0)])),
       '9152': trip(ikeRun, t, IKE0, 'run', 0, 4),
       '4000': trip(mayaBack, t, MAYA0, 'walk', 0, 0),
-      sam: t < SAM_BACK ? trip(samAside, t, 0.9, 'walk', SAM_ASIDE.dir, SAM_AT.dir) : trip(samBack, t, SAM_BACK, 'walk', SAM_AT.dir),
     }),
     shot: (t) => at1x(pan(view(200, LINE_VIEW), view(300, LINE_VIEW), seg(t, 2.4, 6.3))),
     cheer: (t) => lerp(1, 0.5, seg(t, 0.5, 5)),
@@ -611,7 +612,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   const CAPS2 = ['4000', ...shifters, '9152'];
   const PICKS2 = { 0: ['2468', ''] };
 
-  // 13. clock2: Alliance Two's captain walks to the mic.
+  // 17. clock2: Alliance Two's captain walks to the mic.
   const secondUp = [pt(capSpot(1)), [SPOTS[1] + 4, PASS], [AT_MIC.x - 8, PASS], pt(AT_MIC)];
   const clock2 = beat({
     name: 'clock2', dur: 4.5,
@@ -626,10 +627,12 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   const clock2Starts = clock2.say.at + chars(clock2.say.lines[0]) / 40;
   const clock2Left = PICK_CLOCK - (autoEnd(clock2) - clock2Starts);
 
-  // 14. invite2: close on the mic: Alliance Two invites 5026.
+  // 18. invite2: close on the mic: Alliance Two invites 5026. Meanwhile, behind the dialog box and out of the close-up,
+  // Sam comes out of the lane to the gate's left, to make way for Robin going through it.
+  const samBackAside = [pt(SAM_LANE), [SAM_LANE.x, 156], pt(SAM_ASIDE)];
   const invite2 = beat({
     name: 'invite2', dur: 2.5,
-    moves: mcPose('stand', 7),
+    moves: (t) => ({ ...mcPose('stand', 7)(), sam: trip(samBackAside, t, 0, 'walk', SAM_ASIDE.dir) }),
     shot: () => AT_MIC_SHOT,
     cheer: () => 0.15,
     board: (t) => chart(captains(CAPS2, PICKS2), 1, clock2Left - Math.min(t, invite2.say.at)),
@@ -639,13 +642,13 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   });
   const clockStopped2 = clock2Left - invite2.say.at;
 
-  // 15. mcToHer: Robin skates out through the gate, swings round in front of her (18 pixels in front of her feet, so
+  // 19. mcToHer: Robin skates out through the gate, swings round in front of her (18 pixels in front of her feet, so
   // she passes rather than brushes by), on to the open floor on her right, and holds out the mic; she turns as Robin
   // passes and steps out of the crowd to it. They meet where the mic stand (on the field behind them) is well clear of
   // both heads and of the mic between them, the near wall's posts stand clear of her and behind Robin, and a step
-  // forward of her waiting place, so in the close-up their heads are below the captains' feet on the line: she stands
-  // at MEET, Robin a skate's length to her right.
-  const MEET = [HER.x + 34, HER.y + 10], MC_BY_HER = [MEET[0] + 22, MEET[1] + 1];
+  // forward of her waiting place, so in the close-up the film bar covers the captains' feet on the line above their
+  // heads: she stands at MEET, Robin a skate's length to her right. Sam waits on the gate's left (SAM_ASIDE).
+  const MEET = [HER.x + 34, HER.y + 16], MC_BY_HER = [MEET[0] + 22, MEET[1] + 1];
   /** The lane up the gap between the waiting crowd and her place, to and from the gate. */
   const LANE = [HER.x - 20, HER.y - 4];
   const toHer = [HOME, [HOME[0] - 2, FRONT], [376, FRONT], pt(GATE_IN), pt(GATE_OUT), LANE,
@@ -658,8 +661,6 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   beat({
     name: 'mcToHer', dur: Math.max(4.5, MET + 0.5),
     moves: (t) => ({
-      // Sam steps aside from the gate first, to make way, and stays there while she runs on, till the fade.
-      sam: trip(samAside, t, 0.3, 'walk', SAM_ASIDE.dir, SAM_AT.dir),
       mc: glide(toHer, t, TO_HER, 'offer', 6, 'stand', 7),
       '5026': t < HER_STEPS ? still(HER.x, HER.y, turn(4, 2, t - HER_TURNS)) : trip(herStep, t, HER_STEPS, 'walk', 2),
     }),
@@ -668,7 +669,8 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     board: () => chart(captains(CAPS2, PICKS2), 1, clockStopped2),
   });
 
-  // 16. accept2: close on the two of them, the mic held out, the near wall behind their heads.
+  // 20. accept2: close on the two of them, the mic held out, the near wall behind their heads: she accepts, and Robin
+  // congratulates her, as the MC does after every accepted invitation.
   beat({
     name: 'accept2', dur: 2.5,
     shot: () => closeUp(MEET[0] + 11, MEET[1] - 26),
@@ -676,13 +678,15 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     board: () => chart(captains(CAPS2, PICKS2), 1, clockStopped2),
     say: says('5026', pages(
       ['TEAM 5026 ACCEPTS! THANK YOU, 3000!'],
+      { name: MC_NAME, lines: ['CONGRATULATIONS, 5026!', 'HEAD ON OUT TO ALLIANCE TWO!'], tag: C.blue1, look: lookFor('mc'), faceGait: 'emcee' },
     )),
   });
 
-  // 17. sheRunsOn: she runs on through the gate to her captain's left, Robin rolling after her and home; the captain
+  // 21. sheRunsOn: she runs on through the gate to her captain's left, Robin rolling after her and home; the captain
   // walks back to the sign. Each of them crosses the gate's column on their own: she comes up through it and runs off
   // left, and the captain sets off from the mic once she's by, so she's well ahead (she runs, the captain walks) and
-  // never over her; Robin follows through the gate once the captain is past it.
+  // never over her; Robin follows through the gate once the captain is past it. Sam walks off to the left of everyone's
+  // way (SAM_FAR) before she comes through.
   const herRun = [MEET, LANE, pt(GATE_OUT), pt(GATE_IN), [pickSpot(1, 1).x, 124], pt(pickSpot(1, 1))];
   const mcHome = [MC_BY_HER, LANE, pt(GATE_OUT), pt(GATE_IN), [376, FRONT], [HOME[0] - 2, FRONT], HOME];
   const lenaBack = [pt(AT_MIC), [AT_MIC.x - 6, PASS], [SPOTS[1] + 4, PASS], pt(capSpot(1))];
@@ -693,33 +697,34 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
       mc: glide(mcHome, t, MC0, 'emcee', HOME_DIR, 'offer', 6),
       '5026': trip(herRun, t, RUN0, 'run', 0, 2),
       '3000': trip(lenaBack, t, LENA0, 'walk', 0, 0),
+      sam: trip([pt(SAM_ASIDE), pt(SAM_FAR)], t, 0, 'walk', SAM_FAR.dir),
     }),
     shot: (t) => at1x(pan(REPS_SHOT, view(176, LINE_VIEW), seg(t, 0.3, 3.6))),
     cheer: (t) => lerp(1, 0.5, seg(t, 0.5, 3.5)),
     board: () => chart(captains(CAPS2, { ...PICKS2, 1: ['5026', ''] })),
   });
 
-  // 18. later: a four-step fade to black and back, and round two is over: everyone where it leaves them.
+  // 22. later: a four-step fade to black and back, and round two is over: everyone where it leaves them.
   const FINAL = finale(crowd);
-  const AFTER = 1.1;
+  const AFTER = 0.8;
   beat({
-    name: 'later', dur: 2.2,
+    name: 'later', dur: 1.6,
     moves: (t) => (t < AFTER ? {} : FINAL),
     end: FINAL,
     shot: (t) => at1x(t < AFTER ? view(176, LINE_VIEW) : view(222, LINE_VIEW)),
     cheer: (t) => (t < AFTER ? 0.5 : 0.3),
     board: (t) => (t < AFTER ? chart(captains(CAPS2, { ...PICKS2, 1: ['5026', ''] })) : FULL),
     over: (t) => {
-      cover(t < AFTER ? seg(t, 0, 0.8) : 1 - seg(t, 1.3, 2.2));
+      cover(t < AFTER ? seg(t, 0, 0.6) : 1 - seg(t, 0.9, 1.6));
       bars(1);
     },
   });
 
-  // 19. alliances: along the line, all eight alliances of three.
+  // 23. alliances: along the line, all eight alliances of three.
   beat({
-    name: 'alliances', dur: 5.6,
+    name: 'alliances', dur: 4.0,
     moves: mcPose('emcee', HOME_DIR),
-    shot: (t) => at1x(pan(view(222, LINE_VIEW), view(302, LINE_VIEW), seg(t, 0.3, 5.3))),
+    shot: (t) => at1x(pan(view(222, LINE_VIEW), view(302, LINE_VIEW), seg(t, 0.3, 3.8))),
     cheer: (t) => lerp(0.3, 0.7, seg(t, 0.3, 1.2)),
     board: () => FULL,
     say: says('mc', pages(
@@ -727,11 +732,11 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     ), 0.3),
   });
 
-  // 20. backups: the display, the backups on its last line.
+  // 24. backups: the display, the backups on its last line.
   beat({
     name: 'backups', dur: 2.5,
     moves: mcPose('emcee', HOME_DIR),
-    shot: () => at1x(BOARD_SHOT),
+    shot: () => at1x(BACKUPS_SHOT),
     cheer: () => 0.3,
     board: () => FULL,
     say: says('mc', pages(
@@ -739,7 +744,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     )),
   });
 
-  // 21. applause: the whole arena, the stands on their feet over the full line of alliances, and the send-off.
+  // 25. applause: the whole arena, the stands on their feet over the full line of alliances, and the send-off.
   beat({
     name: 'applause', dur: 3,
     moves: mcPose('flair'),
@@ -752,7 +757,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     )),
   });
 
-  // 22. out: from the same shot, down to walking's view, the film bars going, as she steps out in front of the line,
+  // 26. out: from the same shot, down to walking's view, the film bars going, as she steps out in front of the line,
   // clear of her captain, ready to walk about. Its last frame is walking about's first.
   const stepOut = [pt(pickSpot(1, 1)), [START.x + 2, LINE_Y - 4], pt(START)];
   beat({

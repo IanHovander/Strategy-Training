@@ -103,8 +103,8 @@ const EASE = 0.6;
 const rolled = (t) => (t <= 0 ? 0 : t < EASE ? (t * t) / (2 * EASE) : t - EASE / 2);
 /** 5026's board in B5b, as set.js draws it, until each moment: folded by the table, picked up, turned round, standing. */
 const BOARD = [[LEAN_AT + 0.35, 'empty'], [LEAN_AT + 0.7, 'lift'], [LEAN_AT + 1.05, 'turn']];
-const ELI_GO = [642, 124], ELI_GO_AT = 0.3, LEAD_AT = 0.8;
-const LEAD = [ELI_GO, [900, 124]];
+const ELI_GO = [644, 119], ELI_GO_AT = 0.3, LEAD_AT = 0.8;
+const LEAD = [ELI_GO, [670, 124], [900, 124]];
 const HERO_ASIDE = [566, 104];
 
 /** Getting up from kneeling, t seconds after starting to: bent over for a moment first, so nobody pops upright. */
