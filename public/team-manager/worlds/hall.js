@@ -1,22 +1,27 @@
 // The hall around the eight fields: everything at the World Championship that isn't a field, the stands or a person.
 // High up in the dark, a lighting truss runs the length of the hall with a lamp under it every 32 pixels; only the cut
 // scene looks up there. Behind each division's bleachers hangs a dark drape, and between one division's bleachers and
-// the next a pipe-and-drape curtain (the gateway) comes down to the floor. On the curtain hang the division's sign, a
-// blue banner like the one the game is named for, and its big screen with the match on its field: the score, the clock
-// and the qualification match number, live from layout.js matchState(). Past Newton the curtain carries on to the end of
-// the hall with a yellow sign for Einstein (the finals are in another hall: this is the way out), and a concrete wall
-// with an EXIT sign closes off each end. On the floor stand two tables: the button traders' and the info desk.
+// the next a pipe-and-drape curtain (the gateway) comes down to the floor. On each curtain hang the sign of the division
+// on its right, a blue banner like the one the game is named for, beside that division's stands, and the big screen of
+// the division on its left, over that field's scoring table, with the match on its field: the score, the clock and the
+// qualification match number, live from layout.js matchState(). So every aisle shows where one division ends and the
+// next begins. Past Newton the curtain carries on to the end of the hall with Newton's screen and a yellow sign for
+// Einstein (the finals are in another hall: this is the way out), and a concrete wall with an EXIT sign closes off each
+// end; the curtain by the left wall has a second Archimedes screen. On the floor stand two tables: the button traders'
+// and the info desk.
 // Everything is in world pixels through pixel.js's camera, culled to the view: the hall is 6600 pixels long. What never
 // changes is drawn once into pixel.js layers and blitted after; a big screen is drawn again only when its numbers change.
 //   drawHall(g, view, t, { lights })  rows above 0: ceiling, truss, lamps, the drape behind the stands (before the stands)
 //   drawGateways(g, view, t)          the curtains, signs, screens and end walls (after the stands, before the fields)
-//   PROPS, PROP_BLOCKS                the two tables, to sort in with the field, and the boxes that stop her
+//   PROPS, PROP_BLOCKS                the two tables and the hems' barriers, to sort in with the fields, and the boxes
+//                                     that stop her
 //   drawBeams(g, view, t, a)          the lamps' spot cones, in screen space, drawn last
 
-import { C, useContext, camera, screen, fill, rect, disk, text, dither, withAlpha, stepped, layer, blit, rnd } from '../pixel.js';
+import { C, useContext, camera, screen, fill, rect, disk, text, measure, dither, withAlpha, stepped, layer, blit, rnd } from '../pixel.js';
 import { tones } from '../cast.js';
 import {
-  ox, DIVISIONS, WORLD, WALL, TOP, STANDS, GATEWAY, SIGN, SCREEN, BUTTON_TABLE, INFO_DESK, matchState, clockText,
+  ox, DIVISIONS, WORLD, WALL, TOP, STANDS, GATEWAY, SIGN, SCREEN, BUTTON_TABLE, INFO_DESK, BARRIERS, BARRIER_Y, matchState,
+  clockText,
 } from './layout.js';
 
 // Dim ramps beside the palette (lit, mid, shade): the curtains, the darker drape behind the stands, and the concrete
@@ -134,11 +139,12 @@ const trussRepeat = () => once('truss', 288, CHORD[1] + 4 - CHORD[0], () => {
   const top = CHORD[0], rows = CHORD[1] - top - 4;
   camera(0, top, 1);
   // The lacing between the chords: a zigzag, a step up or down each pixel, turning every 6 so each bay is 12 wide,
-  // and the far side's zigzag in shade behind it, the other way round.
+  // and the far side's zigzag in shade behind it, the other way round: the far one first, the near one over it where
+  // they cross.
   for (let x = 0; x < 288; x++) {
     const p = x % 12, up = p < 6 ? p : 11 - p;
-    rect(x, top + 4 + up, 1, 1, C.steel0);
-    rect(x, top + 3 + rows - up, 1, 1, C.steel1);
+    rect(x, top + 3 + rows - up, 1, 1, C.steel0);
+    rect(x, top + 4 + up, 1, 1, C.steel1);
   }
   // The two chords: a steel tube, lit along the top, outlined in ink.
   for (const y of CHORD) {
@@ -245,11 +251,19 @@ const dusk = () => once('dusk', PLEATS.length, 2, () => {
   }
 });
 
-/** A pipe-and-drape curtain from x0 to x1: the pipe, the pleats, the hem on the floor, an upright at each end. */
+/**
+ * A pipe-and-drape curtain from x0 to x1: the pipe, the pleats, the hem on the floor, an upright at its left end and an
+ * ink edge at its right.
+ */
 function curtain(view, x0, x1) {
   band(view, strip('back0', BACKDRAPE), x0, x1, CLOTH, DUSK);
   band(view, dusk(), x0, x1, DUSK, DUSK + 2);
   band(view, strip('drape', DRAPE), x0, x1, DUSK + 2, HEM - 1);
+  // Where the cloth meets the next block of stands, an ink line between the two, the outline of the stands' end stair.
+  if (x1 < WORLD.w - WALL) {
+    const [e0, e1] = cull(view, x1 - 1, x1);
+    if (e1 > e0) rect(x1 - 1, CLOTH, 1, HEM - CLOTH, C.ink);
+  }
   const [c0, c1] = cull(view, x0, x1);
   rect(c0, HEM - 1, c1 - c0, 1, DRAPE[0]);
   rect(c0, HEM, c1 - c0, 1, C.ink);
@@ -257,8 +271,10 @@ function curtain(view, x0, x1) {
   rect(c0, PIPE, c1 - c0, 4, C.ink);
   rect(c0, PIPE + 1, c1 - c0, 1, C.steel3);
   rect(c0, PIPE + 2, c1 - c0, 1, C.steel2);
-  // An upright at each end, except where the curtain meets an end wall.
-  for (const x of [x0, x1 - 2]) if (x > WALL && x < WORLD.w - WALL - 2) upright(view, x);
+  // An upright at the left end, except where the curtain meets an end wall. The right end always meets a block of
+  // stands, outlined in ink above, and an upright there would stand straight up out of the head of whoever waits at the
+  // foot of the curtain (Newton's teammate).
+  if (x0 > WALL) upright(view, x0);
 }
 
 /** An upright: a steel post from the pipe to the floor on a small base plate. */
@@ -305,20 +321,20 @@ function signArt(k, x, y, w, h) {
   const cx = x + Math.floor(w / 2);
   text('DIVISION', cx, y + 4, { font: 3, color: C.blue3, align: 'center' });
   // A rule either side of DIVISION, like the banner's under its words.
-  rect(cx - 33, y + 6, 13, 1, C.blue2);
-  rect(cx + 20, y + 6, 13, 1, C.blue2);
+  rect(cx - 31, y + 6, 11, 1, C.blue2);
+  rect(cx + 20, y + 6, 11, 1, C.blue2);
   text(DIVISIONS[k].name, cx, y + 10, { color: C.white, align: 'center', shadow: C.blue0, sx: 0, sy: 1 });
 }
 
-/** Division k's big screen: the match on its field, as the broadcast shows it. */
-function bigScreen(view, k, t) {
-  const x = ox(k) + SCREEN.x0, w = SCREEN.x1 - SCREEN.x0, y = SCREEN.y0, h = SCREEN.y1 - SCREEN.y0;
+/** Division k's big screen, on the curtain at x `at`: the match on its field, as the broadcast shows it. */
+function bigScreen(view, k, at, t) {
+  const x = at + SCREEN.x0, w = SCREEN.x1 - SCREEN.x0, y = SCREEN.y0, h = SCREEN.y1 - SCREEN.y0;
   if (!inView(view, x - 2, x + w + 4)) return;
   const m = matchState(k, t), final = !m.playing && Math.floor(t * 2) % 2 === 0;
   castShadow(view, x, y, w, h);
   cable(x + 16, y);
   cable(x + w - 16, y);
-  // Drawn again only when what it shows changes: once a second while the clock runs.
+  // Drawn again only when what it shows changes: once a second while the clock runs. Archimedes' two screens share one.
   const key = `${m.blue} ${m.red} ${m.playing ? m.clock : final} ${m.qual}`;
   let shown = screens.get(k);
   if (shown?.key !== key) {
@@ -337,9 +353,13 @@ function screenArt(k, m, final, x, y, w, h) {
   rect(x + 3, y + 3, w - 6, h - 6, C.ink);
   rect(x + 4, y + 4, w - 8, h - 8, C.night0);
   const cx = x + w / 2;
-  text(DIVISIONS[k].name, cx, y + 6, { font: 3, color: C.blue3, align: 'center' });
+  // The division and the qualification match on one line: ARCHIMEDES Q34.
+  const name = `${DIVISIONS[k].name} `, num = `Q${m.qual}`;
+  const nx = cx - Math.floor(measure(name + num, { font: 3 }) / 2);
+  text(name, nx, y + 6, { font: 3, color: C.blue3 });
+  text(num, nx + measure(name, { font: 3 }) + 1, y + 6, { font: 3, color: C.steel3 });
   // The score either side of the clock, in boxes like the intro's broadcast scoreboard.
-  const by = y + 13, bw = 22;
+  const by = y + 12, bw = 22;
   [[m.blue, x + 6, [C.blue0, C.blue1, C.blue2]], [m.red, x + w - 6 - bw, [C.red0, C.red1, C.red2]]].forEach(([n, bx, T]) => {
     rect(bx, by, bw, 11, T[1]);
     rect(bx, by, bw, 1, T[2]);
@@ -348,12 +368,11 @@ function screenArt(k, m, final, x, y, w, h) {
   });
   if (m.playing) text(clockText(m.clock), cx, by + 3, { font: 3, color: C.yel2, align: 'center' });
   else if (final) text('FINAL', cx, by + 3, { font: 3, color: C.yel2, align: 'center' });
-  text(`QUAL ${m.qual}`, cx, by + 15, { font: 3, color: C.steel3, align: 'center' });
 }
 
 /** Past Newton: a yellow sign like the queue's, over the info desk, pointing the way to Einstein. */
 function einsteinSign(view) {
-  const x = LAST + 118, w = 120, y = 10, h = 20;
+  const x = LAST + 118, w = 120, y = 6, h = 20;
   if (!inView(view, x - 2, x + w + 4)) return;
   castShadow(view, x - 1, y - 1, w + 2, h + 2);
   cable(x + 8, y);
@@ -432,8 +451,9 @@ function wallArt(x0, side) {
 }
 
 /**
- * The curtains between the divisions' stands with each division's sign and big screen, the right pad's curtain with the
- * way to Einstein, and the end walls. Drawn after the stands and the walkway, before the fields and the people.
+ * The curtains between the divisions' stands with each division's sign and the big screen of the division before it,
+ * the right pad's curtain with Newton's screen and the way to Einstein, and the end walls. Drawn after the stands and the
+ * walkway, before the fields and the people.
  */
 export function drawGateways(g, view, t) {
   begin(g, view);
@@ -441,13 +461,14 @@ export function drawGateways(g, view, t) {
     const x0 = k === 0 ? WALL : ox(k) - GATEWAY, x1 = ox(k) + GATEWAY;
     if (!inView(view, x0 - 6, x1 + 6)) continue;
     curtain(view, x0, x1);
-    bigScreen(view, k, t);
+    bigScreen(view, Math.max(0, k - 1), ox(k), t);
     sign(view, k);
     // The lamps hang in front of the curtain's top.
     if (view.y < LAMP_Y + LAMP_H) lamps(view, x0, x1);
   }
   if (inView(view, LAST - 6, WORLD.w)) {
     curtain(view, LAST, WORLD.w - WALL);
+    bigScreen(view, DIVISIONS.length - 1, ox(DIVISIONS.length), t);
     einsteinSign(view);
     if (view.y < LAMP_Y + LAMP_H) lamps(view, LAST, WORLD.w - WALL);
   }
@@ -489,14 +510,14 @@ function buttonTable() {
   for (let row = 0; row < 2; row++) {
     for (let i = 0; i < 6 - row; i++) {
       const bx = x0 + 4 + i * 6 + (1 - row) * 3, by = top + 2 + row * 4;
-      if (row === 0 && bx > x1 - 15) continue; // the card stands there
+      if (row === 0 && bx > x1 - 27) continue; // the card stands there
       disk(bx, by, 2, C.ink);
       rect(bx - 1, by - 1, 2, 2, COLS[(i * 3 + row * 5) % COLS.length]);
       rect(bx - 1, by - 1, 1, 1, C.white);
     }
   }
-  // The card, folded to stand up: TRADE, hand-lettered.
-  const cx = x1 - 12, cy = top - 4;
+  // The card, folded to stand up on the table's right end: TRADE, hand-lettered.
+  const cx = x1 - 24, cy = top - 4;
   rect(cx - 1, cy - 1, 23, 9, C.ink);
   rect(cx, cy, 21, 7, '#fff4ee');
   rect(cx, cy + 6, 21, 1, C.steel3);
@@ -551,19 +572,50 @@ function prop(key, table, x0, y0, w, h, art) {
     },
   };
 }
-/** The two tables, to sort in with each field's things by their front floor lines. */
+/**
+ * A belt barrier along a curtain's hem from x0 to x1, built like field.js's stanchions: steel posts outlined in ink on
+ * small bases, about every 24 pixels, and a blue belt between them at the same height as the field's. It runs behind
+ * everyone standing in an aisle, so where the scene splits an aisle between two fields it cuts the run there (cut):
+ * draw(g, view, t, lo, hi) draws only the posts from lo up to hi and the belt between, and each field draws its own part.
+ */
+function barrier({ x0, x1 }) {
+  const y = BARRIER_Y, n = Math.max(1, Math.round((x1 - x0) / 24));
+  const posts = Array.from({ length: n + 1 }, (_, i) => Math.round(x0 + ((x1 - x0) * i) / n));
+  return {
+    x: (x0 + x1) / 2, y, x0: x0 - 3, x1: x1 + 4, cut: true,
+    draw(g, view, t, lo = -Infinity, hi = Infinity) {
+      begin(g, view);
+      if (!inView(view, x0 - 3, x1 + 4)) return;
+      const b0 = Math.max(x0, lo), b1 = Math.min(x1, hi);
+      if (b1 > b0) rect(b0, y - 19, b1 - b0, 1, C.blue1);
+      for (const x of posts) {
+        if (x < lo || x >= hi) continue;
+        rect(x - 3, y - 1, 7, 2, C.ink);
+        rect(x - 1, y - 22, 3, 22, C.ink);
+        rect(x, y - 21, 1, 21, C.steel3);
+      }
+    },
+  };
+}
+
+/** The two tables and the hems' barriers, to sort in with each field's things by their front floor lines. */
 export const PROPS = [
   prop('buttons', BUTTON_TABLE, BUTTON_TABLE.x0 - 1, BUTTON_TABLE.back - TABLE_H - 5,
-    BUTTON_TABLE.x1 - BUTTON_TABLE.x0 + 11, BUTTON_TABLE.front - BUTTON_TABLE.back + TABLE_H + 6, buttonTable),
+    BUTTON_TABLE.x1 - BUTTON_TABLE.x0 + 2, BUTTON_TABLE.front - BUTTON_TABLE.back + TABLE_H + 6, buttonTable),
   prop('info', INFO_DESK, INFO_DESK.x0 - 1, INFO_DESK.back - TABLE_H - 6,
     INFO_DESK.x1 - INFO_DESK.x0 + 2, INFO_DESK.front - INFO_DESK.back + TABLE_H + 7, infoDesk),
+  ...BARRIERS.map(barrier),
 ];
 /**
  * The tables' footprints, which stop her (with field.js's margins round them): the table top, from just behind its back
- * edge to its front. The people working a table have footprints of their own (people.js), and the floor behind them,
- * along the curtain's hem, stays open, as it is in every aisle.
+ * edge to its front, and the barriers' (their posts' floor line and a little behind it, down to the curtain). The people
+ * working a table have footprints of their own (people.js), and the floor between them and the barrier stays open, as
+ * it does in every aisle: it's the way along the aisle.
  */
-export const PROP_BLOCKS = [BUTTON_TABLE, INFO_DESK].map(({ x0, x1, back, front }) => ({ x0, x1, y0: back - 2, y1: front }));
+export const PROP_BLOCKS = [
+  ...[BUTTON_TABLE, INFO_DESK].map(({ x0, x1, back, front }) => ({ x0, x1, y0: back - 2, y1: front })),
+  ...BARRIERS.map(({ x0, x1 }) => ({ x0, x1, y0: BARRIER_Y - 16, y1: BARRIER_Y })),
+];
 
 // ---- The light ----
 /**

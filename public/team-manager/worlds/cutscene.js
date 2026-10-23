@@ -1,30 +1,37 @@
 // The World Championship's cut scene: the hall waking up, then the scan along all eight fields. It opens in the dark up
-// by the truss over Archimedes, the first division: the lamps come on left to right, each throwing its cone down, and
-// the hall comes up out of the dark in hard steps as they do; then the place card names the event. The camera tilts
-// down to the stands and the field, a match already playing, and glides the whole length of the hall, past every
-// division's curtain, sign and big screen, every field playing its own match out of step with the others. As each
-// division's sign comes by, a card in the bottom corner names it, the way the broadcast does; the glide is one beat
-// per division, so A moves on one division at a time and only SKIP leaves the whole scan. It slows and settles on
-// Newton, the last division and 5026's, where the strategist stands at the end of the walkway by the queue, watching.
-// The teammate comes up from 5026's robot in the queue, and the two of them say what the day is about: win Newton and
-// play on Einstein, and scout the other seven divisions, because whoever wins those will be waiting there.
+// by the truss over the left wall and Archimedes' curtain: the lamps come on left to right, each throwing its cone
+// down, and the hall comes up out of the dark in hard steps as they do; then the place card names the event. The camera
+// tilts down and along onto Archimedes' field, a match already playing, and glides the whole length of the hall, one
+// division after the next, every field playing its own match out of step with the others. The glide never stops and
+// never cuts: it runs fast along a field, then slows as it comes to the stretches worth a look, most of all the aisles,
+// where one field's red end, its scoring table and big screen, the curtain, and the next division's sign, queue and
+// blue end share the screen, so it's plain the fields stand side by side in one hall. As each division comes by, a card
+// in the bottom corner names it, the way the broadcast does, each landing somewhere else: on Archimedes' field, in the
+// aisle before Curie, as Daly's sign goes by, at Galileo's blue end, and so on. The glide is one beat per division, so
+// A moves on one division at a time (the camera sweeps on to the next one rather than cutting) and only SKIP leaves the
+// whole scan. At Newton, the last division and 5026's, it glides on past the strategist, who stands at the end of the
+// walkway by the queue, watching, and slows to a stop on Newton's field, its match playing like the other seven; then
+// it pans back to her. The teammate comes up from 5026's robot in the queue, and the two of them say what the day is
+// about: win Newton and play on Einstein, and scout the other seven divisions before queuing calls them, because
+// whoever wins those will be waiting there.
 //
 // makeCutscene(drawWorld) gives the beats, in stage.js's form. drawWorld(g, view, t, o) is the scene's: the whole
 // hall seen from view { x, y } at time t, with o = { lights, beams, hero, mate } (how far the lamps have come on, 0 to
 // 1; how strong the cones are, 0 to 1; her, { x, y, dir, gait, dist } or null; the teammate the same, or left out to
-// stand at MATE). Every beat works out its view as a pure function of its own time, in whole pixels, draws the hall at
-// c.T (the cut scene's clock, so an ?at= frame is exactly the frame that plays), then puts the cards, the film bars and
-// the fades on top in screen space. The last frame is the first frame of walking: level, half a screen left of START,
-// her at START turned to the teammate, the teammate at MATE turned to her. Until the bars go, the view stays at the
-// scan's height, so the two of them talk with their heads well clear of the top bar; it comes down to walking's as the
-// bars go.
+// stand at MATE). Every beat works out its view as a pure function of its own time, draws the hall at c.T (the hall's
+// clock, so an ?at= frame is exactly the frame that plays), then puts the cards, the film bars and the fades on top in
+// screen space. The last frame is the first frame of walking: level, half a screen left of START, her at START turned
+// to the teammate, the teammate at MATE turned to her. Until the bars go, the view stays at the scan's height, so the
+// two of them talk with their heads well clear of the top bar; it comes down to walking's as the bars go.
+// Every beat's opening (the lamps, the fade up, the place card, the cones) runs on the cut scene's clock, so A moving a
+// beat on early never makes any of them vanish: each carries on into the next beat and finishes on its own time.
 
-import { W, H, C, screen, fill, text, measure, stepped, lerp, seg, easeOut, easeIn, easeInOut, clamp } from '../pixel.js';
+import { W, H, C, stepped, lerp, seg, easeInOut, clamp } from '../pixel.js';
 import { placeCard, bars, cover, along, SPEED } from '../stage.js';
 import { HERO_NAME, TEAMMATE_NAME } from '../cast.js';
 import { HERO_LOOK } from '../walker.js';
 import { TEAMMATE_LOOK } from '../teammate.js';
-import { ox, DIVISIONS, HOME, SIGN, START, MATE } from './layout.js';
+import { ox, DIVISIONS, HOME, START, MATE } from './layout.js';
 
 // ---- The camera ----
 // The scan's framing, 8 rows above walking's: under the top film bar the signs and big screens are whole, and under the
@@ -32,129 +39,230 @@ import { ox, DIVISIONS, HOME, SIGN, START, MATE } from './layout.js';
 // truss (OPEN: the truss just clear of the top film bar, the bottom bar across the queue crew's chests rather than their
 // chins), and ends level (y 0), the way walking sees it.
 const OPEN = -56, LEVEL = -8;
-// The scan runs from just past the left wall to Newton framed for walking: her at START, half a screen in.
-const X0 = 24, X1 = START.x - W / 2;
-// A glide: it speeds up over the first 2 seconds, holds a steady speed, and slows to a stop over the last 3.5. The
-// speed is a trapezoid, so where the camera is comes from integrating it: a pure function of time, with no jolt.
-const SCAN = 27, RISE = 2, FALL = 3.5;
-const CRUISE = (X1 - X0) / (SCAN - RISE / 2 - FALL / 2); // about 231 pixels a second
+// The tilt comes down onto Archimedes' field, its blue driver station on the left and the blue rocket on the right, and
+// the scan runs from there past her at Newton's walkway (X1: her at START, half a screen in, the framing walking starts
+// from) to a stop on Newton's field at X_END, its cargo ship and both rockets in view, before it pans back to X1.
+const X0 = ox(0) + 120, X1 = START.x - W / 2, X_END = ox(HOME) + 280;
+
+// The glide's speed, pixels a second, at each view x along the hall: CRUISE between the fields, easing down (a cosine
+// dip, so it never jolts) over each stretch in SLOW to v at its middle x, w pixels either side: on every field, its
+// cargo ship mid-screen, so each match gets a long look, and slowest of all in the aisles. It speeds up over the first
+// RISE seconds and brakes to a stop at X_END at BRAKE pixels a second each second.
+const CRUISE = 200, RISE = 1.6, BRAKE = 70;
+/** A field's slow stretch: its cargo ship mid-screen. */
+const onField = (k, v = 140) => ({ x: ox(k) + 264, v, w: 200 });
+const SLOW = [
+  { x: ox(1) - 150, v: 55, w: 230 }, // the aisle from Archimedes' red station, table and screen to Curie's sign and queue
+  { x: ox(2) + 250, v: 90, w: 260 }, // Daly's field: the cargo ship, both rockets, robots scoring
+  { x: ox(4) - 118, v: 55, w: 230 }, // from Galileo's scoring table and screen to Hopper's queue and blue station
+  { x: ox(5) + 250, v: 140, w: 200 }, // Johnson's field
+  { x: ox(6) - 178, v: 55, w: 230 }, // Johnson's red station, the button traders and Milstein's sign
+  ...[0, 1, 3, 4, 6].map((k) => onField(k)), // the other fields but Newton's, where the glide comes to a stop
+];
+function speed(x, t) {
+  let v = CRUISE;
+  for (const s of SLOW) {
+    const u = Math.abs(x - s.x) / s.w;
+    if (u < 1) v = Math.min(v, s.v + ((CRUISE - s.v) * (1 - Math.cos(Math.PI * u))) / 2);
+  }
+  v = Math.min(v, Math.sqrt(2 * BRAKE * Math.max(0, X_END - x)));
+  return v * easeInOut(seg(t, 0, RISE));
+}
+// Where the camera is, worked out once by stepping along at that speed 240 times a second: STEPS[i] is the view's x
+// i/240 seconds into the scan, and SCAN how long the whole glide takes. scanX() reads between the steps, so the camera
+// is a pure function of time.
+const DT = 1 / 240;
+const STEPS = (() => {
+  const xs = [X0];
+  for (let x = X0, t = 0; x < X_END - 0.01; t += DT) {
+    x = Math.min(X_END, x + Math.max(speed(x, t), t > RISE ? 2 : 0) * DT);
+    xs.push(x);
+  }
+  return Float64Array.from(xs);
+})();
+const SCAN = (STEPS.length - 1) * DT;
 /** Where the scan has got to, t seconds in. */
 function scanX(t) {
-  t = clamp(t, 0, SCAN);
-  if (t < RISE) return X0 + (CRUISE * t * t) / (2 * RISE);
-  const u = SCAN - t;
-  if (u < FALL) return X1 - (CRUISE * u * u) / (2 * FALL);
-  return X0 + CRUISE * (t - RISE / 2);
+  const f = clamp(t, 0, SCAN) / DT, i = Math.min(STEPS.length - 2, Math.floor(f));
+  return lerp(STEPS[i], STEPS[i + 1], f - i);
 }
-/** And the other way: when the scan gets to x (0 if it's already behind the camera when the scan sets off). */
+/** How fast it's going there, pixels a second. */
+const scanV = (t) => (scanX(t + 1 / 60) - scanX(t)) * 60;
+/** And the other way: when the scan gets to x. */
 function scanTimeAt(x) {
-  const a = X0 + (CRUISE * RISE) / 2, b = X1 - (CRUISE * FALL) / 2;
-  if (x <= X0) return 0;
-  if (x < a) return Math.sqrt((2 * RISE * (x - X0)) / CRUISE);
-  if (x <= b) return RISE / 2 + (x - X0) / CRUISE;
-  return SCAN - Math.sqrt((2 * FALL * Math.max(0, X1 - x)) / CRUISE);
+  let lo = 0, hi = STEPS.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (STEPS[mid] < x) lo = mid;
+    else hi = mid;
+  }
+  return lo * DT;
 }
 
 // ---- The division cards ----
-// Built like stage.js's place card, in the bottom left clear of the film bar. It's drawn here rather than by calling
-// placeCard() because placeCard() always sits at the top and holds three seconds; if it ever takes a row and a hold,
-// this should become placeCard(age, name, sub, { y: CARD_Y, hold: HOLD }), so the house card's changes reach it too. A division's card slides in when its sign
-// is still 90 pixels short of the middle of the screen, so it's settled as the sign goes by, and slides out 2.4 seconds
-// later, half a second or so before the next one comes in at the scan's speed. When each comes in is worked out from
-// where the camera is, so it's a pure function of time too. Archimedes' sign is already in view when the scan starts:
-// its card comes in straight away.
-const HOLD = 2.4, SLIDE = 0.4;
-const CARD_H = 23, CARD_Y = H - 12 - 4 - CARD_H;
-const CARD_IN = DIVISIONS.map((_, k) => scanTimeAt(ox(k) + (SIGN.x0 + SIGN.x1) / 2 - (W / 2 + 90)));
-function divisionCard(k, age) {
+// stage.js's place card itself, in the bottom left clear of the film bar instead of the top, held HOLD seconds instead
+// of three: placeCard() is called with its time stretched over the hold (it slides in over its 0.2 to 0.6 seconds and
+// out over its 3.6 to 4) and drawn moved down from its row 16, so whatever the house card becomes, these become too. If
+// placeCard() ever takes a row and a hold, this is placeCard(age, name, sub, { y: CARD_Y, hold: HOLD }).
+// Each card comes in when the view reaches its CARD_AT x, somewhere different in each division (so no two divisions'
+// beats start on the same picture), and slides out HOLD seconds later, before the next one comes in. While it's up, no
+// queue's sign or the numbers on its carts pass under it: in the aisles it comes either as the glide slows into one,
+// before the next queue comes by, or as it leaves, once the queue has gone. When is worked out from where the camera is,
+// so it's a pure function of time too.
+const HOLD = 2.4, SLIDE = 0.4, CARD_SLID = 0.4; // CARD_SLID: how long a card takes to slide in
+const CARD_H = 23, CARD_Y = H - 12 - 4 - CARD_H, HOUSE_Y = 16; // HOUSE_Y: placeCard()'s own row
+const CARD_AT = [
+  X0, // on Archimedes' field as the tilt lands
+  ox(1) - 250, // as the glide slows into the aisle, Curie's sign coming into view while its queue is still off-screen
+  ox(2) + 210, // on Daly's field, the glide slowing for its rockets
+  ox(3) + 28, // with Galileo's blue driver station mid-screen, at full speed
+  ox(4) + 40, // as the glide leaves the aisle, Hopper's queue gone by
+  ox(5) + 80, // over Johnson's blue HAB, at full speed
+  ox(6) - 250, // as the glide slows into the aisle, the button traders coming into view
+  ox(HOME) + 200, // on Newton's own field, as the glide brakes to a stop on it
+];
+const CARD_IN = CARD_AT.map(scanTimeAt);
+function divisionCard(g, k, age) {
   if (age < 0 || age > HOLD + SLIDE) return;
-  const name = DIVISIONS[k].name, sub = `DIVISION ${k + 1} OF ${DIVISIONS.length}`;
-  const w = Math.max(measure(name), measure(sub, { font: 3 })) + 16, y = CARD_Y;
-  const x = Math.round(age < HOLD ? lerp(-w, 6, easeOut(seg(age, 0, SLIDE))) : lerp(6, -w, easeIn(seg(age, HOLD, HOLD + SLIDE))));
-  screen();
-  fill(x, y, w, CARD_H, C.ink);
-  fill(x + 1, y + 1, w - 2, CARD_H - 2, C.blue1);
-  fill(x + 1, y + 1, w - 2, 1, C.blue2);
-  text(name, x + 8, y + 4, { color: C.white });
-  text(sub, x + 8, y + 14, { font: 3, color: C.blue3 });
+  const t = age < HOLD ? 0.2 + Math.min(age, 1.7) : 3.6 + (age - HOLD);
+  g.save();
+  g.translate(0, CARD_Y - HOUSE_Y);
+  placeCard(t, DIVISIONS[k].name, `DIVISION ${k + 1} OF ${DIVISIONS.length}`);
+  g.restore();
 }
 /** The card up t seconds into the scan: only ever the latest division's, so never two at once. */
-function scanCard(t) {
+function scanCard(g, t) {
   const k = CARD_IN.findLastIndex((t0) => t >= t0);
-  if (k >= 0) divisionCard(k, t - CARD_IN[k]);
+  if (k >= 0) divisionCard(g, k, t - CARD_IN[k]);
 }
 
 // ---- The people ----
 // She stands just off the end of Newton's walkway, by the queue, watching the match, the whole time the camera comes
-// along the hall. The teammate waits in the queue behind 5026's robot on its cart, where every other division has one
-// of the robot's team, and once the camera has come to rest walks straight up from it, beside the robots and in front
-// of the curtain, with nothing in the way, to stand on her left. She turns to the teammate as the teammate comes up,
-// and they talk face to face, a head's width apart.
+// along the hall, and as it glides on past her onto Newton's field. The teammate waits in the queue behind 5026's robot
+// on its cart, where every other division has one of the robot's team, and once the camera has come back to her walks
+// straight up from it, beside the robots and in front of the curtain, with nothing in the way, to stand on her left.
+// She turns to the teammate as the teammate comes up, and they talk face to face, a head's width apart.
 const her = (dir) => ({ x: START.x, y: START.y, dir, gait: 'stand', dist: 0 });
 const FROM = [MATE.x, 102]; // behind the second cart, where the other divisions' queues have someone too (people.js)
 const WALK_UP = [FROM, [MATE.x, MATE.y]];
 const WATCHING = { x: FROM[0], y: FROM[1], dir: 0, gait: 'stand', dist: 0 };
-const SETS_OFF = 0.5; // seconds into the settle
+// The settle: the glide has come to rest on Newton's field; a moment later the camera pans back to her (eased, PAN
+// seconds), and once it's on her the teammate sets off.
+const PAN_AT = 0.5, PAN = 2.2;
+const SETS_OFF = PAN_AT + PAN; // seconds into the settle
 const ARRIVES = SETS_OFF + along(WALK_UP, 1e9).dist / SPEED.walk;
 const TURNS = ARRIVES - 0.8; // she hears the teammate coming
 /** The teammate t seconds into the settle: waiting, walking up, then turned to her. */
 const teammate = (t) => (t < SETS_OFF ? WATCHING : t < ARRIVES ? along(WALK_UP, t - SETS_OFF) : { ...MATE, gait: 'stand', dist: 0 });
+/** The view's x t seconds into the settle: where the scan stopped on Newton's field, then panning back to her. */
+const settleX = (t) => Math.round(lerp(X_END, X1, easeInOut(seg(t, PAN_AT, PAN_AT + PAN))));
 
+// ---- The opening ----
+// The lamps coming on, the fade up out of the dark and the cones all run on the cut scene's clock (c.T) or, for the
+// cones, the tilt's, so whichever beat A has moved on to carries them on (the first scan beat too), and each finishes on
+// its own time instead of vanishing. The place card goes when A is pressed, the way it goes at the end of its hold.
 const CARD = ['WORLD CHAMPIONSHIP', 'HOUSTON - EIGHT DIVISIONS']; // font 3 has no comma
-// The place card comes in once the lamps have all come on, so it never hides them doing it, and is carried on through
-// the tilt by the cut scene's clock.
-const CARD_AT = 2.6;
+// The place card comes in once the lamps under it have come on, so it never hides one coming on, and slides out before
+// the tilt brings Archimedes' sign up into its rows.
+const CARD_FROM = 1.2;
+const TILT = 3.0;
+/** How far across the lamps have come on, T seconds into the cut scene. */
+const lights = (T) => seg(T, 0.7, 2.3);
+/** The cones, u seconds into the tilt: full until it starts, fading in four steps as it comes down. */
+const cones = (u) => stepped(1 - seg(u, 0, TILT));
+/**
+ * The fade up and the place card, T seconds into the cut scene, over the hall. cut: when A cut the lights or the tilt
+ * short (left out if it didn't). Pressed before the card has come in, it never does; pressed while it's up, it slides out
+ * then (once it has finished sliding in), so the camera hurrying on never takes Archimedes' sign under it.
+ */
+function opening(T, cut = Infinity) {
+  cover(1 - seg(T, 0.1, 0.8));
+  const age = T - CARD_FROM, at = cut - CARD_FROM, out = Math.max(at, 0.6); // out: the card's age as it starts to go
+  if (at < 0.2) return;
+  placeCard(at >= 3.6 || age <= out ? age : 3.6 + (age - out), ...CARD);
+}
 /** Newton at the scan's height, and the two of them face to face: the say beats hold here. */
 const HELD = Object.freeze({ x: X1, y: LEVEL });
 
+// When A moves the cut scene on early, the camera sweeps from where it is to where the new beat looks, at no more than
+// about PACE pixels a second on average: a sweep takes the distance over PACE, CATCH_UP[0] to CATCH_UP[1] seconds.
+const PACE = 800, CATCH_UP = [0.6, 2.4];
+
 /**
  * The beats (stage.js): the lights, the tilt, the scan (a beat for each division), the settle, the two of them talking,
- * and the bars going. The list also carries clock(): the hall's time on the cut scene's latest frame, so walking can
- * carry on from it.
+ * and the bars going. Each beat's draw(g, t, c) gets c.look(view, vel), the view to draw from (see the clock, below;
+ * vel: how fast the beat's own view is moving as it starts, if it is), and c.begun, how the beat began: { early: whether
+ * A moved the beat before it on early, i and t: that beat and how far into it it got, at: how far the scan had got }.
+ * The list also carries clock(), the hall's time on the cut scene's latest frame, and played(), whether that frame was
+ * in its last beat (it was played through, not skipped), so walking can carry on from it.
  */
 export function makeCutscene(drawWorld) {
+  let scanAt = 0; // how far into the scan the latest frame was, for the next beat to carry on from
+  let cut = Infinity; // when A cut the lights or the tilt short, on the cut scene's clock
   const beats = [
     {
       // Black, then the hall in the dark up by the truss over the left wall and Archimedes' curtain, and its lamps
       // coming on left to right, the hall coming up out of the dark in hard steps as they do.
-      dur: 4.6,
+      dur: 3.4,
       draw(g, t, c) {
-        drawWorld(g, { x: 0, y: OPEN }, c.T, { lights: seg(t, 0.9, 2.7), beams: 1, hero: her(0), mate: WATCHING });
-        cover(1 - seg(t, 0.1, 0.8));
-        placeCard(c.T - CARD_AT, ...CARD);
+        cut = Infinity;
+        drawWorld(g, c.look({ x: 0, y: OPEN }), c.T, { lights: lights(c.T), beams: 1, hero: her(0), mate: WATCHING });
+        opening(c.T);
         bars(1);
       },
     },
     {
-      // Down from the truss to the stands and Archimedes' field, the cones fading as it comes.
-      dur: 3.2,
+      // Down from the truss and along onto Archimedes' field, the cones fading as it comes. It starts straight down and
+      // only sets off along once the place card has gone, so Archimedes' sign never climbs up under the card.
+      dur: TILT,
       draw(g, t, c) {
-        const e = easeInOut(c.k);
-        const view = { x: Math.round(lerp(0, X0, e)), y: Math.round(lerp(OPEN, LEVEL, e)) };
-        drawWorld(g, view, c.T, { lights: 1, beams: stepped(1 - c.k), hero: her(0), mate: WATCHING });
-        placeCard(c.T - CARD_AT, ...CARD);
+        const pan = easeInOut(seg(c.k, 0.4, 1)), tilt = easeInOut(c.k);
+        const view = { x: Math.round(lerp(0, X0, pan)), y: Math.round(lerp(OPEN, LEVEL, tilt)) };
+        if (c.begun.early) cut = Math.min(cut, c.T - t);
+        drawWorld(g, c.look(view), c.T, { lights: lights(c.T), beams: cones(t), hero: her(0), mate: WATCHING });
+        opening(c.T, cut);
         bars(1);
       },
     },
-    // The scan: all eight fields, a card for each division as its sign goes by, slowing to a stop at Newton. One beat
-    // a division, from its card coming in to the next one's, so A moves on a division at a time.
+    // The scan: all eight fields, a card for each division, gliding on past her onto Newton's field and stopping there.
+    // One beat a division, from its card coming in to the next one's, so A moves on a division at a time. When A does,
+    // the camera doesn't jump to this division: it sweeps on from where it had got to, as fast as it was going, through
+    // everything in between, and joins the glide on its own time (c.look), with only this division's card up.
     ...DIVISIONS.map((_, k) => {
-      const from = CARD_IN[k], to = CARD_IN[k + 1] ?? SCAN;
+      const from = k === 0 ? 0 : CARD_IN[k], to = CARD_IN[k + 1] ?? SCAN;
       return {
         dur: to - from,
+        scan: true,
         draw(g, t, c) {
-          drawWorld(g, { x: Math.round(scanX(from + t)), y: LEVEL }, c.T, { lights: 1, beams: 0, hero: her(0), mate: WATCHING });
-          scanCard(from + t);
+          scanAt = from + t;
+          // If A cut the tilt short, its cones fade on the tilt's own time, and the place card goes; if the card was up,
+          // the camera comes down level straight away but only sets off along once the card has all but gone, so
+          // Archimedes' sign doesn't climb up under it.
+          const tilted = k === 0 && c.begun.early && c.begun.i === 1 ? c.begun.t + t : TILT;
+          if (tilted < TILT) cut = Math.min(cut, c.T - t);
+          const wait = tilted < TILT && cut - CARD_FROM < 4 ? easeInOut(seg(t, 0.35, 1)) : 1;
+          const x = scanX(scanAt);
+          const view = wait < 1
+            ? c.look({ x: Math.round(lerp(c.begun.from.x, x, wait)), y: LEVEL })
+            : c.look({ x: Math.round(x), y: LEVEL }, { x: scanV(from), y: 0 });
+          drawWorld(g, view, c.T, { lights: lights(c.T), beams: cones(tilted), hero: her(0), mate: WATCHING });
+          if (k === 0) opening(c.T, cut);
+          // Moved on here early, the last division's card stays (on its own time) until this one has slid in over it.
+          const was = c.begun.early && beats[c.begun.i].scan && t < CARD_SLID;
+          if (was) divisionCard(g, k - 1, c.begun.at - CARD_IN[k - 1] + t);
+          scanCard(g, scanAt);
           bars(1);
         },
       };
     }),
     {
-      // Newton's card goes, and the teammate walks in from the aisle.
+      // Newton's card goes, the camera pans back to her, and the teammate walks up from the queue.
       dur: ARRIVES + 0.3,
       draw(g, t, c) {
-        drawWorld(g, HELD, c.T, { lights: 1, beams: 0, hero: her(t < TURNS ? 0 : START.dir), mate: teammate(t) });
-        divisionCard(HOME, SCAN - CARD_IN[HOME] + t);
+        const view = c.look({ x: settleX(t), y: LEVEL });
+        drawWorld(g, view, c.T, { lights: 1, beams: 0, hero: her(t < TURNS ? 0 : START.dir), mate: teammate(t) });
+        const scanned = c.begun.early && beats[c.begun.i].scan ? c.begun.at : SCAN; // as far as the scan got
+        divisionCard(g, HOME, scanned - CARD_IN[HOME] + t);
         bars(1);
       },
     },
@@ -168,21 +276,24 @@ export function makeCutscene(drawWorld) {
         ],
       },
       draw(g, t, c) {
-        drawWorld(g, HELD, c.T, { lights: 1, beams: 0, hero: her(START.dir) });
+        // If A cut the walk up short, the teammate carries on walking up from where they'd got to, as they start talking.
+        const u = c.begun.early && !beats[c.begun.i].say ? c.begun.t + t : Infinity;
+        drawWorld(g, c.look(HELD), c.T, { lights: 1, beams: 0, hero: her(u < TURNS ? 0 : START.dir), mate: teammate(u) });
         bars(1);
       },
     },
     {
       dur: 0.6,
       say: {
+        // The drive team's strategist meets the alliance partners in queue, so she has to be back before then.
         name: HERO_NAME, look: HERO_LOOK, tag: C.red1,
         lines: [
-          ['OUR ROBOT IS IN THE QUEUE, TWO MATCHES', 'OUT. TIME TO SCOUT THE OTHER SEVEN.'],
-          ['WHOEVER WINS THEM IS WAITING FOR US ON', 'EINSTEIN. THEY ALL GO ON THIS BOARD.'],
+          ['QUEUING CALLS US IN TWO MATCHES. TEN', 'MINUTES TO SCOUT, THEN BACK HERE.'],
+          ['THE OTHER SEVEN WINNERS WAIT FOR US ON', 'EINSTEIN. THEY ALL GO ON THIS BOARD.'],
         ],
       },
       draw(g, t, c) {
-        drawWorld(g, HELD, c.T, { lights: 1, beams: 0, hero: her(START.dir) });
+        drawWorld(g, c.look(HELD), c.T, { lights: 1, beams: 0, hero: her(START.dir) });
         bars(1);
       },
     },
@@ -191,26 +302,74 @@ export function makeCutscene(drawWorld) {
       dur: 1.0,
       draw(g, t, c) {
         const view = { x: X1, y: Math.round(lerp(LEVEL, 0, easeInOut(c.k))) };
-        drawWorld(g, view, c.T, { lights: 1, beams: 0, hero: her(START.dir) });
+        drawWorld(g, c.look(view), c.T, { lights: 1, beams: 0, hero: her(START.dir) });
         bars(1 - c.k);
       },
     },
   ];
-  // The hall's clock. c.T counts from each beat's start, so while a say beat waits to be read it runs on past the next
-  // beat's start, and the next beat would set every match back a few seconds. waited[i] is how long beat i has waited
-  // past its end this time through; the hall's time is c.T plus every earlier beat's wait. A frozen ?at= frame never
-  // waits, so it's still exactly c.T.
-  const waited = beats.map(() => 0);
-  let last = 0;
+  // ---- The clock ----
+  // The hall's time runs on as the page's does, whatever the beats do. c.T counts from each beat's start as if every
+  // beat had taken exactly its dur, but a say beat waits to be read, running on past the next beat's start, and A moves
+  // a beat on before its end; either way the next beat would set every match back or jump it on. spent[i] is how long
+  // beat i really ran this time through (left at its dur for a beat that never ran: ?beat=N), and the hall's time is the
+  // beat's own time plus every earlier beat's spent. A frozen ?at= frame never waits or moves on, so it's still exactly
+  // c.T. And the camera: when A moves a beat on early, the next beat's first frame would cut to wherever that beat
+  // starts, so instead c.look sweeps it on from where the last frame looked, at the speed it was already going, into
+  // the beat's own view, over a time that grows with the distance (PACE, CATCH_UP). Pressed again mid-sweep, the next
+  // sweep starts from wherever this one has got to, as fast as it's going. Without an A, every beat starts where the
+  // last one ended, and nothing is added.
+  const spent = beats.map((b) => b.dur);
+  let now = -1, last = 0, begun = null;
+  let seen = null, before = null; // the latest frame's view and hall time, and the frame's before that
   const clocked = beats.map((b, i) => ({
     ...b,
     draw(g, t, c) {
-      waited[i] = Math.max(0, t - b.dur);
-      waited.fill(0, i + 1);
-      last = c.T + waited.slice(0, i).reduce((n, w) => n + w, 0);
-      b.draw(g, t, { ...c, T: last });
+      if (i !== now) {
+        // A new beat: straight on from the one before (catching up if that ended early), or a fresh start.
+        const early = now >= 0 && i === now + 1 && spent[now] < beats[now].dur - 0.05;
+        begun = { early, i: now, t: early ? spent[now] : 0, at: scanAt, from: seen, was: before, sweep: null };
+        if (i !== now + 1) spent.forEach((_, j) => (spent[j] = beats[j].dur));
+        now = i;
+      }
+      spent[i] = t;
+      last = spent.slice(0, i).reduce((n, s) => n + s, 0) + t;
+      const look = (view, vel = { x: 0, y: 0 }) => {
+        if (begun.early && begun.from) {
+          begun.sweep ??= sweepFrom(begun, view, vel, t);
+          const { D, x, y } = begun.sweep;
+          if (t < D) {
+            // A cubic Hermite from the whole offset to none: ease, its part that starts still, and push, its part that
+            // starts at the slope M (the camera's own speed less the view's).
+            const s = t / D, ease = 2 * s ** 3 - 3 * s ** 2 + 1, push = s ** 3 - 2 * s ** 2 + s;
+            view = { x: Math.round(view.x + x.by * ease + x.M * push), y: Math.round(view.y + y.by * ease + y.M * push) };
+          }
+        }
+        before = seen;
+        seen = { x: view.x, y: view.y, T: last };
+        return view;
+      };
+      b.draw(g, t, { ...c, T: last, look, begun });
     },
   }));
+  /**
+   * The sweep from where the camera was to a beat's own view: how long it takes (D, from how far it has to go), and on
+   * each axis how far off it starts (by) and how fast it sets off relative to the view (M, as a cubic Hermite's starting
+   * slope), matched to how fast the camera was already going so it never stops dead or lurches, but never so fast that
+   * it overshoots by much (M within three times by either way). view is the beat's own view t seconds in (its first
+   * frame), moving at vel, so where it started is a little behind.
+   */
+  function sweepFrom({ from, was }, view, vel, t) {
+    const dt = was ? from.T - was.T : 0;
+    const start = { x: view.x - vel.x * t, y: view.y - vel.y * t };
+    const far = Math.max(Math.abs(from.x - start.x), Math.abs(from.y - start.y));
+    const D = clamp(far / PACE, CATCH_UP[0], CATCH_UP[1]);
+    const axis = (a) => {
+      const by = from[a] - start[a], v = dt > 0 ? (from[a] - was[a]) / dt : 0;
+      return { by, M: clamp((v - vel[a]) * D, -3 * Math.abs(by), 3 * Math.abs(by)) };
+    };
+    return { D, x: axis('x'), y: axis('y') };
+  }
   clocked.clock = () => last;
+  clocked.played = () => now === beats.length - 1;
   return clocked;
 }

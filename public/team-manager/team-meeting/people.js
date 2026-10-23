@@ -29,7 +29,8 @@
 // clap, about five claps a second, each out of step with the rest, starting a little apart; whoever was praised gets
 // up and throws both arms up in a V instead, again and again. On "IRON PANTHERS ON THREE!" every arm goes up, and pumps
 // up and down with a clap between for a couple of seconds, each in their own time, before they all hold it. At the
-// permission slips some of them, the freshman always, turn to the person next to them.
+// permission slips most of them, the freshman always, turn to the person next to them, frowning (and slump, once
+// walker.js has the pose).
 //
 // After the meeting it breaks up into small groups (after()): the co-captains still talking at the head of the old
 // circle, the teammate waiting for her, the build lead on the path looking in at the robot, the programmer under the
@@ -44,17 +45,20 @@
 //                            cue = { react: 'chat' | 'listen' | 'clap' | 'cheer' | 'groan', at: { x, y } (the speaker's
 //                            feet), cheer: [ids], still: [ids], since: seconds since the reaction began, rise: whether
 //                            the ids in cheer get up on their feet to cheer, toward: { [id]: { x, y } } anyone who
-//                            listens to somewhere else than at }
+//                            listens to somewhere else than at, nudge: { [id]: [dx, dy] } anyone sat a little off
+//                            their seat, for one shot }
 //   after(t, o)              the walkable part's people (not her), the same shape, and extra(g, view) on anyone with
 //                            something drawn just after them. o.me: her feet; o.talking: the id she's talking to.
 //   TALKERS                  the eleven she can talk to, where they are after: { id, name, x, y, look, gait, bubble,
-//                            faceGait }
+//                            faceGait, faceDy } (faceGait and faceDy: how the phone shows them, stage.js)
+//   FACE_DY_FLOOR            the phone's faceDy for anyone sitting on the grass
 //   occupied(x, y)           true when feet at (x, y) would stand in someone after the meeting, or right over them
 //   within(p, x, y)          how close feet at (x, y) are to talk to p (one of TALKERS), Infinity if not close enough:
-//                            anywhere occupied() stops her walking up to them counts
+//                            anywhere occupied() stops her walking up to them counts, beside them or in front
+//   glum(look)               that look with a frown instead of the smile (the groan at the permission slips)
 
 import { C, rnd } from '../pixel.js';
-import { HERO_LOOK, leftFacing } from '../walker.js';
+import { HERO_LOOK, leftFacing, FRAMES } from '../walker.js';
 import { HERO_NAME, TEAMMATE_NAME, BASE, HEADS, SIDE, backOf, SKIN, HAIR, skinBody, tones, MERCH, CAPS } from '../cast.js';
 import { TEAMMATE_LOOK } from '../teammate.js';
 import { dirToward } from '../stage.js';
@@ -262,20 +266,22 @@ const BACK = {
     '..kghhhhhhhhhgk.',
     '...kkkkkkkkkkk..',
   ],
-  // The fringe is a band round the back from ear to ear, with the back of the neck below it.
+  // The fringe is a horseshoe: up the sides from the ears, and from ear to ear right down to the nape, its top edge
+  // curving down from the temples to the middle (seen from above and behind, the edge of the bare crown is a U) and lit
+  // grey along it, so it reads as hair round a bald crown, not a strap across the skull. The neck below.
   bald: [
     '................',
     '.....kkkkkk.....',
     '...kkSSsssskk...',
     '..kSSssssssssk..',
     '..kSssssssssdk..',
-    '..ksssssssssdk..',
-    '..khhsssssshgk..',
+    '..kHssssssssgk..',
+    '..khHssssssggk..',
+    '..khhHHssshhgk..',
+    '.kdhhhhHHHhhgdk.',
     '..kghhhhhhhhgk..',
-    '.kdghhhhhhhhgdk.',
-    '..kghhhhhhhhgk..',
-    '..ksshhhhhhsdk..',
-    '..kssssssssddk..',
+    '..kghhhHhhhhgk..',
+    '..kgghhhhhhggk..',
     '...kssssssdk....',
     '....kksssskk....',
     '......kkkk......',
@@ -288,7 +294,9 @@ const headsOf = (h) => ({
 });
 
 // ---- Merch and clothes ----
-const ALT = { shirt: tones.black, print: '#d3212f' };                     // the black alternate tee, red print
+// The black alternate tee, red print: the arena's dark greys (a step up from ink, like place.js's black bag), so the
+// ink outline still shows down its shaded side and round the sleeves.
+const ALT = { shirt: [C.carpet0, C.carpet1, C.carpet2], print: '#d3212f' };
 const RED_CAP = { c: CAPS[0][0], C: CAPS[0][1], D: CAPS[0][2] };           // the red team cap
 const SCRUNCHIE = { r: '#d3212f', R: '#ff6a55' };
 const JEANS = {
@@ -330,9 +338,12 @@ function member(id, { merch, head, skin, hair, legs = 'blue', socks = 'white', s
 // Faces are spread so no two alike sit side by side, and kept clear of the arena's people (Rosa's brown curls, Juno's
 // and Priya's black buns, Dani's bob, the grey glasses of Mr. Adeyemi and Gus, Milo's and Sam's caps).
 const LOOKS = {
-  tessa: member('tessa', { merch: 'alt', head: 'pony', skin: 'tan', hair: 'auburn', faceMore: SCRUNCHIE }),
+  tessa: member('tessa', { merch: 'tee', head: 'pony', skin: 'tan', hair: 'auburn', faceMore: SCRUNCHIE }),
+  // His clipboard is the walker's whiteboard (look.board), its three tones split between the paper (the lit face and
+  // the shaded one, light steel) and the tan hardboard (the mid tone, cast.js's blonde): turned to talk, as he mostly
+  // is, you see the sheets with the board's edge down one side; side on or held up, the board's back.
   owen: {
-    ...member('owen', { merch: 'hoodie', head: 'crop', skin: 'deep', hair: 'black', shoes: 'black', socks: 'dark', more: { board: ['#5e3a26', '#7a4a24', '#9a6234'] } }),
+    ...member('owen', { merch: 'hoodie', head: 'crop', skin: 'deep', hair: 'black', shoes: 'black', socks: 'dark', more: { board: ['#b9c0d4', HAIR.blonde.h, '#f4f6fb'] } }),
     board: true,
   },
   bea: member('bea', { merch: 'tee', head: 'bun', skin: 'light', hair: 'chestnut', legs: 'dark', shoes: 'black', socks: 'dark' }),
@@ -399,8 +410,9 @@ export const SEATS = ORDER.map((id, k) => {
 });
 /** The mentors during the meeting, standing on the lawn either side of the circle: Ms. Okafor off its left side (with
  *  the path behind her, not the dark shop door, so she reads), Mr. Brandt off its right, in front of the bench. (Sat on
- *  the bench, the close-up on the strategist would cut him off at the waist.) */
-const OKAFOR = { x: 148, y: 184 }, BRANDT = { x: 364, y: 190 };
+ *  the bench, the close-up on the strategist would cut him off at the waist; and low enough that in it the top of his
+ *  head clears the film bar by a few pixels.) */
+const OKAFOR = { x: 148, y: 184 }, BRANDT = { x: 364, y: 193 };
 
 /** The way to face a point on the ground, in the ground's own proportions. */
 const face = (p, q) => dirToward((q.x - p.x) / FT, (q.y - p.y) / DEEP);
@@ -439,8 +451,43 @@ function chatting(k, t) {
 /** The neighbour someone groaning turns to: one side or the other, or the only one at the ends. The freshman turns to
  *  the one round the circle toward you, so his face shows. */
 const groanTo = (s) => (s.id === 'eli' ? s.k + 1 : s.k === 0 ? 1 : s.k === 17 ? 16 : rnd(s.k * 5 + 9) < 0.5 ? s.k - 1 : s.k + 1);
-/** About a third of the circle groan to a neighbour; the freshman always does. */
+/** Most of the circle groan to a neighbour (twelve of the eighteen, as rnd falls); the freshman always does. */
 const groans = (s) => s.id === 'eli' || rnd(s.k * 13 + 3) < 0.3;
+/** Groaning, they slump where they sit (walker.js floorSlump: leaning forward, arms dropped into the lap), once the
+ *  rig has that pose; until then they just turn to a neighbour, glum (below). */
+const SLUMP = FRAMES.floorSlump ? 'floorSlump' : 'floor';
+
+/**
+ * A head's rows with the smile gone, for the groan: the grin (its run of mouth and teeth, on one row or two) and the lip
+ * under it go back to skin, and a small frown takes its place on the mouth's top row, in ink so it reads across the
+ * wide shot: three pixels with a corner turned down a row either side. In profile, where the mouth meets the outline,
+ * two pixels with the back corner turned down. Heads seen from behind have no mouth and stay as they are.
+ */
+function glumRows(rows) {
+  const r = rows.findIndex((row) => /[MT]/.test(row));
+  if (r < 0) return rows;
+  const out = rows.map((row) => [...row]);
+  const run = out[r].flatMap((ch, x) => (ch === 'M' || ch === 'T' ? [x] : []));
+  const a = run[0], b = run[run.length - 1];
+  for (let y = r; y < Math.min(out.length, r + 3); y++) out[y] = out[y].map((ch) => (/[MTm]/.test(ch) ? 's' : ch));
+  const skin = (x, y) => /[sd]/.test(out[y]?.[x] ?? '');
+  // [dx, dy] from where the frown starts: in profile facing right, from the mouth's front end; facing left, the mirror.
+  const frown = out[r][b + 1] === 'k' ? [b, [[-1, 0], [0, 0], [-2, 1]]]
+    : out[r][a - 1] === 'k' ? [a, [[1, 0], [0, 0], [2, 1]]]
+      : [Math.round((a + b) / 2), [[-1, 0], [0, 0], [1, 0], [-2, 1], [2, 1]]];
+  for (const [dx, dy] of frown[1]) if (skin(frown[0] + dx, r + dy)) out[r + dy][frown[0] + dx] = 'k';
+  return out.map((row) => row.join(''));
+}
+/** Someone's look, glum: the same in every way but the mouth (glumRows on every head), with an id of its own so the
+ *  walker keeps its frames apart. Made once each. (The cut scene shows her glum on the phone for the groan.) */
+const GLUM = new Map();
+export function glum(look) {
+  if (!GLUM.has(look.id)) {
+    const heads = Object.fromEntries(Object.entries(look.heads).map(([k, rows]) => [k, glumRows(rows)]));
+    GLUM.set(look.id, { ...look, id: `${look.id}-glum`, heads });
+  }
+  return GLUM.get(look.id);
+}
 /** A clap: two frames, about five claps a second, each person out of step with the rest. */
 const clapFrame = (t, i) => Math.floor((t + rnd(i) * 0.2) * 10) % 2;
 /** The cheer at the end, as [gait, frame]: for its first 2.5 seconds the arms pump, up for 0.3 seconds and down to a
@@ -453,10 +500,10 @@ export const pump = (t, since, i, up, down) =>
  * reacting to cue. Each is { id, x, y, dir, gait, frame, look }, to draw with stage.js drawWithShadow.
  */
 export function circle(t, cue = {}) {
-  const { react = 'chat', at = CIRCLE, cheer = [], still = [], since = t, rise = false, toward = {} } = cue;
+  const { react = 'chat', at = CIRCLE, cheer = [], still = [], since = t, rise = false, toward = {}, nudge = {} } = cue;
   const out = SEATS.map((s) => {
     const mid = face(s, CIRCLE);
-    let dir = mid, gait = 'floor', frame = 0, x = s.x, y = s.y;
+    let dir = mid, gait = 'floor', frame = 0, x = s.x, y = s.y, look = CAST[s.id].look;
     if (react === 'chat') {
       const nb = chatting(s.k, t);
       if (nb >= 0) dir = stepToward(mid, face(s, SEATS[nb]));
@@ -483,9 +530,12 @@ export function circle(t, cue = {}) {
       dir = face(s, at);
       if (since >= rnd(s.k * 23 + 11) * 0.2) [gait, frame, dir] = [...pump(t, since, s.k, 'floorCheer', 'floorClap'), sideOn(dir)];
     } else if (react === 'groan') {
-      dir = groans(s) ? face(s, SEATS[groanTo(s)]) : face(s, at);
+      if (groans(s)) [dir, gait, look] = [face(s, SEATS[groanTo(s)]), SLUMP, glum(look)];
+      else dir = face(s, at);
     }
-    return { id: s.id, x, y, dir, gait, frame, look: CAST[s.id].look };
+    // A film cheat for a close-up: someone sat a few pixels off their seat, where the shot needs room.
+    const [nx, ny] = nudge[s.id] ?? [0, 0];
+    return { id: s.id, x: x + nx, y: y + ny, dir, gait, frame, look };
   });
   // The mentors stand and watch, and clap and cheer with them, a moment after the students.
   const watching = react === 'chat' ? CIRCLE : at;
@@ -509,8 +559,9 @@ const AFTER = [
   { id: 'owen', x: 274, y: 176, dir: 6, gait: 'stand' },
   // The teammate, up from her place, waiting for the strategist.
   { id: 'teammate', x: 322, y: 188, dir: 7, gait: 'stand' },
-  // The build lead on the path, looking in at the robot through the shop door.
-  { id: 'bea', x: 150, y: 150, dir: 4, gait: 'stand' },
+  // The build lead on the path at the left edge of the shop door, turned in to the robot, so it shows whole between
+  // her and the easel while she talks about it.
+  { id: 'bea', x: 134, y: 150, dir: 3, gait: 'stand' },
   // The mentor on the path just right of the thank-you card, turned to it, clear of it so it reads whole (the card's
   // right edge is at x 227; she's 230 to 244), with her bag at her feet. Left of it she'd stand in front of the robot.
   { id: 'okafor', x: 238, y: 153, dir: 6, gait: 'stand' },
@@ -521,20 +572,22 @@ const AFTER = [
   { id: 'luis', x: 366, y: BENCH.y + 3, dir: 0, gait: 'sit' },
   // The outreach lead behind the sign-up table, far enough back that her face shows over anyone across it from her.
   { id: 'nadia', x: 424, y: 212, dir: 0, gait: 'stand' },
-  // The drive team in a huddle, short of the sign-up table so it shows, a step apart so their faces don't touch, and
-  // far enough up the lawn that, with the view held at the bottom of the world, Jamal shows to the waist over the box.
-  { id: 'jamal', x: 384, y: 230, dir: 6, gait: 'stand' },
-  { id: 'drv1', x: 360, y: 230, dir: 2, gait: 'stand' },
-  { id: 'drv2', x: 372, y: 238, dir: 4, gait: 'stand' },
+  // The drive team in a huddle, short of the sign-up table so it shows, a step apart so their faces don't touch: Jamal
+  // at the back facing you, a driver either side of him a step forward, turned in to him, so the lawn in front of him is
+  // open and she walks up to him from there, where his face shows; and far enough up the lawn that, with the view held
+  // at the bottom of the world, he shows to the waist over the box.
+  { id: 'jamal', x: 364, y: 224, dir: 0, gait: 'stand' },
+  { id: 'drv1', x: 342, y: 232, dir: 2, gait: 'stand' },
+  { id: 'drv2', x: 386, y: 232, dir: 6, gait: 'stand' },
   // The freshman, on his own on the grass (high enough that, with the view lifted while she talks to him, the dialog
   // box doesn't cover him even at the lowest view).
   { id: 'eli', x: 214, y: 210, dir: 0, gait: 'floor' },
-  // The rest: three standing by the path near the shop (two facing each other, the third a step in front with her back
-  // to you, her head below their chins), a pair sitting where the circle was, one by the bench, one on the grass, one
-  // in the right tree's shade.
-  { id: 's1', x: 112, y: 160, dir: 2, gait: 'stand' },
-  { id: 's4', x: 128, y: 158, dir: 6, gait: 'stand' },
-  { id: 's3', x: 120, y: 178, dir: 4, gait: 'stand' },
+  // The rest: three standing by the path left of the shop (two facing each other, the third a step in front with her
+  // back to you, her head below their chins), a pair sitting where the circle was, one by the bench, one on the grass,
+  // one in the right tree's shade.
+  { id: 's1', x: 96, y: 160, dir: 2, gait: 'stand' },
+  { id: 's4', x: 112, y: 158, dir: 6, gait: 'stand' },
+  { id: 's3', x: 104, y: 178, dir: 4, gait: 'stand' },
   { id: 's6', x: 270, y: 220, dir: 2, gait: 'floor' },
   { id: 's7', x: 287, y: 222, dir: 6, gait: 'floor' },
   { id: 's8', x: 404, y: 182, dir: 7, gait: 'stand' },
@@ -564,7 +617,8 @@ function laptop(g, view, p) {
 /**
  * The people on the lawn after the meeting (not her: she's stage.js's s.player), t seconds after the page opened, as
  * circle() gives them, plus extra(g, view) on anyone with something to draw just after them. o.me: her feet; o.talking:
- * the id of whoever she's talking to, who turns to face her (unless they're on the bench, or the programmer).
+ * the id of whoever she's talking to, who turns to face her (unless they're on the bench, or the programmer), but never
+ * so far round that their back is to the camera: then their face, the one talking, wouldn't show.
  */
 export function after(t, o = {}) {
   return AFTER.map((a, i) => {
@@ -576,23 +630,33 @@ export function after(t, o = {}) {
       const u = t + rnd(i) * 5, n = Math.floor(u / 5);
       if (rnd(i * 7 + n * 13) < 0.35 && u % 5 < 1.4) p.dir = (a.dir + (rnd(i + n) < 0.5 ? 1 : 7)) % 8;
     }
-    // Whoever she's talking to turns to her, except on the bench and the programmer, who stays on his laptop.
-    if (o.talking === a.id && o.me && a.gait !== 'sit' && a.id !== 'kenji') p.dir = face(a, o.me);
+    // Whoever she's talking to turns to her, except on the bench and the programmer, who stays on his laptop; with her a
+    // little behind them, they turn side on to her (3 to 5 would put their back to you), so their face shows.
+    if (o.talking === a.id && o.me && a.gait !== 'sit' && a.id !== 'kenji') {
+      const d = face(a, o.me);
+      p.dir = d >= 3 && d <= 5 ? (o.me.x >= a.x ? 2 : 6) : d;
+    }
     if (a.id === 'kenji') p.extra = (g, view) => laptop(g, view, p);
     return p;
   });
 }
 
+/** How far the phone's picture of someone sitting on the grass is moved (stage.js faceDy): their head is 31 pixels
+ *  over their feet against 46 standing, so it goes 15 pixels up, to where a standing face would be. */
+export const FACE_DY_FLOOR = -15;
 /** The eleven she can talk to. gait says how they're placed ('stand', 'sit' on the bench, 'floor' on the grass), and
- *  faceGait how the phone shows them talking: seated on the bench as the arena's front row is, otherwise standing
- *  (stage.js lifts only 'sit' into the phone's frame). */
+ *  faceGait how the phone shows them talking: the way they are, seated on the bench as the arena's front row is (stage.js
+ *  lifts 'sit' into the phone's frame by itself), or cross-legged on the grass, lifted by FACE_DY_FLOOR. */
 export const TALKERS = ['tessa', 'owen', 'teammate', 'bea', 'kenji', 'luis', 'nadia', 'jamal', 'eli', 'okafor', 'brandt'].map((id) => {
   const a = AFTER.find((p) => p.id === id);
   return {
     id, name: CAST[id].name, x: a.x, y: a.y, look: CAST[id].look, gait: a.gait, bubble: BUBBLE[a.gait],
-    faceGait: a.gait === 'sit' ? 'sit' : 'stand',
+    faceGait: a.gait === 'floor' ? 'floor' : a.gait === 'sit' ? 'sit' : 'stand',
+    faceDy: a.gait === 'floor' ? FACE_DY_FLOOR : undefined,
   };
 });
+/** The ids of TALKERS. */
+const TALKS = new Set(TALKERS.map((p) => p.id));
 
 /** How far either side of someone on the grass the space kept clear round them reaches, on the side (x - p.x) is on:
  *  16 (their crossed legs reach 10 from the lap, hers 6), and 4 more on the side their back is (the hips are 5 behind
@@ -603,16 +667,22 @@ const lapWidth = (p, dx) => 16 + (Math.sign(dx) === (p.dir >= 1 && p.dir <= 3 ? 
  * True when feet at (x, y) would stand in someone after the meeting, or so close that one of them would hide the
  * other's face. Standing: 18 pixels either side, so two faces in profile (each reaches 7 pixels in front of its middle)
  * keep a gap; 14 behind, so her eyes stay above their head when she's behind them (they're drawn after her); and 15 in
- * front, where her head comes up only to their chin. Sitting, their faces are lower, so she stops further off in front,
- * again where her head comes up to their chin: on the grass, lapWidth() either side, 4 behind and 29 in front; the
- * bench, its whole front out to 25 pixels (22 past the feet of the two on it) and 4 past its ends.
+ * front, where her head comes up only to their chin. On the grass: lapWidth() either side and 8 behind, so she stands
+ * clear of their back, not in it. In front of the two she can talk to there (the programmer and the freshman) she
+ * stops further off, 29 pixels, where her head comes up only to their chin, so their face shows while they talk; the
+ * silent ones keep only their own footprint (their lap, 6 in front, and 4 less either side), so they're no wall across
+ * the lawn and she walks on past them. The bench: its whole front out to 25 pixels (22 past the feet of the two on
+ * it) and 4 past its ends.
  */
 export function occupied(x, y) {
   if (x >= BENCH.x0 - 4 && x <= BENCH.x1 + 4 && y > BENCH.y && y <= BENCH.y + 25) return true;
   return AFTER.some((p) => {
     if (p.gait === 'sit') return false;
     const dx = x - p.x, dy = y - p.y;
-    if (p.gait === 'floor') return Math.abs(dx) <= lapWidth(p, dx) && dy >= -4 && dy <= 29;
+    if (p.gait === 'floor') {
+      return TALKS.has(p.id) ? Math.abs(dx) <= lapWidth(p, dx) && dy >= -8 && dy <= 29
+        : Math.abs(dx) <= lapWidth(p, dx) - 4 && dy >= -8 && dy <= 6;
+    }
     return Math.abs(dx) <= 18 && dy >= -14 && dy <= 15;
   });
 }
@@ -620,17 +690,20 @@ export function occupied(x, y) {
 /**
  * Whether feet at (x, y) are close enough to p (one of TALKERS) to talk, and how close (smaller is closer), or
  * Infinity. Close enough is within a step or so of the space occupied() keeps clear round them, wider than a running
- * step, so wherever walking up to them stops her, from any side, she can talk: 9 pixels past it either side, 7 behind
- * and 9 in front (across the sign-up table from Nadia, say). How close is how far she is from the edge of that space
- * (a pixel of depth counting as two across), and then how far she is off their middle, so it's whoever she's walked up
- * to that gets the A. On the bench the space is the bench's front, and its near end, for each of the two on it.
+ * step, so wherever walking up to them stops her, from beside them or in front, she can talk: 9 pixels past it either
+ * side and 9 in front (across the sign-up table from Nadia, say). Not from behind anyone standing or on the grass (more
+ * than 6 pixels back): there she's drawn behind them and they'd talk with the back of their head on her chest, so the A
+ * shows only where their face reads. How close is how far she is from the edge of that space (a pixel of depth counting
+ * as two across), and then how far she is off their middle, so it's whoever she's walked up to that gets the A. On the
+ * bench the space is the bench's front, and its near end out to where the path stops her (place.js blocked()), for
+ * each of the two on it.
  */
 export function within(p, x, y) {
   const dx = Math.abs(x - p.x), dy = y - p.y;
   // The space kept clear round them: w either side, back behind them and front in front.
   const [w, back, front] = p.gait === 'stand' ? [18, 14, 15]
-    : p.gait === 'floor' ? [lapWidth(p, x - p.x), 4, 29]
-      : [p.x < (BENCH.x0 + BENCH.x1) / 2 ? p.x - BENCH.x0 + 4 : BENCH.x1 + 4 - p.x, p.y - WALL_Y - 4, BENCH.y + 25 - p.y];
-  if (dx > w + 9 || dy < -back - 7 || dy > front + 9) return Infinity;
+    : p.gait === 'floor' ? [lapWidth(p, x - p.x), 8, 29]
+      : [p.x < (BENCH.x0 + BENCH.x1) / 2 ? p.x - BENCH.x0 + 12 : BENCH.x1 + 12 - p.x, p.y - WALL_Y - 4, BENCH.y + 25 - p.y];
+  if (dx > w + 9 || dy < -back - 7 || dy > front + 9 || (p.gait !== 'sit' && dy < -6)) return Infinity;
   return Math.max(0, dx - w) + 2 * Math.max(0, -back - dy, dy - front) + dx / 20;
 }

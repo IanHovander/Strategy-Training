@@ -22,10 +22,9 @@ import { C } from '../pixel.js';
 import { walkerFrame, leftFacing, HERO_LOOK, FRAMES } from '../walker.js';
 import { look, stranger, student, tones, skinBody, SKIN, HAIR, TEAMMATE_NAME } from '../cast.js';
 import { TEAMMATE_LOOK } from '../teammate.js';
-import { drawWithShadow } from '../stage.js';
+import { drawPerson, drawWithShadow } from '../stage.js';
 import { drawBubble } from '../talk.js';
-import { FIELD, floorY } from '../field.js';
-import { PEOPLE as SEATS, TIERS } from '../bleachers.js';
+import { PEOPLE as SEATS, TIERS, STANDING as ARENA_STANDING } from '../bleachers.js';
 import { DIVISIONS, HOME, ox, divisionAt, START, MATE, BUTTON_TABLE, INFO_DESK } from './layout.js';
 
 // ---- Looks ----
@@ -41,6 +40,8 @@ const LANYARD = [
 ];
 /** Pins from a day of trading, a few on the chest: as sparse as a volunteer's lanyard card. */
 const BUTTONS = [[-4, -2, 2, 2, C.yel1], [-1, -2, 2, 2, C.blue2], [2, -2, 2, 2, C.white], [-2, 1, 2, 2, C.org1]];
+/** A scouting tablet held up at the chest: a dark slab in an ink outline, its screen lit, with a glint. */
+const TABLET = [[-3, -1, 7, 5, C.ink], [-2, 0, 5, 3, C.steel0], [-1, 0, 3, 2, C.blue2], [-1, 0, 1, 1, C.white]];
 
 // Two heads the crowd doesn't have, drawn like cast.js's (16 columns, the same letters): hair cropped short, and a
 // headscarf. The scarf's cloth has letters of its own (v mid, V lit, u shade) for its colours in the head palette; the
@@ -211,7 +212,7 @@ function seated(k, id) {
 export const MATE_PERSON = {
   name: TEAMMATE_NAME, x: MATE.x, y: MATE.y, dir: MATE.dir, look: TEAMMATE_LOOK,
   lines: [
-    ['QUEUE CALLS US IN TWO MATCHES. THE', 'ROBOT IS ON ITS CART, BATTERY IN.'],
+    ["WE'RE QUEUED. ROBOT'S ON ITS CART,", 'BATTERY IN, BUMPERS ON. ALL SET.'],
     ['WATCH WHO CLIMBS TO LEVEL 3, AND HOW', 'FAST THEY CYCLE. THAT IS WHAT WINS.'],
     ['BRING BACK NOTES, NOT JUST BUTTONS.', 'OKAY. SOME BUTTONS.'],
   ],
@@ -220,9 +221,10 @@ export const MATE_PERSON = {
 const TALKERS = [
   MATE_PERSON,
   {
-    // Newton's queuer, in Priya's place by the queue sign, a step nearer it than the other queuers, so there's a slot
-    // to walk down between her and the queue's first drive team member.
-    name: 'BEA, NEWTON QUEUER', x: ox(HOME) + 26, y: 86,
+    // Newton's queuer, behind the queue sign like every division's (it hides her legs, as the button table hides
+    // Noor's), so the floor above the queue stays open from the walkway's mouth, where the walking starts, straight
+    // along into the aisle, between the hem's barrier and her.
+    name: 'BEA, NEWTON QUEUER', x: ox(HOME) + 26, y: 100,
     look: look('w-bea', { ...skinBody('fair'), shirt: tones.shirtOrange, jeans: tones.black, cuff: tones.black, print: null }, 'bob',
       { ...SKIN.fair, ...HAIR.auburn, r: HAIR.auburn.h, R: HAIR.auburn.H }),
     badge: LANYARD,
@@ -256,12 +258,14 @@ const TALKERS = [
     ],
   },
   {
-    // In Milstein's front row, with his team.
+    // In Milstein's front row with his team, in the seat nearest the walkway's mouth at the red end, his scouting
+    // tablet up.
     name: 'DIEGO, SCOUT FROM MONTERREY', ...seated(6, 'juno'),
-    look: look('w-diego', { ...skinBody('brown'), shirt: SHIRT.purple, jeans: tones.black, cuff: tones.black, print: C.white }, 'cap',
+    look: look('w-diego', { ...skinBody('brown'), shirt: SHIRT.purple, jeans: tones.black, cuff: tones.black, print: null }, 'cap',
       { ...SKIN.brown, ...HAIR.black, c: '#5b3fa0', C: '#8a6ad0', D: '#2a1c4e' }),
+    badge: TABLET,
     lines: [
-      ['ABOUT SEVENTY TEAMS IN MILSTEIN. WE', 'SCOUT EVERY MATCH, IN SHIFTS.'],
+      ['SEVENTY-FIVE TEAMS IN MILSTEIN. WE', 'SCOUT EVERY MATCH, IN SHIFTS.'],
       ['PIT SCOUTING TELLS YOU WHAT THEY SAY.', 'MATCH SCOUTING TELLS YOU WHAT IT DOES.'],
       ['7395 SAID THEY CLIMB TO LEVEL 2. THEN', 'THEY CLIMBED TO 3. I LOVE SURPRISES.'],
     ],
@@ -365,28 +369,34 @@ export function lookOf(k) {
 // ---- Standing ----
 // Per division, in its own x: the drivers at their stations behind the alliance walls, turned to the field, one of each
 // of the match's six teams; a drive team member behind each robot in the queue; the queuer by the queue sign and the
-// scorekeeper at the scoring table.
+// scorekeeper at the scoring table. The drive teams and the queue crew stand where the arena's do and as they do
+// (bleachers.js), moved along to the division, so if the arena moves or re-poses them all eight divisions follow; only
+// their teams' shirts are this scene's.
 const TEAM_ORDER = ['teal', 'pink', 'lime', 'maroon', 'yellow', 'purple'];
-const STATIONS = [4.5, 13.5, 22.5].map((z) => Math.round(floorY(z)));
+const ARENA_CREW = ARENA_STANDING.filter((p) => /^(driver|queue)/.test(p.id));
+/** The shirt for the arena crew member `id` in division k: driver<alliance><station>, or queue<cart>. */
+function crewLook(k, id) {
+  if (id.startsWith('driver')) {
+    const a = Number(id[6]), i = Number(id[7]);
+    return TEAM[TEAM_ORDER[(k + a * 3 + i) % 6]][(k * 2 + a * 3 + i * 5) % 7];
+  }
+  return id === 'queue0' ? TEAM[TEAM_ORDER[(k + 2) % 6]][(k * 4 + 1) % 7] : TEAM[TEAM_ORDER[(k + 5) % 6]][(k * 4 + 4) % 7];
+}
 function crewOf(k) {
   const x0 = ox(k);
-  const drivers = [0, 1].flatMap((a) => STATIONS.map((y, i) => ({
-    x: x0 + (a ? FIELD.x1 + 18 : FIELD.x0 - 18), y, dir: a ? 6 : 2, gait: 'drive', driver: true,
-    look: TEAM[TEAM_ORDER[(k + a * 3 + i) % 6]][(k * 2 + a * 3 + i * 5) % 7],
-  })));
-  const queue = [
-    { x: x0 + 70, y: 104, look: TEAM[TEAM_ORDER[(k + 2) % 6]][(k * 4 + 1) % 7] },
-    // In Newton, the robot on the second cart is 5026's, and the one who waits with it is the teammate (the cut scene
-    // has the teammate walk up from it to her), so nobody else stands there.
-    ...(k === HOME ? [] : [{ x: x0 + 100, y: 102, look: TEAM[TEAM_ORDER[(k + 5) % 6]][(k * 4 + 4) % 7] }]),
-  ];
+  // In Newton, the robot on the second cart is 5026's, and the one who waits with it is the teammate (the cut scene
+  // has the teammate walk up from it to her), so nobody else stands there.
+  const crew = ARENA_CREW.filter((p) => !(k === HOME && p.id === 'queue1'))
+    .map((p) => ({ ...p, x: x0 + p.x, look: crewLook(k, p.id), driver: p.id.startsWith('driver') }));
   const ends = [
-    ...(k === HOME ? [] : [{ x: x0 + 28, y: 84, look: QUEUERS[k % QUEUERS.length] }]),
+    // The queuer stands behind the queue sign, which hides her legs, leaving the floor between her and the hem's barrier
+    // open: that's the way along the aisle from one division's walkway to the next.
+    ...(k === HOME ? [] : [{ x: x0 + 28, y: 100, look: QUEUERS[k % QUEUERS.length] }]),
     // Behind the scoring table (field.js: x 664 to 728, its back on row 95), close enough that it hides their legs, the
     // way the button table hides Noor's, and right of its two monitors.
-    { x: x0 + 716, y: 92, look: SCOREKEEPERS[k % SCOREKEEPERS.length] },
+    { x: x0 + 716, y: 92, look: SCOREKEEPERS[k % SCOREKEEPERS.length], table: true },
   ];
-  return [...drivers, ...queue, ...ends];
+  return [...crew, ...ends];
 }
 
 // People standing about in the aisles between the fields and on the floor past both ends, mostly in pairs turned to
@@ -410,16 +420,19 @@ const AISLES = [
   // Galileo and Hopper: one of Aylin's team with her.
   [ox(4) - 42, 93, 1, T('maroon', 4)],
   // Hopper and Johnson: someone stopped to talk to Lena, a head's width up the aisle from her, so either side of her
-  // is open to stand and talk.
-  [ox(5) + 4, 93, 7, M(9)],
-  // Johnson and Milstein: Noor's teammate behind the button table with her. The table, Johnson's scorekeeper and
-  // Milstein's queue fill the rest of this aisle.
-  [BUTTON_TABLE.x0 + 32, BUTTON_TABLE.back - 3, 7, T('pink', 1)],
-  // Milstein and Newton, a little lower than the others, clear of Milstein's scorekeeper.
-  [ox(7) - 36, 98, 1, T('pink', 5)], [ox(7) - 14, 97, 7, M(1)],
-  // Past Newton's red end: two by the curtain, and someone at the info desk.
-  [ox(7) + 754, 72, 1, M(10)], [ox(7) + 776, 73, 7, T('lime', 3)], [INFO_DESK.x0 - 10, INFO_DESK.back + 4, 2, M(2)],
-].map(([x, y, dir, lk]) => ({ x, y, dir, look: lk }));
+  // is open to stand and talk. In a white tee: orange is the queuers' (nobody but a volunteer wears it standing about).
+  [ox(5) + 4, 93, 7, M(11)],
+  // Johnson and Milstein: Noor's teammate behind the button table with her, halfway between the end posts of the hem's
+  // two barriers, her head over both, so neither stands up out of it, and her legs behind the table. The table, Johnson's scorekeeper and Milstein's queue fill the rest of this
+  // aisle.
+  [BUTTON_TABLE.x0 + 36, BUTTON_TABLE.back - 3, 7, T('pink', 1), true],
+  // Milstein and Newton, a little lower than the others, clear of Milstein's scorekeeper, and far enough left of Bea
+  // that there's room to stand between them and talk to her.
+  [ox(7) - 48, 98, 1, T('pink', 5)], [ox(7) - 26, 97, 7, M(1)],
+  // Past Newton's red end: two beyond its scoring table, low enough that their heads are under Newton's big screen, and
+  // someone at the info desk (in a dark hoodie, not the orange of the volunteers).
+  [ox(7) + 744, 100, 1, M(10)], [ox(7) + 766, 101, 7, T('lime', 3)], [INFO_DESK.x0 - 10, INFO_DESK.back + 4, 2, M(13)],
+].map(([x, y, dir, lk, table]) => ({ x, y, dir, look: lk, table }));
 
 /** Everyone standing, by division (divisionAt their x): crews, people about, and the people to talk to. */
 const STANDING = DIVISIONS.map((_, k) => [
@@ -435,9 +448,12 @@ const STANDING = DIVISIONS.map((_, k) => [
  * few pixels between them (the cut scene's two-shot keeps 22), and one behind the other, the two heads (16 pixels
  * each) are one above the other, never one over the other's face. The teammate too: standing at the foot of the
  * curtain, left of the walkway, the teammate leaves the walkway's mouth and the way down to the aisle open.
+ * Whoever works a table (the scorekeepers, the button traders, the info desk) has the table in front of them already,
+ * and behind them only ten rows: then the floor between the hem's barrier and them is as wide as the floor between the
+ * barrier and every queue (scene.js QUEUES), the way along the aisle, and her head behind theirs is still above it.
  */
 export const BLOCKS = [...STANDING.flat().filter((p) => !p.driver), MATE_PERSON]
-  .map(({ x, y }) => ({ x0: x - 15, x1: x + 15, y0: y - 14, y1: y + 14 }));
+  .map(({ x, y, table, across }) => ({ x0: x - 15, x1: x + 15, y0: y - (table || across ? 10 : 14), y1: y + 14 }));
 
 /**
  * Everyone standing in division k near the view, each { x, y, draw() } to sort in with its field (drawFieldLive calls
@@ -446,7 +462,10 @@ export const BLOCKS = [...STANDING.flat().filter((p) => !p.driver), MATE_PERSON]
  */
 export function standingIn(g, view, k, t, o = {}) {
   const near = (p) => Math.abs(p.x - view.x - 128) < 128 + 24;
-  const out = STANDING[k].filter(near).map((p) => ({ x: p.x, y: p.y, draw: () => drawWithShadow(g, view, p) }));
+  // The drivers' feet are hidden behind the alliance wall and each other, so they get no shadow, like the arena's
+  // (bleachers.js drawStanding): a shadow wider than a body in profile would stick out beside the next driver's waist.
+  const out = STANDING[k].filter(near)
+    .map((p) => ({ x: p.x, y: p.y, draw: () => (p.driver ? drawPerson : drawWithShadow)(g, view, p) }));
   const mate = o.mate ? { ...o.mate, look: TEAMMATE_LOOK } : MATE_PERSON;
   if (divisionAt(mate.x) === k && near(mate)) out.push({ x: mate.x, y: mate.y, draw: () => drawWithShadow(g, view, mate) });
   return out;
@@ -456,29 +475,34 @@ export function standingIn(g, view, k, t, o = {}) {
 /**
  * The closest person in reach: standing, 24 across and 10 deep from her feet, so shoulder to shoulder beside them,
  * where their footprint (BLOCKS) stops her, and never straight behind or in front of them, where one would hide the
- * other; seated, 11 across while she's on the walkway. Someone working a table (across) is talked to across it: from
- * in front only, up to 18 rows, where the table stops her.
+ * other; seated, beside their seat while she's on the walkway, 12 to 23 across (best 17, a head's width), never right
+ * in front of it, where her head would hide theirs. Someone working a table (across) is talked to across it: from in
+ * front only, up to 18 rows, where the table stops her.
  */
 export function reach(s) {
   let best = null, bestD = Infinity;
   for (const p of PEOPLE) {
     const dx = Math.abs(p.x - s.me.x), dy = p.across ? s.me.y - p.y : Math.abs(p.y - s.me.y);
     const deep = p.across ? 18 : 10;
-    const d = p.seat ? (dx < 11 && s.me.y <= 64 ? dx : Infinity) : dx < 24 && dy >= 0 && dy < deep ? dx + dy : Infinity;
+    const d = p.seat ? (dx >= 12 && dx < 24 && s.me.y <= 64 ? Math.abs(dx - 17) : Infinity)
+      : dx < 24 && dy >= 0 && dy < deep ? dx + dy : Infinity;
     if (d < bestD) [best, bestD] = [p, d];
   }
   return best;
 }
 /**
  * The speech bubble over someone in reach, standing or sitting: at the top corner of their head on the side away from
- * her, so standing beside them, as she does to talk, she never has it on her own head. herX: where she stands.
+ * her, so standing beside them, as she does to talk to anyone, she never has it on her own head. herX: where she stands.
  */
 export function prompt(g, view, p, t, herX = p.x) {
   const side = herX > p.x ? -1 : 1;
   drawBubble(g, p.x - view.x + side * 11, p.y - view.y - (p.seat ? 41 : 50), t);
 }
-/** Where to turn to talk to someone: up at a seat, or at their feet. */
-export const faceTo = (p) => (p.seat ? { x: p.x, y: 38 } : p);
+/**
+ * Where to turn to talk to someone: at their feet, or, for someone seated beside her, straight across at them (her: where
+ * she stands), so she shows in profile and both faces read.
+ */
+export const faceTo = (p, her = p) => (p.seat ? { x: p.x, y: her.y } : p);
 /** The bleachers seat whose person sits still while she talks to them (bleachers.js drawStands' talkingTo). */
 export const talkingSeat = (s) => s.talk?.person?.seat ?? null;
 

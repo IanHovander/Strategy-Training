@@ -4,9 +4,9 @@
 // said by whoever the conversation is with, or { name, lines, tag } for someone else (tag: their name tag's colour; the
 // strategist's is red).
 //
-// It's the same Saturday as the arena (bleachers.js), and the two agree: match 42 is on the field (3000 and 7777 are
-// out there), 2468 and 1357 are the two robots in the queue for match 43, and 5026 is called for match 44 right after,
-// as Priya the queuer says. 7777's scout Juno has already been round with her notebook. The strategist and the teammate
+// It's the same Saturday as the arena (bleachers.js), and it follows the arena's queue: 2468 and 1357 are the two robots
+// queuing for match 43, and 5026 is called for match 44 right after, as Priya the queuer says. Match 42 is on the field,
+// with 3000's and 7777's robots in it. 7777's scout Juno has already been round with her notebook. The strategist and the teammate
 // don't have names yet, so nobody here says one: cast.js's HERO_NAME and TEAMMATE_NAME go on their name tags. Everyone
 // else talks the way the arena's people do, light and warm, each teaching one real thing about FRC: a volunteer, the
 // students on other teams, a judge, our mentor, the pit admin and the safety advisor.
@@ -18,10 +18,12 @@ const ELI = 'ELI, 5026 DRIVER';
 
 /** The cut scene's pages: the call over the speakers, the plan before the robot goes, and the hand over to walking. */
 export const SCRIPT = {
-  // The pit announcer (Tomas at the PIT ADMIN desk), said by the beat's name.
+  // The pit announcer (Tomas at the PIT ADMIN desk), said by the beat's name. He calls an alliance at a time, red
+  // first, the way match schedules and the field's own screens list them: 5026 is blue, as Eli says, and 6174 (the
+  // defender the plan steers round) is on the other side. Every number is one a team had by 2019.
   call: [
     ['ATTENTION PITS: MATCH 43 TEAMS SHOULD', 'BE IN THE QUEUE NOW.'],
-    ['MATCH 44: 5026, 9009, 2020, 1100,', '3141 AND 6174. TO THE QUEUE, PLEASE!'],
+    ['MATCH 44: RED 1100, 3141 AND 6174.', 'BLUE 5026, 2020 AND 7009. QUEUE UP!'],
   ],
   // One page each, so the phone shows whoever is talking: the robot's ready, the driver asks, she gives him the plan off
   // her board, and he reads it back the way drive teams do.
@@ -31,7 +33,8 @@ export const SCRIPT = {
     { name: HERO_NAME, tag: C.red1, lines: ['6174 GUARDS THE LEFT ROCKET: GO RIGHT.', 'HATCHES. PINNED? COUNT 5. HAB 3 AT 20.'] },
     { name: ELI, lines: ['RIGHT ROCKET, HATCHES, HAB 3 AT 20.', 'GOT IT. ROLLING!'] },
   ],
-  // Noor, pushing the robot down the aisle to the queue: the pits' etiquette for a robot on a cart.
+  // Noor, up from the robot with her hands on the cart's handle, before she pushes it out into the aisle to the queue:
+  // the pits' etiquette for a robot on a cart.
   through: [['ROBOT COMING THROUGH!', 'MAKE A HOLE, PLEASE!']],
   // The teammate, staying behind with the pit.
   duty: [
@@ -77,7 +80,7 @@ export const LINES = {
   teammate: [
     ['PIT DUTY IS MINE TILL 44 IS OVER.', 'BATTERY 3 IS CHARGING. 5 GOES IN NEXT.'],
     ['GO WATCH FROM THE STANDS. SCOUT WHO', 'WE MIGHT PICK, AND WHO WE MIGHT PLAY.'],
-    ['AND GOOD LUCK. THE PLAN WAS GOOD. I', 'COULD TELL BY HOW FAST ELI NODDED.'],
+    ['AND GOOD LUCK. THE PLAN WAS GOOD: ELI', 'READ IT BACK WITHOUT A SINGLE PAUSE.'],
   ],
   kowalski: [
     ['ME? I KEEP MY HANDS IN MY POCKETS.', "IT'S YOUR ROBOT. YOU ALL BUILT IT."],

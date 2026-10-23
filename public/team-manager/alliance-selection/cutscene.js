@@ -3,9 +3,10 @@
 // to 8, then tilts down to the team reps waiting their turn in front of the field, the strategist at the front corner by the gate with her whiteboard, 5026's
 // rep, ranked eleventh. MC Robin skates in along the front of the crowd in her pink blazer, through the gate and up to
 // the mic, and lands it with a spin. She welcomes everyone, thanks the volunteers and sponsors, gets a cheer for every
-// team, and skates the line from sign 1 to sign 8 and back while she explains the rules plainly: the top eight are the
-// captains, round one picks one to eight and round two eight to one, and a team that turns an invitation down can't be
-// picked by anyone else. The eight captains run on through the gate to their signs.
+// team, and explains the rules plainly while she skates the order the picks go in: the top eight are the captains,
+// round one picks one to eight (sign 1 to sign 8) and round two eight to one (back again), a captain can invite any
+// team ranked below them (even another captain), and a team that turns an invitation down can't be picked by anyone
+// else. Then she calls the eight captains out by seed, and each runs on through the gate to their sign as she does.
 // Then two picks, the way FIRST runs them. Alliance One's captain walks to the mic ("you are on the clock", and a cut to
 // the display past the red end as its clock starts counting down from 45) and invites 2468, a captain; Robin skates over to 2468 with "would you prefer to
 // join or form your own alliance?", 2468 accepts, and every captain below moves up a spot while 9152, ranked ninth,
@@ -17,7 +18,9 @@
 //
 // It's built like the intro and every other scene's cut scene (stage.js): eased pans and hard cuts between shots at 1x,
 // whole-number 2x close-ups for the people talking and the crowd on its feet, film bars throughout (in as it opens, out
-// as it ends), fades in four hard steps, and the place card as it opens. Everyone is placed as a pure function of time: a beat starts from where
+// as it ends), fades in four hard steps, and the place card as the camera comes down to the reps (over the empty floor,
+// clear of the crowd and the signs). The opening's shot of the arena starts 12 rows above the world, under the top film
+// bar, so the front row of the stands shows its faces. Everyone is placed as a pure function of time: a beat starts from where
 // the one before left everyone, moves whoever it moves (walking and running with stage.js along(), so feet step with
 // the distance covered; Robin rolling at SKATE_SPEED, posing once she stops), and holds the end of it for as long as
 // the words take to read. Paths keep clear of everyone standing: Robin and anyone running to the right of the mic pass
@@ -44,26 +47,37 @@ import { HERO_NAME } from '../cast.js';
 import {
   WORLD, SPOTS, LINE_Y, capSpot, pickSpot, AT_MIC, MC_HOME, GATE_OUT, GATE_IN, waitSlot, PRIYA_AT, SAM_AT, SAM_ASIDE,
   REF_AT, START, backupSpot, DECLINED_AT, SKATE_SPEED, MC_NAME, repTag, FIRST_CAPTAINS, ALLIANCES, DECLINED, BACKUPS, WAITING,
+  SIGN_POST, walkView,
 } from './layout.js';
 
 // ---- The camera ----
 /** As far as a 1x view can go and stay inside the world: x 0 to 528, y 0 to 64. */
 const MAX = { x: WORLD.w - W, y: WORLD.h - H };
-const view = (x, y) => ({ x: Math.round(clamp(x, 0, MAX.x)), y: Math.round(clamp(y, 0, MAX.y)) });
-/** An eased pan from one view to another, k from 0 to 1. */
-const pan = (a, b, k) => view(lerp(a.x, b.x, easeInOut(clamp(k, 0, 1))), lerp(a.y, b.y, easeInOut(clamp(k, 0, 1))));
+/**
+ * How far above the world a 1x view may start: the top film bar's 12 rows, so with the bars in, the first row you see
+ * is the world's top row. Seen from there, the front row of the stands has its faces whole under the bar, the way the
+ * arena's walkabout frames them at its top edge (at y 0 the bar would cover them).
+ */
+const ABOVE = -12;
+const view = (x, y, top = 0) => ({ x: Math.round(clamp(x, 0, MAX.x)), y: Math.round(clamp(y, top, MAX.y)) });
+/** An eased pan from one view to another, k from 0 to 1 (from or to a view above the world, if either is). */
+const pan = (a, b, k) => view(lerp(a.x, b.x, easeInOut(clamp(k, 0, 1))), lerp(a.y, b.y, easeInOut(clamp(k, 0, 1))), ABOVE);
 /**
  * The shots along the line: the signs' panels well clear of the top film bar, the captains' feet at row 85 and Robin's
  * at 92, the waiting reps' heads along the bottom; with words up, every face stays above the dialog box.
  */
 const LINE_VIEW = 35;
 /**
- * The arena: the stands, the walkway and the field, the signs standing over the line; with the line full, the stands
- * on their feet over all eight alliances.
+ * The arena with the line full: the stands on their feet over all eight alliances, the faces along the line just
+ * clear of the dialog box (seen from 12 rows higher, the box would cover them).
  */
 const CROWD_SHOT = view(264, 0);
-/** Along the empty line as it opens: from sign 1 near the left of the frame to sign 8 near the right. */
-const LINE_FROM = view(190, 0), LINE_TO = view(300, 0);
+/**
+ * Along the empty line as it opens, the stands above it: from signs 1 to 6 whole (sign 1 at the left edge, the place
+ * card nowhere near) to signs 3 to 8 whole (sign 8 at the right edge), so every sign is seen whole. The eight of them
+ * are 294 pixels end to end, more than the screen's 256, so no 1x view holds them all at once.
+ */
+const LINE_FROM = view(SPOTS[0] - 15, ABOVE, ABOVE), LINE_TO = view(SPOTS[7] + 15 - W, ABOVE, ABOVE);
 /**
  * The crowd, close, at 2x: the front row of fans across the frame above the dialog box, as high as the world goes so
  * the film bar doesn't cut their hands off, past the blue end of the field, clear of the signs, the rocket and the
@@ -80,11 +94,13 @@ const REPS_SHOT = view(230, 64);
 const HER_SHOT = { focus: { x: waitSlot(0).x - 41, y: 130 }, zoom: 2 };
 /**
  * The audience display past the red end, its header just under the film bar: as far right as the view goes without
- * cutting anyone at its left edge, Alliance Eight whole there (Alliance Seven's right pick ends at x 513).
+ * cutting anyone at its left edge, Alliance Eight whole there (Alliance Seven's right pick ends at x 513). From the top
+ * of the world, so the front row of the stands above it shows its faces under the bar, and the backups' last line still
+ * ends above the dialog box.
  */
-const BOARD_SHOT = view(514, 4);
-/** Walking about starts here (stage.js follows her: half a screen left of her, 28 + 72 rows above her feet). */
-const WALK_VIEW = view(START.x - W / 2, START.y - 28 - H / 2);
+const BOARD_SHOT = view(514, 0);
+/** Walking about starts here: the walkabout's own camera on her where she stands (layout.js walkView). */
+const WALK_VIEW = view(walkView(START.x, START.y).x, walkView(START.x, START.y).y);
 /**
  * A camera operator following something along x: where it is on average over `span` seconds, from a little before t
  * to `ahead` seconds after (the cut scene knows where it's going), half a screen to its left. The pan eases in as the
@@ -241,6 +257,8 @@ const pages = (...p) => p;
 const chars = (page) => page.join('').length;
 /** How long stage.js takes over a page when the pages turn by themselves: typing at 40 a second, then a pause. */
 const pageTime = (page) => chars(page) / 40 + 1.2 + chars(page) * 0.035;
+/** When page k of a beat's words comes up at that pace, the words starting `at` seconds into the beat. */
+const pageAt = (lines, at, k) => at + lines.slice(0, k).reduce((n, p) => n + pageTime(p), 0);
 
 /**
  * The beats (stage.js), 22 of them: open, mcEnters, welcome, thanks, herTurn, rules, captains, clock1, invite1,
@@ -253,6 +271,8 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     name: who === 'mc' ? MC_NAME : repTag(who),
     lines, at, auto: true, look: lookFor(who),
     ...(who === '5026' ? { tag: C.red1 } : {}),
+    // The phone shows Robin with her mic up, as on the big screen and while walking about (scene.js).
+    ...(who === 'mc' ? { faceGait: 'emcee' } : {}),
   });
   if (repTag('5026') !== HERO_NAME) throw new Error('cutscene.js: her name tag should be HERO_NAME');
 
@@ -298,25 +318,33 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   const autoEnd = (b) => Math.max(b.dur, b.say ? (b.say.at ?? 0) + b.say.lines.reduce((n, p) => n + pageTime(p), 0) : 0);
   const mcPose = (gait, dir = 0) => () => ({ mc: still(HOME[0], HOME[1], dir, gait) });
 
-  // 1. open: close on the crowd as it fades in; a cut to the empty line of signs with the place card, a pan along it
-  // from 1 to 8, and down to the reps waiting in front of the field.
-  const LINE_AT = 1.5;
+  // 1. open: close on the crowd as it fades in; a cut to the arena, the stands over the empty line of signs, held on
+  // signs 1 to 6 and panned along to 3 to 8; then down to the reps waiting in front of the field, the place card
+  // sliding in as the camera settles on them, over the cargo ship and the empty floor (not over the crowd or the
+  // signs), and out at the top left as Robin comes in from the right.
+  const LINE_AT = 1.4, TILT_AT = 3.6, CARD_AT = 4.6;
+  const card = (T) => placeCard(T - CARD_AT, 'ALLIANCE SELECTION', 'SATURDAY 12:40 PM'); // font 3 has no comma
   beat({
     name: 'open', dur: 5.5,
-    shot: (t) => (t < LINE_AT ? standsDrift(t / LINE_AT) : at1x(t < 3.4
-      ? pan(LINE_FROM, LINE_TO, seg(t, LINE_AT + 0.1, 3.4))
-      : pan(LINE_TO, REPS_SHOT, seg(t, 3.4, 5.4)))),
+    shot: (t) => (t < LINE_AT ? standsDrift(t / LINE_AT) : at1x(t < TILT_AT
+      ? pan(LINE_FROM, LINE_TO, seg(t, LINE_AT + 0.3, TILT_AT - 0.1))
+      : pan(LINE_TO, REPS_SHOT, seg(t, TILT_AT, 5.4)))),
     cheer: (t) => (t < LINE_AT ? 0.4 : 0.15),
-    over: (t) => {
+    over: (t, c) => {
       cover(1 - seg(t, 0, 0.8));
-      placeCard(t - LINE_AT, 'ALLIANCE SELECTION', 'SATURDAY 12:40 PM'); // font 3 has no comma
+      card(c.T);
       bars(seg(t, 0, 0.6));
     },
   });
 
   // 2. mcEnters: Robin skates into the shot of the reps from the right, the camera picking her up and following her up
-  // through the gate to the mic, and lands a spin.
+  // through the gate to the mic, and lands a spin. Sam sees her coming and steps aside from the gate (as he does
+  // whenever anyone goes through it); he stays there, out of the close-up of Robin that follows, and walks back while
+  // the camera's on the crowd.
   const IN0 = 0.2, AT_GATE = reaches(ENTRY, 5, IN0, 'skate'), HOME_AT = reaches(ENTRY, ENTRY.length - 1, IN0, 'skate');
+  const samAside = [pt(SAM_AT), pt(SAM_ASIDE)], samBack = [pt(SAM_ASIDE), pt(SAM_AT)];
+  /** He sets off as she comes into the shot, so he's past the gate's column long before she gets to it. */
+  const SAM_OFF = 0.8;
   const SPIN = [HOME_AT + 0.1, HOME_AT + 1.0];
   const entering = (t) => glide(ENTRY, t, IN0, 'flair', null, 'stand', 6);
   const mcIn = (t) => {
@@ -325,18 +353,28 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   };
   beat({
     name: 'mcEnters', dur: SPIN[1] + 0.4,
-    moves: (t) => ({ mc: mcIn(t) }),
+    moves: (t) => ({
+      mc: mcIn(t),
+      sam: trip(samAside, t, SAM_OFF, 'walk', SAM_ASIDE.dir, SAM_AT.dir),
+    }),
     shot: (t) => at1x(view(Math.min(REPS_SHOT.x, follow((s) => mcIn(s).x, t)), lerp(REPS_SHOT.y, LINE_VIEW, easeInOut(seg(t, AT_GATE - 0.7, HOME_AT + 0.3))))),
     cheer: (t) => lerp(0.1, 0.9, seg(t, 2, SPIN[1])),
+    // The place card from the opening, sliding out.
+    over: (t, c) => {
+      card(c.T);
+      bars(1);
+    },
   });
 
-  // 3. welcome: close on Robin, mic up, the mic stand beside her, her head high in the frame: the signs' panels are
-  // above it, under the top film bar (their posts go up out of the shot), and Sam (by the gate, below left) is out of
-  // it on the left. The words start with the cut, so the dialog box covers the top of the strategist's head below.
+  // 3. welcome: close on Robin, mic up, the mic stand beside her, the two of them a little left of the middle, her head
+  // high in the frame: the signs' panels are above it, under the top film bar (their posts go up out of the shot), and
+  // Sam (stepped aside from the gate, below left) is well out of it. The words start with the cut, so the dialog box
+  // covers the top of the strategist's head below.
+  const WELCOME = closeUp(HOME[0] + 12, 99);
   beat({
     name: 'welcome', dur: 2.5,
     moves: mcPose('emcee'),
-    shot: () => closeUp(HOME[0] + 26, 99),
+    shot: () => WELCOME,
     cheer: () => 0.6,
     say: says('mc', pages(
       ['WELCOME TO ALLIANCE SELECTION!', 'HOW ARE WE FEELING, EVERYBODY?!'],
@@ -344,11 +382,12 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   });
 
   // 4. thanks: close on the crowd on its feet; Robin, off to the right, rolls a skate's length toward them (ASIDE), her
-  // free arm up. There she's clear of the close-up of the strategist that follows; the rules start from there.
+  // free arm up. There she's clear of the close-up of the strategist that follows; the rules start from there. Sam
+  // walks back to the gate.
   const ASIDE = [HOME[0] + 17, HOME[1]];
   beat({
     name: 'thanks', dur: 2.5,
-    moves: (t) => ({ mc: glide([HOME, ASIDE], t, 0.2, 'flair', 0, 'emcee', 0) }),
+    moves: (t) => ({ mc: glide([HOME, ASIDE], t, 0.2, 'flair', 0, 'emcee', 0), sam: trip(samBack, t, 0.3, 'walk', SAM_AT.dir) }),
     shot: () => STANDS_BLUE,
     cheer: (t) => lerp(0.6, 1, seg(t, 0, 0.4)),
     say: says('mc', pages(
@@ -368,51 +407,80 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     ), 0.3),
   });
 
-  // 6. rules: Robin skates the line, sign 1 to sign 8 and back, explaining; the camera follows her.
-  const R1 = [ASIDE, [HOME[0] + 4, 121], [SPOTS[0], 122]], R2 = [[SPOTS[0], 122], [SPOTS[7], 122]], R3 = [[SPOTS[7], 122], HOME];
-  const RT = [0.3];
-  RT.push(RT[0] + timeOf(R1, SKATE_SPEED) + 0.6);
-  RT.push(RT[1] + timeOf(R2, SKATE_SPEED) + 0.6);
+  // 6. rules: Robin skates out to sign 1 as she says who the captains are, then skates the order the picks go in, timed
+  // to the pages as they turn by themselves: sign 1 to sign 8 as "round one, they pick one to eight" comes up, and once
+  // she's there back from 8 to 1 for "round two goes back, eight to one"; then home beside the mic, before the last
+  // page. The camera follows her.
+  const RULES = pages(
+    ["HERE'S HOW IT WORKS: OUR TOP EIGHT", 'SEEDS ARE THE ALLIANCE CAPTAINS.'],
+    ['ROUND ONE, THEY PICK ONE TO EIGHT.', 'ROUND TWO GOES BACK, EIGHT TO ONE.'],
+    ['A CAPTAIN CAN INVITE ANY TEAM RANKED', 'BELOW THEM. EVEN ANOTHER CAPTAIN!'],
+    ['TURN AN INVITE DOWN AND NOBODY ELSE', 'CAN PICK YOU. AND WATCH THE CLOCK!'],
+  );
+  const RULES_AT = 0.3;
+  const SIGN1 = [SPOTS[0], 122], SIGN8 = [SPOTS[7], 122];
+  const R1 = [ASIDE, [HOME[0] + 4, 121], SIGN1], R2 = [SIGN1, SIGN8], R3 = [SIGN8, SIGN1], R4 = [SIGN1, [HOME[0] + 4, 121], HOME];
+  /** When she sets off on each: R2 as the round order's page starts typing, R3 and R4 a moment after she pulls up. */
+  const RT = [0.6, pageAt(RULES, RULES_AT, 1)];
+  RT.push(RT[1] + timeOf(R2, SKATE_SPEED) + 0.4);
+  RT.push(RT[2] + timeOf(R3, SKATE_SPEED) + 0.3);
+  const RULES_HOME = RT[3] + timeOf(R4, SKATE_SPEED);
+  if (RULES_HOME > pageAt(RULES, RULES_AT, 3)) throw new Error('cutscene.js: Robin should be home before the last rule');
   const rulesMc = (t) => {
     if (t < RT[1]) return glide(R1, t, RT[0], 'emcee', 0, 'emcee', 0);
     if (t < RT[2]) return glide(R2, t, RT[1], 'emcee', 0, 'emcee', 0);
-    return glide(R3, t, RT[2], 'emcee', HOME_DIR, 'emcee', 0);
+    if (t < RT[3]) return glide(R3, t, RT[2], 'emcee', 0, 'emcee', 0);
+    return glide(R4, t, RT[3], 'emcee', HOME_DIR, 'emcee', 0);
   };
   beat({
-    name: 'rules', dur: 10,
+    // As long as her skate (so ?at= shows all of it and A can't cut it short); the last page holds on her at home.
+    name: 'rules', dur: RULES_HOME + 0.6,
     // She looks back at the field while Robin explains.
     moves: (t) => ({ mc: rulesMc(t), '5026': still(HER.x, HER.y, 4) }),
     shot: (t) => at1x(view(follow((s) => rulesMc(s).x, t, 1.2, 0.7), LINE_VIEW)),
     cheer: () => 0.1,
-    say: says('mc', pages(
-      ["HERE'S HOW IT WORKS: OUR TOP EIGHT", 'SEEDS ARE THE ALLIANCE CAPTAINS.'],
-      ['ROUND ONE, THEY PICK ONE TO EIGHT.', 'ROUND TWO GOES BACK, EIGHT TO ONE.'],
-      ['TURN AN INVITE DOWN AND NOBODY ELSE', 'CAN PICK YOU. AND WATCH THE CLOCK!'],
-    ), 0.3),
+    say: says('mc', RULES, RULES_AT),
   });
 
-  // 7. captains: the top eight run on through the gate to their signs, 0.45 seconds apart. Right of the mic, they pass
-  // in front of it and of Robin. The shot opens low, on the gate above the dialog box while Robin calls them out, and
-  // rises to the line as they get to their signs.
+  // 7. captains: Robin calls the top eight out one by one, by seed, and each runs on through the gate to their sign as
+  // she calls them, in single file: setting off so as to get there as their number types, but never sooner than
+  // CAP_GAP after the one before (the ones for the far side of the mic have the furthest to go, so they come in a
+  // little after their names). Right of the mic, they pass in front of it and of Robin. The shot opens low, on the
+  // gate above the dialog box, rises to the line as the first two get to their signs and follows along it as the
+  // rest come in.
+  const CALL = pages(
+    ["LET'S BRING OUT OUR CAPTAINS! YOUR", 'NUMBER ONE SEED, 4000! TWO, 2468!'],
+    ['THREE, 3000! FOUR, 1357! FIVE, 7777!', 'SIX, 6417! SEVEN, 8086!'],
+    ['AND NUMBER EIGHT, 5940! GIVE IT UP', 'FOR YOUR ALLIANCE CAPTAINS!'],
+  );
+  const CALL_AT = 0.3;
+  /** When a team's number has typed out in Robin's call, at the automatic pace. */
+  const calledAt = (num) => {
+    const k = CALL.findIndex((page) => page.join('').includes(num));
+    if (k < 0) throw new Error(`cutscene.js: Robin never calls ${num} out`);
+    return pageAt(CALL, CALL_AT, k) + (CALL[k].join('').indexOf(num) + num.length) / 40;
+  };
+  // Right of the mic they keep to FRONT till they're level with their sign, so they pass well in front of the captains
+  // already standing there (their heads below those captains' faces), never across them.
   const capRun = FIRST_CAPTAINS.map((num, i) => {
     const s = slotOf(num), spot = capSpot(i);
-    const around = spot.x > AT_MIC.x ? [[376, FRONT], [436, FRONT]] : [];
+    const around = spot.x > AT_MIC.x ? [[376, FRONT], [spot.x, FRONT]] : [];
     return [[s.x, s.y], [s.x, TAPE], pt(GATE_OUT), pt(GATE_IN), ...around, [spot.x, 124], [spot.x, spot.y]];
   });
   const CAP0 = 0.4, CAP_GAP = 0.45;
+  const capGo = [];
+  capRun.forEach((path, i) => capGo.push(Math.max(i ? capGo[i - 1] + CAP_GAP : CAP0, calledAt(FIRST_CAPTAINS[i]) - timeOf(path, SPEEDS.run))));
   /** Low enough that the gate (rows 134-152) and the runners' faces are above the dialog box. */
   const GATE_VIEW = 62;
-  const capIn = capRun.map((path, i) => reaches(path, path.length - 1, CAP0 + i * CAP_GAP, 'run'));
+  const capIn = capRun.map((path, i) => capGo[i] + timeOf(path, SPEEDS.run));
   const CAPS_IN = capIn[capIn.length - 1];
   beat({
-    name: 'captains', dur: CAPS_IN + 0.3,
-    moves: (t) => Object.fromEntries(FIRST_CAPTAINS.map((num, i) => [num, trip(capRun[i], t, CAP0 + i * CAP_GAP, 'run', 0)])),
-    shot: (t) => at1x(view(lerp(200, 296, easeInOut(seg(t, 0.8, CAPS_IN))), lerp(GATE_VIEW, LINE_VIEW, easeInOut(seg(t, 2.0, 4.6))))),
+    name: 'captains', dur: CAPS_IN + 0.5,
+    moves: (t) => Object.fromEntries(FIRST_CAPTAINS.map((num, i) => [num, trip(capRun[i], t, capGo[i], 'run', 0)])),
+    shot: (t) => at1x(view(lerp(200, 296, easeInOut(seg(t, capIn[3], CAPS_IN))), lerp(GATE_VIEW, LINE_VIEW, easeInOut(seg(t, 1.0, capIn[1] + 0.6))))),
     cheer: (t) => lerp(0.1, 0.7, seg(t, 0.3, 1.5)),
     board: (t) => chart(captains(FIRST_CAPTAINS.map((num, i) => (t >= capIn[i] ? num : '')))),
-    say: says('mc', pages(
-      ["LET'S BRING OUT OUR CAPTAINS, SEEDS", 'ONE THROUGH EIGHT! COME ON DOWN!'],
-    ), 0.3),
+    say: says('mc', CALL, CALL_AT),
   });
 
   // 8. clock1: Alliance One's captain walks to the mic, and the clock starts on "you are on the clock": a cut to the
@@ -448,10 +516,12 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   });
   const clockStopped1 = clock1Left - invite1.say.at;
 
-  // 10. joinOrForm: 2468 is a captain, so Robin skates over (in front of the mic and the captain at it) and holds the
-  // mic out to them.
-  const BY_THEO = [SPOTS[1] + 18, LINE_Y + 8];
-  const toTheo = [HOME, [HOME[0] - 2, FRONT], [376, FRONT], [330, 128], BY_THEO];
+  // 10. joinOrForm: 2468 is a captain, so Robin skates over (in front of the mic and the captain at it, and of 3000's)
+  // and holds the mic out to them. She stops nearly level with them, so the mic she holds out comes up by their chin.
+  const BY_THEO = [SPOTS[1] + 17, LINE_Y + 2];
+  /** Past 3000's captain, a step in front of their feet, before she turns in to 2468. */
+  const PAST_LENA = [SPOTS[2] - 10, 128];
+  const toTheo = [HOME, [HOME[0] - 2, FRONT], [376, FRONT], PAST_LENA, BY_THEO];
   const TO_THEO = 0.2;
   beat({
     name: 'joinOrForm', dur: 3.5,
@@ -479,18 +549,26 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   // ranked ninth, runs on as the new number eight, once the line has settled: along the empty front row of the waiting
   // area, through the gate and along in front of the mic, Sam stepping aside from the gate till he's through. Robin
   // skates home; Alliance One's captain walks back last, once 9152 is past the mic, so nobody walks along in step in
-  // front of anyone and no two people on the move are ever in the same column. The view follows the line along as the
-  // captains settle.
+  // front of anyone and no two people on the move are ever in the same column. The one captain whose step crosses the
+  // mic's gap (7777, spot 5 to 4) goes round behind Robin's spot, the mic and the captain still at it, along the picks'
+  // empty row (in front of the cargo ship), his face over their heads, and in to his new spot clear of sign 4's post;
+  // he sets off first, so he's past Robin's spot before she skates home onto it. The view follows the line along as
+  // the captains settle.
   const theoBack = [pt(capSpot(1)), [pickSpot(0, 1).x + 2, LINE_Y + 1], pt(pickSpot(0, 1))];
-  const mcBack = [BY_THEO, [330, 128], [376, FRONT], [HOME[0] - 2, FRONT], HOME];
-  const SHIFT0 = 1.0, SHIFT_GAP = 0.1, IKE0 = 1.7;
+  const mcBack = [BY_THEO, PAST_LENA, [376, FRONT], [HOME[0] - 2, FRONT], HOME];
+  const SHIFT0 = 1.0, SHIFT_GAP = 0.1, IKE0 = 1.7, CROSS0 = 0.6;
   const shifters = FIRST_CAPTAINS.slice(2); // 3000 to 5940, from spots 3-8 to 2-7
+  const crosses = (k) => capSpot(k + 2).x > AT_MIC.x && capSpot(k + 1).x < AT_MIC.x;
+  /** When each moves up on the display, one after the other; and when they set off (the one crossing first). */
   const shiftAt = (k) => SHIFT0 + k * SHIFT_GAP;
+  const stepAt = (k) => (crosses(k) ? CROSS0 : shiftAt(k));
+  const shiftPath = (k) => (crosses(k)
+    ? [pt(capSpot(k + 2)), [SPOTS[k + 2] - 6, LINE_Y - 8], [SPOTS[k + 1] + SIGN_POST + 5, LINE_Y - 8], pt(capSpot(k + 1))]
+    : [pt(capSpot(k + 2)), pt(capSpot(k + 1))]);
   const ikeSlot = slotOf('9152');
   const ikeRun = [[ikeSlot.x, ikeSlot.y], [GATE_OUT.x - 14, ikeSlot.y], pt(GATE_OUT), pt(GATE_IN), [376, FRONT],
-    [436, FRONT], [SPOTS[7], 124], pt(capSpot(7))];
+    [SPOTS[7], FRONT], [SPOTS[7], 124], pt(capSpot(7))];
   const MAYA0 = reaches(ikeRun, 4, IKE0, 'run') + 0.4;
-  const samAside = [pt(SAM_AT), pt(SAM_ASIDE)], samBack = [pt(SAM_ASIDE), pt(SAM_AT)];
   const SAM_BACK = reaches(ikeRun, 3, IKE0, 'run') + 0.1;
   const mayaBack = [pt(AT_MIC), [AT_MIC.x - 6, PASS], [SPOTS[0] + 6, PASS], pt(capSpot(0))];
   beat({
@@ -498,7 +576,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     moves: (t) => ({
       '2468': trip(theoBack, t, 0.5, 'walk', 0),
       mc: glide(mcBack, t, 0.3, 'emcee', HOME_DIR, 'offer', 6),
-      ...Object.fromEntries(shifters.map((num, k) => [num, trip([pt(capSpot(k + 2)), pt(capSpot(k + 1))], t, shiftAt(k), 'walk', 0, 0)])),
+      ...Object.fromEntries(shifters.map((num, k) => [num, trip(shiftPath(k), t, stepAt(k), 'walk', 0, 0)])),
       '9152': trip(ikeRun, t, IKE0, 'run', 0, 4),
       '4000': trip(mayaBack, t, MAYA0, 'walk', 0, 0),
       sam: t < SAM_BACK ? trip(samAside, t, 0.9, 'walk', SAM_ASIDE.dir, SAM_AT.dir) : trip(samBack, t, SAM_BACK, 'walk', SAM_AT.dir),
@@ -586,11 +664,12 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
 
   // 17. sheRunsOn: she runs on through the gate to her captain's left, Robin rolling after her and home; the captain
   // walks back to the sign. Each of them crosses the gate's column on their own: she comes up through it and runs off
-  // left ahead of the captain, who sets off from the mic as she gets there; Robin follows once the captain is past.
+  // left, and the captain sets off from the mic once she's by, so she's well ahead (she runs, the captain walks) and
+  // never over her; Robin follows through the gate once the captain is past it.
   const herRun = [MEET, LANE, pt(GATE_OUT), pt(GATE_IN), [pickSpot(1, 1).x, 124], pt(pickSpot(1, 1))];
   const mcHome = [MC_BY_HER, LANE, pt(GATE_OUT), pt(GATE_IN), [376, FRONT], [HOME[0] - 2, FRONT], HOME];
   const lenaBack = [pt(AT_MIC), [AT_MIC.x - 6, PASS], [SPOTS[1] + 4, PASS], pt(capSpot(1))];
-  const RUN0 = 0.3, LENA0 = 0.9, MC0 = 1.4;
+  const RUN0 = 0.3, LENA0 = 1.4, MC0 = 1.7;
   beat({
     name: 'sheRunsOn', dur: Math.max(4.0, LENA0 + timeOf(lenaBack, SPEEDS.walk) + 0.2, MC0 + timeOf(mcHome, SKATE_SPEED) + 0.2),
     moves: (t) => ({

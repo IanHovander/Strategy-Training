@@ -43,11 +43,17 @@ export const STANDS = { x0: 106, x1: 678 };
 /** The curtain between two blocks of stands runs from ox(k) - GATEWAY to ox(k) + GATEWAY, down to the floor at row 55. */
 export const GATEWAY = 106;
 /**
- * On division k's curtain: its sign, beside its own stands, and its big screen. Rows are world rows. The sign stops
- * short of the curtain's end, so someone standing there in front of the curtain (Newton's teammate) has a clear head.
+ * On the curtain at ox(k): division k's sign, beside its own stands, and on the other half the big screen of the
+ * division on the left, over that field's scoring table, so a field's screen and its table show the same match (the
+ * curtain past Newton carries Newton's, and the one by the left wall a second Archimedes screen). Rows are world rows.
+ * The sign stops well short of the curtain's end, so someone standing there in front of the curtain (Newton's teammate)
+ * has a clear head, and the bubble over them lands on bare cloth. Both hang from the same top line, high enough that
+ * the head of anyone standing on the floor in front of the hem's barrier stays under the sign and covers at most the
+ * screen's bottom bezel: the screen is only a little taller than the sign, the division and its match number on one
+ * line, the score and the clock under it.
  */
-export const SIGN = { x0: 6, x1: 90, y0: 8, y1: 30 };
-export const SCREEN = { x0: -98, x1: -18, y0: 4, y1: 40 };
+export const SIGN = { x0: 6, x1: 84, y0: 4, y1: 26 };
+export const SCREEN = { x0: -98, x1: -18, y0: 4, y1: 32 };
 
 // World positions:
 /**
@@ -56,12 +62,30 @@ export const SCREEN = { x0: -98, x1: -18, y0: 4, y1: 40 };
  * front of the dark curtain, beside Newton's sign, a little further back, turned to her: a head's width between them.
  * The teammate stands clear of the walkway and of the way down to the aisle, so she never has to walk through anyone:
  * the walkway opens on her right, and the way back to the aisle is down past the teammate's feet, between them and
- * the queue.
+ * the queue. Both stand high on the floor, so her feet are well clear of the top of 5026's elevator in the queue below
+ * her (a foot on the tip of a mast would read as standing on it).
  */
-export const START = { x: ox(HOME) + 124, y: 62, dir: 6 };
-export const MATE = { x: START.x - 22, y: 58, dir: 2 };
-/** Two tables on the floor (hall.js draws them, people.js puts someone behind each): along x0-x1, floor lines back to front. */
-export const BUTTON_TABLE = { x0: ox(6) - 44, x1: ox(6) - 4, back: 89, front: 96 };
+export const START = { x: ox(HOME) + 124, y: 59, dir: 6 };
+export const MATE = { x: START.x - 22, y: 56, dir: 2 };
+/**
+ * Belt barriers along the curtains' hems, their posts standing on floor line BARRIER_Y (hall.js draws them, and they
+ * stop her): the floor at the foot of a curtain is kept clear, so nobody walks along under the signs and screens with
+ * their head across a division's name or score. Each aisle has two runs, one under the screen and one under the sign,
+ * a gap too narrow to pass between them on the line between the two divisions (so each run belongs to one division's
+ * field, sorted in with its things), and they stop short of the walkways at both ends: the screen's run far enough
+ * along that nobody standing at the walkway's mouth has their face against the screen's edge. The pads have one each.
+ */
+export const BARRIER_Y = 70;
+export const BARRIERS = [
+  { x0: WALL + 6, x1: ox(0) + 88 },
+  ...DIVISIONS.slice(1).flatMap((_, i) => [{ x0: ox(i + 1) - 112, x1: ox(i + 1) - 12 }, { x0: ox(i + 1) - 4, x1: ox(i + 1) + 88 }]),
+  { x0: ox(DIVISIONS.length) - 112, x1: WORLD.w - WALL - 6 },
+];
+/**
+ * Two tables on the floor (hall.js draws them, people.js puts someone behind each): along x0-x1, floor lines back to
+ * front, far enough forward that whoever stands behind one leaves the floor in front of the hem's barrier open.
+ */
+export const BUTTON_TABLE = { x0: ox(6) - 44, x1: ox(6) - 4, back: 95, front: 102 };
 export const INFO_DESK = { x0: ox(HOME) + PITCH + 38, x1: ox(HOME) + PITCH + 94, back: 90, front: 98 };
 
 // ---- The matches ----

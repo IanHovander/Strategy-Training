@@ -10,12 +10,14 @@
 // sun low in the first window, and the trees and the school's other wing as silhouettes against it.
 // The floor is two-foot vinyl tiles in a quiet checker. The team's carpet goes down on it (halffield.js), then the sun:
 // each window throws its own shape onto the floor, its six panes sheared to the right and squashed, with the frame's bars
-// as shadow lines between them. The patches are each material lifted well over halfway to the sun's gold (so the carpet
-// comes out a light warm gold with its speckle and tape still showing, lighter and greyer than the plywood's orange),
-// hard-edged all round, with a one-pixel rim of brighter, paler light down their lit left sides. The shafts in the air
-// above them are one flat band each, from under the sill down to the patch, in the same gold, painted into the floor
-// canvas too, so they never tint what stands in them; dust drifts through them every frame. No glows and no smooth
-// gradients.
+// as shadow lines between them. A patch is a fixed ramp of pale straw, the same hue on the carpet and the tiles, clearly
+// paler and yellower than the plywood standing in it, so it reads as light, with the carpet's speckle and tape still
+// showing. Every patch is hard-edged all round, with a one-pixel rim of brighter, paler light down its lit left side.
+// The shafts in the air above them run from under the sill down to the patch in two flat steps, the upper one brighter,
+// with two rows of checkerboard between, each surface under them a fixed clean colour a step or two up its own ramp and
+// warmer, and a brighter rim down each band's lit edge. They're painted into the floor canvas too, so they never tint
+// what stands in them; dust drifts through them every frame. Ink outlines stay ink in the light. No glows and no
+// smooth gradients.
 // Out on the floor: a table where the programmer works, another where a scout eats pizza, two backpacks, the custodian's
 // cart, and the bins by the vending machines. Everything standing up is a box like field.js's: its top lighter, the face
 // toward you darker, an ink outline round it, lit from the upper left. The background furniture stays dim, like the
@@ -32,6 +34,7 @@
 import { W, C, useContext, camera, screen, rect, disk, text, rnd } from '../pixel.js';
 import { tones } from '../cast.js';
 import { ROOM, roomY, DOORS, WINDOWS, WIN, FOLDED, SERVING, VENDING, SUN, sunShift, FURNITURE, SPOTS } from './layout.js';
+import { CARPET_IN_SUN, CARPET_IN_SHAFT } from './halffield.js';
 
 // ---- Colours ----
 // New ramps sit beside pixel.js's palette, shade / mid / lit.
@@ -191,23 +194,23 @@ function roundel(cx, cy, r, c) {
     rect(cx - hw, cy + dy, hw * 2 + 1, 1, c);
   }
 }
-/** A clock on the second pier, reading 4:40: a steel rim lit at the upper left, a white face shaded at the lower right,
- *  four ticks against the rim, and two one-pixel ink hands from the middle: the long minute hand out to the rim at the
- *  8, the short hour hand two thirds of the way to the 5. (Blocky hands and a red pin read as a face at this size.) */
+/** A clock on the second pier, reading 4:40: a steel rim lit at the upper left and shaded at the lower right, a flat
+ *  white face with one tick at the 12, and two straight one-pixel ink hands from the ink centre, a clean V: the long
+ *  minute hand down to the left, toward the 8, the short hour hand down to the right, toward the 5. Small round things
+ *  stay clean flat tones, like the rocket's ports. */
 function clock(cx, cy) {
   roundel(cx, cy, 6, C.ink);
   roundel(cx, cy, 5, STEEL[2]);
   for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) {
-    if (dx * dx + dy * dy <= 30 && dx + dy <= -5) rect(cx + dx, cy + dy, 1, 1, STEEL[3]);
+    if (dx * dx + dy * dy > 30) continue;
+    if (dx + dy <= -5) rect(cx + dx, cy + dy, 1, 1, STEEL[3]);
+    else if (dx + dy >= 5) rect(cx + dx, cy + dy, 1, 1, STEEL[1]);
   }
   roundel(cx, cy, 4, C.white);
-  for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
-    if (dx * dx + dy * dy <= 20 && dx + dy >= 4) rect(cx + dx, cy + dy, 1, 1, STEEL[3]);
-  }
-  for (const [dx, dy] of [[0, -4], [4, 0], [0, 4], [-4, 0]]) rect(cx + dx, cy + dy, 1, 1, STEEL[1]);
+  rect(cx, cy - 4, 1, 1, STEEL[1]);
   rect(cx, cy, 1, 1, C.ink);
-  for (const [dx, dy] of [[-1, 1], [-2, 1], [-3, 2], [-4, 2]]) rect(cx + dx, cy + dy, 1, 1, C.ink); // the minute hand, at the 8
-  for (const [dx, dy] of [[1, 1], [1, 2], [2, 3]]) rect(cx + dx, cy + dy, 1, 1, C.ink); // the hour hand, nearly at the 5
+  for (const [dx, dy] of [[-1, 1], [-2, 2], [-3, 3]]) rect(cx + dx, cy + dy, 1, 1, C.ink); // the minute hand
+  for (const [dx, dy] of [[1, 1], [2, 2]]) rect(cx + dx, cy + dy, 1, 1, C.ink); // the hour hand
 }
 
 /** READ, in four colours under an open book: two white pages whose tops dip to the spine, lines of print on them, the
@@ -436,16 +439,24 @@ export function drawTiles(ctx) {
 // ---- The sun on the floor ----
 // Each floor pixel (x, y) in the rows the sun reaches is lit if the point of the window it maps back to is a pane: its
 // column x - sunShift(y), its row squeezed from the sill (on the near row) up to the window's top (on the far row).
-// The frame, the mullion and the transoms leave shadow bars. Lit pixels take a sunlit version of whatever they were,
-// tiles and carpet and tape alike, the same colour every time: lifted 58% of the way to the outer ring of the sun's
-// gold (SUN_RINGS[1]), late-afternoon light, so each keeps something of its own colour. Each pane's patch is hard-edged
-// all round, with a one-pixel rim of paler, brighter light down its left side, toward the sun.
+// The frame, the mullion and the transoms leave shadow bars. Lit pixels take a fixed sunlit colour for whatever they
+// were, the same every time: on the tiles and the carpet a pale straw, clearly paler and yellower than any plywood, so a
+// patch reads as light, not as a board lying on the floor; the tiles' straw a step lighter than the carpet's
+// (halffield.js CARPET_IN_SUN), so a window's patch is one hue across the carpet's edge. Anything else (a depot's
+// plywood, its cargo) is lifted 58% of the way to the outer ring of the sun's gold (SUN_RINGS[1]), so each keeps
+// something of its own colour. Ink stays ink, so every outline the light crosses still shows. Each pane's patch is
+// hard-edged all round, with a one-pixel rim of paler, brighter light down its left side, toward the sun.
 // Above the patches, each window's shaft: from under the sill down to the patch's near row, each row the panes'
-// columns shifted right by sunShift(y), so it pours into the patch. One flat band, the floor and the wall under it
-// lifted a bit over a quarter of the way to the same gold, enough to read at 1x as light coming in, the frame's bars
-// still shadow lines through it.
-const SUNLIT = [0xff, 0xd8, 0x90], LIT_K = 0.58, SHAFT_K = 0.28, RIM = [0xff, 0xf1, 0xc4];
+// columns shifted right by sunShift(y), so it pours into the patch, the frame's bars still shadow lines through it.
+// It's stepped like the sky in the glass: from the sill halfway down a step brighter than below, two rows of
+// checkerboard between (skyAt). Each surface under it has a fixed lit colour for each step, clean colours a step or two
+// up its own ramp and warmer: the wainscot a lighter teal, its cove a step up, the tiles warm light greys, the carpet's
+// edge a dark straw. Down its lit left edge each band has a one-pixel rim a step brighter again, like the patches, so
+// each shaft reads as light joining its window to its patch.
+const SUNLIT = [0xff, 0xd8, 0x90], LIT_K = 0.58, RIM = [0xff, 0xf1, 0xc4];
 const SHAFT_TOP = WIN.top + 65; // the first row under the sill
+/** The shaft's lower step starts here; the row before it and this one are the checkerboard between the two. */
+const SHAFT_STEP = Math.round((SHAFT_TOP + SUN.near) / 2) + 2;
 const toward = (to, k) => {
   const cache = new Map();
   return (r, g, b) => {
@@ -455,7 +466,41 @@ const toward = (to, k) => {
     return c;
   };
 };
-const sunlit = toward(SUNLIT, LIT_K), shafted = toward(SUNLIT, SHAFT_K);
+const rgb = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+const keyOf = (r, g, b) => (r << 16) | (g << 8) | b;
+const INK = keyOf(...rgb(C.ink));
+/** A fixed relighting: each colour in pairs ([from, to] as hex) to its own, anything else by fallback. */
+function fixedLight(pairs, fallback) {
+  const m = new Map([...pairs].map(([from, to]) => [keyOf(...rgb(from)), rgb(to)]));
+  return (r, g, b) => m.get(keyOf(r, g, b)) ?? fallback(r, g, b);
+}
+/** The patches. */
+const sunlit = fixedLight([
+  [TILE.a, '#e6d39a'], [TILE.b, '#ecdaa2'], [TILE.fleck[0], '#f2e3b0'], [TILE.fleck[1], '#d6c28a'], [TILE.grout, '#cdb87e'],
+  ...CARPET_IN_SUN,
+], toward(SUNLIT, LIT_K));
+/** The shafts: the lower step, the upper step, and the rim down each band's lit edge. */
+const SHAFT_LO = fixedLight([
+  [GLAZE[0], '#245e55'], [GLAZE[1], '#2c7468'], [GLAZE[2], '#3a8a7c'], [DUSK[0], DUSK[1]], [DUSK[1], DUSK[2]],
+  [TILE.a, '#7a7270'], [TILE.b, '#837a77'], [TILE.fleck[0], '#8c8380'], [TILE.fleck[1], '#706866'], [TILE.grout, '#686060'],
+  ...CARPET_IN_SHAFT,
+], toward(SUNLIT, 0.2));
+const SHAFT_HI = fixedLight([
+  [GLAZE[0], '#2c7468'], [GLAZE[1], '#3a8a7c'], [GLAZE[2], '#4aa08e'], [DUSK[0], DUSK[2]], [DUSK[1], '#33475f'],
+  [TILE.a, '#988c86'], [TILE.b, '#a1948d'], [TILE.fleck[0], '#ab9e96'], [TILE.fleck[1], '#8a817b'], [TILE.grout, '#807772'],
+  ...CARPET_IN_SHAFT,
+], toward(SUNLIT, 0.3));
+const SHAFT_RIM = fixedLight([
+  [GLAZE[0], '#4aa08e'], [GLAZE[1], '#5cb49e'], [GLAZE[2], '#6cc4ac'], [DUSK[0], '#33475f'], [DUSK[1], '#3d5470'],
+  [TILE.a, '#c8b9a0'], [TILE.b, '#d0c0a6'], [TILE.fleck[0], '#d8c8ac'], [TILE.fleck[1], '#b9ab94'], [TILE.grout, '#aea28c'],
+  ...CARPET_IN_SUN,
+], toward(SUNLIT, 0.45));
+/** Which step of the shaft (x, y) is in: the upper above SHAFT_STEP, the lower from it down, checkered in between. */
+function shaftStep(x, y) {
+  if (y === SHAFT_STEP - 1) return (x + y) % 2 === 0 ? SHAFT_LO : SHAFT_HI;
+  if (y === SHAFT_STEP) return (x + y) % 2 === 1 ? SHAFT_HI : SHAFT_LO;
+  return y < SHAFT_STEP ? SHAFT_HI : SHAFT_LO;
+}
 /** Which point of a window, measured from its corner, the floor pixel (x, y) maps back to. */
 function backToWindow(x0, x, y) {
   const wy = WIN.sill - ((y + 0.5 - SUN.near) * (WIN.sill - WIN.top)) / (SUN.far - SUN.near);
@@ -465,30 +510,28 @@ function backToWindow(x0, x, y) {
 export function drawSunPatches(ctx) {
   const y0 = SHAFT_TOP, h = SUN.far - y0 + 1;
   const img = ctx.getImageData(0, y0, ROOM.w, h), px = img.data;
-  const set = (x, y, [r, g, b]) => {
-    const k = ((y - y0) * ROOM.w + x) * 4;
-    px[k] = r;
-    px[k + 1] = g;
-    px[k + 2] = b;
-  };
+  /** Relight (x, y) with f, or set it to a colour; ink is left alone. */
   const relight = (x, y, f) => {
     const k = ((y - y0) * ROOM.w + x) * 4;
-    set(x, y, f(px[k], px[k + 1], px[k + 2]));
+    if (keyOf(px[k], px[k + 1], px[k + 2]) === INK) return;
+    const c = typeof f === 'function' ? f(px[k], px[k + 1], px[k + 2]) : f;
+    [px[k], px[k + 1], px[k + 2]] = c;
   };
   const lit = (x0, x, y) => y >= SUN.near && y <= SUN.far && inPane(...backToWindow(x0, x, y));
   for (const { x0 } of WINDOWS) {
-    // The shaft, down to the patch.
+    // The shaft, down to the patch: each pane's band, its left column the rim.
     for (let y = SHAFT_TOP; y < SUN.near; y++) {
       const s = x0 + Math.round(sunShift(y));
-      for (const [a, b] of PANES_X) for (let x = s + a; x < s + b && x < ROOM.w; x++) relight(x, y, shafted);
+      for (const [a, b] of PANES_X) {
+        for (let x = s + a; x < s + b && x < ROOM.w; x++) relight(x, y, x === s + a ? SHAFT_RIM : shaftStep(x, y));
+      }
     }
     // The patch.
     for (let y = SUN.near; y <= SUN.far; y++) {
       const s = Math.round(sunShift(y));
       for (let x = x0 + s; x < x0 + s + 40 && x < ROOM.w; x++) {
         if (!lit(x0, x, y)) continue;
-        if (!lit(x0, x - 1, y)) set(x, y, RIM);
-        else relight(x, y, sunlit);
+        relight(x, y, lit(x0, x - 1, y) ? sunlit : RIM);
       }
     }
   }
@@ -687,7 +730,8 @@ function table(x0, x1, y0, y1) {
   return { top, front };
 }
 
-/** The programmer's table: the laptop with its lid to you, a mug and a notebook. */
+/** The programmer's table: the laptop with its lid to you, tipped well back so his face shows over it, a mug and a
+ *  notebook. */
 function programmerTable() {
   const { x0, x1, y0, y1 } = FURNITURE.programmerTable;
   const { top } = table(x0, x1, y0, y1);
@@ -695,11 +739,11 @@ function programmerTable() {
   // The screen's glow on the table behind the lid, then the lid with its sticker.
   rect(lx - 3, ly - 1, 19, 2, BLUE[3]);
   rect(lx - 2, ly - 1, 17, 1, C.white);
-  rect(lx - 1, ly - 9, 14, 11, C.ink);
-  rect(lx, ly - 8, 12, 9, STEEL[1]);
-  rect(lx, ly - 8, 12, 1, STEEL[2]);
-  rect(lx, ly - 8, 1, 9, STEEL[2]);
-  sprite(lx + 4, ly - 6, ['.rr.', 'rRrr', 'rrrr', '.rr.'], { r: RED[1], R: RED[2] });
+  rect(lx - 1, ly - 6, 14, 8, C.ink);
+  rect(lx, ly - 5, 12, 6, STEEL[1]);
+  rect(lx, ly - 5, 12, 1, STEEL[2]);
+  rect(lx, ly - 5, 1, 6, STEEL[2]);
+  sprite(lx + 4, ly - 4, ['.rr.', 'rRrr', '.rr.'], { r: RED[1], R: RED[2] });
   rect(lx - 1, ly + 1, 14, 1, STEEL[2]);
   // A mug and a notebook.
   rect(x1 - 15, top + 1, 5, 6, C.ink);
@@ -808,8 +852,9 @@ function janitorCart() {
   for (const wx of [kx + 1, kx + 8]) rect(wx, ky, 2, 1, C.ink);
 }
 
-/** The hallway doors standing open: the dim corridor through them, the leaves swung in against the jambs. */
-function doorway() {
+/** The hallway doors open, or (half) on their way, in two steps like the four-step fades: the dim corridor through
+ *  them, and the leaves swung in against the jambs, or half way round. */
+function doorway(half) {
   const { x0, x1, top } = DOORS, L = x0 + 4, R = x1 - 4, T = top + 4, B = ROOM.wallY;
   rect(L, T, R - L, B - T, DUSK[0]);
   rect(L + 6, T + 2, R - L - 12, 1, STEEL[2]);
@@ -821,6 +866,30 @@ function doorway() {
   }
   rect(L, B - 10, R - L, 10, WALL[0]);
   rect(L, B - 10, R - L, 1, WALL[2]);
+  if (half) {
+    // Half way round, each leaf shows half its width, its face turned toward the room and foreshortened, its free edge
+    // a few pixels out from the wall, so its top and bottom step down toward it: the wire-glass window by that edge,
+    // the push bar across, and the kick plate.
+    for (const [hx, s] of [[L, 1], [R - 1, -1]]) {
+      const w = 9;
+      for (let i = 0; i < w; i++) {
+        const x = hx + s * i, dy = Math.floor((i * 4) / w);
+        rect(x, T - 1 + dy, 1, B - T + 2, C.ink);
+        if (i === w - 1) continue;
+        rect(x, T + dy, 1, B - T, i === 0 ? STEEL[2] : STEEL[1]);
+        rect(x, T + dy, 1, 1, STEEL[2]);
+        if (i >= 4 && i <= 6) {
+          rect(x, T + 4 + dy, 1, 17, C.ink);
+          if (i === 5) rect(x, T + 5 + dy, 1, 15, DUSK[2]);
+        }
+        rect(x, B - 30 + dy, 1, 3, C.ink);
+        rect(x, B - 29 + dy, 1, 1, STEEL[3]);
+        rect(x, B - 7 + dy, 1, 1, C.ink);
+        rect(x, B - 6 + dy, 1, 6, STEEL[2]);
+      }
+    }
+    return;
+  }
   // Each leaf is swung right round against its jamb, so it shows as a sliver: its edge, a glimpse of its face and the
   // end of its push bar.
   for (const [lx, s] of [[x0 + 1, 1], [x1 - 6, -1]]) {
@@ -836,7 +905,8 @@ function doorway() {
 /**
  * Everything of the room's that stands on the floor, as [{ y, draw }] to sort in with the field and the people: the
  * furniture against the wall, the tables (each one thing at its front floor line, so whoever sits behind it is drawn
- * first and its front hides their legs), the backpacks, the cart, and the open doorway when o.door is past half.
+ * first and its front hides their legs), the backpacks, the cart, and the doorway as o.door opens it: half open past a
+ * quarter, open past three quarters.
  * The caller sets the camera to view before each draw().
  */
 export function roomThings(g, view, t, o = {}) {
@@ -854,7 +924,8 @@ export function roomThings(g, view, t, o = {}) {
     ...BACKPACKS.map((b) => ({ x0: b.x - 5, x1: b.x + 5, y: b.y, draw: () => backpack(b) })),
     { ...FURNITURE.janitorCart, y: FURNITURE.janitorCart.y1, draw: janitorCart },
   ];
-  if ((o.door ?? 0) > 0.5) things.push({ x0: DOORS.x0, x1: DOORS.x1, y: ROOM.wallY, draw: doorway });
+  const door = o.door ?? 0;
+  if (door > 0.25) things.push({ x0: DOORS.x0, x1: DOORS.x1, y: ROOM.wallY, draw: () => doorway(door < 0.75) });
   return things.filter((p) => p.x1 > vx0 && p.x0 < vx1).map((p) => ({ y: p.y, draw: p.draw }));
 }
 

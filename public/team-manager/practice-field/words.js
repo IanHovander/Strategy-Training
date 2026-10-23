@@ -27,12 +27,13 @@ export const SCENE_TEXT = {
 
 /** Who says what, by person (people.js has their names and looks). Each is two to four pages. */
 export const LINES = {
-  // The mentor, with the stopwatch.
+  // The mentor, with the stopwatch, timing the robot's reps in front of her: level 2 then level 3, whose lift has
+  // further to go (robot.js SLOW), so a higher placement takes longer.
   okafor: [
+    ['9.2 ON TWO, 10.4 ON THREE. THE LIFT', 'HAS FURTHER TO GO, SO THREE IS SLOWER.'],
     ['WE TIME EVERY CYCLE. A SECOND OFF ONE', 'CYCLE IS NOTHING. OFF ALL OF THEM...'],
     ["TEN CYCLES A MATCH, THAT'S TEN", 'SECONDS. ONE MORE HATCH ON THE ROCKET.'],
-    ["NONE OF THIS IS PRETTY. IT DOESN'T", 'HAVE TO BE.'],
-    ['THE HEIGHTS AND DISTANCES ARE RIGHT', 'TO THE INCH. THAT PART MATTERS.'],
+    ["IT'S NOT PRETTY, BUT EVERY HEIGHT AND", 'DISTANCE IS RIGHT TO THE INCH.'],
   ],
   // The drive coach.
   teammate: [
@@ -71,10 +72,12 @@ export const LINES = {
     ['TEAM RULE: UNDER 12.5 VOLTS, IT STAYS', 'ON THE CHARGER.'],
     ['A TIRED BATTERY MAKES A SLOW ROBOT,', 'AND THEN EVERYONE BLAMES THE DRIVER.'],
   ],
-  // The first thing Kai says is why she can't walk on the carpet. (The space bar is the Driver Station's emergency stop.)
+  // The first thing Kai says is why she can't walk on the carpet; then how the team keeps to it between reps, as the
+  // robot's light shows (robot.js RESET). (The space bar is the Driver Station's emergency stop.)
   kai: [
     ['HOLD UP! STAY OFF THE CARPET WHILE', 'THE ROBOT IS ENABLED.'],
     ['IT WEIGHS MORE THAN YOU, AND IT', "MOVES FASTER THAN YOU CAN JUMP."],
+    ['BETWEEN REPS MEI DISABLES IT, SO WE', 'CAN RESET. THEN SHE YELLS ENABLING!'],
     ['IF IT EVER GETS LOOSE, YELL STOP.', 'MEI HITS THE SPACE BAR: E-STOP.'],
   ],
   flores: [

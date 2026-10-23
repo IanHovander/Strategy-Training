@@ -1,5 +1,5 @@
 // The team meeting's cut scene: a Monday afternoon on the back lawn, the whole team sitting in a circle on the grass,
-// and the two co-captains standing at its head. Tessa gives the shout-outs, Owen reads the updates off his clipboard,
+// and the two co-captains standing at its head. Tessa gives the shout-outs, Owen the updates with his clipboard in hand,
 // and it ends the way every 5026 meeting ends: "IRON PANTHERS ON THREE!".
 //
 // It moves like the intro: hard cuts between a few fixed framings, eased pans inside a shot (the tilt down from the sky
@@ -10,13 +10,17 @@
 // The framings (CAMERAS) are the top-left corner of the view in world pixels and a whole-number scale:
 //   SKY          the sky over the school's roof, the wall with the shop door, its sign and the robot's 5026 whole,
 //                the thank-you card and the bench below (the circle's heads all under the bottom film bar)
-//   WIDE_CLAP    the whole circle and both co-captains, the bottoms of the windows along the top: for the claps
-//   WIDE         the same, a little lower, while the dialog box is up: the front row's backs go under the box
+//   WIDE         the whole circle and both co-captains, the bottoms of the windows along the top. With the dialog
+//                box up, the box hides the front row's backs whole (a little lower and their hair would stick up over
+//                its top edge) and the sides from the lap down; three at its edge sit a little off their seats (IN_WIDE)
 //   CLOSE_TESSA  twice the size: Tessa at her speaking spot, head to waist over the dialog box, Owen listening a step
-//                to her side, the back of the circle, the sponsor's card (RIVERSIDE) in the top corner
-//   CLOSE_OWEN   the same for Owen, clipboard and all, Tessa listening to his side
+//                to her side, the back of the circle, the sponsor's card (RIVERSIDE) in the top corner; two at the
+//                circle's back left sit a little higher (IN_CLOSE_TESSA), clear of the name tag
+//   CLOSE_OWEN   the same for Owen, clipboard and all, Tessa listening to his side (IN_CLOSE_OWEN: the same two, and the
+//                strategist a little further round, out of the shot's right edge)
 //   ON_HERO      twice the size: the strategist on the grass among her neighbours in the circle, the teammate beside
-//                her, Mr. Brandt standing to the right, the bench behind
+//                her, both whole from head to lap over the dialog box (the name tag goes under their laps), Mr. Brandt
+//                standing whole to the right, the bench's seat behind
 //
 // Beat by beat (seconds; a beat with words waits at its end until they've been read):
 //    0 open        4.0  SKY. Fades in on the sky, clouds drifting over the roof; the place card slides in: THE BACK
@@ -25,8 +29,8 @@
 //    1 tilt        4.6  The camera tilts down the wall to the circle, drifting a little right to centre it (eased,
 //                       like the intro's tilt); as it starts the co-captains step up to the head, the card slides
 //                       out, and near the end both turn to face the circle.
-//    2 circle up   2.2  The view settles a little lower; Tessa steps into the circle and Owen a step aside to give
-//                       her the floor, the team turns to her: "OKAY, PANTHERS! SHOUT-OUTS FIRST..."
+//    2 circle up   2.2  The same shot; Tessa steps into the circle and Owen a step aside to give her the floor, the
+//                       team turns to her: "OKAY, PANTHERS! SHOUT-OUTS FIRST..."
 //    3 build       0.8  Cut to her close-up: the elevator made level 3 on Saturday; Bea and the build crew.
 //    4 build clap  1.6  Cut wide: everyone claps, Bea gets up and throws both arms up; Tessa and Owen clap too.
 //    5 scouts      0.8  Close-up: every qualification match, every robot, Luis's spreadsheet.
@@ -35,14 +39,17 @@
 //    8 drive clap  1.6  Wide: claps, Jamal and the two drivers are up cheering.
 //    9 pick list   0.8  Close-up: Tessa turns to the strategist: "AND OUR STRATEGIST..." and the circle turns too.
 //   10 her answer  1.4  Cut to the strategist on the grass, the circle clapping, the teammate's arms up for her; she
-//                       says the scouts did the hard part (her red name tag).
-//   11 teammate    0.4  The same shot: the teammate says she called it a week early. (A beat of its own, so the phone
-//                       shows the teammate's face: stage.js takes the face from the beat, not the page.)
+//                       says the scouts did the hard part (her red name tag). The two front-row backs at the bottom
+//                       of the shot sit a few pixels further round for it (ROOM_BY_HER), clear of her and each other.
+//   11 teammate    0.4  The same shot: the teammate says she had 3000 on top by Friday lunch. (A beat of its own, so
+//                       the phone shows the teammate's face, sitting on the grass as she is.)
 //   12 sponsor     0.8  Back to Tessa, facing everyone again: Riverside Machine Works and their thank-you card.
 //   13 swap        2.2  Wide: a last round of applause; Tessa steps back to her side of the head and turns to Owen as
 //                       he steps in with his clipboard.
-//   14 updates     0.8  Cut to his close-up, Tessa turned to him beside: the regional, the vans at six, what to bring.
-//   15 slips       1.0  Wide: build hours, permission slips, no slip no van; half the circle groans to a neighbour.
+//   14 updates     0.8  Cut to his close-up, Tessa turned to him beside: next week's regional, the vans at six the day
+//                       before, what to bring.
+//   15 slips       1.0  Wide: build hours, permission slips due this Friday, no slip no van; most of the circle
+//                       turns to a neighbour with a frown.
 //   16 awww        0.3  The same: EVERYONE: AWWW.
 //   17 more        0.8  Close-up: the robot demo at Maple Elementary, Nadia's sign-up.
 //   18 break       1.0  Wide: "THAT'S IT. IRON PANTHERS ON THREE!"
@@ -64,26 +71,26 @@
 //   shoot(g, cam, t, cue, paint) the world through a camera: at 1x straight onto the screen; at 2x (or 3x) painted at
 //                                1x off screen and enlarged, since the walker's people are drawn at 1x
 //
-// cue = { circle: { react, at, cheer, still, since, rise }, tessa: P, owen: P }, with P = { x, y, dir, gait, frame,
-// dist }. react is 'chat', 'listen', 'clap', 'cheer' or 'groan'; at is the speaker's feet; cheer and still are ids;
-// since is how many seconds this reaction has been going (people.js staggers the start of a clap or a cheer by it);
-// rise, whether the ids in cheer get up to cheer (in the wide shots).
+// cue = { circle: { react, at, cheer, still, since, rise, toward, nudge }, tessa: P, owen: P }, with P = { x, y, dir,
+// gait, frame, dist }. react is 'chat', 'listen', 'clap', 'cheer' or 'groan'; at is the speaker's feet; cheer and still
+// are ids; since is how many seconds this reaction has been going (people.js staggers the start of a clap or a cheer by
+// it); rise, whether the ids in cheer get up to cheer (in the wide shots); toward, { [id]: { x, y } } anyone looking
+// somewhere else than at; nudge, { [id]: [dx, dy] } anyone sat a few pixels off their seat for the shot.
 
 import { W, H, C, useContext, screen, lerp, seg, easeInOut } from '../pixel.js';
 import { along, bars, cover, placeCard, dirToward } from '../stage.js';
 import { FT, DEEP, HEAD, FLOOR, ASIDE, CIRCLE } from './layout.js';
-import { SEATS, pump } from './people.js';
+import { SEATS, pump, glum, FACE_DY_FLOOR } from './people.js';
 
 // The close-ups are framed so the speaker, a step in front of the other, stands clear of the dialog box's name tag
 // (the left 120 pixels of the screen) from the head to the waist, and the card's RIVERSIDE sits whole under the top
 // film bar (THANK YOU! goes under it: a pixel lower or higher and the bar would cut one of its lines in half).
 export const CAMERAS = {
   SKY: { x: 114, y: 6, s: 1 },
-  WIDE_CLAP: { x: 128, y: 88, s: 1 },
-  WIDE: { x: 128, y: 102, s: 1 },
+  WIDE: { x: 128, y: 88, s: 1 },
   CLOSE_TESSA: { x: 176, y: 117, s: 2 },
   CLOSE_OWEN: { x: 186, y: 117, s: 2 },
-  ON_HERO: { x: 276, y: 128, s: 2 },
+  ON_HERO: { x: 270, y: 138, s: 2 },
 };
 
 /** Her seat in the circle (people.js SEATS). */
@@ -97,11 +104,32 @@ const HER_SEAT = SEATS.find((p) => p.id === 'hero');
 const BY_HER = { x: HER_SEAT.x - 13, y: HER_SEAT.y + 22 };
 const NEXT_TO_HER = ['luis', 'bea', 's6'];
 /**
+ * In her close-up the front row's backs frame the bottom of the shot, and at twice the size their seats are too close:
+ * the scouting lead's clapping hands would reach across her knees and the build lead's bun sit in the middle of his
+ * back. So for this shot only they sit a few pixels further round (nobody sees them move: it's a cut each way).
+ */
+const ROOM_BY_HER = { luis: [6, 0], bea: [12, 1] };
+/**
  * Where the co-captains wait while the camera is on the sky: a step in front of the head of the circle, low enough that
  * the tops of their heads (46 pixels over their feet) stay under the bottom film bar. They step up to the head as the
  * tilt begins.
  */
 const LOW = { tessa: { x: HEAD.tessa.x, y: 185 }, owen: { x: HEAD.owen.x, y: 185 } };
+/**
+ * Film cheats for the framings the dialog box comes across, so it never cuts a face (people.js circle() nudge). Wide:
+ * the box hides the front row whole and the sides from the lap down, but three sit right at its edge, so they sit a few
+ * pixels off their seats in every wide shot, a little down, all of them under the box instead of the top of a head
+ * alone over it: the two drivers on the left (one turned away while she listens, so only her hair would show over the
+ * name tag) and the cap on the right. The co-captains' close-ups: the freshman and the drive coach, at the back left of
+ * the circle, sit a little higher, so their faces clear the name tag; and in Owen's, the strategist sits a little
+ * further round, out of the shot, not cut in half by its right edge. Every move from one framing to another is a cut,
+ * so nobody sees anyone move.
+ */
+const IN_WIDE = { drv1: [-3, 4], drv2: [0, 5], s6: [0, 7] };
+const IN_CLOSE_TESSA = { eli: [-4, -6], jamal: [0, -5] };
+const IN_CLOSE_OWEN = { ...IN_CLOSE_TESSA, hero: [10, 0] };
+/** Where Owen stands while the camera is on her: at the head of the circle, a step to Tessa's side, out of the shot. */
+const OWEN_OFF = { x: HEAD.owen.x - 8, y: HEAD.owen.y };
 
 // ---- The camera ----
 let OFF = null;
@@ -146,11 +174,11 @@ function step(from, to, t, t0, before, after) {
   return w.gait === 'walk' ? { ...w, frame: 0 } : stand(to, after);
 }
 
-/** The circle's reaction: what, to whom, the ids that cheer or sit still, how long it's been going, and anyone who
- *  listens to somewhere else (toward). */
+/** The circle's reaction: what, to whom, the ids that cheer or sit still, how long it's been going, anyone who listens
+ *  to somewhere else (toward), and anyone sat a little off their seat for the shot (nudge). */
 const react = (what, at, since, o = {}) => ({
   react: what, at, cheer: o.cheer ?? [], still: o.still ?? [], since: Math.max(0, since), rise: o.rise ?? false,
-  toward: o.toward ?? {},
+  toward: o.toward ?? {}, nudge: o.nudge ?? {},
 });
 
 /** The beats of the meeting, for scene.cutscene. */
@@ -167,7 +195,7 @@ export function makeCutscene({ paint, cast }) {
   });
   // The praised get up on their feet to cheer, so the eye finds them over the seated heads.
   const applause = (cheer) => ({
-    cam: () => CAMERAS.WIDE_CLAP,
+    cam: () => CAMERAS.WIDE,
     cue: (t, T) => ({ circle: react('clap', T_AT, t, { cheer, rise: true }), tessa: clap(T_AT, 0, T), owen: clap(O_BY, 0, T + 0.05) }),
   });
   // Owen's turn: him on his spot, Tessa to his side. He talks to the circle's near left, a step round from facing you,
@@ -176,18 +204,21 @@ export function makeCutscene({ paint, cast }) {
     cam: () => cam,
     cue: (t, T) => ({ circle: circle(t), tessa: stand(T_BY, tessaListens), owen: owenPose(O_AT, 7, T) }),
   });
-  const says = (who, lines, at = 0.3) => ({ say: { name: who.name, lines, at, look: who.look } });
+  // A beat's words, said by who (and shown on the phone in o.faceGait and o.faceDy, if they aren't standing: stage.js).
+  const says = (who, lines, at = 0.3, o = {}) => ({ say: { name: who.name, lines, at, look: who.look, ...o } });
+  /** How the phone shows the strategist and the teammate, sitting in the circle. */
+  const ON_GRASS = { faceGait: 'floor', faceDy: FACE_DY_FLOOR };
   // On her: the circle claps for her and the teammate cheers (sitting: the close-up has no room above her), she stays
-  // put; then everyone listens. (Owen is back at the head here, just out of the shot: a step to his side would put
-  // half of him on its left edge. Nobody can see him move.)
+  // put; then everyone listens. (Owen is back at the head here and a step past it, just out of the shot on the left: at
+  // the head itself a sliver of him would show at its edge. Nobody can see him move.)
   const onHer = {
     cam: () => CAMERAS.ON_HERO,
     cue: (t, T) => ({
       circle: t < 1.4
-        ? react('clap', HER_SEAT, t, { cheer: ['teammate'], still: ['hero'] })
-        : react('listen', BY_HER, t - 1.4, { toward: Object.fromEntries(NEXT_TO_HER.map((id) => [id, HER_SEAT])) }),
+        ? react('clap', HER_SEAT, t, { cheer: ['teammate'], still: ['hero'], nudge: ROOM_BY_HER })
+        : react('listen', BY_HER, t - 1.4, { toward: Object.fromEntries(NEXT_TO_HER.map((id) => [id, HER_SEAT])), nudge: ROOM_BY_HER }),
       tessa: t < 1.4 ? clap(T_AT, face(T_AT, HER_SEAT), T) : stand(T_AT, face(T_AT, HER_SEAT)),
-      owen: t < 1.4 ? clap(HEAD.owen, face(HEAD.owen, HER_SEAT), T + 0.05) : stand(HEAD.owen, face(HEAD.owen, HER_SEAT)),
+      owen: t < 1.4 ? clap(OWEN_OFF, face(OWEN_OFF, HER_SEAT), T + 0.05) : stand(OWEN_OFF, face(OWEN_OFF, HER_SEAT)),
     }),
   };
 
@@ -205,7 +236,7 @@ export function makeCutscene({ paint, cast }) {
     // 1 tilt: down the wall to the circle; the co-captains step up to its head as it starts, and turn to the team.
     {
       dur: 4.6,
-      cam: (t) => pan(CAMERAS.SKY, CAMERAS.WIDE_CLAP, t, 0.2, 4.4),
+      cam: (t) => pan(CAMERAS.SKY, CAMERAS.WIDE, t, 0.2, 4.4),
       cue: (t, T) => {
         const ready = t >= 3.8;
         return {
@@ -219,7 +250,7 @@ export function makeCutscene({ paint, cast }) {
     // 2 circle up: Tessa steps in and Owen a step aside, everyone turns to her.
     {
       dur: 2.2,
-      cam: (t) => pan(CAMERAS.WIDE_CLAP, CAMERAS.WIDE, t, 0, 0.8),
+      cam: () => CAMERAS.WIDE,
       cue: (t, T) => {
         const walking = step(HEAD.tessa, T_AT, t, 0.2, 0, 0);
         const there = walking.gait !== 'walk' && t > 0.2;
@@ -263,9 +294,9 @@ export function makeCutscene({ paint, cast }) {
       ...says(tessa, [['AND OUR STRATEGIST! HER PICK LIST HAD', '3000 FIRST BEFORE ANYONE NOTICED THEM.']]),
     },
     // 10 her answer: the circle claps for her, the teammate cheers; she stays put, then everyone listens.
-    { dur: 1.4, ...onHer, ...says(hero, [{ name: hero.name, tag: C.red1, lines: ['THE SCOUTS DID THE HARD PART. I JUST', 'SORTED THEIR NUMBERS.'] }], 0.5) },
+    { dur: 1.4, ...onHer, ...says(hero, [{ name: hero.name, tag: C.red1, lines: ['THE SCOUTS DID THE HARD PART. I JUST', 'SORTED THEIR NUMBERS.'] }], 0.5, ON_GRASS) },
     // 11 the teammate's word: the same shot, a beat of its own so the phone shows her face.
-    { dur: 0.4, ...onHer, cue: (t, T) => onHer.cue(t + 2, T), ...says(teammate, [['SHE HAD 3000 PICKED A WEEK EARLY.', 'JUST SAYING.']], 0) },
+    { dur: 0.4, ...onHer, cue: (t, T) => onHer.cue(t + 2, T), ...says(teammate, [['SHE HAD 3000 ON TOP BY FRIDAY LUNCH.', 'JUST SAYING.']], 0, ON_GRASS) },
     // 12 sponsor: back to Tessa, facing everyone again.
     {
       dur: 0.8,
@@ -275,7 +306,7 @@ export function makeCutscene({ paint, cast }) {
     // 13 swap: a last round of applause; Tessa steps back to her side of the head and turns to Owen as he steps in.
     {
       dur: 2.2,
-      cam: () => CAMERAS.WIDE_CLAP,
+      cam: () => CAMERAS.WIDE,
       cue: (t, T) => ({
         circle: t < 1.2 ? react('clap', T_AT, t) : react('listen', O_AT, t - 1.0),
         tessa: t < 0.3 ? clap(T_AT, 0, T) : step(T_AT, T_BY, t, 0.3, 0, t < 1.1 ? 0 : tessaListens),
@@ -287,8 +318,8 @@ export function makeCutscene({ paint, cast }) {
       dur: 0.8,
       ...update(CAMERAS.CLOSE_OWEN),
       ...says(owen, [
-        ['NEXT EVENT: SILVER LAKE REGIONAL,', 'THURSDAY THE 21ST THROUGH THE 23RD.'],
-        ['VANS LEAVE THE SHOP DOOR WEDNESDAY AT', '6:00 AM. SIX. NOT SIX-TEN.'],
+        ['NEXT WEEK: THE SILVER LAKE REGIONAL,', 'THURSDAY THE 21ST THROUGH THE 23RD.'],
+        ['VANS LEAVE THE SHOP DOOR WEDNESDAY THE', '20TH AT 6:00 AM. SIX. NOT SIX-TEN.'],
         ['BRING SAFETY GLASSES, TEAM SHIRT AND A', 'WATER BOTTLE. NO GLASSES, NO PITS.'],
       ]),
     },
@@ -296,13 +327,14 @@ export function makeCutscene({ paint, cast }) {
     {
       dur: 1.0,
       ...update(CAMERAS.WIDE, (t) => react('groan', O_AT, t)),
-      ...says(owen, [['BUILD HOURS ALL WEEK. PERMISSION SLIPS', 'ARE DUE FRIDAY. NO SLIP, NO VAN.']]),
+      ...says(owen, [['BUILD HOURS ALL WEEK. PERMISSION SLIPS', 'ARE DUE THIS FRIDAY. NO SLIP, NO VAN.']]),
     },
-    // 16 the circle's answer, a beat of its own so the phone doesn't show Owen saying it (it shows her: she groans too).
+    // 16 the circle's answer, a beat of its own so the phone doesn't show Owen saying it (it shows her, sitting in the
+    // circle and frowning: she groans too).
     {
       dur: 0.3,
       ...update(CAMERAS.WIDE, (t) => react('groan', O_AT, t + 1), (p, dir) => stand(p, dir)),
-      say: { name: 'EVERYONE', lines: [['AWWW.']], at: 0 },
+      say: { name: 'EVERYONE', lines: [['AWWW.']], at: 0, look: glum(hero.look), ...ON_GRASS },
     },
     // 17 more
     {
@@ -316,7 +348,7 @@ export function makeCutscene({ paint, cast }) {
       ...update(CAMERAS.WIDE),
       ...says(owen, [["THAT'S IT. IRON PANTHERS ON THREE!", 'ONE... TWO... THREE!']]),
     },
-    // 19 cheer: every arm up, held in the wide shot (lower, the dialog box would hide the circle's arms). The arms pump a
+    // 19 cheer: every arm up, held in the wide shot, over the dialog box everywhere but the front row. The arms pump a
     // couple of seconds (people.js pump), the shout comes up once they're up, and goes by itself; the whole circle holds
     // with its arms up a second more, then black.
     {
@@ -327,22 +359,32 @@ export function makeCutscene({ paint, cast }) {
         tessa: stand(T_BY, 0, ...pump(T, t, 20, 'hooray', 'clap')),
         owen: stand(O_AT, 0, ...pump(T, t, 21, 'hooray', 'clap')),
       }),
-      say: { name: 'EVERYONE', lines: [['IRON PANTHERS!']], at: 0.8, auto: true },
+      say: { name: 'EVERYONE', lines: [['IRON PANTHERS!']], at: 0.8, auto: true, look: hero.look, ...ON_GRASS },
       over: (t) => cover(seg(t, 4.2, 5.0)),
     },
   ];
 
+  // The cheats for the framing the beat is in at t (IN_WIDE, IN_CLOSE_TESSA, IN_CLOSE_OWEN), added to any of the beat's
+  // own.
+  const cheat = (b) => (t, T) => {
+    const cue = b.cue(t, T), cam = b.cam(t);
+    const more = cam.s === 1 ? IN_WIDE : cam === CAMERAS.CLOSE_TESSA ? IN_CLOSE_TESSA : cam === CAMERAS.CLOSE_OWEN ? IN_CLOSE_OWEN : null;
+    return more ? { ...cue, circle: { ...cue.circle, nudge: { ...more, ...cue.circle.nudge } } } : cue;
+  };
   // Each beat also keeps its camera and its cue (t seconds into the beat, T into the cut scene), so the scene can see
   // ahead who'll be drawn in which pose and get their frames made before they're needed.
-  return beats.map((b) => ({
-    dur: b.dur,
-    say: b.say,
-    cam: b.cam,
-    cue: b.cue,
-    draw(g, t, c) {
-      shoot(g, b.cam(t), c.T, b.cue(t, c.T), paint);
-      bars(1);
-      b.over?.(t, c.T);
-    },
-  }));
+  return beats.map((b) => {
+    const cue = cheat(b);
+    return {
+      dur: b.dur,
+      say: b.say,
+      cam: b.cam,
+      cue,
+      draw(g, t, c) {
+        shoot(g, b.cam(t), c.T, cue(t, c.T), paint);
+        bars(1);
+        b.over?.(t, c.T);
+      },
+    };
+  });
 }

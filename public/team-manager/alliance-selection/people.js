@@ -21,10 +21,10 @@
 // Once selection is over, everyone stands where it left them (layout.js): each alliance's captain on its spot facing
 // you, the two picks close behind on either side (a couple turned to their captain), the backups round the queuer
 // (the front row turned three-quarters to you, the top backup a step out in front) with 6038's rep on their own, facing
-// the field they turned down, Priya and Sam where they work, and the head referee
-// on the open floor, waiting to brief the captains. Eleven of them have something to say, each a little lesson in
-// picking: why a pick should do what your robot can't, why late picks are about reliability, what happens when a
-// captain picks a captain, why you never turn an invitation down lightly, how the backups work and what comes next.
+// the field they turned down, Priya and Sam where they work, and the head referee by the near wall past the end of
+// the line, waiting to brief the captains. Eleven of them have something to say, each a little lesson in picking: why
+// a pick should do what your robot can't, why late picks are about reliability, what happens when a captain picks a
+// captain, why you never turn an invitation down lightly, how the backups work and what comes next.
 // MC Robin, meanwhile, skates the strip in front of the line: a loop of about twenty seconds, a stop by the mic with the
 // mic up, a weave in front of the captains to past the red end, a spin and a pose, the whole line back to past the blue
 // end, another spin, and home again.
@@ -197,7 +197,7 @@ const WORDS = [
     ['WE PICK FIRST IN ROUND ONE AND LAST', 'IN ROUND TWO. THE SNAKE EVENS IT OUT.'],
   ]],
   ['2468', 'THEO, 2468', [
-    ['WE COULD HAVE BEEN CAPTAIN TWO. WE', 'CHOSE TO JOIN THE BEST ROBOT HERE.'],
+    ['WE COULD HAVE STAYED CAPTAIN TWO. WE', 'CHOSE TO JOIN THE BEST ROBOT HERE.'],
     ['SAYING NO WOULD HAVE KEPT US CAPTAIN,', "BUT THEN WE COULDN'T JOIN ANYONE."],
     ['MAYA ASKED US THIS MORNING. TALK TO', 'TEAMS EARLY. IT SAVES THE CLOCK.'],
   ]],

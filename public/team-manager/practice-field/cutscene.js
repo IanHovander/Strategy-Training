@@ -2,34 +2,38 @@
 // hard cuts, whole-number zooms) with stage.js's place card, film bars and four-step fades, and talk.js's dialog box.
 //   0 sun        fade in on the sun low in the first window, behind the mullion and the trees, the clock reading 4:40
 //                beside the place card
-//   1 light      no cut: the camera slides down the light, past the windows, onto the sunlit patches on the carpet
-//                with the rocket's home face standing at the edge of the frame
+//   1 light      no cut: the camera slides down the light, past the windows, onto the sunlit patches on the carpet,
+//                ending with the rocket's home face and the sunlit patch at its foot whole in the right of the frame
 //   2 field      cut wide and pan from the doors to the whole half field, station wall to centre line: the drive team
 //                at the homemade station, the robot waiting at the loading station with its light solid, the rocket,
 //                the cargo ship; the mentor calls hatch cycles, level two, and then the field holds with nothing over it
 //   3 ready      cut close on the drive coach and the driver at the controls, the robot beside them: drivers ready?
-//   4 go         no cut: the operator enables the robot (its light starts blinking) and the mentor counts it down
+//   4 go         no cut: the operator calls ENABLING! and enables the robot (its light starts blinking), and the
+//                mentor counts it down
 //   5 cycle      cut wide on the whole run: hatch in, spin, run to the rocket, lift, place, lower, spin, the coach
 //                calling it, the camera holding still
 //   6 home       cut back to the station as the robot runs home to it, the coach cheering it in
 //   7 time       cut close on the mentor in profile with her stopwatch, the scouting lead beside her: nine point two
 //   8 hooray     cut close on the drive team, out from behind the wall in a row, arms up in a V, hopping
 //   9 tables     cut to the other end of the room, panning slowly: the custodian wants his tables back
-//  10 her        cut to the hallway doors: the strategist runs in, the mentor calling the time over to her as she comes,
-//                stops for it, and runs on to the edge of the field while it's still up, Kai stepping over to his place
-//                in front of the carpet's tape to meet her. There she answers, the camera down a little so her face
-//                clears the dialog box; then it comes back up as the robot puts a hatch on level three, the film bars
-//                slide away, and the last frame is the walkable view, pixel for pixel. The camera follows her the way it
-//                does when you walk.
+//  10 her        cut to the hallway doors: the strategist runs in, the mentor calling the time over to her as she comes;
+//                she stops for it, and once it's been read she runs on round the front of the field to her mark, with
+//                no dialog box over her, Kai stepping over to his place in front of the carpet's tape to meet her. The
+//                camera follows her the way it does when you walk, the film bars' height lower.
+//  11 answer     no cut: the camera goes down a little, so her face clears the dialog box, and she answers in profile,
+//                turned to the field and the mentor up it; then it comes back up as the robot puts a hatch on level
+//                three, the film bars slide away, and the last frame is a few pixels above the walkable view, which
+//                walking eases on from.
 // Every frame is a pure function of time: t, seconds into the beat, places the camera and the people (held still once a
-// beat runs past its length waiting for its words to be read), and the robot runs on its own clock, robotU. Words show
+// beat runs past its length waiting for its words to be read; in beats 10 and 11 also of when A read the call or ended
+// beat 10), and the robot runs on its own clock, robotU. Words show
 // in the dialog box, which covers the screen from row 90 down, so every shot keeps the faces that matter above it.
 //
 //   makeCutscene(world)                 the beats, for stage.js
 //   zoomShot(g, x, y, zoom, draw1x)     a close-up: the world drawn 1:1 into a small canvas, then scaled up whole
-//   HANDOFF.robotU, .late, .viewY       the robot's clock in the last frame drawn, how far past its length the last beat
-//                                       had run by then (less than 0 if A cut it short), and the camera's y, to carry
-//                                       them all on without a jump
+//   HANDOFF.robotU, .late, .viewY,      the robot's clock in the last frame drawn, how far past its length the last beat
+//          .hero, .kai(since)           had run by then (less than 0 if A cut it short), the camera's y, where she was
+//                                       and where Kai is, to carry them all on without a jump
 //
 // world (the scene builds it): { draw(g, view, t, o), shot(g, x, y, zoom, t, o), looks }, where o says what differs
 // from the walkable scene: robotU (the robot's clock; left out, it runs free), enabled (false before GO), blink (the
@@ -43,11 +47,13 @@ import { W, H, C, useContext, screen, clamp, lerp, seg, easeInOut, easeOut } fro
 import { along, bars, cover, placeCard, SPEED } from '../stage.js';
 import { HERO_NAME, TEAMMATE_NAME } from '../cast.js';
 import { ROOM, DOORWAY, START, SPOTS } from './layout.js';
-import { CYCLE } from './robot.js';
+import { CYCLE, PLACE } from './robot.js';
 import { CARD } from './words.js';
 
 // The mentor's time for the cycle in beats 4 and 5, from leaving the station to coming back to it.
 const TIMED = CYCLE.timed;
+/** When the operator enables the robot in beat 4: once she's called ENABLING!, so its light starts blinking after. */
+const ENABLE_AT = 0.6;
 
 // ---- Close-ups ----
 // The walkers are drawn with drawImage, which pixel.js's camera can't scale, so a close-up draws the world at 1:1 into
@@ -101,12 +107,13 @@ const pathTime = (path, gait) =>
 /** The walking camera (scene.js followView), so the last beat ends on exactly the view you walk off with. */
 const follow = (x, y) => ({
   x: clamp(Math.round(x) - W / 2, 0, ROOM.w - W),
-  y: clamp(Math.round(y) - 28 - H / 2, 0, Math.max(ROOM.shown, Math.round(y) + 4) - H),
+  y: clamp(Math.round(y) - 28 - H / 2, 0, Math.min(ROOM.h, Math.max(ROOM.shown, Math.round(y) + 12)) - H),
 });
 const ease = (t, t0, t1) => easeInOut(seg(t, t0, t1));
 
 // ---- What's said ----
 const MENTOR = 'MS. OKAFOR, MENTOR', DRIVER = 'JALEN, DRIVER', OPERATOR = 'MEI, OPERATOR', CUSTODIAN = 'MR. FLORES, CUSTODIAN';
+// A page said by someone other than the beat's speaker carries `who`, so the phone shows them (makeCutscene voiced).
 const SAY = {
   // While the camera pans across to the field, so it's gone by the time the whole field is in the shot.
   field: {
@@ -114,12 +121,13 @@ const SAY = {
   },
   ready: {
     name: TEAMMATE_NAME, at: 0.3,
-    lines: [['DRIVERS READY?'], { name: DRIVER, lines: ['READY.'] }],
+    lines: [['DRIVERS READY?'], { name: DRIVER, who: 'jalen', lines: ['READY.'] }],
   },
-  // The robot is enabled from the Driver Station laptop at the station, by the operator; its light blinks from then on.
+  // The operator enables the robot from the Driver Station laptop at the station. She calls it out as she does, before
+  // it's live, so everyone near the field knows (ENABLE_AT); its light blinks from then on.
   go: {
     name: OPERATOR, at: 0,
-    lines: [['ENABLED!'], { name: MENTOR, lines: ['THREE, TWO, ONE...', 'GO!'] }],
+    lines: [['ENABLING!'], { name: MENTOR, who: 'okafor', lines: ['THREE, TWO, ONE...', 'GO!'] }],
   },
   // In step with the robot: it drives at 0.8-3.6 s and lifts at 3.6-4.8, and the hatch goes on at 5.2, as 'place it'
   // finishes typing; it turns for home at 6.6-7.0. The run home is the next beat, a cut, so 'now home' can't come early
@@ -137,63 +145,120 @@ const SAY = {
   // As soon as she's through the doors.
   her: {
     name: MENTOR, at: 1.0,
-    lines: [
-      ["THERE'S OUR STRATEGIST! PUT THIS ON", `YOUR BOARD: ${TIMED} ON A LEVEL TWO HATCH.`],
-      { name: HERO_NAME, tag: C.red1, lines: [`${TIMED}. GOT IT. NOW LET'S SEE HOW FAST`, 'LEVEL THREE IS.'] },
-    ],
+    lines: [["THERE'S OUR STRATEGIST! PUT THIS ON", `YOUR BOARD: ${TIMED} ON A LEVEL TWO HATCH.`]],
+  },
+  // From her mark, as the camera settles.
+  answer: {
+    name: HERO_NAME, tag: C.red1, at: 0.4,
+    lines: [[`${TIMED}. GOT IT. NOW LET'S SEE HOW FAST`, 'LEVEL THREE IS.']],
   },
 };
 /** Every line said in the cut scene, by beat, for checking. */
 export const CUT_LINES = SAY;
 
-// ---- The strategist's way in (beat 10) ----
+// ---- The strategist's way in (beats 10 and 11) ----
 // Through the hallway doors and down the left of the room, wide of Bea at the battery cart and clear of the tool
 // chest's corner, to the open floor by the drive team, where she stops for the mentor's call (her face stays clear of
-// the dialog box there). While the call is still up she runs on, down past the cargo basket, wide of it, and round the
-// front of the field to where you take over, and gets there as her own answer comes up. Standing there her face would
-// be under the dialog box, so the camera goes down for it, the way it does when you talk to someone at the front of the
-// room (scene.js talkY), and back up once it's been said, as the film bars slide away: the last frame is the walkable
-// view. Everything moving happens before the last page, so an A that ends the beat early only skips the bars sliding
-// away and the camera's way back up, which walking finishes for it (HANDOFF.viewY). The robot's clock is set so the
-// level 3 hatch goes on as the camera comes back up to it.
+// the dialog box there). Once it's been read (it turns by itself at the auto pace; A reads it sooner, and she sets off
+// as soon as it has been: runAt), she runs on, down past the cargo basket, wide of it, and round the front of the field
+// to where you take over, with nothing over her: so far down the room, the dialog box would hide all of her but her
+// head. If it's read before she's even got to her stop, she doesn't stop at all (WAY). There, in the next beat, she
+// answers; standing there her face would be under the dialog box, so the camera goes down for it, the way it does when
+// you talk to someone at the front of the room (scene.js talkY), and back up once she's answered, as the film bars
+// slide away. She answers in profile, turned to the field and the mentor by the centre line up it to the right, her
+// face and her board above the box. While the film bars are up the camera that follows her sits their height lower, so
+// her feet and her shadow are on the floor above the bottom bar, and it ends a few pixels above the walkable view, so
+// the level 3 hatch goes on whole below the top of the screen; walking eases the rest of the way (HANDOFF.viewY).
+// An A that ends beat 10 before she's at her mark makes beat 11 carry on her run (and Kai's step over) from wherever
+// beat 10 had got to, setting off at once if she hadn't yet (in the doorway if she hadn't come in): she never jumps.
+// Beat 11's words and its camera wait for her to get to her mark (answerAt), so the box is never over her run. If A
+// ends beat 11 early too, walking starts from wherever she was (HANDOFF.hero).
+// The robot's clock is set so that, at the auto pace, the level 3 hatch goes on as the camera comes back up to it.
 const IN = [[DOORWAY.x, DOORWAY.y], [48, 118], [80, 150]];
 const ON = [[80, 150], [84, 182], [START.x, START.y]];
-/** When her answer comes up at the auto pace: the mentor's page is typed and read. */
-const ANSWER = SAY.her.at + pageTime(SAY.her.lines[0]);
-const IN_AT = 0.6, THERE = ANSWER - 0.3, ON_AT = THERE - pathTime(ON, 'run');
-const BACK = wordsEnd(SAY.her) + 0.1, HER_DUR = BACK + 0.75;
+const WAY = [...IN, ...ON.slice(1)];
+/** Beat 10: she comes in at IN_AT and is at her stop at IN_END. At the auto pace, she runs on at ON_AT, once the
+ *  mentor's page has been typed and read; it takes her ON_T to get to her mark, or WAY_T from the doors without a stop. */
+const IN_AT = 0.6, IN_END = IN_AT + pathTime(IN, 'run'), ON_T = pathTime(ON, 'run'), WAY_T = pathTime(WAY, 'run');
+const ON_AT = SAY.her.at + pageTime(SAY.her.lines[0]) + 0.1;
+/** When she's at her mark if she runs on at onAt (on beat 10's clock), and when Kai sets off to meet her there. */
+const arrival = (onAt) => (onAt <= IN_END ? IN_AT + WAY_T : onAt + ON_T);
+const kaiFrom = (onAt) => arrival(onAt) - 0.8;
+const HER_DUR = arrival(ON_AT) + 0.2;
+/** Beat 11, at the auto pace: the camera goes down at once and comes back up at BACK, when her answer has been read. */
+const READ_ANSWER = SAY.answer.lines.reduce((n, page) => n + pageTime(page), 0);
+const BACK = SAY.answer.at + READ_ANSWER + 0.1, ANSWER_DUR = BACK + 0.75;
 /** The camera while she answers: low enough that her face clears the dialog box. */
 const LOW = Math.min(ROOM.h - H, START.y - 112);
-const PLACED = 12 + 5.6; // the second cycle (level 3) puts its hatch on at phase 5.6 (robot.js)
-const HER_U = PLACED - (BACK + 0.5);
+const PLACED = CYCLE.period + PLACE[3]; // the second cycle, level 3, puts its hatch on (robot.js)
+/** The robot's clock at the start of beats 11 and 10. It runs straight on from one into the other, from wherever
+ *  beat 10 ended. */
+const ANSWER_U = PLACED - (BACK + 0.5), HER_U = ANSWER_U - HER_DUR;
 /** The cut scene's last frame, for the walkable scene to carry on from without a jump: robotU, the robot's clock where
- *  it was in the last frame of the last beat (which can run past its length while its words are read, or be cut short
- *  by A), or where that beat ends if it was never drawn (SKIP from an earlier beat); late, by how much the last beat ran
- *  over; viewY, where the camera was, for walking to ease on from. */
-let herLast = null, herView = null;
+ *  it was in the last frame of the last beat (beats 10 and 11 can each be cut short by A, and the last can run past its
+ *  length while its words are read), or where that beat ends if it was never drawn (SKIP from an earlier beat); late,
+ *  by how much the last beat ran over its length at the auto pace (less than 0 if A cut it short), which is what
+ *  stage.js counted it as; viewY, where the camera was, for walking to ease on from; hero, where she was ({ x, y, dir }),
+ *  in case A ended the last beat while she was still running (null if it was never drawn). */
+let lastT = null, lastView = null, lastHero = null, lastKai = null;
+/** How far into beat 10 its last frame was (short of its length if A ended it early), and when its page was read. */
+let herEnd = null, readAt = null;
 export const HANDOFF = {
-  get late() { return (herLast ?? HER_DUR) - HER_DUR; },
-  get robotU() { return HER_U + HER_DUR + this.late; },
-  get viewY() { return herView ?? follow(START.x, START.y).y; },
+  get late() { return (lastT ?? ANSWER_DUR) - ANSWER_DUR; },
+  get robotU() { return HER_U + (herEnd ?? HER_DUR) + (lastT ?? ANSWER_DUR); },
+  get viewY() { return lastView ?? follow(START.x, START.y).y; },
+  get hero() { return lastHero; },
+  /** Kai, `since` seconds after the cut scene ended, if he was still stepping over to his place (null once he's there). */
+  kai(since) {
+    if (!lastKai) return null;
+    const p = kaiAt(lastKai.h + since, lastKai.from);
+    return p.gait === 'stand' && lastKai.h + since > lastKai.from ? null : p;
+  },
 };
+
+/** Beat 10: she runs on once the page has been read, or at the auto pace's ON_AT if that's sooner. */
+const runAt = () => (readAt == null ? ON_AT : Math.min(ON_AT, readAt + 0.1));
+const herDur = () => arrival(runAt()) + 0.2;
+/** Beat 11, carrying on from beat 10's last frame: hStart, beat 10's clock that beat 11 starts at (the doorway, if
+ *  she hadn't come in yet); onAt, when she runs on (at once, if she hadn't yet); arrive, when she's at her mark, on beat
+ *  11's clock (0 or less if she was already); kai, when Kai steps over (at once at the soonest, if he hadn't yet). */
+function answerRun() {
+  const h0 = herEnd ?? herDur(), hStart = Math.max(h0, IN_AT), onAt = Math.min(runAt(), hStart), kai = kaiFrom(runAt());
+  return { hStart, onAt, arrive: arrival(onAt) - hStart, kai: h0 >= kai ? kai : Math.max(hStart, kaiFrom(onAt)) };
+}
+/** Beat 11: her answer starts once she's at her mark, and BACK comes with it. */
+const answerAt = () => Math.max(SAY.answer.at, answerRun().arrive + 0.3);
+const backAt = () => answerAt() + READ_ANSWER + 0.1;
 
 // Kai's head would show over the bottom bar at the right edge of the shot of the doors, so he waits just beyond it and
 // steps over to his place in front of the carpet's tape as she comes round the front.
-const KAI = SPOTS.kai, KAI_IN = [[KAI.x + 18, KAI.y], [KAI.x, KAI.y]], KAI_AT = THERE - 0.8;
-function kaiAt(t) {
-  const p = along(KAI_IN, t - KAI_AT, 'walk');
-  return t > KAI_AT && p.gait === 'stand' ? { ...p, dir: KAI.dir } : p;
+const KAI = SPOTS.kai, KAI_IN = [[KAI.x + 18, KAI.y], [KAI.x, KAI.y]];
+function kaiAt(t, from) {
+  const p = along(KAI_IN, t - from, 'walk');
+  return t > from && p.gait === 'stand' ? { ...p, dir: KAI.dir } : p;
 }
 
-function heroAt(t) {
-  if (t < IN_AT) return null;
-  if (t < ON_AT) {
-    const p = along(IN, t - IN_AT, 'run');
-    return p.gait === 'stand' ? { ...p, dir: 2 } : p; // she stops turned to the field, where the call comes from
-  }
-  const p = along(ON, t - ON_AT, 'run');
-  return p.gait === 'stand' ? { ...p, dir: START.dir } : p;
+/** Where she is at h on beat 10's clock if she runs on at onAt: in at the doors, stopped turned to the field (where
+ *  the call comes from) and then on round the front, or all the way without a stop; at her mark, in profile to the
+ *  field (START.dir). Null before she's through the doors. */
+function heroPath(h, onAt) {
+  if (h < IN_AT) return null;
+  const then = (path, t, total, dir) => {
+    const p = along(path, t, 'run');
+    return t >= total ? { ...p, dir } : p;
+  };
+  if (onAt <= IN_END) return then(WAY, h - IN_AT, WAY_T, START.dir);
+  if (h < onAt) return then(IN, h - IN_AT, IN_END - IN_AT, 2);
+  return then(ON, h - onAt, ON_T, START.dir);
 }
+/** The hallway doors, open as she comes through them. */
+const doorAt = (h) => seg(h, 0.2, 0.5) - seg(h, 2.4, 2.7);
+/** The follow camera, its film bars' height lower while k (0-1) of them is up, so her feet stay on the floor above the
+ *  bottom bar. */
+const followBarred = (x, y, k) => {
+  const v = follow(x, y);
+  return { x: v.x, y: Math.min(v.y + Math.round(4 * k), ROOM.h - H) };
+};
 
 // ---- The drive team's celebration (beat 8) ----
 // They come out from behind the station wall into a loose row on the open floor, turned to the camera with both arms
@@ -228,7 +293,19 @@ export function makeCutscene(world) {
     } else world.shot(g, x, y, zoom, T, o);
   };
   const look = (id) => world.looks?.[id];
-  const beat = (dur, draw, say) => ({ dur, draw: (g, t, c) => draw(g, t, Math.min(t, dur), c), ...(say && { say }) });
+  /** A beat's words, with the phone showing whoever says each page. */
+  const voiced = (say) => ({ ...say, lines: say.lines.map((page) => (page.who ? { ...page, look: look(page.who) } : page)) });
+  // A beat's length is a number, or a function for the two whose length depends on how fast A was pressed (stage.js
+  // reads it every frame; scene.js and stage.js add up the lengths once, before any of that, so they get the auto pace).
+  const beat = (dur, draw, say) => {
+    const len = typeof dur === 'function' ? dur : () => dur;
+    return { get dur() { return len(); }, draw: (g, t, c) => draw(g, t, Math.min(t, len()), c), ...(say && { say: voiced(say) }) };
+  };
+  /** Whether the beat b is the one stage.js is running live (not frozen with ?at=). */
+  const live = (b) => {
+    const st = window.stage;
+    return !!st && st.frozen == null && st.mode === 'cut' && st.scene?.cutscene?.[st.cut?.i] === b;
+  };
   const still = { robotU: 0, enabled: false };
   // Bea stands at the end of the battery cart, just inside the left edge of the two shots of the sun; for those she's
   // stepped over toward the doors, out of the frame (she's back at the cart by the wide shot). The slide down the light
@@ -239,36 +316,43 @@ export function makeCutscene(world) {
   // the place card, and under them the robot's mast and carriage at the station and Ines holding out a hatch, from the
   // waist up, over the bottom bar.
   const SUN_Y = 24;
-  // Kai, in front of the carpet, would be a head over the bottom bar of the wide shots.
-  const wide = { kai: { x: 404 } };
+  // Kai, in front of the carpet, would be a head over the bottom bar of the wide shots, and the student who resets the
+  // field, waiting just off its far end, half a person at their right edge: both step out of them.
+  const wide = { kai: { x: 404 }, reset: { x: 404 } };
+  // The wide shots of the field: from the drive team, whole, behind the station wall to the centre line's tape.
+  const WIDE_X = 113;
   const run = (robotU) => ({ robotU, enabled: true, cast: wide });
   // The close shot of the station: the coach and the driver at the controls in the left of the frame, the robot at the
   // station to their right. Their faces sit clear of the dialog box; the human player and the operator, who'd be cut in
   // half by the bars, step out of the shot.
   const STATION = { x: 96, y: 70 }, drivers = { ines: { x: 84 }, mei: { x: 84 } };
 
-  return [
+  const beats = [
     // 0 sun: the sun low in the first window, the light coming in under the sill, drifting right as it fades in. Low
     // enough that the robot at the station shows its carriage under the mast, and Ines her hatch, above the bottom bar.
     beat(4.8, (g, t, tc, c) => {
-      herLast = null; // the cut scene (re)starts
-      herView = null;
+      lastT = null; // the cut scene (re)starts
+      lastView = null;
+      lastHero = null;
+      lastKai = null;
+      herEnd = null;
+      readAt = null;
       shoot(g, lerp(60, 76, ease(tc, 0, 4.8)), SUN_Y, 2, c.T, sunny);
       bars(easeOut(seg(t, 0, 0.8)));
       placeCard(t - 0.6, CARD.name, CARD.sub); // in at 0.8 (its first 0.2 s are off the screen), gone by 4.6
       cover(1 - seg(t, 0, 1.2));
     }),
-    // 1 light: down the light onto the sunlit patches on the carpet, the rocket's home face at the right edge, the robot
-    // at the station just out of the shot to the left. No cut.
+    // 1 light: down the light onto the sunlit patches on the carpet, ending with the rocket's home face and the sunlit
+    // patch at its foot whole in the right third of the frame. No cut.
     beat(5.0, (g, t, tc, c) => {
       const k = ease(tc, 0, 5);
-      shoot(g, lerp(76, 188, k), lerp(SUN_Y, 60, k), 2, c.T, sunny);
+      shoot(g, lerp(76, 200, k), lerp(SUN_Y, 60, k), 2, c.T, sunny);
       bars(1);
     }),
     // 2 field: panning from the doors to the whole half field, station wall to centre line, as the mentor calls from
     // off to the right; the pan ends on the whole field with nothing over it, and holds it a moment.
     beat(6.5, (g, t, tc, c) => {
-      shoot(g, lerp(0, 120, ease(tc, 0, 6)), 40, 1, c.T, { ...still, cast: wide });
+      shoot(g, lerp(0, WIDE_X, ease(tc, 0, 6)), 40, 1, c.T, { ...still, cast: wide });
       bars(1);
     }, { ...SAY.field, auto: true, look: look('okafor') }),
     // 3 ready: the station, close. As long as its words take to read.
@@ -276,15 +360,15 @@ export function makeCutscene(world) {
       shoot(g, STATION.x, STATION.y, 2, c.T, { ...still, cast: drivers });
       bars(1);
     }, { ...SAY.ready, auto: true, look: look('teammate') }),
-    // 4 go: the same shot. Enabled, the robot's light blinks (on the cut scene's clock, as the robot itself holds still
-    // until GO).
+    // 4 go: the same shot. Once she's called it and enabled it, the robot's light blinks (on the cut scene's clock, as
+    // the robot itself holds still until GO).
     beat(wordsEnd(SAY.go), (g, t, tc, c) => {
-      shoot(g, STATION.x, STATION.y, 2, c.T, { robotU: 0, enabled: true, blink: c.T, cast: drivers });
+      shoot(g, STATION.x, STATION.y, 2, c.T, { robotU: 0, enabled: t >= ENABLE_AT, blink: c.T, cast: drivers });
       bars(1);
     }, { ...SAY.go, auto: true, look: look('mei') }),
     // 5 cycle: the whole run, station to cargo ship, the camera still. Hatch in, out to the rocket, place it, turn.
     beat(wordsEnd(SAY.cycle), (g, t, tc, c) => {
-      shoot(g, 122, 20, 1, c.T, run(0.4 + t));
+      shoot(g, WIDE_X, 20, 1, c.T, run(0.4 + t));
       bars(1);
     }, { ...SAY.cycle, auto: true, look: look('teammate') }),
     // 6 home: back to the station as the robot comes home, carrying on its clock from the end of the run at the pace
@@ -298,7 +382,7 @@ export function makeCutscene(world) {
     // station, and the student resetting the field is at the rocket, out of the shot (he'd run through it with his head
     // under the top bar).
     beat(3.7, (g, t, tc, c) => {
-      const cast = { noor: { x: 406, y: 128 }, reset: { x: 294, y: 110, dir: 3 } };
+      const cast = { noor: { x: 416, y: 128 }, reset: { x: 294, y: 110, dir: 3 } };
       shoot(g, 330, 70, 2, c.T, { robotU: Math.min(11.9, 10.5 + t), enabled: true, cast });
       bars(1);
     }, { ...SAY.time, auto: true, look: look('okafor') }),
@@ -314,16 +398,40 @@ export function makeCutscene(world) {
       shoot(g, lerp(424, 404, ease(tc, 0, 4.8)), 28, 1, c.T, { robotU: 12 + t, enabled: true });
       bars(1);
     }, { ...SAY.tables, auto: true, look: look('flores') }),
-    // 10 her: the doors, her run in, the call, her run on; the camera follows her as stage.js will. The bars slide away
-    // at the end, so the last frame is the walkable view.
-    beat(HER_DUR, (g, t, tc, c) => {
-      herLast = t;
-      const hero = heroAt(tc), view = follow(hero?.x ?? DOORWAY.x, hero?.y ?? DOORWAY.y);
-      view.y = Math.round(lerp(view.y, LOW, ease(tc, THERE, THERE + 0.5) - ease(tc, BACK, BACK + 0.5)));
-      herView = view.y;
-      const door = seg(tc, 0.2, 0.5) - seg(tc, 2.4, 2.7);
-      shoot(g, view.x, view.y, 1, c.T, { robotU: HER_U + t, enabled: true, door, cast: { kai: kaiAt(tc) }, ...(hero && { hero }) });
-      bars(1 - seg(tc, BACK, BACK + 0.6));
+    // 10 her: the doors, her run in, the call, her run on once it's been read; the camera follows her as stage.js will,
+    // the film bars' height lower. It lasts until she's at her mark, so it's shorter if A read the call sooner.
+    beat(herDur, function her(g, t, tc, c) {
+      if (herEnd != null && tc < herEnd) readAt = null; // beat 10 starts again
+      herEnd = tc;
+      if (readAt == null && live(beats[10]) && window.stage.cut.read) readAt = tc;
+      const onAt = runAt(), hero = heroPath(tc, onAt), view = followBarred(hero?.x ?? DOORWAY.x, hero?.y ?? DOORWAY.y, 1);
+      const cast = { kai: kaiAt(tc, kaiFrom(onAt)) };
+      shoot(g, view.x, view.y, 1, c.T, { robotU: HER_U + tc, enabled: true, door: doorAt(tc), cast, ...(hero && { hero }) });
+      bars(1);
     }, { ...SAY.her, auto: true, look: look('okafor') }),
+    // 11 answer: her answer from her mark, the camera down for it and back up after, to a little above the walkable view.
+    // The bars slide away at the end. If beat 10 was cut short she runs the rest of the way first, and the words and the
+    // camera wait for her.
+    beat(() => backAt() + 0.75, (g, t, tc, c) => {
+      lastT = t;
+      const run = answerRun(), h = run.hStart + tc, at0 = answerAt(), back = at0 + READ_ANSWER + 0.1;
+      const hero = heroPath(h, run.onAt), barK = 1 - seg(tc, back, back + 0.6);
+      const view = followBarred(hero.x, hero.y, barK);
+      const up = Math.round(6 * seg(tc, back, back + 0.5));
+      view.y = Math.round(lerp(view.y - up, LOW, ease(tc, at0 - 0.4, at0 + 0.1) - ease(tc, back, back + 0.5)));
+      lastView = view.y;
+      lastHero = { x: hero.x, y: hero.y, dir: hero.dir };
+      lastKai = { h, from: run.kai };
+      const cast = { kai: kaiAt(h, run.kai) };
+      // A brings a beat's words on straight away (stage.js), but not these while she's still on her way to her mark:
+      // until then the press is undone, so the box is never over her run.
+      const st = window.stage, conv = st?.cut?.conv;
+      if (live(beats[11]) && tc < at0 && conv && conv.start < st.cut.t0 + at0) conv.start = st.cut.t0 + at0;
+      shoot(g, view.x, view.y, 1, c.T, { robotU: HER_U + (herEnd ?? HER_DUR) + t, enabled: true, door: doorAt(h), hero, cast });
+      bars(barK);
+    }, { ...SAY.answer, auto: true, look: look('hero') }),
   ];
+  // Her answer waits for her to be at her mark (stage.js reads say.at as the beat starts, when beat 10 has ended).
+  Object.defineProperty(beats[11].say, 'at', { get: answerAt, enumerable: true });
+  return beats;
 }

@@ -137,6 +137,45 @@ function follow(s) {
   };
 }
 
+// ---- The A bubble ----
+// It goes just over the head of whoever she's in reach of (people.js TALKERS bubble), nudged a little away from her. But
+// beside someone, a little behind them (people.js within() gives the A up to 6 pixels back), her face may be right where
+// that would be, and in a group the next head may be close by. So the bubble
+// takes the nearest spot, a pixel at a time either side, that covers no face (hers or anyone else's), keeps 4 pixels
+// clear of anyone else's head beside it, and has nobody else's head under or beside it nearer its tail than theirs (a
+// pixel of drop counting as two across), where it would read as that someone's; failing that, the same, level with
+// their head, beside it, as the arena has it; failing that, clear of her face at least.
+/** How far above someone's feet the top of their head is (a head is 16 rows): on the bench, on the grass, and on their
+ *  feet (standing, or making a point). */
+const HEAD_TOP = { sit: 38, floor: 31 };
+const headOf = (q) => {
+  const x = Math.round(q.x), y = Math.round(q.y) - (HEAD_TOP[q.gait] ?? 46);
+  return { x, x0: x - 8, x1: x + 8, y0: y, y1: y + 16 };
+};
+/** The bubble's box about x with its top at y, the tail and its bob included (talk.js drawBubble). */
+const boxAt = (x, y) => ({ x0: x - 5, x1: x + 6, y0: y, y1: y + 13 });
+const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+/** Where the A over p goes, in world pixels (its middle and its top), with her feet at me, t seconds in. */
+function bubbleAt(p, me, t) {
+  const her = headOf({ x: me.x, y: me.y }), others = after(t).filter((q) => q.id !== p.id).map(headOf);
+  const mine = headOf(p), away = me.x > p.x ? -1 : 1, top = p.y - p.bubble;
+  /** How near a head is to the tail of a bubble at x with box b. */
+  const near = (h, x, b) => Math.abs(x - h.x) + 2 * Math.max(0, h.y0 - b.y1);
+  const clear = (x, y) => {
+    const b = boxAt(x, y), own = near(mine, x, b);
+    // Beside their head (the lower spot), not over their face either. (Beside hers is fine: it's never her own A.)
+    if (overlap(b, her) || (y !== top && overlap(b, mine))) return false;
+    // Nobody else's head within 4 pixels either side of it either: a bubble right beside a head, level with it, reads
+    // as that head's.
+    const wide = { ...b, x0: b.x0 - 4, x1: b.x1 + 4 };
+    return others.every((h) => !overlap(wide, h) && (h.y0 < y - 8 || h.y0 > b.y1 + 24 || near(h, x, b) > own));
+  };
+  for (const y of [top, top + 8]) {
+    for (let d = 3; d <= 18; d++) for (const side of [away, -away]) if (clear(p.x + side * d, y)) return [p.x + side * d, y];
+  }
+  return [away > 0 ? Math.max(p.x + 3, her.x1 + 5) : Math.min(p.x - 3, her.x0 - 6), top];
+}
+
 // Who she can talk to. The phone shows the face of whoever's talking, and stage.js takes it from the person's look; a
 // page with someone else's name on it (Owen chiming in on Tessa's) shows that someone's face instead.
 const LOOK_OF = Object.fromEntries(Object.values(CAST).filter((c) => c.name).map((c) => [c.name, c.look]));
@@ -196,13 +235,13 @@ runScene({
   // Turn to the middle of someone seated: on the bench, their body is behind their feet; on the grass, their lap.
   faceTo: (p) => (p.gait === 'sit' ? { x: p.x, y: p.y - 10 } : p.gait === 'floor' ? { x: p.x, y: p.y - 2 } : p),
   camera: follow,
-  // The A goes just over their own head (people.js TALKERS bubble), nudged a little away from her, so it's never over
-  // her head or a neighbour's; not while the lawn is still fading in (stage.js draws it after draw(), over the fade).
+  // The A goes over their own head (bubbleAt()); not while the lawn is still fading in (stage.js draws it after draw(),
+  // over the fade).
   prompt(g, view, p, t) {
     const s = window.stage;
     if (s.freeAt != null && t < s.freeAt + FADE) return;
-    const away = s.me.x > p.x ? -1 : 1;
-    drawBubble(g, p.x - view.x + away * 3, p.y - view.y - p.bubble, t);
+    const [x, y] = bubbleAt(p, s.me, t);
+    drawBubble(g, x - view.x, y - view.y, t);
   },
 
   draw(g, view, t, s) {

@@ -1,7 +1,7 @@
 // The back lawn of the team's high school on a sunny afternoon, after the last bell: where 5026 holds its team meeting.
-// The sun is low on the left, behind you, so everything facing you is lit from the upper left, the windows glint, and
-// the trees' shade falls away from you and to the right, hard-edged like everything else in this game; everything else
-// standing on the floor has a short dark patch right under it, like the people's shadows.
+// The light comes from the upper left, as everywhere in this game, so everything facing you is lit on its top and left
+// and the windows glint. The trees' shade lies on the grass right under their crowns, hard-edged like everything else
+// here, and everything else standing on the floor has a short dark patch right under it, like the people's shadows.
 // Same scale and camera as the arena (field.js): 8 pixels to the foot across, 2.75 to the foot of depth, people 48
 // pixels tall on the walker's rig. Along the top runs the school's single-storey wall of sand-coloured block with its
 // flat roof, a row of classroom windows reflecting the sky, the robotics shop's roll-up door rolled open (the dark shop
@@ -28,8 +28,12 @@ const W = WORLD.w, H = WORLD.h;
 // Daylight ramps that sit beside pixel.js's palette: the same saturation and value steps, three tones each.
 /** The sky, top to horizon: two new blues either side of the palette's own. */
 const SKY = [[0, '#2f6fe4'], [14, C.blue2], [30, '#79b2ff'], [44, C.blue3]];
-const CLOUD = ['#ffffff', '#d6e8ff', C.blue3];
-const GRASS = { deep: '#1d5e3a', shade: '#267a3e', mid: '#2f8f45', stripe: '#2b8541', lit: '#4fb35a', blade: '#86d66e' };
+/** Cloud white, its pale rims, and its flat underside in the palette's light steel, greyer than any band of the sky
+ *  behind it so the bottom edge stays hard. */
+const CLOUD = ['#ffffff', '#d6e8ff', C.steel3];
+/** The lawn, kept dark the way the arena keeps its carpet, so the team's red merch stands out on it (in greyscale too):
+ *  a deep, saturated green, its tree shade a step under it, lit blades a step over. */
+const GRASS = { deep: '#103a22', shade: '#154a2b', mid: '#1b5c33', stripe: '#19572f', lit: '#2b8541', blade: '#4fb35a' };
 const LEAF = ['#174a2c', '#22703a', '#3b9a48', '#6cc95a'];
 const LEAF_FAR = ['#123d2a', '#1b5634', '#2a7040'];
 const BARK = ['#3d2519', '#5e3a26', '#7a4a24'];
@@ -43,6 +47,8 @@ const WOOD = ['#5a3418', '#7a4a24', '#9a6234', '#bf8048'];
 const SHOP_FLOOR = ['#30354a', '#353a4c', '#3b4154'];
 // The black bag is the arena's dark greys, a step up from ink so its outline still shows.
 const BAG = { red: ['#a1172a', '#d3212f', '#ff6a55'], navy: ['#141a2e', '#232a44', '#3a4466'], black: [C.steel0, C.carpet1, C.carpet2] };
+/** The people's shadow (stage.js drawWithShadow draws it at 45 percent). */
+const SHADOW = '#05060d';
 
 // ---- Helpers ----
 /** A box seen from the front and a little above: its top face, then the face toward you, outlined (field.js box()). */
@@ -79,7 +85,8 @@ function contact(x0, x1, y, c) {
 /**
  * Leaves: overlapping clumps [x, y, r] (pixel.js disk() circles), outlined in ink as one shape. Each pixel is shaded by
  * the clump in front at that spot and by where it sits on the whole crown (centre cx, cy, radius R), light from the
- * upper left, in three tones; a few bright leaves on the lit side (tones[3]) and dark ones in the mid. base: a box
+ * upper left, in three tones; a few bright leaves on the lit side (tones[3]), most of the lit edge along the top and
+ * left in them too (the highlight line on lit top edges, broken up like leaf tips), and dark ones in the mid. base: a box
  * { x0, x1, y, y1 } counted as leaves too, down to row y1, for a treeline whose foot is hidden behind something drawn
  * after it (the roof). pockets: little shapes [x, y, rows] of shade-tone leaves (rows as in sprite(), '#' a pixel),
  * deep places in the foliage, unoutlined.
@@ -109,7 +116,9 @@ function crown(clumps, cx, cy, R, tones, seed, base, pockets = []) {
       const n = rnd(seed + px * 7.13 + py * 3.71);
       const b = 0.9 * ball(lx, ly) + 0.6 * ball(gx, gy) + (rnd(seed + px * 1.7 + py * 9.3) - 0.5) * 0.08;
       const tone = b > 0.7 ? 2 : b > 0.18 ? 1 : 0;
-      if (tone === 2 && tones[3] && n < 0.045) rect(px, py, 1, 1, tones[3]);
+      // Lit leaves at the crown's top or left edge catch the sun, most of them: a broken highlight line, leaf tips.
+      const rim = tone === 2 && (!hit(px, py - 1) || !hit(px - 1, py)) && n < 0.7;
+      if (tones[3] && tone === 2 && (rim || n < 0.045)) rect(px, py, 1, 1, tones[3]);
       else if (tone === 1 && n < 0.02) rect(px, py, 1, 1, tones[0]);
       else rect(px, py, 1, 1, tones[tone]);
     }
@@ -128,7 +137,9 @@ function paintSky() {
 }
 
 // Flat clouds: puffs [x, y, r] over a flat base at y 0, each white with a pale rim on its lower right, so the bumps
-// read; then a pale band and the sky's palest blue along the bottom. Sky art has no outline, like the intro's stars.
+// read (every rim first, then every white, so no rim lands inside the white); then a flat bottom, one straight line from
+// end to end: a pale band and the shade under it. Then the one-pixel ink outline everything in the game has, traced
+// round the whole cloud the way crown() traces the leaves.
 const CLOUDS = [
   { x: 36, base: 24, puffs: [[6, -3, 5], [15, -7, 8], [28, -9, 10], [40, -5, 7], [49, -2, 4]] },
   { x: 188, base: 14, puffs: [[4, -2, 4], [11, -5, 6], [20, -3, 5], [26, -1, 3]] },
@@ -138,18 +149,21 @@ const CLOUDS = [
 function makeCloud(puffs) {
   const x0 = Math.min(...puffs.map(([x, , r]) => x - r)), x1 = Math.max(...puffs.map(([x, , r]) => x + r));
   const y0 = Math.min(...puffs.map(([, y, r]) => y - r)), w = x1 - x0, base = -y0;
-  const l = layer(w, base + 1, (lg) => {
-    for (const [x, y, r] of puffs) {
-      disk(x - x0, y - y0, r, CLOUD[1]);
-      disk(x - x0 - 1, y - y0 - 1, r - 1, CLOUD[0]);
+  // A pixel of room all round for the outline: the cloud itself is drawn a pixel in from the layer's top left.
+  const lw = w + 2, lh = base + 3;
+  const l = layer(lw, lh, (lg) => {
+    for (const [x, y, r] of puffs) disk(x - x0 + 1, y - y0 + 1, r, CLOUD[1]);
+    for (const [x, y, r] of puffs) disk(x - x0, y - y0, r - 1, CLOUD[0]);
+    // The flat bottom, from a pixel in from either end (the end puffs round off into it).
+    fill(2, base - 2, w - 2, 2, CLOUD[1]);
+    fill(2, base, w - 2, 2, CLOUD[2]);
+    // The outline: ink on every empty pixel next to the cloud, above, below or either side.
+    const a = lg.getImageData(0, 0, lw, lh).data, on = (px, py) => px >= 0 && py >= 0 && px < lw && py < lh && a[(py * lw + px) * 4 + 3] > 0;
+    for (let py = 0; py < lh; py++) for (let px = 0; px < lw; px++) {
+      if (!on(px, py) && (on(px - 1, py) || on(px + 1, py) || on(px, py - 1) || on(px, py + 1))) rect(px, py, 1, 1, C.ink);
     }
-    // Only where there's cloud already: the pale band, then the blue underside.
-    lg.globalCompositeOperation = 'source-atop';
-    fill(0, base - 3, w, 2, CLOUD[1]);
-    fill(0, base - 1, w, 2, CLOUD[2]);
-    lg.globalCompositeOperation = 'source-over';
   });
-  return { ...l, dx: x0, dy: y0 };
+  return { ...l, dx: x0 - 1, dy: y0 - 1 };
 }
 const WRAP = W + 80;
 /** Clouds drift right about 3 pixels a second, round and round. */
@@ -159,12 +173,16 @@ function clouds(t) {
     blit(BAKED.clouds[i], x + BAKED.clouds[i].dx, c.base + BAKED.clouds[i].dy);
   });
 }
-/** Three birds cross the sky now and then (the first time as the meeting opens), wings up, wings level. */
+/**
+ * Three birds cross the sky now and then (the first time as the meeting opens), wings up, wings level: in the opening
+ * shot through the open sky right of the place card, under the film bar and over the treetops, then up out of the
+ * tilt. (Walking, the view never goes up this far.)
+ */
 function birds(t) {
   const u = t % 46;
-  if (u > 16) return;
+  if (u > 12) return;
   [[0, 0], [-7, 3], [-12, -2]].forEach(([dx, dy], i) => {
-    const x = Math.round(96 + u * 24 + dx), y = Math.round(20 + dy + Math.sin(u * 1.3 + i) * 1.5);
+    const x = Math.round(268 + u * 24 + dx), y = Math.round(24 + dy + Math.sin(u * 1.3 + i) * 1.5);
     const up = Math.floor(t * 7 + i * 1.7) % 2 === 0;
     if (up) {
       rect(x, y, 1, 1, C.steel0);
@@ -230,13 +248,18 @@ function paintWall() {
   rect(0, WALL_Y - 1, W, 1, C.ink);
 }
 
-/** A classroom window: steel frame lit top and left, glass reflecting the sky, a glint, the mullion, the sill. */
+/** A classroom window: steel frame lit top and left and shaded right and bottom (the mid tone where they meet at the
+ *  corners, and on the mullion), glass reflecting the sky, a glint, the mullion, and an outlined sill. */
 function paintWindow({ x0, x1, y0, y1 }) {
   const w = x1 - x0, h = y1 - y0;
   rect(x0 - 1, y0 - 1, w + 2, h + 2, C.ink);
   rect(x0, y0, w, h, C.steel2);
   rect(x0, y0, w, 2, C.steel3);
   rect(x0, y0, 2, h, C.steel3);
+  rect(x1 - 2, y0 + 2, 2, h - 2, C.steel1);
+  rect(x0 + 2, y1 - 2, w - 2, 2, C.steel1);
+  rect(x1 - 2, y0, 2, 2, C.steel2);
+  rect(x0, y1 - 2, 2, 2, C.steel2);
   rect(x0 + 2, y0 + 2, w - 4, h - 4, C.ink);
   const gx = x0 + 3, gy = y0 + 3, gw = w - 6, gh = h - 6, third = Math.round(gh / 3);
   rect(gx, gy, gw, gh, C.blue2);
@@ -254,7 +277,8 @@ function paintWindow({ x0, x1, y0, y1 }) {
   rect(mx, gy, 4, gh, C.ink);
   rect(mx + 1, gy, 1, gh, C.steel3);
   rect(mx + 2, gy, 1, gh, C.steel2);
-  // The sill: lit on top, shade under.
+  // The sill: a ledge of block a little wider than the window, outlined, lit on top and shaded under.
+  rect(x0 - 4, y1, w + 8, 4, C.ink);
   rect(x0 - 3, y1 + 1, w + 6, 1, SAND.lit);
   rect(x0 - 3, y1 + 2, w + 6, 1, SAND.shade);
 }
@@ -472,9 +496,9 @@ function paintLawn() {
 }
 
 /**
- * Shade under the trees, falling away from you and to the right, and a short contact shadow right under everything else
- * standing on the floor: the same rule as the people's (stage.js drawWithShadow), a dark patch under the feet, so the
- * props and the people beside them read as lit alike, the arena's way.
+ * Shade under the trees, centred under each crown, and a short contact shadow right under everything else
+ * standing on the floor: the same as the people's (stage.js drawWithShadow), ink at 45 percent, so the props and the
+ * people beside them read as lit alike, the arena's way.
  */
 function paintShadows() {
   for (const tr of TREES) {
@@ -485,11 +509,12 @@ function paintShadows() {
       rect(Math.round(s.x + Math.cos(a) * d * (s.rx - 3)), Math.round(s.y + Math.sin(a) * d * (s.ry - 2)), 1, 1, GRASS.shade);
     }
   }
-  // As dark as the people's own shadows on the same ground: the concrete's joint grey, the lawn's deepest green.
-  contact(BENCH.x0 - 2, BENCH.x1 + 2, BENCH.y, CONCRETE.joint);
-  contact(EASEL.x - 12, EASEL.x + 13, EASEL.y, CONCRETE.joint);
-  contact(TABLE.x0 - 1, TABLE.x1 + 2, TABLE.y, GRASS.deep);
-  for (const b of BAGS) contact(b.x - 5, b.x + 5, b.y, GRASS.deep);
+  withAlpha(0.45, () => {
+    contact(BENCH.x0 - 2, BENCH.x1 + 2, BENCH.y, SHADOW);
+    contact(EASEL.x - 12, EASEL.x + 13, EASEL.y, SHADOW);
+    contact(TABLE.x0 - 1, TABLE.x1 + 2, TABLE.y, SHADOW);
+    for (const b of BAGS) contact(b.x - 5, b.x + 5, b.y, SHADOW);
+  });
 }
 
 // ---- Baked once ----
@@ -763,7 +788,9 @@ export function blocked(x, y) {
   if (y < WALL_Y + 4 || y > 258 || x < 8 || x > 504) return true;
   // A trunk: its own half width (four pixels, six at the roots) and hers, so she never stands over it.
   if (TREES.some((tr) => Math.abs(x - tr.x) < 11 && y >= tr.y - 4 && y <= tr.y + 2)) return true;
-  if (x >= BENCH.x0 - 4 && x <= BENCH.x1 + 4 && y >= BENCH.y - 6 && y <= BENCH.y + 2) return true;
+  // The bench, and her own half width past either end, so walking along the path into it she stops clear of its steel
+  // ends and armrests.
+  if (x >= BENCH.x0 - 12 && x <= BENCH.x1 + 12 && y >= BENCH.y - 6 && y <= BENCH.y + 2) return true;
   // The easel: the whole card's width and hers, from the wall's foot, so she can't stand behind it or over its card.
   if (Math.abs(x - EASEL.x) <= 28 && y <= EASEL.y + 4) return true;
   // The table, and a step in front of it: walking up to it she stops where she's across it from Nadia (people.js within()),

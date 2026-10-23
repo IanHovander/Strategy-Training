@@ -19,9 +19,10 @@ export const BANNER = { x0: 212, x1: 228, y0: 70, y1: 112 };
 // ---- The path and the lawn ----
 export const PATH = { y0: 142, y1: 158 };
 export const LAWN_Y = 158;
-/** The trees on the lawn, by the foot of the trunk. The sun is low on the left behind you, so shade falls up and right. */
+/** The trees on the lawn, by the foot of the trunk, and the shade on the grass under each crown: centred under it, the
+ *  way every shadow in the game sits under its owner (the people's, the props'), so the frame has one light. */
 export const TREES = [{ x: 64, y: 206 }, { x: 470, y: 200 }];
-export const shadeOf = (tree) => ({ x: tree.x + 16, y: tree.y - 4, rx: 30, ry: 9 });
+export const shadeOf = (tree) => ({ x: tree.x + 4, y: tree.y - 1, rx: 30, ry: 9 });
 /** A bench on the path, facing the lawn. y is its floor line; whoever sits on it has their feet at y + 3. */
 export const BENCH = { x0: 330, x1: 378, y: 152 };
 /** The big thank-you card for a sponsor, on an easel by the shop door. */

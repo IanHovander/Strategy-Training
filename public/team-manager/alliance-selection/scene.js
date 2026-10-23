@@ -8,7 +8,8 @@
 // walk: along the front of the line, out through the gate to the floor in front where the backups wait with the lead
 // queuer, and past both ends. Everyone standing stops her, as do the signs' posts, the mic, the display and the field's
 // own walls and corner pieces (set.js moveIn). She can talk to her captain and partners, the captains who made the big
-// decisions, the team that turned an invitation down, the top backup, Priya, Sam, the head referee and Robin.
+// decisions, the team that turned an invitation down (whose rep, standing with their back to you, turns round to talk),
+// the top backup, Priya, Sam, the head referee and Robin.
 //
 // Robin keeps skating the strip in front of the line (people.js mcPatrol, a loop of about twenty seconds) on her own
 // clock: it starts as walking starts, which is where the cut scene left her, mic up beside the mic stand. When the
@@ -25,7 +26,9 @@ import { makeSetLayers, drawSet, moveIn } from './set.js';
 import { lookOf, CROWD, TALKERS, MC_LINES, mcPatrol } from './people.js';
 import { MC_LOOK, drawSkater } from './mc.js';
 import { makeCutscene } from './cutscene.js';
-import { WORLD, START, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, SKATE_SPEED, SIGN_TOP, capSpot } from './layout.js';
+import {
+  WORLD, START, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, SKATE_SPEED, SIGN_TOP, capSpot, walkView,
+} from './layout.js';
 
 /** The display once it's over: every alliance, the backups, no clock. */
 const BOARD_FULL = { rows: ALLIANCES, hot: null, clock: null, backups: BACKUPS };
@@ -39,11 +42,15 @@ const PICK_Y = 22;
 /** Captains, and first picks (who stand on their captain's left), for where the bubble goes; and both picks. */
 const CAPTAINS = new Set(ALLIANCES.map(([cap]) => cap)), FIRST_PICKS = new Set(ALLIANCES.map(([, first]) => first));
 const PICKS = new Set(ALLIANCES.flatMap(([, ...picks]) => picks));
-/** Robin stops for her when she's this close to where Robin is, or will be LOOK_AHEAD seconds on. */
+/**
+ * Robin stops for her when she's this close to where Robin is, or will be LOOK_AHEAD seconds on; once stopped, she
+ * waits till the strategist is SLACK further off than that from both, so she doesn't flicker on and off at the edge.
+ */
 const PAUSE = { x: 14, y: 14 };
 const LOOK_AHEAD = 0.1;
+const SLACK = 4;
 /** Stopped for her, Robin can be as far off as that: her reach while she waits, so she's never stopped out of reach. */
-const WAITING_REACH = PAUSE.x + LOOK_AHEAD * SKATE_SPEED + 1;
+const WAITING_REACH = PAUSE.x + SLACK + LOOK_AHEAD * SKATE_SPEED + 1;
 /** The captains' feet on the line (once it's over, every captain stands on their spot). */
 const CAPTAIN_FEET = ALLIANCES.map((_, i) => capSpot(i));
 /** stage.js's floor recession: going down the screen covers more ground than going across. */
@@ -67,13 +74,16 @@ function faceHer(x, y) {
   return captainRight && dir <= 1 ? 7 : dir;
 }
 
-/** Where Robin is now: on her loop, unless the strategist is close by or talking to her, when she stops and turns. */
+/**
+ * Where Robin is now: on her loop, unless the strategist is close by or talking to her, when she stops and turns. While
+ * she waits, her loop's clock waits with her, every moment of it (a long frame doesn't nudge her on).
+ */
 function moveMc(t, s) {
   if (clock.t0 == null) Object.assign(clock, { t0: t, paused: 0, last: t });
-  const dt = Math.min(0.05, Math.max(0, t - clock.last));
+  const dt = Math.max(0, t - clock.last);
   clock.last = t;
-  const me = s.me, talking = s.talk?.person === mc;
-  const near = (p) => Math.abs(me.x - p.x) < PAUSE.x && Math.abs(me.y - p.y) < PAUSE.y;
+  const me = s.me, talking = s.talk?.person === mc, slack = mc.waiting ? SLACK : 0;
+  const near = (p) => Math.abs(me.x - p.x) < PAUSE.x + slack && Math.abs(me.y - p.y) < PAUSE.y + slack;
   const close = near(mc) || near(mcPatrol(t - clock.t0 - clock.paused + LOOK_AHEAD));
   mc.waiting = talking || close;
   if (mc.waiting) {
@@ -83,6 +93,16 @@ function moveMc(t, s) {
     return;
   }
   Object.assign(mc, mcPatrol(t - clock.t0 - clock.paused));
+}
+
+/**
+ * Whoever she's talking to, turned to her if they stand with their back to you (6038's rep, facing the field they
+ * turned down) and she's in front of them, so you talk to a face and not the back of a head; everyone else as they
+ * stand. They turn back once the talk is over.
+ */
+function turnedTo(p, s) {
+  if (s.talk?.person !== p || p.dir < 3 || p.dir > 5 || s.me.y <= p.y) return p;
+  return { ...p, dir: dirToward(s.me.x - p.x, (s.me.y - p.y) / DEPTH) };
 }
 
 // ---- The cut scene ----
@@ -129,19 +149,22 @@ export const scene = {
   /**
    * The bubble by their heads, Robin's a few pixels higher on her skates. On the line it keeps off the faces round them:
    * on top of a captain's sign (the picks' heads fill the space between it and the captain's), and by a pick's outside
-   * ear (a first pick's left).
+   * ear (a first pick's left). With the view down on the field there's no room above the sign under the screen's top,
+   * so it sits on the sign's top right-hand corner, clear of the number, its point on the panel.
    */
   prompt(g, view, p, t) {
-    const x = p.x - view.x, y = p.y - view.y;
-    if (CAPTAINS.has(p.id)) drawBubble(g, x, SIGN_TOP - 13 - view.y, t);
+    const x = p.x - view.x, y = p.y - view.y, above = SIGN_TOP - 13 - view.y;
+    if (CAPTAINS.has(p.id)) drawBubble(g, above >= 1 ? x : x + 9, Math.max(1, above), t);
     else drawBubble(g, x + (FIRST_PICKS.has(p.id) ? -11 : 11), y - (p === mc ? 53 : 50), t);
   },
+  /** The view follows her as stage.js does, but on the field it stays down far enough to keep the stands' legs out. */
+  camera: (s) => walkView(s.me.x, s.me.y),
   move: (x, y, dx, dy) => moveIn(x, y, dx, dy, CROWD, [mc]),
 
   draw(g, view, t, s) {
     moveMc(t, s);
     const people = [
-      ...CROWD.map((p) => ({ y: p.y, draw: () => drawWithShadow(g, view, p) })),
+      ...CROWD.map((p) => ({ y: p.y, draw: () => drawWithShadow(g, view, turnedTo(p, s)) })),
       { y: mc.y, draw: () => drawSkater(g, view, mc) },
       s.player,
     ];

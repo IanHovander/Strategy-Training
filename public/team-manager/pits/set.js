@@ -24,7 +24,7 @@
 // light comes from the upper left. The hall and the drapes are kept dim so the team colours, the robots and the light
 // steel carry the contrast. Everything is in world pixels, drawn through pixel.js's camera, so it works zoomed in too.
 
-import { C, useContext, camera, rect, text, layer, blit, rnd } from '../pixel.js';
+import { C, useContext, camera, rect, disk, text, layer, blit, rnd } from '../pixel.js';
 import { tones } from '../cast.js';
 import { eleBot, armBot, defBot } from '../sprites.js';
 import { robotCart } from '../field.js';
@@ -55,7 +55,7 @@ const BINS = [[C.org0, C.org1, C.org2], [C.blue0, C.blue1, C.blue2], [C.steel1, 
 // mirrored: the battery cart on the right and the tool chest on the left.
 const STATE = {
   3000: { state: 'field', match: 42, bot: null, mirrored: false },
-  8192: { state: 'busy', match: null, bot: { bot: 'arm', team: 'red', rsl: true }, mirrored: true },
+  8192: { state: 'busy', match: null, bot: { bot: 'arm', team: 'red', rsl: false }, mirrored: true }, // off: Ruth's hands are in it
   7777: { state: 'field', match: 42, bot: null, mirrored: false },
   4000: { state: 'busy', match: null, bot: { bot: 'ele', team: 'red', rsl: false }, mirrored: true },
   2468: { state: 'queue', match: 43, bot: null, mirrored: false },
@@ -77,7 +77,7 @@ const DRESS = {
   4000: { chest: 'steel', table: [['tv', 5, 2], ['laptop', 23, 4], ['drill', 33, 5]] },
   2468: { chest: 'red', table: [['shut', 14, 4], ['bins', 30, 2]] },
   6060: { chest: 'black', table: [['bins', 3, 2], ['laptop', 15, 3, 'code'], ['tape', 31, 4]] },
-  5026: { chest: 'red', table: [['laptop', 5, 3, 'cursor'], ['bins', 20, 2], ['drill', 31, 5]] },
+  5026: { chest: 'black', table: [['laptop', 5, 3, 'cursor'], ['bins', 20, 2], ['drill', 31, 5]] },
   1357: { chest: 'steel', table: [['bins', 3, 2], ['shut', 13, 3], ['buttons', 30, 5]] },
 };
 // Where the furniture stands in a pit (x from its left edge), standard and mirrored.
@@ -121,10 +121,10 @@ function drawFloor() {
     rect(x0, y0, 1, 8, C.steel2);
     rect(x0 + 40, y0, 1, 8, C.steel2);
   }
-  // Dashed yellow lines on the concrete like the arena's queue lines: a lane down the middle of the aisle and its near
+  // Dashed yellow lines on the concrete, the arena's queue lines exactly (3 pixels on, 1 off): a lane down the middle of the aisle and its near
   // edge. Then the floor boxes the pits' power comes from: a steel plate flush with the floor, lit along its top edge,
   // its lid's screws, and the black cable from it taped down across to the pit it feeds.
-  for (const y of [LANE_Y, EDGE_Y]) for (let x = 2; x < WORLD.w; x += 10) rect(x, y, 6, 1, C.yel1);
+  for (const y of [LANE_Y, EDGE_Y]) for (let x = 2; x < WORLD.w; x += 4) rect(x, y, 3, 1, C.yel1);
   for (const [x, y, to] of FLOOR_BOXES) {
     rect(to - 1, 100, 3, y - 100, C.ink);
     rect(to, 100, 1, y - 100, C.steel0);
@@ -157,10 +157,10 @@ const BADGE = [
 
 function banner(p) {
   // It hangs a little under the pipe, so its top edge shows under a cut scene's film bars (12 pixels), and its name is
-  // clear of the tallest robot on its cart (the elevator's mast top is at y 34). A white team's banner is in its shirts'
-  // shade, so it isn't the brightest thing on the dim drape.
+  // clear of the tallest robot on its cart (the elevator's mast top is at y 34). A white team's banner is in steel with
+  // its number in white, so it isn't the brightest thing on the dim drape.
   const x = p.x0 + 8, y = 12, w = 64, h = 24;
-  const [dark, mid, lit] = p.num === '3000' ? [C.steel2, p.tone[0], p.tone[1]] : p.tone, light = p.num === '3000' || p.num === '1357';
+  const [dark, mid, lit] = p.num === '3000' ? [C.steel1, C.steel2, C.steel3] : p.tone, light = p.num === '3000' || p.num === '1357';
   // Zip-tied to the pipe at the grommets.
   for (const tx of [x + 3, x + w - 4]) rect(tx, 9, 1, y - 9, C.steel1);
   rect(x, y, w, h, C.ink);
@@ -168,14 +168,15 @@ function banner(p) {
   rect(x + 1, y + 1, w - 2, 1, lit);
   rect(x + 1, y + h - 2, w - 2, 1, dark);
   for (const gx of [x + 3, x + w - 4]) rect(gx, y + 2, 1, 1, C.steel3);
-  // The number in the colour their shirts print it in, with a shadow; the name under it.
-  const num = TEAMS[p.num].print;
+  // The number flat in the colour their shirts print it in (white on the steel one), like the bumpers' numbers and the
+  // QUEUE sign's; the name under it.
+  const num = p.num === '3000' ? C.white : TEAMS[p.num].print;
   if (p.num === '5026') {
     BADGE.forEach((row, r) => [...row].forEach((ch, c) => {
       if (ch !== '.') rect(x + 2 + c, y + 2 + r, 1, 1, { W: C.white, y: C.yel1 }[ch] ?? C.ink);
     }));
-    text(p.num, x + 15, y + 2, { scale: 2, color: num, shadow: dark });
-  } else text(p.num, x + w / 2, y + 2, { scale: 2, color: num, shadow: dark, align: 'center' });
+    text(p.num, x + 15, y + 2, { scale: 2, color: num });
+  } else text(p.num, x + w / 2, y + 2, { scale: 2, color: num, align: 'center' });
   text(p.name, x + w / 2, y + 17, { font: 3, color: light ? C.ink : C.white, align: 'center' });
 }
 
@@ -195,22 +196,34 @@ function pegboard() {
     rect(x - 1, 20, 1, 1, C.steel3);
     rect(x + 1, 20, 1, 1, C.steel3);
   }
-  for (const [x, y, c] of [[33, 21, C.red1], [33, 34, C.blue1]]) {
-    rect(x - 1, y - 1, 9, 9, C.ink);
-    rect(x, y, 7, 7, c);
-    rect(x + 2, y + 2, 3, 3, C.ink);
-    rect(x, y, 7, 1, c === C.red1 ? C.red2 : C.blue2);
+  // Two spools of wire, round: the coil in its colour, lit on its upper left, and the spool's hub.
+  for (const [x, y, c, lit, shade] of [[36, 25, C.red1, C.red2, C.red0], [36, 38, C.blue1, C.blue2, C.blue0]]) {
+    disk(x, y, 5, C.ink);
+    disk(x, y, 4, c);
+    rect(x + 1, y + 2, 2, 1, shade);
+    rect(x + 2, y, 1, 2, shade);
+    rect(x - 3, y - 2, 1, 2, lit);
+    rect(x - 2, y - 3, 2, 1, lit);
+    rect(x - 1, y - 1, 2, 2, C.ink);
   }
   for (let i = 0; i < 4; i++) {
-    rect(64 + i * 3, 19, 3, 15, C.ink);
-    rect(65 + i * 3, 20, 1, 13, i % 2 ? C.steel2 : C.steel3);
+    rect(64 + i * 3, 19, 3, 10, C.ink);
+    rect(65 + i * 3, 20, 1, 8, i % 2 ? C.steel2 : C.steel3);
   }
-  rect(65, 37, 13, 13, C.ink);
-  rect(66, 38, 11, 11, C.steel2);
-  rect(66, 38, 11, 1, C.steel3);
-  for (const [dx, dy] of [[5, -1], [5, 11], [-1, 5], [11, 5]]) rect(66 + dx, 38 + dy, 1, 1, C.steel2);
-  rect(69, 41, 5, 5, C.ink);
-  rect(70, 42, 3, 3, C.steel1);
+  // The sprocket, under the hex shaft and clear of the bins on the counter: a steel disk with a tooth every 45 degrees
+  // round its rim, lit on its upper left, shaded on its lower right, and its bore.
+  const [sx, sy, r] = [71, 37, 5];
+  const teeth = Array.from({ length: 8 }, (_, k) => [Math.round(sx - 0.5 + Math.cos((k * Math.PI) / 4) * (r + 0.5)), Math.round(sy - 0.5 + Math.sin((k * Math.PI) / 4) * (r + 0.5))]);
+  for (const [tx, ty] of teeth) rect(tx - 1, ty - 1, 3, 3, C.ink);
+  disk(sx, sy, r, C.ink);
+  for (const [tx, ty] of teeth) rect(tx, ty, 1, 1, C.steel2);
+  disk(sx, sy, r - 1, C.steel2);
+  rect(sx - 4, sy - 2, 1, 2, C.steel3);
+  rect(sx - 3, sy - 3, 1, 1, C.steel3);
+  rect(sx - 2, sy - 4, 2, 1, C.steel3);
+  rect(sx + 1, sy + 2, 2, 1, C.steel1);
+  rect(sx + 2, sy + 1, 1, 1, C.steel1);
+  rect(sx - 2, sy - 2, 3, 3, C.ink);
   for (let y = 22; y < 48; y += 2) rect(59 + ((y >> 1) % 2), y, 2, 2, C.steel2);
   rect(54, 20, 4, 14, C.ink);
   rect(55, 21, 2, 12, C.white);
@@ -477,21 +490,30 @@ function awayBoard(x, y, where, match, open = true) {
 
 /**
  * 5026's board while its robot is home: folded flat and leaning on the front of the work table behind where the cart
- * stands, its back to you, the easel's legs folded against it (drawn once the robot rolls away; till then the robot
- * hides it). Turned round and stood up on the spot, it's the white IN QUEUE board on its legs, at the same height.
+ * stands, its back to you, its feet (x, y) on the floor (drawn once the robot rolls away; till then the robot hides it).
+ * It's the same board as awayBoard's, the same size: the white of its face showing round the edge of the grey back, and
+ * the easel's two legs folded flat against the back, down past the panel to the floor. Turned round and stood up on the
+ * spot, it's the white IN QUEUE board on its legs.
  */
 function stowedBoard(x, y) {
-  const top = y - 16;
+  const top = y - 25;
   rect(x - 1, top - 3, 3, 4, C.ink);
   rect(x, top - 2, 1, 2, C.steel2);
   rect(x - 17, top, 35, 17, C.ink);
-  rect(x - 16, top + 1, 33, 15, C.steel1);
-  rect(x - 16, top + 1, 33, 1, C.steel2);
+  rect(x - 16, top + 1, 33, 15, WHITEBOARD);
+  rect(x - 16, top + 15, 33, 1, C.steel3);
+  rect(x - 15, top + 2, 31, 12, C.steel1);
+  rect(x - 15, top + 2, 31, 1, C.steel2);
+  // The legs, folded against the back and down to the floor, a hinge at the top of each.
   for (const s of [-1, 1]) {
-    rect(x + s * 11 - 1, top + 2, 3, 15, C.ink);
-    rect(x + s * 11, top + 2, 1, 14, C.steel3);
+    rect(x + s * 11 - 1, top + 1, 3, 25, C.ink);
+    rect(x + s * 11, top + 2, 1, 23, C.steel3);
+    rect(x + s * 11, top + 2, 1, 1, C.white);
   }
 }
+
+/** Where 5026's board is, across, while the teammate lifts it: at her hands (cutscene.js MATE_SET, 630, less 10). */
+const LIFT_X = 620;
 
 // The arm robot's arm, raised a little: any higher and it hides its own team's banner from the aisle.
 const ARM_ANGLE = -0.15;
@@ -508,8 +530,9 @@ function pushHandle(x, y, side) {
 /**
  * A robot on its cart with the cart's floor line at (x, y), through pixel.js's current camera: the queue's dolly
  * (field.js robotCart) with the intro's robot on its deck, wheels still. spec: { bot: 'ele' | 'arm' | 'def', num, team,
- * rsl = false, dir = 1, handle = 0 } (handle: -1 a push handle at the left end, +1 at the right, 0 none). The defender's
- * bumpers are always red, and the arm robot has no signal light.
+ * rsl = false, dir = 1, handle = 0, roll } (handle: -1 a push handle at the left end, +1 at the right, 0 none; roll: how
+ * far it has rolled, in pixels, for a cart on the move: its casters turn, the glint on each moving round it every two
+ * pixels). The defender's bumpers are always red, and the arm robot has no signal light.
  */
 export function drawCartBot(x, y, spec) {
   const { bot, num, team = 'blue', rsl = false, dir = 1, handle = 0 } = spec;
@@ -521,6 +544,14 @@ export function drawCartBot(x, y, spec) {
     else if (bot === 'def') defBot(rx, ry, { num, dir, spin: 0, rsl });
     else eleBot(rx, ry, { team, num, dir, spin: 0, rsl });
   });
+  // The casters robotCart draws, turning: the lit pixel of each goes from one side of it to the other.
+  if (spec.roll != null) {
+    const k = Math.floor(spec.roll / 2) % 2;
+    for (const cx of [x - 15, x + 13]) {
+      rect(cx, y - 2, 2, 1, C.steel1);
+      rect(cx + k, y - 2, 1, 1, C.steel3);
+    }
+  }
 }
 
 /** One side drape between pits, end-on: its top rail running back to the drape, the upright at its front corner. */
@@ -533,20 +564,21 @@ function divider(x) {
   rect(x - 2, yFloor - 1, 5, 1, C.steel2);
 }
 
-// 7777's team flag, hanging like cloth: yellow, lit along the top and shaded along the bottom, the fly end drooping a
-// pixel, two folds (lit, then shade, like the drape's), a grey band along the fly edge so it shows on the navy drape,
-// and a black 7. '.' is the drape showing through.
+// 7777's team flag, hanging like cloth: yellow all over, in its own three yellows, lit along the top and shaded along the
+// bottom, two folds running its full height (lit, then shade, like the drape's), the fly end drooping a pixel lower than
+// the hoist, an ink outline all round (it parts the flag from the navy drape) and a black 7. '.' is the drape showing
+// through.
 const FLAG = [
-  'kkkkkkkkkkkkk.....',
-  'kYYYYYYYYYYYYkkkkk',
-  'kyyyykkkkkyyyYBBBk',
-  'kyYoyyyyykyYoybbbk',
-  'kyYoyyyykyyYoybbbk',
-  'kyYoyyykyyyYoybbbk',
-  'kyYoyyykyyyYoybbbk',
-  'kyYoyyykyyyYoybbbk',
-  'kooooooooooooybbbk',
-  'kkkkkkkkkkkkkonnnk',
+  'kkkkkkkkkkkkkkkkkk',
+  'kYYYYYYYYYYYYYYYYk',
+  'kyYoykkkkkyYoyyyyk',
+  'kyYoyyyyykyYoyyyyk',
+  'kyYoyyyykyyYoyyyyk',
+  'kyYoyyykyyyYoyyyyk',
+  'kyYoyyykyyyYoyyyyk',
+  'kyYoyyykyyyYoyyyyk',
+  'koYooooooooYoyyyyk',
+  'kkkkkkkkkkkkkooook',
   '.............kkkkk',
 ];
 /**
@@ -559,7 +591,7 @@ function flag(x, y) {
   rect(x, top, 1, y - top, C.steel2);
   rect(x, top, 1, 1, C.steel3);
   FLAG.forEach((row, r) => [...row].forEach((ch, c) => {
-    if (ch !== '.') rect(x + 1 + c, fly + r, 1, 1, { k: C.ink, Y: C.yel2, y: C.yel1, o: C.yel0, B: BLACK[3], b: BLACK[2], n: BLACK[1] }[ch]);
+    if (ch !== '.') rect(x + 1 + c, fly + r, 1, 1, { k: C.ink, Y: C.yel2, y: C.yel1, o: C.yel0 }[ch]);
   }));
 }
 
@@ -600,11 +632,12 @@ function adminDesk() {
   rect(748, yFront, 60, 1, C.blue0);
   for (let fx = 753; fx < 806; fx += 10) rect(fx, yFront + 3, 1, yFloor - yFront - 4, C.blue0);
   rect(748, yFloor - 1, 60, 1, C.blue0);
-  // Its sign, a panel on the skirt like SPARE PARTS's, the skirt's folds behind it.
-  rect(759, yFront + 5, 39, 11, C.ink);
-  rect(760, yFront + 6, 37, 9, C.blue0);
-  rect(760, yFront + 6, 37, 1, C.blue1);
-  text('PIT ADMIN', 778, yFront + 8, { font: 3, color: C.white, align: 'center' });
+  // Its sign, a panel on the skirt like SPARE PARTS's, the skirt's folds behind it: on the skirt's left, under the mic,
+  // so that where the cut scene's pan after the robot stops (its right edge at x 792) it's whole on the screen.
+  rect(751, yFront + 5, 39, 11, C.ink);
+  rect(752, yFront + 6, 37, 9, C.blue0);
+  rect(752, yFront + 6, 37, 1, C.blue1);
+  text('PIT ADMIN', 770, yFront + 8, { font: 3, color: C.white, align: 'center' });
   // Schedules, a stack of them.
   rect(751, yTop + 1, 10, 6, C.ink);
   rect(752, yTop + 2, 8, 3, C.white);
@@ -626,9 +659,9 @@ function adminDesk() {
 
 /** Safety glasses for anyone who needs a pair, under the sign on the drape's end post. */
 function glassesStand() {
-  // The sign, yellow all round its words like the QUEUE sign (two pixels each side of the longest), and clear of the
-  // end of the hall.
-  const sx = 793, sy = 38, w = 37;
+  // The sign, yellow all round its words like the QUEUE sign (two pixels each side of the longest), clear of the end
+  // of the hall, and hung high enough that its words show over the head of anyone standing at the desk's end below it.
+  const sx = 793, sy = 26, w = 37;
   rect(sx, sy, w, 21, C.ink);
   rect(sx + 1, sy + 1, w - 2, 19, C.yel1);
   rect(sx + 1, sy + 1, w - 2, 1, C.yel2);
@@ -674,11 +707,11 @@ function standing(t, pit5026) {
     else if (p.num !== '5026' || pit5026 === 'robot') {
       list.push({ ...span, y: 90, draw: () => drawCartBot(p.mid, 90, { ...p.bot, num: p.num, handle: p.num === '5026' ? -1 : 0 }) });
     }
-    // 5026's board on its way from the table to the spot: folded against the table, picked up off the floor, turned
-    // round with its legs still folded, then standing (above).
-    const stowed = Math.round(floorY(3.2));
-    if (p.num === '5026' && pit5026 === 'empty') list.push({ ...span, y: floorY(3.2), draw: () => stowedBoard(p.mid, stowed) });
-    if (p.num === '5026' && pit5026 === 'lift') list.push({ ...span, y: 85, draw: () => stowedBoard(p.mid, stowed - 5) });
+    // 5026's board on its way from the table to the spot: folded against the table, then lifted in the teammate's hands
+    // (she bends over it from MATE_SET, cutscene.js, her hands ten pixels to her left and 18 up, so it's drawn just
+    // behind her with her hands on it), turned round with its legs still folded, then standing (above).
+    if (p.num === '5026' && pit5026 === 'empty') list.push({ ...span, y: floorY(3.2), draw: () => stowedBoard(p.mid, Math.round(floorY(3.2))) });
+    if (p.num === '5026' && pit5026 === 'lift') list.push({ ...span, y: 91, draw: () => stowedBoard(LIFT_X, 88) });
     if (p.num === '5026' && pit5026 === 'turn') list.push({ ...span, y: 89, draw: () => awayBoard(p.mid, 87, 'IN QUEUE', p.match, false) });
     if (p.num === '7777') list.push({ x0: p.x0, x1: p.x0 + 24, y: floorY(0.5), draw: () => flag(p.x0 + 4, 74) });
   }
@@ -735,7 +768,7 @@ function open(x, y) {
 const BLOCKS = [
   ...PITS.filter((p) => p.state === 'busy' && p.num !== '5026').map((p) => ({ x0: p.mid - 19, x1: p.mid + 19, y0: 84, y1: 90 })),
   ...PITS.filter((p) => p.state !== 'busy' || p.num === '5026').map((p) => ({ x0: p.mid - 17, x1: p.mid + 17, y0: 84, y1: 90 })),
-  { x0: 814, x1: 828, y0: 83, y1: 87 }, // the safety glasses stand
+  { x0: 792, x1: 828, y0: 83, y1: 90 }, // the safety glasses stand, and under its sign at the desk's end
   { x0: 808, x1: 816, y0: 131, y1: 134 }, // the QUEUE sign's post
 ];
 const hits = (bs, x, y) => bs.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);

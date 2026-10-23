@@ -22,8 +22,9 @@
 // Walking: she has the floor round the field (the back strip behind it, the front strip before it, and both ends), but
 // not the carpet, which the robot is always running on; the furniture, the gear and everyone else stop her too.
 // The camera follows her as stage.js's does, but no lower than ROOM.shown, so the windows stay in sight, unless she walks
-// out past that across the front of the room, when it keeps a little floor under her feet; while she talks to someone
-// at the front of the room it eases down over the tiles below that, so both faces clear the dialog box.
+// out toward the front of the room, when it keeps a strip of floor under her feet so she never walks along the bottom
+// edge; while she talks to someone at the front of the room it eases down over the tiles below that, so both faces
+// clear the dialog box.
 // The robot and the room's clock carry on from the cut scene into walking without a jump: stage.js gives walking the
 // page's own clock, so the scene keeps the difference between that and the cut scene's last frame and adds it.
 
@@ -111,6 +112,19 @@ function move(x, y, dx, dy) {
   return [nx, ny];
 }
 
+/** The nearest point to (x, y) she can stand on, within 24 pixels (null if there's none). */
+function standable(x, y) {
+  let best = null, bestD = Infinity;
+  for (let dy = -24; dy <= 24; dy++) {
+    for (let dx = -24; dx <= 24; dx++) {
+      const px = Math.round(x) + dx, py = Math.round(y) + dy, d = dx * dx + dy * dy;
+      if (d >= bestD || px < FLOOR.x0 || px > FLOOR.x1 || py < FLOOR.y0 || py > FLOOR.y1 || blocked(px, py)) continue;
+      [best, bestD] = [{ x: dx || dy ? px : x, y: dx || dy ? py : y }, d];
+    }
+  }
+  return best;
+}
+
 const people = PEOPLE.map((p) => ({ ...p, lines: LINES[p.id] }));
 /** Who's in reach: the closest she's near, from where she talks to them (Theo beside his table), the drive team from
  *  further off along the room, since she comes at them from the floor beside the station, Kai from a little further
@@ -125,17 +139,17 @@ function reach(s) {
 }
 
 // ---- The camera ----
-/** stage.js's follow, kept above ROOM.shown, or 4 pixels below her feet if she's further forward than that. The cut
- *  scene's last beat (cutscene.js follow) frames her the same way. */
+/** stage.js's follow, kept above ROOM.shown, or 12 pixels below her feet if she's further forward than that, so there's
+ *  always floor under her shadow. The cut scene's last beat (cutscene.js follow) frames her the same way. */
 const followView = (me) => ({
   x: Math.round(clamp(me.x - W / 2, 0, ROOM.w - W)),
-  y: Math.round(clamp(me.y - 28 - H / 2, 0, Math.max(ROOM.shown, me.y + 4) - H)),
+  y: Math.round(clamp(me.y - 28 - H / 2, 0, Math.min(ROOM.h, Math.max(ROOM.shown, me.y + 12)) - H)),
 });
 /** Talking, low enough that her face and theirs (about 34 pixels above their feet) sit above the dialog box and its
- *  name tag. */
+ *  name tag; for someone sitting at a table, whose face is lower, as low as the room goes, so the name tag clears it. */
 function talkY(s, y) {
-  const p = s.talk.person, feet = Math.max(s.me.y, (SPOTS[p.id] ?? p).y);
-  return Math.round(clamp(feet - 112, y, ROOM.h - H));
+  const p = s.talk.person, spot = SPOTS[p.id] ?? p, feet = Math.max(s.me.y, spot.y);
+  return Math.round(clamp(feet - (spot.gait === 'sit' ? 108 : 112), y, ROOM.h - H));
 }
 /** An eased pan of half a second whenever a conversation starts or ends; otherwise straight from followView. */
 const pan = { talking: false, from: 0, t0: -1, y: null };
@@ -156,6 +170,7 @@ function turned(s) {
 
 let shift = 0; // walking's world time is the page's clock plus this
 let robotFrom = null; // and the robot's clock is world time plus this, once the cut scene has handed over
+let freeAt = null; // when it did, on the page's clock
 
 runScene({
   ...SCENE_TEXT,
@@ -165,18 +180,31 @@ runScene({
   move,
   people,
   reach,
-  // She turns to the person, not to where she stands to talk to them: along the table to Theo.
-  faceTo: (p) => SPOTS[p.id],
+  // She turns to the person, not to where she stands to talk to them: along the table to Theo. Kai's face is a little
+  // up the room from her when she's beside him in front of the carpet, which rounds to turning her back on him, so she
+  // turns to a point level with her instead and faces him in profile.
+  faceTo: (p) => (p.id === 'kai' ? { x: SPOTS.kai.x, y: SPOTS.kai.y + 4 } : SPOTS[p.id]),
   camera: viewFor,
+  // The bubble beside their head, on the side away from her, so it's never over her own. Ms. Okafor's left is the
+  // student who resets the field, behind her and off to that side, so hers sits over her head instead, a little to the
+  // right: clear of his head, and of the strategist's when she talks to her from the right.
   prompt(g, view, p, t) {
-    const spot = SPOTS[p.id];
-    drawBubble(g, spot.x - view.x + 11, spot.y - view.y - (spot.gait === 'sit' ? 41 : 50), t);
+    const spot = SPOTS[p.id], side = window.stage.me.x > spot.x ? -1 : 1, y = spot.y - view.y - (spot.gait === 'sit' ? 41 : 50);
+    if (p.id === 'okafor') drawBubble(g, spot.x - view.x + 6, y - 11, t);
+    else drawBubble(g, spot.x - view.x + side * 11, y, t);
   },
-  onFree() {
+  onFree(s) {
     const now = performance.now() / 1000, end = CUT_END + HANDOFF.late; // the cut scene's clock in its last frame
     shift = end - now;
     robotFrom = HANDOFF.robotU - end;
-    // If A ended the last beat before the camera was back up from her answer, walking eases it the rest of the way.
+    freeAt = now;
+    // If A ended the last beat while she was still running to her mark, walking starts from where she was, not from her
+    // mark (stage.js has just put her there), or from the nearest floor she can stand on, if that was in the doorway or
+    // by someone she runs past.
+    const at = HANDOFF.hero && standable(HANDOFF.hero.x, HANDOFF.hero.y);
+    if (at) Object.assign(s.me, at, { dir: HANDOFF.hero.dir, gait: 'stand', dist: 0 });
+    // The camera ends the cut scene a little above the walkable view (and further, if A ended the last beat before it
+    // was back up from her answer): walking eases it the rest of the way.
     Object.assign(pan, { talking: false, from: HANDOFF.viewY, t0: now, y: HANDOFF.viewY });
   },
   draw(g, view, t, s) {
@@ -184,7 +212,8 @@ runScene({
     draw(g, view, T, {
       player: s.player,
       who: [{ x0: s.me.x - 5, x1: s.me.x + 5, y1: s.me.y }], // her body's width, so the rocket is solid once she's clear
-      cast: turned(s),
+      // Kai finishes his step over to his place, if A ended the cut scene before he was there.
+      cast: { ...(freeAt != null && { kai: HANDOFF.kai(t - freeAt) }), ...turned(s) },
       ...(robotFrom != null && { robotU: robotFrom + T, enabled: true }),
     });
   },

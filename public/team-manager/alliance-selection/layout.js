@@ -5,6 +5,7 @@
 // the waiting reps need: walking about down there, the view stops 64 rows down (WORLD.h - 144), so the faces along the
 // line stay in frame over her head.
 
+import { W, H, clamp } from '../pixel.js';
 import { WORLD_W, FIELD } from '../field.js';
 import { HERO_NAME } from '../cast.js';
 
@@ -29,10 +30,14 @@ export const capSpot = (i) => ({ x: SPOTS[i], y: LINE_Y });
 export const pickSpot = (i, k) => ({ x: SPOTS[i] + (k === 1 ? -7 : 7), y: LINE_Y - 8 });
 /**
  * Each spot's numbered sign: the floor line its post stands on, at the picks' own (it sorts in just behind them, in
- * front of the cargo ship), and how far right of its captain the post stands, so it rises from between heads.
+ * front of the cargo ship); how far right of its captain the post stands, just clear of the captain's head (16 columns,
+ * x - 8 to x + 7), so it rises beside it rather than out of their hair, and behind the second pick once they're there
+ * (their head spans x - 1 to x + 14); and how far the panel reaches either side of the captain: wide enough to sit on
+ * the post (like the arena's QUEUE sign, whose panel is wider than its words), the number centred over the captain.
  */
 export const SIGN_Y = LINE_Y - 8;
-export const SIGN_POST = 4;
+export const SIGN_POST = 9;
+export const SIGN_HALF = 11;
 /**
  * The top row of the signs' panels: low enough that the picks' hair (their heads' top row is 46 above their feet) comes
  * over the panel's bottom two rows, so once the alliance is standing at it the post is hidden behind them and the panel
@@ -85,8 +90,14 @@ export const PRIYA_AT = { x: 186, y: 162, dir: 2 };
 export const SAM_AT = { x: 364, y: 150, dir: 6 };
 /** Where Sam steps aside to while 9152's rep, and later the MC and she, go through the gate. */
 export const SAM_ASIDE = { x: 322, y: 150, dir: 2 };
-/** The head referee, on the open floor right of the gate, waiting to brief the captains once it's over. */
-export const REF_AT = { x: 520, y: 166, dir: 7 };
+/**
+ * The head referee, on the open floor right of the gate, waiting to brief the captains once it's over: close in front
+ * of the near wall, like Sam at the gate, so in the cut scene's shots along the line, with words up, he shows down to
+ * the waist over the dialog box (as Sam does) rather than as a head on its top edge, and walking about, talking to
+ * him, he's whole over it. He stands past the end of the line, so his head is never in front of Robin at sign 8 and
+ * the line's usual shots leave him wholly in or wholly out of frame.
+ */
+export const REF_AT = { x: 584, y: 150, dir: 7 };
 /**
  * Once it's over: where the backup teams gather round the queuer, the best-ranked four in the front row turned
  * three-quarters to you, the back row to her; the top backup, Gabe, a step out in front of the rest beside her, so he
@@ -105,6 +116,26 @@ export const WALK_MAX_Y = 198;
 // ---- Motion ----
 /** The MC's skating speed in pixels a second (stage.js SPEED: walking 34, running 78). */
 export const SKATE_SPEED = 80;
+
+// ---- The camera, walking about ----
+/**
+ * On the field the view stays at least this far down: its top row is then the walkway's rail behind the far wall, not
+ * the stands' front row cut off at the hips (following her on the strip in front of the line, the view would sit 21 to
+ * 40 rows down, a strip of jeans and shoes along the top). The signs' panels stay in frame and her feet stay above
+ * the dialog box (row 92 at the strip's front edge).
+ */
+export const FIELD_VIEW = 48;
+/**
+ * Where the view is with her at (x, y), walking about: stage.js's own follow (half a screen left of her, 28 + 72 rows
+ * above her feet, inside the world), but on the field, and in the gate down to row 148, never above FIELD_VIEW. At row
+ * 148 the follow comes to FIELD_VIEW by itself, so going out through the gate the view holds still while she walks
+ * down it and then follows her on, with no jump; the floors either side of the field only meet the field's below that.
+ */
+export function walkView(x, y) {
+  let vy = clamp(y - 28 - H / 2, 0, WORLD.h - H);
+  if (x >= FIELD.x0 && x <= FIELD.x1 && y >= 110 && y < FIELD_VIEW + 28 + H / 2) vy = Math.max(vy, FIELD_VIEW);
+  return { x: Math.round(clamp(x - W / 2, 0, WORLD.w - W)), y: Math.round(vy) };
+}
 
 // ---- Who's who ----
 export const MC_NAME = 'MC ROBIN';

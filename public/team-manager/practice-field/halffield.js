@@ -37,6 +37,20 @@ const ROLLS = [
   { x0: 248, x1: 344, c: '#2e3140', s: ['#333645', '#2a2d3b'] },
   { x0: 344, x1: CARPET.x1, c: '#292c37', s: ['#2e313c', '#252832'] },
 ];
+/** The carpet and its tape where the sun's patches fall on them (room.js drawSunPatches): one fixed ramp of pale straw
+ *  for all three rolls, base to its base and each speckle to a speckle a step lighter or darker, clearly paler and
+ *  yellower than any plywood (WOOD), so a patch reads as light lying on the carpet, not a board, and keeps its speckle.
+ *  The tiles' patch (room.js) is the same straw a step lighter, so a window's patch is one hue across the carpet's edge.
+ *  The white gaffer tape goes whiter still, and the duct tape a warm silver, so the lines still show in the light. */
+export const CARPET_IN_SUN = new Map([
+  ...ROLLS.flatMap((r) => [[r.c, '#e0cb8c'], [r.s[0], '#ecd99e'], [r.s[1], '#cbb277']]),
+  [C.tape, '#fffaf0'], [DUCT[0], '#b9a676'], [DUCT[1], '#f4e7bf'], [DUCT[2], '#fff6dc'],
+]);
+/** The same in the lower half of a shaft of light (room.js), where it crosses the carpet's far edge: the straw darker. */
+export const CARPET_IN_SHAFT = new Map([
+  ...ROLLS.flatMap((r) => [[r.c, '#8a7c58'], [r.s[0], '#958662'], [r.s[1], '#7e714f']]),
+  [C.tape, '#f6eedc'], [DUCT[0], '#7c7462'], [DUCT[1], '#c4b996'], [DUCT[2], '#e6dbb8'],
+]);
 /** Which rocket ports are filled, bottom level first; home is the face toward the alliance wall. */
 const FILL = { home: [true, false, false], away: [false, false, false], cargo: [true, false, false] };
 

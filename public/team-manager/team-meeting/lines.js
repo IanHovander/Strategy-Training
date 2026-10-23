@@ -11,7 +11,7 @@
 //   kenji     programmer, under the tree with a laptop: the sandstorm and the vision code
 //   luis      scouting lead, on the bench: six scouts a match, match and pit scouting, the pick list
 //   nadia     outreach lead, at the sign-up table: sponsors, the demo, the Chairman's Award
-//   jamal     drive coach, in a huddle with his drivers: who's on a drive team, cycles
+//   jamal     drive coach, in a huddle with his drivers: who's on 5026's drive team, cycles
 //   eli       a freshman, before his first event: there's a job for everyone
 //   okafor    the engineer who mentors the team, at the thank-you card: safety, gracious professionalism
 //   brandt    the teacher who signs the forms, on the bench: forms, the van at six, a dad joke
@@ -26,14 +26,14 @@ export const LINES = {
     { name: 'OWEN, CO-CAPTAIN', lines: ['UNDER A MINUTE, PLEASE.', "I'LL BE TIMING IT."] },
   ],
   owen: [
-    ['BEFORE OUR FIRST MATCH, THE ROBOT HAS', 'TO PASS INSPECTION. NO PASS, NO PLAY.'],
-    ['WEIGHT: 125 POUNDS, NOT COUNTING THE', 'BUMPERS OR THE BATTERY.'],
+    ['BEFORE OUR FIRST QUAL MATCH WE HAVE TO', 'PASS INSPECTION. NO PASS, NO PLAY.'],
+    ['WEIGHT: 125 POUNDS MAX, NOT COUNTING', 'THE BUMPERS OR THE BATTERY.'],
     ['BUMPERS BUILT TO SPEC, AND THE FRAME', 'PERIMETER 120 INCHES AT MOST.'],
-    ['SO WE WEIGH IT TONIGHT. AND I MADE A', 'PACKING LIST FOR THE PACKING LIST.'],
+    ['SO WE WEIGH IT FIRST THING AT LOAD-IN.', 'I MADE A PACKING LIST. AND A BACKUP.'],
   ],
   teammate: [
     [`${HERO_NAME} OF THE WEEK, EVERYBODY.`, 'CAN I HAVE YOUR AUTOGRAPH NOW?'],
-    ['A WEEK EARLY YOU HAD 3000 ON TOP. I', 'SAW IT. I HAVE WITNESSES.'],
+    ['FOR THE RECORD, I CLAPPED THE LOUDEST.', 'I HAVE WITNESSES.'],
     ['REAL TALK, A WHOLE REGIONAL MAKES MY', 'STOMACH DO A LEVEL 3 CLIMB.'],
     ['VAN PLAN: BACK ROW, SNACKS, AND YOU', 'TEACHING ME THE PICK LIST. DEAL?'],
   ],
@@ -62,8 +62,8 @@ export const LINES = {
     ["AND IT ISN'T FOR THE ROBOT. IT'S FOR", 'WHAT THE TEAM DOES FOR EVERYONE ELSE.'],
   ],
   jamal: [
-    ['A DRIVE TEAM IS FOUR: A DRIVER, AN', 'OPERATOR, A HUMAN PLAYER AND A COACH.'],
-    ['THE COACH CAN BE A MENTOR. HERE IT IS', 'ME. I WATCH THE CLOCK AND CALL PLAYS.'],
+    ['OUR DRIVE TEAM: A DRIVER, AN OPERATOR,', "A HUMAN PLAYER AND A COACH. THAT'S ME."],
+    ['A COACH CAN BE A MENTOR OR A STUDENT.', 'I WATCH THE CLOCK AND CALL PLAYS.'],
     ['PRACTICE IS JUST CYCLES. GRAB A HATCH,', 'SCORE IT, GO BACK. AGAIN. AND AGAIN.'],
     ['SHAVE TWO SECONDS OFF EVERY CYCLE AND', "THAT'S ONE MORE HATCH BY THE BUZZER."],
   ],
@@ -81,7 +81,7 @@ export const LINES = {
   ],
   brandt: [
     ['TWENTY FIELD TRIP FORMS TO CHASE DOWN.', "I'M STARTING WITH YOU."],
-    ["THE VAN LEAVES AT SIX. I'LL BE HERE AT", 'FIVE-THIRTY WITH COFFEE. A LOT OF IT.'],
+    ["THE VANS LEAVE AT SIX. I'LL BE HERE AT", 'FIVE-THIRTY WITH COFFEE. A LOT OF IT.'],
     ['WHY DID THE ROBOT GO ON VACATION?', 'IT NEEDED TO RECHARGE.'],
     ['...NO? TOUGH CROWD.'],
   ],

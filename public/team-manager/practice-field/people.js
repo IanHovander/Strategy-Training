@@ -9,9 +9,9 @@
 // Theo tunes the elevator at a laptop on a cafeteria table, Bea minds the battery cart, Kai keeps people off the carpet
 // while the robot runs (standing off it himself, in front of its tape), and Mr. Flores, the custodian, waits by his cart.
 // Two more students make the room busy without a word to say: one sits scouting at the far table with a tablet, and one
-// resets the field. He waits off the carpet by the folded tables, and only while the robot is parked at the station
-// between reps does he run on, pull the hatch it placed back off the rocket and run back, the way teams reset a practice
-// field.
+// resets the field. He waits a step off the carpet's right-hand edge, behind Ms. Okafor, and only once the robot is
+// parked at the station between reps and disabled (its light solid) does he run on, pull the hatch it placed back off
+// the rocket and run back off, before it's enabled again: the way teams reset a practice field.
 //
 // Where they stand and which way they face is layout.js's SPOTS; a cut scene can move, turn, re-pose or lift anyone
 // (o.cast). Everything is in world pixels: the caller sets pixel.js's camera before each draw, and the rig's sprites are
@@ -32,11 +32,18 @@ const hoodie = (l, badge = TEAMMATE_LOOK.badge) => ({ ...l, hoodie: true, sleeve
 /** A mentor's polo in teal, a mid tone that holds against the cafeteria's dim wall and floor, and isn't the students'
  *  red. Shade, mid, lit. */
 const POLO = ['#16525a', '#1f7f86', '#47b3b0'];
-/** Jalen: the cap head, with his brows from the front in his skin's shade. In the near-black of his hair they run into
- *  his eyes and read as an X. (From the side and behind, the head is cast.js's.) The seated scout has the cap head too,
- *  and the same brows, which in her dark blonde read as a scowl from the front, the only way she's seen. */
+/** Jalen: the cap head, with a plainer face from the front. cast.js's cap head has slanted two-row brows over close-set
+ *  eyes and a grin with teeth; in his near-black hair the brows run into his eyes and read as an X, and in any colour,
+ *  at the close-ups' zoom, they squint and grimace. From the front this one has no brows (skin under the brim), the
+ *  same two-pixel eyes, and the small closed smile of the other front heads. (From the side and behind, the head is
+ *  cast.js's.) The seated scout has the cap head too, and the same face, the only way she's seen. */
 const JALEN = look('pf-jalen', { ...skinBody('brown'), ...MERCH.tee }, 'cap', { ...SKIN.brown, ...HAIR.black, c: '#d3212f', C: '#ff6a55', D: '#6b0f1b' });
-const CAP_FRONT = HEADS.cap.map((row) => row.replaceAll('g', 'd'));
+const CAP_FRONT = HEADS.cap.map((row, j) => {
+  if (j === 7) return '..khsssssssshk..'; // was the brows' upper row
+  if (j === 8) return '..kssssssssssk..'; // and their lower row
+  if (j === 11) return '..ksssdMMdsssk..'; // a small smile, no teeth
+  return row;
+});
 const capFront = (l) => ({ ...l, heads: { ...l.heads, s: CAP_FRONT, se: CAP_FRONT, sw: CAP_FRONT } });
 
 /** Everyone's look, by id. The drive gait's pad is whatever they hold: the drivers' controllers and Noor's tablet. Ms.
@@ -82,11 +89,12 @@ export const NAMES = {
 /** The drive team, who stand behind the station wall. */
 const DRIVE_TEAM = ['ines', 'teammate', 'jalen', 'mei'];
 
-/** Ines stands where she has to get past her, so she keeps only her own body clear and the back strip behind the field
- *  stays open behind her (she stands a step out from the wall, so the strategist's face clears her head). Everyone else
+/** Ines stands where she has to get past her, so she keeps only her own body's depth clear and the back strip behind
+ *  the field stays open behind her (she stands a step out from the wall, so the strategist's face clears her head);
+ *  along the room she keeps the same 18 pixels as everyone, so two faces in profile have air between them. Everyone else
  *  keeps the whole of peopleBlocks' room round them: Kai, in front of the carpet, makes her walk round in front of him at
  *  the front of the room, far enough out that her head passes his chest, not his face. */
-const SLIM = { ines: [10, 4, 5] };
+const SLIM = { ines: [14, 4, 5] };
 
 /** The people she can talk to, at the spot she talks to them from (Theo beside his table). She talks to anyone on their
  *  feet from a step away (peopleBlocks keeps her there), so they're in reach a little further off than stage.js's 14
@@ -95,7 +103,9 @@ const SLIM = { ines: [10, 4, 5] };
  *  in front, where she'd stand over her face, or just behind, where she'd stand over hers; and from further back, so
  *  she can talk to her from the back strip behind the field, where her face is clear above Ines's head (reachY). Kai
  *  is in reach from beside him a little further across the front strip than stage.js's 10 pixels, but not from the
- *  lane in front of him. Their lines come from words.js. */
+ *  lane in front of him. Mei, the nearest of the drive team to the front of the room, is in reach only from the floor
+ *  beside her too (apart), not from the pocket between her footprint's two boxes, where the strategist's head would cover
+ *  her chest. Their lines come from words.js. */
 export const PEOPLE = Object.keys(NAMES).map((id) => {
   const at = SPOTS[id].talk ?? SPOTS[id];
   return {
@@ -103,6 +113,7 @@ export const PEOPLE = Object.keys(NAMES).map((id) => {
     faceGait: SPOTS[id].gait === 'sit' ? 'sit' : 'stand',
     reach: SPOTS[id].gait === 'sit' ? 14 : DRIVE_TEAM.includes(id) ? 30 : 22,
     ...(SLIM[id] && { apart: SLIM[id][0] + 4 }),
+    ...(id === 'mei' && { apart: 16 }),
     ...(id === 'kai' && { reachY: 12 }),
     ...(id === 'ines' && { reachY: 18 }),
   };
@@ -144,16 +155,17 @@ function controller(x, y, look) {
 }
 const DRIVERS = ['jalen', 'mei'];
 
-// The field reset (robot.js RESET): from his spot by the folded tables, onto the carpet past its far corner and along
-// behind the cargo ship to the rocket's front, where he reaches the hatch on its home face; he gets there just before
-// `pull`, holds it a moment and runs back the same way, off the carpet before the robot moves. At a run the way in takes
-// 1.69 seconds.
-const RESET_PATH = [[SPOTS.reset.x, SPOTS.reset.y], [340, 108], [294, 110]];
+// The field reset (robot.js RESET): from his spot a step off the carpet's edge, straight on and along behind the cargo
+// ship to the rocket's front, where he reaches the hatch on its home face. He sets off at `on`, once the robot is
+// disabled, gets there just before `pull` (the way in takes 1.12 seconds at a run), holds it a moment and runs back the
+// same way, off the carpet just before `to`. Waiting, he's turned to the field like Ms. Okafor.
+const RESET_PATH = [[SPOTS.reset.x, SPOTS.reset.y], [340, 106], [294, 110]];
 const RESET_BACK = [...RESET_PATH].reverse();
 function resetting(since) {
   const hold = 0.1;
+  if (since < RESET.on) return {};
   if (since < RESET.pull + hold) {
-    const p = along(RESET_PATH, since, 'run');
+    const p = along(RESET_PATH, since - RESET.on, 'run');
     return p.gait === 'stand' ? { ...p, dir: 3 } : p; // turned to the rocket's home face
   }
   const p = along(RESET_BACK, since - RESET.pull - hold, 'run');
@@ -217,11 +229,15 @@ const DRIVE_BLOCK = { x0: 114, x1: 146, y0: 98, y1: 166 };
  * air between them; behind them, 10 pixels of floor back; in front, 7 pixels out to the side, but 16 straight in front,
  * where her head comes up no higher than their chin. The SLIM three have just their body blocked, x +-dx and y from
  * -back to +front. The two sitting have their chair blocked behind their table (which blocks too), so she can't stand
- * in it.
+ * in it. The student who resets the field has his footprint run on down to Ms. Okafor's: it covers the step of floor
+ * between his spot and the carpet, so she's never in his way, and leaves no gap between the two of them to squeeze
+ * into. Behind him it keeps just 6 pixels back, so the back strip stays open there, and her face, walking along it,
+ * clears the top of his head.
  */
 export function peopleBlocks() {
   const round = ([id, p]) => {
     if (p.gait === 'sit') return [{ x0: p.x - 10, x1: p.x + 10, y0: p.y - 12, y1: p.y }];
+    if (id === 'reset') return [{ x0: p.x - 14, x1: p.x + 14, y0: p.y - 6, y1: SPOTS.okafor.y - 8 }];
     if (SLIM[id]) {
       const [dx, back, front] = SLIM[id];
       return [{ x0: p.x - dx, x1: p.x + dx, y0: p.y - back, y1: p.y + front }];

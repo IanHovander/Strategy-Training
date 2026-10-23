@@ -25,7 +25,7 @@ import { FIELD, STATION, floorY, makeFloor, drawFieldLive } from '../field.js';
 import { drawStands, drawWalkway } from '../bleachers.js';
 import { tones } from '../cast.js';
 import {
-  WORLD, NEAR_TOP, SPOTS, SIGN_Y, SIGN_POST, SIGN_TOP, MIC, MC_HOME, BAND, LINE_AREA, NEAR_GATE, WAIT, REPS_SIGN, BOARD, BARRIER_Y,
+  WORLD, NEAR_TOP, SPOTS, SIGN_Y, SIGN_POST, SIGN_HALF, SIGN_TOP, MIC, MC_HOME, BAND, LINE_AREA, NEAR_GATE, WAIT, REPS_SIGN, BOARD, BARRIER_Y,
   WALK_MAX_Y,
 } from './layout.js';
 
@@ -87,16 +87,16 @@ export function makeSetLayers() {
 // ---- On the field ----
 /**
  * A numbered sign on its post, built exactly like the arena's QUEUE sign (field.js queueSign): a flat yellow panel in
- * ink with the alliance's number on it, up above its captain's head, on a plain post with an ink foot a few pixels to
- * the captain's right.
+ * ink with the alliance's number on it, up above its captain's head, on a plain post with an ink foot, rising just
+ * right of the captain's head and under the panel's right-hand end.
  */
 function spotSign(i) {
   const x = SPOTS[i], px = x + SIGN_POST, y = SIGN_Y, top = SIGN_TOP;
   rect(px - 4, y - 1, 9, 2, C.ink);
   rect(px - 1, top + 12, 3, y - top - 12, C.ink);
   rect(px, top + 13, 1, y - top - 13, C.steel3);
-  rect(x - 7, top, 15, 13, C.ink);
-  rect(x - 6, top + 1, 13, 11, C.yel1);
+  rect(x - SIGN_HALF, top, 2 * SIGN_HALF + 1, 13, C.ink);
+  rect(x - SIGN_HALF + 1, top + 1, 2 * SIGN_HALF - 1, 11, C.yel1);
   text(String(i + 1), x, top + 3, { color: C.ink, align: 'center' });
 }
 
@@ -107,20 +107,23 @@ function sprite(rows, x0, y0, pal) {
   }));
 }
 
-// The microphone on its stand, by hand: k ink, L/M/D steel lit, mid and shade, and the mic's own black (cast.js
-// tones.black, as on Robin's handheld): B its grille, b the grille's mesh, G the grip. Its column 6 is the pole. At the
-// top, the clutch, a short boom angled up to the left, the grip and the mic's head, a dark grille with one lit pixel,
-// so it reads against the cargo ship's light bays behind it; it comes out beside the chin of whoever stands at AT_MIC
-// (their face stays clear). At the bottom, the round weighted base, its top lit.
-const MIC_PAL = { k: C.ink, L: C.steel3, M: C.steel2, D: C.steel1, B: tones.black[1], b: tones.black[0], G: tones.black[2] };
+// The microphone on its stand, by hand: k ink, W white, L/M/D steel lit, mid and shade, and the mic's black body
+// (cast.js tones.black, as on Robin's handheld): B its mid, b its shade, G its lit edge. Its column 6 is the pole. At
+// the top, the mic itself, the same as the one in Robin's hand: a round steel grille, lit from the upper left with a
+// white glint and its mesh in the mid tone, on a black body tipped up to the left out of the clip, so it points at the
+// mouth of whoever stands at AT_MIC and comes out beside their chin (their face stays clear). The ball is the light
+// shape that reads as a mic at 1x against the dark bays of the cargo ship behind it, with an ink ring that keeps it
+// apart from the ship's light frame. Under the clip, the clutch; at the bottom, the round weighted base, its top lit.
+const MIC_PAL = { k: C.ink, W: C.white, L: C.steel3, M: C.steel2, D: C.steel1, B: tones.black[1], b: tones.black[0], G: tones.black[2] };
 const MIC_TOP = [
-  '.kkk.......',
-  'kLBBk......',
-  'kBbBk......',
-  'kbBbk......',
-  'kBbBk......',
-  '.kkkGk.....',
-  '....kMk....',
+  '.kkkk......',
+  'kWLLMk.....',
+  'kLMLMk.....',
+  'kLLMDk.....',
+  'kMMDDk.....',
+  '.kkkkGk....',
+  '....kBGk...',
+  '.....kBk...',
   '.....kkk...',
   '.....kLk...',
   '.....kkk...',
@@ -311,9 +314,9 @@ const PROPS = [
   footprint(FIELD.mid - 63, FIELD.mid + 63, 11.2, 15.8), // the cargo ship
   ...SPOTS.map((x) => stop(x + SIGN_POST, SIGN_Y - 1, 6, 2)),
   stop(MIC.x, MIC.y, 7, 2),
-  // The end of the pocket in the line behind the mic: she can stand at the mic, but not in behind MC Robin's spot
-  // beside it, where Robin would have to turn her back to talk.
-  stop(MC_HOME.x - 3, LINE_AREA.y1 - 4, 8, 5),
+  // The end of the pocket in the line behind the mic: she can stand at the mic (4 pixels right of its pole at most),
+  // but not in behind MC Robin's spot beside it, where Robin would stand in front of her, turned side-on, to talk.
+  stop(MC_HOME.x - 7, LINE_AREA.y1 - 4, 8, 5),
   // The floor behind the backups and the queuer, between them and the near wall: anyone there would be hidden
   // behind them but for the top of her head.
   stop(222, 152, 48, 8),
@@ -329,16 +332,22 @@ const depth = (b, x, y) => Math.max(Math.abs(x - b.x) / b.hx, Math.abs(y - b.y) 
 const stops = (b, x, y, nx, ny) => depth(b, nx, ny) < 1 && depth(b, nx, ny) <= depth(b, x, y);
 
 /**
- * Someone standing: 5 pixels behind their feet to 13 in front. She's about 48 pixels tall and their eyes are about 40
- * above their feet, so walking straight up to someone she halts with their face clear over her head, and whoever she
- * talks to stays in view.
+ * Someone standing: 6 pixels behind their feet to 16 in front. She's about 48 pixels tall and their eyes are about 40
+ * above their feet, so walking straight up to someone she halts with their face, down to the chin, clear over her
+ * head, and whoever she talks to stays in view.
  */
-const standing = (p) => stop(p.x, p.y + 4, 12, 9);
+const standing = (p) => stop(p.x, p.y + 5, 12, 11);
 /**
  * Someone on the move (Robin, skating the 19-pixel strip in front of the line): a shallower box, 5 pixels behind and
- * 7 in front, so there's always a way past her in front, even while she's stopped to talk.
+ * 7 in front, so there's always a way past her in front. Stopped for her (p.waiting), Robin's reaches up to 10 in
+ * front, so walking up to her she halts with Robin's face, mic and bow tie in view over her head; but never past the
+ * strip's last two rows (BAND.y1), so there's still a way past her in front wherever she's stopped.
  */
-const moving = (p) => stop(p.x, p.y + 1, 12, 6);
+const moving = (p) => {
+  if (!p.waiting) return stop(p.x, p.y + 1, 12, 6);
+  const front = Math.min(10, Math.max(7, BAND.y1 - 1 - p.y));
+  return stop(p.x, p.y + (front - 6) / 2, 12, (front + 6) / 2);
+};
 
 /**
  * Step someone at (x, y) by (dx, dy): along, then across, each as far as allowed, like field.js move(). blockers: the

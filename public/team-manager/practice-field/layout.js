@@ -9,8 +9,9 @@ export const FT = 8, DEEP = 2.75;
 
 // ---- The room ----
 /** 85 feet long; the back wall's floor line at y = 84, so 10.5 feet of wall show above it; 46 feet of floor below. The
- *  walking camera keeps above y = `shown` while she's further back than 4 pixels short of it, so the windows stay in
- *  sight; only when she walks out across the last few rows of floor, round in front of Kai, does it go down with her.
+ *  walking camera keeps above y = `shown` while she's further back than 12 pixels short of it, so the windows stay in
+ *  sight; only when she walks out across the front strip, round in front of Kai, does it go down with her, keeping 12
+ *  pixels of floor under her feet.
  *  The last rows of tiles under that come into view while she talks to someone at the front of the room, so the dialog
  *  box doesn't hide their faces (scene.js camera). */
 export const ROOM = { w: 680, h: 212, wallY: 84, shown: 192 };
@@ -89,9 +90,10 @@ export const FURNITURE = {
 // The people at the mentor's end stand well apart, not in a column down the room, so nobody's head is drawn over the
 // legs of whoever is behind them, and so the strategist, talking to Ms. Okafor from beside her, isn't stacked on
 // anyone either: Ms. Okafor by the centre line, Noor out at the near corner of the carpet, scouting the run from the
-// front, and the student who resets the field back by the folded tables.
+// front, and the student who resets the field just off the carpet's edge, behind Ms. Okafor and far enough to her left
+// that her head and bun are clear of his legs.
 export const SPOTS = {
-  okafor: { x: 388, y: 126, dir: 6, gait: 'drive' },
+  okafor: { x: 398, y: 126, dir: 6, gait: 'drive' },
   teammate: { x: 132, y: 123, dir: 2, gait: 'stand' },
   jalen: { x: 136, y: 142, dir: 2, gait: 'drive' },
   mei: { x: 136, y: 161, dir: 2, gait: 'drive' },
@@ -103,9 +105,13 @@ export const SPOTS = {
   // Off the carpet, just in front of its tape, keeping everyone else off it too. She walks round in front of him.
   kai: { x: 250, y: 176, dir: 0, gait: 'stand' },
   flores: { x: 600, y: 140, dir: 6, gait: 'stand' },
-  // The student who resets the field waits off the carpet, past its far corner by the folded tables, and only runs on
-  // while the robot is parked at the station (people.js, robot.js RESET).
-  reset: { x: 424, y: 94, dir: 6, gait: 'stand' },
+  // The student who resets the field waits a step off the carpet's right-hand edge, behind Ms. Okafor and 18 pixels to
+  // her left (far enough back that his head is clear above hers, and far enough over that hers is clear of his legs),
+  // and only runs on once the robot is parked at the station and
+  // disabled (people.js, robot.js RESET). His step off the edge is all the floor his run crosses, and his footprint
+  // covers it, so he never runs through her; the back strip behind the field still joins the right of the room behind
+  // him.
+  reset: { x: 380, y: 100, dir: 6, gait: 'stand' },
   scout: { x: 448, y: 134, dir: 0, gait: 'sit' },
 };
 /** Where she comes in (the doorway) in the cut scene, and where she stands when it hands over to you. */
