@@ -14,7 +14,8 @@
 export const DIRS = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
 export const FRAMES = {
   stand: 1, walk: 8, run: 8, sit: 1, cheer: 1, armsUp: 1, drive: 1, celebrate: 2, steer: 1, phone: 1, kneel: 4, lean: 2, carry: 8,
-  push: 8, floor: 1, floorClap: 2, floorCheer: 1, clap: 2, hooray: 1, gesture: 1, skate: 8, flair: 1, emcee: 1, offer: 1,
+  push: 8, floor: 1, floorClap: 2, floorCheer: 1, floorSlump: 1, clap: 2, hooray: 1, gesture: 1, skate: 8, flair: 1, emcee: 1,
+  offer: 1,
 };
 export const CELL_W = 36, CELL_H = 56;
 // Where her feet are in a frame.
@@ -347,6 +348,8 @@ const GAITS = {
   floor: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, armUp: 20, elbow: 45, lean: 0, flight: 0, floor: 1.92, board: 'lap' },
   floorClap: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, armUp: 35, elbow: 115, lean: 0, flight: 0, floor: 1.92, clap: [3, 1.35], board: 'lap' },
   floorCheer: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, armUp: 168, elbow: 8, lean: 0, flight: 0, floor: 1.92, board: 'lap', splay: 24, splayReach: 1.3, armNear: 140 },
+  // Groaning on the grass: slumped forward over crossed legs, both forearms dropped into the lap.
+  floorSlump: { hip: 0, hipBias: 0, knee: 0, kneeBase: 0, arm: 0, armUp: 5, elbow: 20, lean: 14, flight: 0, floor: 1.92, board: 'lap' },
   // Standing in front of the team (flat: feet flat, as in stand): clapping with the board tucked under her arm, both
   // arms up (the board held up in one hand, if she has it), and making a point with her right hand (armR, elbowR, handR:
   // that arm's own angles, and how far out the hand is).

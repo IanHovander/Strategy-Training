@@ -221,8 +221,23 @@ export const skinBody = (k) => ({ skin: [SKIN[k].d, SKIN[k].s, SKIN[k].S] });
 
 // From behind (and three-quarters behind) you see hair where the face was: the template with its face painted over.
 const FACE = new Set([...'sSdeEwMTmq']);
-/** A head template seen from behind: the face filled with hair, a cap's brim folded into its band. */
-export const backOf = (rows) => rows.map((r) => [...r].map((ch) => (FACE.has(ch) ? 'h' : ch === 'D' ? 'c' : ch)).join(''));
+const HAIRY = new Set([...'hHrR']);
+/**
+ * A head template seen from behind: the face filled with hair, a cap's brim folded into its band, and the brows (dark
+ * hair, g, with hair on both sides once the face is gone) filled too, so they don't read as eyes in the back of a head.
+ */
+export const backOf = (rows) => rows.map((r) => {
+  const out = [...r].map((ch) => (FACE.has(ch) ? 'h' : ch === 'D' ? 'c' : ch));
+  for (let x = 0; x < out.length; x++) {
+    if (out[x] !== 'g') continue;
+    let a = x, b = x;
+    while (a > 0 && out[a - 1] === 'g') a--;
+    while (b < out.length - 1 && out[b + 1] === 'g') b++;
+    if (HAIRY.has(out[a - 1]) && HAIRY.has(out[b + 1])) for (let i = a; i <= b; i++) out[i] = 'h';
+    x = b;
+  }
+  return out.join('');
+});
 export const BACKS = Object.fromEntries(Object.entries(HEADS).map(([k, rows]) => [k, backOf(rows)]));
 
 /**
