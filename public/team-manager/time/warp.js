@@ -11,7 +11,8 @@
 //                                 middle, t (seconds) turns the rings
 //   tape(src, dst, o)             a tape running fast: bands of torn rows rolling down, the colours split, a jolt now
 //                                 and then; amt from 0 to 1, t seconds
-//   overlay(dst, top, mask)       top's pixels where mask is set, over dst: her, kept out of the swirl
+//   overlay(dst, top, mask, a)    top's pixels where mask is set, over dst (a of the way, 1 if not given): her,
+//                                 kept out of the swirl
 //   blend(dst, prev, a)           a of the frame before left behind, for trails
 
 import { W, H, C, rnd } from '../pixel.js';
@@ -107,10 +108,11 @@ export function tape(src, dst, { amt = 1, t = 0 } = {}) {
   }
 }
 
-export function overlay(dst, top, mask) {
+export function overlay(dst, top, mask, a = 1) {
+  if (a <= 0) return;
   for (let p = 0, q = 0; p < W * H; p++, q += 4) {
     if (!mask[p]) continue;
-    dst[q] = top[q]; dst[q + 1] = top[q + 1]; dst[q + 2] = top[q + 2];
+    dst[q] += (top[q] - dst[q]) * a; dst[q + 1] += (top[q + 1] - dst[q + 1]) * a; dst[q + 2] += (top[q + 2] - dst[q + 2]) * a;
   }
 }
 

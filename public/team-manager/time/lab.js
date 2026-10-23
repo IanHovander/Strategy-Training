@@ -30,7 +30,7 @@
 
 import { W, H, C, useContext, screen, fill, text, clamp, seg, lerp, easeIn, easeOut, easeInOut, easeBack, disk, layer } from '../pixel.js';
 import { conversation, drawDialog, typed, typedAt, advance } from '../talk.js';
-import { drawWithShadow, dirToward } from '../stage.js';
+import { drawWithShadow, drawPerson, dirToward } from '../stage.js';
 import { makeCutscene } from '../alliance-selection/cutscene.js';
 import { makeSetLayers, drawSet } from '../alliance-selection/set.js';
 import { lookOf, CROWD } from '../alliance-selection/people.js';
@@ -38,7 +38,7 @@ import { MC_LOOK, drawSkater } from '../alliance-selection/mc.js';
 import { drawNorbert, drawNorbertBig, BIG_W, BIG_H, NORBERT_W } from '../norbert.js';
 import { drawKey } from './key.js';
 import { PAGE, PICTURE, sketchOf, picturePage, notesPage, drawBook, drawTurning } from './notebook.js';
-import { still, maskOf, swirl, tape, overlay, blend } from './warp.js';
+import { still, maskOf, swirl, tape, overlay, blend, stepped4 } from './warp.js';
 import { sound } from './sound.js';
 
 const canvas = document.getElementById('screen');
@@ -56,14 +56,25 @@ const opts = {
 sound.muted = params.has('mute');
 
 // ---- The cut scene, with a way to leave her out ----
-let HER = null, hideHer = false, herPose = null;
+let HER = null, hideHer = false, herPose = null, alone = null;
 const looks = (k) => {
   const l = k === 'mc' ? MC_LOOK : lookOf(k);
   if (k === '5026') HER = l;
   return l;
 };
-/** As alliance selection's own drawWorld (scene.js), but she can be left out, or posed (turned to look round). */
+/**
+ * As alliance selection's own drawWorld (scene.js), but she can be left out, or posed (turned to look round). With
+ * `alone`, the world is a plain ground with only her on it ('her') or nobody ('none'): the two differ by all of her,
+ * even where something stands in front of her in the real frame.
+ */
 function drawWorld(gg, view, t, frame) {
+  if (alone) {
+    gg.fillStyle = '#ff00ff';
+    gg.fillRect(0, 0, gg.canvas.width, gg.canvas.height);
+    const her = frame.people.find((p) => p.look === HER);
+    if (alone === 'her' && her) drawPerson(gg, view, herPose ? { ...her, ...herPose } : her);
+    return;
+  }
   const people = [];
   for (const p of frame.people) {
     if (p.look === HER && hideHer) continue;
@@ -118,18 +129,20 @@ const moment = () => ({
 const startMoment = () => ({ i: FIRST, t: 0, T: offsets[FIRST], conv: null, clock: 0, sim: 0 });
 
 /** Draw a moment on the screen; with grab, return its pixels. */
-function paint(m, { her = true, pose = null, grab = true } = {}) {
+function paint(m, { her = true, pose = null, grab = true, only = null, words = true } = {}) {
   hideHer = !her;
   herPose = pose;
+  alone = only;
   useContext(g);
   screen();
   g.globalAlpha = 1;
   const b = beats[m.i];
   b.draw(g, m.t, { T: m.T, k: clamp(m.t / b.dur, 0, 1) });
   g.globalAlpha = 1;
-  if (m.conv) drawDialog(g, m.conv, m.clock);
+  if (m.conv && !only && words) drawDialog(g, m.conv, m.clock);
   hideHer = false;
   herPose = null;
+  alone = null;
   return grab ? g.getImageData(0, 0, W, H) : null;
 }
 
@@ -282,7 +295,21 @@ function frozen(u, drain, pose = lookRound(u)) {
   still(a.data, out.data, drain, mask);
   J.her = a;
   J.herMask = mask.slice();
+  // And all of her, drawn on her own: what's laid over the world once it moves, so nothing that stood in front of
+  // her in the stopped frame (the dialog box, someone nearer) leaves her cut off.
+  const whole = paint(J.last, { pose, only: 'her' }), none = paint(J.last, { only: 'none' });
+  maskOf(whole.data, none.data, mask);
+  J.whole = whole;
+  J.wholeMask = mask.slice();
   return b;
+}
+/**
+ * Her, over a world that's moving: as she stood in the stopped frame, then the whole of her stepping out in front of
+ * whatever covered her, in four steps over a quarter of a second from `since` (seconds into the jump).
+ */
+function herOver(u, since) {
+  overlay(out.data, J.her.data, J.herMask);
+  overlay(out.data, J.whole.data, J.wholeMask, stepped4(seg(u, since, since + 0.25)));
 }
 /** Her middle, or the middle of the screen if she's out of shot. */
 const middle = () => J.center ?? { x: W / 2, y: H / 2 - 8 };
@@ -362,13 +389,13 @@ function stepJump(now, dt) {
       swirl(tmp.data, out.data, opening
         ? { cx: c.x, cy: c.y, angle: d * 12 * easeIn(k), pull: 0.2 * k, t: u * d }
         : { cx: c.x, cy: c.y, angle: d * (12 + 14 * k), pull: 0.2 + 0.3 * k, core: 26 * easeIn(k), t: u * d });
-      overlay(out.data, J.her.data, J.herMask);
+      herOver(u, J.times.open[0]);
       glow = 1;
     } else if ((k = part('collapse', u)) !== null) {
       const c = middle();
       still(paint(J.last, { her: false }).data, tmp.data, 1);
       swirl(tmp.data, out.data, { cx: c.x, cy: c.y, angle: d * 26, pull: 0.5, core: lerp(26, 320, easeIn(k)), t: u * d });
-      if (k < 0.5) overlay(out.data, J.her.data, J.herMask);
+      if (k < 0.5) herOver(u, J.times.open[0]);
       glow = 1;
     } else if ((k = part('card', u)) !== null) {
       cue('chime', u, J.times.card[0], () => sound.chime(d));
@@ -493,10 +520,11 @@ function stepWind(u) {
     prog = 0.55 + 0.45 * easeIn(k);
   }
   if (angle !== undefined) {
-    const m = travelTo(prog), world = paint(m, { her: false });
+    // The words lift away as the key turns, so nothing's left in front of her.
+    const m = travelTo(prog), world = paint(m, { her: false, words: false });
     still(world.data, tmp.data, 1);
     out.data.set(tmp.data);
-    overlay(out.data, J.her.data, J.herMask);
+    herOver(u, T.wind[0]);
     g.putImageData(out, 0, 0);
     useContext(g); screen();
     drawNorbertBig(spot.x, spot.y - jolt * BIG, { back: true, glow: 1, scale: BIG });
