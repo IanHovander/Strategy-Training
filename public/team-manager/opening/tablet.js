@@ -5,7 +5,7 @@
 // right left clear for SKIP and NEXT SCENE), the clock's draining bar, her robot pinned in a row for reference, then
 // one card per team she can pick, side by side, and a hint line at the bottom. A card has the team number, its
 // average (the biggest number on the screen: the tempting one), one short note, and its ten qualification matches as
-// a strip of boxes, Friday's six then Saturday morning's four, set a little apart. A blank box is a match nobody scored.
+// a strip of boxes, Friday's seven then Saturday morning's three, set a little apart. A blank box is a match nobody scored.
 //
 //   drawTablet({ t, left, on, hint, thought, glow, drag })
 //                                                      the tablet: t seconds since the clock slammed in, left the
@@ -31,7 +31,7 @@
 
 import { W, H, C, screen, fill, text, measure, withAlpha, dither, clamp, rnd } from '../pixel.js';
 import { drawHud } from './norbert-held.js';
-import { OURS, YOU, TEAMS, FRIDAY, avgOf, fridayOf, saturdayOf } from './teams.js';
+import { OURS, YOU, TEAMS, FRIDAY, RECENT, avgOf, earlyOf, recentOf } from './teams.js';
 
 export const PICK_CLOCK = 45;
 /** Good and bad, for the bet log's stamps: the palette has no green, so it's here. */
@@ -94,28 +94,29 @@ function line(parts, x, y, o = {}) {
 /**
  * Ten matches as a strip of boxes, Friday's then (a little apart) Saturday's. A score is a filled box with the number
  * in it; a blank is an empty dotted box. o: w, h (a box), gap, split (the extra gap before Saturday), font (3 or 5),
- * fillC (a scored box's colour), sat: [colour, lit colour] to light up Saturday's boxes (the reveal), satK from 0 to 1
- * how many of them are lit so far, one after another.
+ * fillC (a scored box's colour), last: [colour, lit colour] to light up the last RECENT boxes (the reveal), lastK from
+ * 0 to 1 how many of them are lit so far, one after another.
  */
 function drawStrip(scores, x, y, o) {
-  const { w, h, gap = 1, split = 3, font = 3, fillC = C.night3, sat = null, satK = 1 } = o;
-  const th = font === 3 ? 5 : 7;
+  const { w, h, gap = 1, split = 3, font = 3, fillC = C.night3, last = null, lastK = 1 } = o;
+  const th = font === 3 ? 5 : 7, from = scores.length - RECENT;
+  const boxX = (i) => x + i * (w + gap) + (i >= FRIDAY ? split : 0);
   scores.forEach((v, i) => {
-    const bx = x + i * (w + gap) + (i >= FRIDAY ? split : 0);
+    const bx = boxX(i);
     if (v == null) {
       fill(bx, y, w, h, C.night0);
       dotted(bx, y, w, h, C.steel2);
       return;
     }
-    const lit = sat && i >= FRIDAY && (i - FRIDAY + 1) / (scores.length - FRIDAY) <= satK + 1e-6;
-    fill(bx, y, w, h, lit ? sat[0] : fillC);
-    fill(bx, y, w, 1, lit ? sat[1] : C.blue2);
+    const lit = last && i >= from && (i - from + 1) / RECENT <= lastK + 1e-6;
+    fill(bx, y, w, h, lit ? last[0] : fillC);
+    fill(bx, y, w, 1, lit ? last[1] : C.blue2);
     text(String(v), bx + Math.ceil(w / 2), y + Math.ceil((h - th) / 2), { font, align: 'center', color: C.white });
   });
-  // Saturday's boxes, once they're all lit, get a frame round them: the last four, the ones that matter.
-  if (sat && satK >= 1) {
-    const sx = x + FRIDAY * (w + gap) + split - 2, sw = (scores.length - FRIDAY) * (w + gap) - gap + 4;
-    frame(sx, y - 2, sw, h + 4, sat[1]);
+  // The last four, once they're all lit, get a frame round them, across the night between Friday and Saturday.
+  if (last && lastK >= 1) {
+    const sx = boxX(from) - 2;
+    frame(sx, y - 2, boxX(scores.length - 1) + w + 2 - sx, h + 4, last[1]);
   }
   return 10 * w + 9 * gap + split;
 }
@@ -314,7 +315,7 @@ function stamp(good, t, y) {
   text(word, x + box + 8, y + 6, { scale: 2, color: c, outline: C.ink });
 }
 
-/** Saturday's boxes lighting up one after another from `from` seconds in: 0 to 1. */
+/** The last four boxes lighting up one after another from `from` seconds in: 0 to 1. */
 const lighting = (t, from) => clamp((t - from) / 0.9, 0, 1);
 const FADE = [C.red1, C.red2], RISE = [GOOD0, GOOD];
 /** A blink for "A: ..." lines once they're there. */
@@ -327,9 +328,9 @@ const prompt = (str, y, t, at) => {
 };
 
 /**
- * The bet log after the pick: PICK 1, the stamp, and the reveal: Saturday's four boxes lighting up. A wrong pick (7461):
- * its ten matches, Saturday's in red, and FRIDAY 44 · SATURDAY 29. The right one (6834): its ten matches, Saturday's in
- * green, over 7461's in red, and SATURDAY 45 · 29. Then the one line to remember, and A to rewind or carry on.
+ * The bet log after the pick: PICK 1, the stamp, and the reveal: the last four boxes lighting up. A wrong pick (7461):
+ * its ten matches, the last four in red, and FIRST 6 44 · LAST 4 29. The right one (6834): its ten matches, the last
+ * four in green, over 7461's in red, and LAST 4 48 · 29. Then the one line to remember, and A to rewind or carry on.
  */
 export function drawResult(team, good, t, { glow = 0 } = {}) {
   screen();
@@ -339,23 +340,23 @@ export function drawResult(team, good, t, { glow = 0 } = {}) {
   text('BET LOG', W / 2, 4, { font: 3, align: 'center', color: C.steel2 });
   text(`PICK 1: ${team.num}`, W / 2, 11, { align: 'center', color: C.white });
   stamp(good, t, 23);
-  const satK = lighting(t, 0.6);
+  const lastK = lighting(t, 0.6);
   if (!good) {
     const o = { w: 15, h: 15, gap: 2, split: 6, font: 5 };
     const sw = 10 * o.w + 9 * o.gap + o.split, sx = Math.round(W / 2 - sw / 2);
-    drawStrip(FADING.scores, sx, 58, { ...o, sat: FADE, satK });
+    drawStrip(FADING.scores, sx, 58, { ...o, last: FADE, lastK });
     if (t > 1.6) {
-      line([['FRIDAY', C.blue3], [String(fridayOf(FADING)), C.yel1], ['·', C.steel2], ['SATURDAY', C.red3], [String(saturdayOf(FADING)), C.red2]], W / 2, 79);
+      line([['FIRST 6', C.blue3], [String(earlyOf(FADING)), C.yel1], ['·', C.steel2], [`LAST ${RECENT}`, C.red3], [String(recentOf(FADING)), C.red2]], W / 2, 79);
     }
   } else {
     const o = { w: 12, h: 11, gap: 1, split: 4, font: 3 };
     const sw = 10 * o.w + 9 * o.gap + o.split, lw = measure('0000') + 6, sx = Math.round(W / 2 - (sw + lw) / 2) + lw;
     text(RISING.num, sx - lw, 60, { color: GOOD });
-    drawStrip(RISING.scores, sx, 58, { ...o, sat: RISE, satK });
+    drawStrip(RISING.scores, sx, 58, { ...o, last: RISE, lastK });
     text(FADING.num, sx - lw, 74, { color: C.steel2 });
-    drawStrip(FADING.scores, sx, 72, { ...o, sat: FADE, satK });
+    drawStrip(FADING.scores, sx, 72, { ...o, last: FADE, lastK });
     if (t > 1.6) {
-      line([['SATURDAY', C.steel3], [RISING.num, GOOD], [String(saturdayOf(RISING)), GOOD], ['·', C.steel2], [FADING.num, C.red3], [String(saturdayOf(FADING)), C.red2]], W / 2, 88, { font: 3 });
+      line([[`LAST ${RECENT}`, C.steel3], [RISING.num, GOOD], [String(recentOf(RISING)), GOOD], ['·', C.steel2], [FADING.num, C.red3], [String(recentOf(FADING)), C.red2]], W / 2, 88, { font: 3 });
     }
   }
   if (t > 1.6) text(WHY, W / 2, 95, { font: 3, align: 'center', color: C.steel3 });
