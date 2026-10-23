@@ -3,7 +3,8 @@
 // 144 rows are the arena's own (the stands, the walkway behind the far wall, the field); below the field's near wall
 // the floor carries on to the bottom of the world, and that's where the team reps wait their turn. It's only as deep as
 // the waiting reps need: walking about down there, the view stops 64 rows down (WORLD.h - 144), so the faces along the
-// line stay in frame over her head.
+// line stay in frame over her head. Past either end of the field the floor runs up beside the field to the walkway, as in
+// the arena; there the view rises to keep the stands' front row whole along the top (walkView).
 
 import { W, H, clamp } from '../pixel.js';
 import { WORLD_W, FIELD } from '../field.js';
@@ -57,13 +58,18 @@ export const MC_HOME = { x: FIELD.mid + 19, y: 127, dir: 7 };
  * the corner depots and loading stations at both ends, so she always stands in front of them.
  */
 export const BAND = { x0: 194, x1: WORLD.w - 194, y0: 121, y1: 140 };
-/** The line itself: walkable for her once it's over, between the people standing in it. */
-export const LINE_AREA = { x0: 236, x1: 548, y0: 110, y1: 121 };
 /**
- * Where she stands as walking starts: two steps out in front of the line, between Alliance One and her own captain,
- * on the open strip in front of their feet, so she can walk off either way at once.
+ * The line itself: walkable for her once it's over, between the people standing in it, but no further back than a row
+ * in front of the signs' floor line, so the panels never come down over her head (her hair comes over a panel's bottom
+ * row, as the picks' does).
  */
-export const START = { x: (SPOTS[0] + SPOTS[1]) / 2, y: LINE_Y + 14, dir: 0 };
+export const LINE_AREA = { x0: 236, x1: 548, y0: SIGN_Y + 1, y1: 121 };
+/**
+ * Where she stands as walking starts: out in front of the line, between Alliance One and her own captain, a row in
+ * front of the boxes that stop her at anyone standing on the line (set.js standing(): up to 16 rows in front of their
+ * feet), so she can walk off either way at once.
+ */
+export const START = { x: (SPOTS[0] + SPOTS[1]) / 2, y: LINE_Y + 17, dir: 0 };
 
 // ---- The gate ----
 /** The opening in the near wall, left of the mic. Open: its chain hangs off one post. */
@@ -88,8 +94,17 @@ export function waitSlot(n) {
 /** The queuer beside the waiting area, and the field volunteer at the gate. */
 export const PRIYA_AT = { x: 186, y: 162, dir: 2 };
 export const SAM_AT = { x: 364, y: 150, dir: 6 };
-/** Where Sam steps aside to while 9152's rep, and later the MC and she, go through the gate. */
+/** Where Sam steps aside to while the MC, coming in and going out to her, goes through the gate. */
 export const SAM_ASIDE = { x: 322, y: 150, dir: 2 };
+/**
+ * Where Sam stands in the cut scene while the captains come out and the first picks are made: stepped back from the
+ * gate into the lane between the waiting crowd and her (18 pixels from each), low enough that his head is below the
+ * feet of anyone on the field. Standing by the gate, his head is on the same rows as the legs of everyone walking the
+ * front of the line, so anyone passing behind him would seem to have legs coming out of it.
+ */
+export const SAM_LANE = { x: 374, y: 186, dir: 5 };
+/** Where he goes while she runs on and her captain walks back: left of everyone's way, between sign 1 and the queuer. */
+export const SAM_FAR = { x: 228, y: 150, dir: 2 };
 /**
  * The head referee, on the open floor right of the gate, waiting to brief the captains once it's over: close in front
  * of the near wall, like Sam at the gate, so in the cut scene's shots along the line, with words up, he shows down to
@@ -112,6 +127,12 @@ export const BOARD = { x: 720, y: 118 };
 /** The belt barrier along the bottom of the world (its floor line), and as far down as anyone walks. */
 export const BARRIER_Y = 204;
 export const WALK_MAX_Y = 198;
+/**
+ * The floor past each end of the field, ENDS pixels wide, runs from the walkway (row 70) to the bottom; the floor in
+ * front of the field joins it from FRONT_FLOOR down (above that, the corner depots stand between the two).
+ */
+export const ENDS = 128;
+export const FRONT_FLOOR = 147;
 
 // ---- Motion ----
 /** The MC's skating speed in pixels a second (stage.js SPEED: walking 34, running 78). */
@@ -119,21 +140,32 @@ export const SKATE_SPEED = 80;
 
 // ---- The camera, walking about ----
 /**
- * On the field the view stays at least this far down: its top row is then the walkway's rail behind the far wall, not
- * the stands' front row cut off at the hips (following her on the strip in front of the line, the view would sit 21 to
- * 40 rows down, a strip of jeans and shoes along the top). The signs' panels stay in frame and her feet stay above
- * the dialog box (row 92 at the strip's front edge).
+ * On the field the view stays at least this far down: its top row is then the walkway's rail behind the far wall, just
+ * below the shoes of the stands' front row (they reach row 49), not the front row cut off at the hips or the feet
+ * (following her on the strip in front of the line, the view would sit 21 to 40 rows down, a strip of jeans and shoes
+ * along the top). The signs' panels stay in frame and her feet stay above the dialog box (row 90 at the strip's front
+ * edge).
  */
-export const FIELD_VIEW = 48;
+export const FIELD_VIEW = 50;
+/**
+ * Past either end, above the floor in front, the view comes no further down than this: the stands' front row has its
+ * faces whole along the top, the way the arena frames them, the audience display's whole face is in frame (rows 16 to
+ * 104, on legs to row 118), and her feet are never lower than screen row 135.
+ */
+export const END_VIEW = 12;
 /**
  * Where the view is with her at (x, y), walking about: stage.js's own follow (half a screen left of her, 28 + 72 rows
- * above her feet, inside the world), but on the field, and in the gate down to row 148, never above FIELD_VIEW. At row
- * 148 the follow comes to FIELD_VIEW by itself, so going out through the gate the view holds still while she walks
- * down it and then follows her on, with no jump; the floors either side of the field only meet the field's below that.
+ * above her feet, inside the world), but on the field, and in the gate down to FIELD_VIEW + 100, never above
+ * FIELD_VIEW; and past either end, above FRONT_FLOOR, never below END_VIEW. At FIELD_VIEW + 100 the follow comes to
+ * FIELD_VIEW by itself, so going out through the gate the view holds still while she walks down it and then follows
+ * her on, with no jump; the floors either side of the field only meet the field's below that. The one jump left is
+ * stepping between an end's floor and the floor in front, at FRONT_FLOOR; the scene pans the view across it (scene.js
+ * camera()).
  */
 export function walkView(x, y) {
   let vy = clamp(y - 28 - H / 2, 0, WORLD.h - H);
   if (x >= FIELD.x0 && x <= FIELD.x1 && y >= 110 && y < FIELD_VIEW + 28 + H / 2) vy = Math.max(vy, FIELD_VIEW);
+  else if ((x <= ENDS || x >= WORLD.w - ENDS) && y < FRONT_FLOOR) vy = Math.min(vy, END_VIEW);
   return { x: Math.round(clamp(x - W / 2, 0, WORLD.w - W)), y: Math.round(vy) };
 }
 

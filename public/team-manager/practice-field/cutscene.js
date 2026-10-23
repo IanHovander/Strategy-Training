@@ -179,8 +179,9 @@ export const CUT_LINES = SAY;
 // Through the hallway doors and down the left of the room, passing Bea at the battery cart with a body's width of air
 // between them and clear of the tool chest's corner, to the open floor by the drive team, where she stops for the
 // mentor's call: far enough up the room that her face stays clear of the dialog box, and that the camera following her
-// puts Theo, at his table at the front, wholly under the box's name tag. Once it's been read (it turns by itself at the auto pace; A reads it sooner, and she sets off
-// as soon as it has been: runAt), she runs on, down past the cargo basket, wide of it, and round the front of the field
+// puts Theo, at his table at the front, wholly under the box's name tag. Once it's been read (it turns by itself at the
+// auto pace; A reads it sooner, and she sets off as soon as it has been: runAt), she runs on, down past the cargo
+// basket, wide of it, and round the front of the field
 // to where you take over, with nothing over her: so far down the room, the dialog box would hide all of her but her
 // head. If it's read before she's even got to her stop, she doesn't stop at all (WAY). There, in the next beat, she
 // answers; standing there her face would be under the dialog box, so the camera goes down for it, the way it does when

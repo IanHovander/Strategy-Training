@@ -605,9 +605,8 @@ function drawTitle(t, B) {
   cover(1 - seg(t, 0, 0.6), C.white);
 }
 
-// ---- Menu (the game itself starts here later) ----
+// ---- Menu: NEW SEASON starts the game (play.html, every scene so far in turn) ----
 const MENU = ['NEW SEASON', 'REPLAY INTRO'];
-const DIALOG = ['KICKOFF IS COMING SOON!', 'THIS IS WHERE YOUR SEASON STARTS.'];
 function box(x, y, w, h) {
   fill(x, y, w, h, C.ink);
   fill(x + 2, y + 2, w - 4, h - 4, '#f4f6ff');
@@ -620,18 +619,8 @@ function drawMenu(now) {
   box(6, 6, 104, 40);
   MENU.forEach((label, i) => {
     text(label, 24, 15 + i * 14, { color: C.ink });
-    if (i === ui.cursor && (!ui.dialog || Math.floor(now * 2) % 2)) text('>', 14, 15 + i * 14, { color: C.ink });
+    if (i === ui.cursor && (!ui.leaving || Math.floor(now * 8) % 2)) text('>', 14, 15 + i * 14, { color: C.ink });
   });
-  if (ui.dialog) {
-    box(6, 98, 244, 40);
-    const n = Math.floor((now - ui.dialog) * 30);
-    let left = n;
-    DIALOG.forEach((line, i) => {
-      text(line, 16, 108 + i * 12, { color: C.ink, upto: Math.max(0, left) });
-      left -= line.length;
-    });
-    if (left > 0 && Math.floor(now * 2.5) % 2) text('#', 236, 126, { color: C.ink });
-  }
 }
 
 function drawBoot(now) {
@@ -768,7 +757,7 @@ class SongTrack {
 }
 
 let track = SONG ? new SongTrack(SONG) : new ChipTrack();
-const ui = { state: 'boot', cursor: 0, dialog: 0, woke: false, pending: false };
+const ui = { state: 'boot', cursor: 0, leaving: false, woke: false, pending: false };
 // The picture always runs on its own clock. The music joins it at the current moment as soon as the audio is
 // actually running, which on some phones is only after a later tap, or again after the phone interrupted it.
 const clock = { perf0: 0, audio: false };
@@ -798,7 +787,6 @@ function begin() {
 }
 
 function press(key) {
-  const now = perfNow();
   if (ui.state === 'boot') {
     // The tap unlocks the audio now; a song still loading starts as soon as it's ready.
     chip.start();
@@ -821,13 +809,7 @@ function press(key) {
     }
     return;
   }
-  if (ui.dialog) {
-    if (key === 'a' || key === 'b') {
-      ui.dialog = 0;
-      chip.sfx('cursor');
-    }
-    return;
-  }
+  if (ui.leaving) return;
   if (key === 'up' || key === 'down') {
     ui.cursor = (ui.cursor + (key === 'up' ? MENU.length - 1 : 1)) % MENU.length;
     chip.sfx('cursor');
@@ -835,8 +817,11 @@ function press(key) {
     ui.state = 'play';
   } else if (key === 'a' || key === 'start') {
     chip.sfx('select');
-    if (ui.cursor === 0) ui.dialog = now;
-    else {
+    if (ui.cursor === 0) {
+      // The cursor blinks while the select sound plays, then the season starts.
+      ui.leaving = true;
+      setTimeout(() => location.assign('./play.html'), 450);
+    } else {
       ui.state = 'play';
       playFrom(0);
     }
@@ -860,7 +845,7 @@ window.addEventListener('keydown', (e) => {
 canvas.addEventListener('click', (e) => {
   const r = canvas.getBoundingClientRect();
   const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
-  if (ui.state === 'menu' && !ui.dialog && x < 110 && y > 8 && y < 44) {
+  if (ui.state === 'menu' && x < 110 && y > 8 && y < 44) {
     const i = y < 26 ? 0 : 1;
     if (i !== ui.cursor) ui.cursor = i;
     return press('a');

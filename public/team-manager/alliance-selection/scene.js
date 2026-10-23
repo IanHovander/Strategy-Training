@@ -62,6 +62,22 @@ const mc = { id: 'mc', name: MC_NAME, lines: MC_LINES, look: MC_LOOK, faceGait: 
 /** Her loop's clock: when walking started, how long she's stood still for the strategist, and the last frame's time. */
 const clock = { t0: null, paused: 0, last: null };
 
+// ---- The camera ----
+/** The view's last row, so a jump in where it should be (layout.js walkView) becomes a pan. */
+const cam = { y: null };
+/**
+ * The view, walking about: layout.js walkView(), but where that jumps (stepping between the floor past an end of the
+ * field and the floor in front of it) the view pans there instead, a sixth of the way each frame and at least a pixel,
+ * in whole pixels. It starts where walkView says, so walking about's first frame is the cut scene's last.
+ */
+function camera(s) {
+  const v = walkView(s.me.x, s.me.y);
+  if (cam.y == null) cam.y = v.y;
+  const d = v.y - cam.y;
+  cam.y += Math.sign(d) * Math.ceil(Math.abs(d) / 6);
+  return { x: v.x, y: cam.y };
+}
+
 /**
  * Which way Robin turns to face the strategist at (x, y): toward her, but side-on rather than with her back to you when
  * she's behind Robin (directions 3 to 5), and three-quarters left (7) rather than to the front (0 or 1) with a captain
@@ -129,6 +145,7 @@ export const scene = {
   /** Walking starts (the cut scene over or skipped): Robin's loop starts again from where the cut scene left her. */
   onFree() {
     clock.t0 = null;
+    cam.y = null;
     Object.assign(mc, mcPatrol(0));
   },
   /**
@@ -157,8 +174,11 @@ export const scene = {
     if (CAPTAINS.has(p.id)) drawBubble(g, above >= 1 ? x : x + 9, Math.max(1, above), t);
     else drawBubble(g, x + (FIRST_PICKS.has(p.id) ? -11 : 11), y - (p === mc ? 53 : 50), t);
   },
-  /** The view follows her as stage.js does, but on the field it stays down far enough to keep the stands' legs out. */
-  camera: (s) => walkView(s.me.x, s.me.y),
+  /**
+   * The view follows her as stage.js does, but on the field it stays down far enough to keep the stands' legs out, and
+   * past the ends it stays up far enough to keep the front row's faces in.
+   */
+  camera,
   move: (x, y, dx, dy) => moveIn(x, y, dx, dy, CROWD, [mc]),
 
   draw(g, view, t, s) {

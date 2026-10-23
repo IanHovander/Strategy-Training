@@ -33,6 +33,11 @@
   </section>
   <p class="foot">The field's pieces follow field.js, the robot and the game pieces are sprites.js's, and the people are walker.js with cast.js looks, all shared with the arena; this scene's own modules are in the practice-field folder. The controller, the camera and the talking are stage.js, shared by every scene.</p>
 </div>
-<script type="module" src="./scene.js"></script>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
 </body>
 </html>

@@ -26,12 +26,13 @@ export const SCRIPT = {
     ['MATCH 44: RED 1100, 3141 AND 6174.', 'BLUE 5026, 2020 AND 7009. QUEUE UP!'],
   ],
   // One page each, so the phone shows whoever is talking: the robot's ready, the driver asks, she gives him the plan off
-  // her board, and he reads it back the way drive teams do.
+  // her board, and he reads it back the way drive teams do. A 2019 drive team is four: the driver and operator who go
+  // with the robot, and the coach and the human player, already in the queue.
   ready: [
     { name: TEAMMATE_NAME, lines: ['BUMPERS ARE BACK ON. FRESH BATTERY:', '12.8 VOLTS ON THE TESTER. READY!'] },
     { name: ELI, lines: ["THAT'S US. MATCH 44, BLUE ALLIANCE.", "WHAT'S THE PLAN?"] },
     { name: HERO_NAME, tag: C.red1, lines: ['6174 GUARDS THE LEFT ROCKET: GO RIGHT.', 'HATCHES. PINNED? COUNT 5. HAB 3 AT 20.'] },
-    { name: ELI, lines: ['RIGHT ROCKET, HATCHES, HAB 3 AT 20.', 'GOT IT. ROLLING!'] },
+    { name: ELI, lines: ['RIGHT ROCKET, HATCHES, HAB 3 AT 20.', 'COACH AND HUMAN PLAYER ARE IN QUEUE.'] },
   ],
   // Noor, up from the robot with her hands on the cart's handle, before she pushes it out into the aisle to the queue:
   // the pits' etiquette for a robot on a cart.
@@ -68,7 +69,7 @@ export const LINES = {
   ],
   lena: [
     ['DEPLOYING A FIX TO OUR AUTO. ROBOT IS', 'UP ON ITS CART, WHEELS OFF THE GROUND.'],
-    ['ALWAYS. ENABLE IT ON THE FLOOR IN THE', 'PITS AND IT DRIVES RIGHT INTO SOMEONE.'],
+    ['WHEELS UP, ALWAYS. ENABLE IT ON THE', 'FLOOR AND IT DRIVES INTO SOMEBODY.'],
     ['RULE TWO: NEVER DEPLOY UNTESTED CODE', "RIGHT BEFORE A MATCH. SO DON'T WATCH."],
   ],
   okafor: [

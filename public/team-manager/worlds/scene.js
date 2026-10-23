@@ -29,7 +29,7 @@
 // so that Newton's is playing when she gets there (layout.js).
 
 import { W, H, C, useContext, screen, fill } from '../pixel.js';
-import { runScene, drawWithShadow } from '../stage.js';
+import { drawWithShadow } from '../stage.js';
 import { HERO_LOOK } from '../walker.js';
 import { WORLD, START, DIVISIONS, ox, divisionAt } from './layout.js';
 import { setupFields, visibleDivisions, drawFloors, drawStandsAll, drawField, move } from './fields.js';
@@ -113,7 +113,7 @@ const END = cutscene.reduce((t, b) => t + b.dur, 0); // the hall's time on the c
 let shift = END - performance.now() / 1000; // walking's world time is the page's clock plus this
 let where = { x: START.x, y: START.y }; // where she is: for the bubble over whoever's in reach and turning to them
 
-runScene({
+export const scene = {
   // The card under the big screen and the phone's title: short enough for one line at phone width (the page's title
   // says the rest).
   name: 'WORLDS',
@@ -140,4 +140,4 @@ runScene({
     drawWorld(g, view, t + shift, { player: s.player, playerX: s.me.x, talkingSeat: talkingSeat(s) });
   },
   cutscene,
-});
+};

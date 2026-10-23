@@ -16,7 +16,9 @@
 // waitSlot(n)), not inside an alliance, not between neighbouring alliances, and not among the backups.
 //
 // From behind, a rep shows the back of their head: the template's face filled with hair, brows and all (cast.js
-// backOf() keeps the brows' dark hair pixels in the face, which from behind read as two closed eyes on light hair).
+// backOf() keeps the brows' dark hair pixels in the face, which from behind read as two closed eyes on light hair). A
+// cap's is drawn by hand: under the cap and its band, the hair lit on the upper left and dark on the right, tapering
+// to the nape of the neck, with no ears sticking out (the face's outline filled with hair would be a blank face).
 //
 // Once selection is over, everyone stands where it left them (layout.js): each alliance's captain on its spot facing
 // you, the two picks close behind on either side (a couple turned to their captain), the backups round the queuer
@@ -115,6 +117,19 @@ const REPS = {
 const FACE_RE = /[sSdeEwMTmq]/;
 const cleanBack = (rows) => backOf(rows.map((r) => r.replace(/g/g, (m, i) => (FACE_RE.test(r.slice(0, i)) && FACE_RE.test(r.slice(i + 1)) ? 'h' : m))));
 const BACK = Object.fromEntries(Object.entries(HEADS).map(([k, rows]) => [k, cleanBack(rows)]));
+BACK.cap = [
+  ...BACK.cap.slice(0, 6),
+  '..kHHhhhhhhhgk..',
+  '..kHhhhhhhhhgk..',
+  '..khhhhhhhhhgk..',
+  '..kghhhhhhhhgk..',
+  '..kghhhhhhhggk..',
+  '..kgghhhhhhggk..',
+  '...kgghhhhggk...',
+  '....kkddddkk....',
+  '......kkkk......',
+];
+if (BACK.cap.length !== HEADS.cap.length || BACK.cap.some((r) => r.length !== 16)) throw new Error('people.js: the cap from behind is the wrong size');
 
 /** A rep's look, built like cast.js stranger(): the cast's head and palettes, in the team's colours. */
 function repLook(num, r) {
@@ -177,8 +192,9 @@ export const CROWD = [
 ];
 
 // ---- What they say ----
-// Two lines of at most 38 characters a page. Everything they say about the rules is the 2019 manual's (section 12.7)
-// or the way FIRST runs selection today (the pick clock).
+// Two lines of at most 38 characters a page. Everything they say about the rules is the 2019 manual's (section 12.7,
+// and the Championship's third round) or the way FIRST runs selection today (the pick clock). Robin owns up that she
+// skated the mic out to the strategist: the invited team's rep usually comes up to the MC's mic on the field.
 const WORDS = [
   ['3000', 'LENA, 3000 CAPTAIN', [
     ['YOU HUNG HATCHES WITH US IN QUALS.', 'WE SCORE CARGO. A PERFECT FIT.'],
@@ -207,7 +223,7 @@ const WORDS = [
     ['KEEP YOUR LIST IN ORDER, AND CROSS', 'TEAMS OFF AS THEY GET PICKED.'],
   ]],
   ['9152', 'IKE, 9152 CAPTAIN', [
-    ['WE WERE NINTH THIS MORNING. THEN 1', 'PICKED 2 AND WE MOVED UP TO 8!'],
+    ['WE FINISHED QUALS NINTH. THEN 1', 'PICKED 2 AND WE MOVED UP TO 8!'],
     ['AS NUMBER EIGHT WE PICK LAST IN ROUND', 'ONE, THEN FIRST IN ROUND TWO.'],
     ['ALWAYS SEND A REP READY TO CAPTAIN.', 'YOU NEVER KNOW WHO MOVES UP.'],
   ]],
@@ -236,6 +252,7 @@ const WORDS = [
     ["I'M HERE FOR THE CAPTAINS. THEY STAY", 'ON THE FIELD FOR MY PLAYOFF BRIEFING.'],
     ['EACH ALLIANCE GETS ONE TIMEOUT IN', 'PLAYOFFS. SPEND IT WISELY.'],
     ['IF A ROBOT BREAKS, ITS CAPTAIN CAN', 'CALL IN THE HIGHEST-RANKED BACKUP.'],
+    ["AT CHAMPIONSHIP THERE'S A ROUND THREE,", 'ONE TO EIGHT AGAIN, FOR TEAMS OF FOUR.'],
   ]],
 ];
 /** Who she can talk to: stage.js `people` entries, the very objects in CROWD (so nobody is drawn twice). */
@@ -246,7 +263,7 @@ export const TALKERS = WORDS.map(([id, name, lines]) => {
 
 /** MC Robin's pages, when she catches the MC skating the line. */
 export const MC_LINES = [
-  ['NICE ANSWER, 5026! YOUR VOICE ONLY', 'SHOOK A LITTLE ON THAT MIC.'],
+  ['NICE ANSWER, 5026! USUALLY THE REP', 'COMES TO MY MIC, BUT I LOVE TO SKATE!'],
   ["MY 'YOU ARE ON THE CLOCK' STARTS IT:", '45 SECONDS A PICK, 90 IN ROUND TWO.'],
   ['AND TWO MINUTES BETWEEN ROUNDS, SO', 'EVERY ALLIANCE CAN TALK IT OVER.'],
   ['THE PICKS ARE ALL YOU STUDENTS. I', 'JUST SKATE AROUND AND KEEP IT LOUD!'],

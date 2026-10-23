@@ -19,7 +19,7 @@
 
 import { W, H, useContext, camera, screen, seg, clamp, lerp, easeInOut } from '../pixel.js';
 import { walkerFrame } from '../walker.js';
-import { runScene, drawWithShadow, cover, frameOf } from '../stage.js';
+import { drawWithShadow, cover, frameOf } from '../stage.js';
 import { drawBubble } from '../talk.js';
 import { WORLD, START } from './layout.js';
 import { drawBackdrop, things, blocked } from './place.js';
@@ -188,7 +188,7 @@ const PEOPLE = TALKERS.map((p) => ({
   },
 }));
 
-runScene({
+export const scene = {
   name: 'TEAM MEETING',
   label: "The back lawn of the school on a sunny afternoon: the wall with the robotics shop's door open, the path and the grass, the team standing and sitting about in red merch after their meeting, and the strategist you're steering among them; the view follows her",
   hint: 'Drag the stick, tap A by someone to talk',
@@ -250,4 +250,4 @@ runScene({
     standing(g, view, things(t, { who: her }), after(t, { me, talking: s.talk?.person?.id }), [s.player]);
     if (s.freeAt != null) cover(1 - seg(t, s.freeAt, s.freeAt + FADE));
   },
-});
+};

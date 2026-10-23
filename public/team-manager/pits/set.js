@@ -55,7 +55,7 @@ const BINS = [[C.org0, C.org1, C.org2], [C.blue0, C.blue1, C.blue2], [C.steel1, 
 // mirrored: the battery cart on the right and the tool chest on the left.
 const STATE = {
   3000: { state: 'field', match: 42, bot: null, mirrored: false },
-  8192: { state: 'busy', match: null, bot: { bot: 'arm', team: 'red', rsl: false }, mirrored: true }, // off: Ruth's hands are in it
+  1024: { state: 'busy', match: null, bot: { bot: 'arm', team: 'red', rsl: false }, mirrored: true }, // off: Ruth's hands are in it
   7777: { state: 'field', match: 42, bot: null, mirrored: false },
   4000: { state: 'busy', match: null, bot: { bot: 'ele', team: 'red', rsl: false }, mirrored: true },
   2468: { state: 'queue', match: 43, bot: null, mirrored: false },
@@ -72,7 +72,7 @@ export const PITS = ROW.map((num, i) => {
 // left end, how far back on the table top (0 back .. 6 front)].
 const DRESS = {
   3000: { chest: 'steel', table: [['bins', 3, 2], ['shut', 13, 4], ['tape', 30, 3]] },
-  8192: { chest: 'black', table: [['laptop', 4, 3], ['drill', 18, 5], ['bins', 30, 2]] },
+  1024: { chest: 'black', table: [['laptop', 4, 3], ['drill', 18, 5], ['bins', 30, 2]] },
   7777: { chest: 'red', table: [['shut', 4, 4], ['bins', 20, 2], ['tape', 31, 4]] },
   4000: { chest: 'steel', table: [['tv', 5, 2], ['laptop', 23, 4], ['drill', 33, 5]] },
   2468: { chest: 'red', table: [['shut', 14, 4], ['bins', 30, 2]] },

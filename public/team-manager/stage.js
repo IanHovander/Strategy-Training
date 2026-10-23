@@ -33,6 +33,15 @@
 //                         For a scene with no room to walk (the van): the stick picks who to talk to.
 //   hint, note            the phone's hint line and the note under the controls, if the usual ones don't fit
 //   status(s)             the phone's status line under her name, if not STANDING, WALKING N and so on
+//   exit: { x, y0, y1, label, sign }
+//                         the way out, on the right (every scene is entered on the left and left on the right): once
+//                         her feet are past x, between y0 and y1, she walks on out of the picture and the screen fades.
+//                         An arrow points the way, with label over it ('TO THE PITS'); sign: { y } moves the arrow, which
+//                         otherwise sits a little above the middle of the gap. move() has to let her get there. In
+//                         play.html leaving is on to the next scene; on the scene's own page she comes back in.
+//   enter                 a path, [[x, y], ...], she walks in along as the cut scene ends, on to start: from off the left
+//                         edge, say. The stick is hers once she gets there. Not with ?x= in the address.
+// A scene with no exit, in play.html, gets a NEXT SCENE button instead.
 //
 // A cut scene is a list of beats. Each is { dur, draw(g, t, c) }: draw the whole screen t seconds into the beat; c.T is
 // seconds into the cut scene and c.k is t / dur (0 to 1). A beat can say something: say: { name, lines, at, auto, tag,
@@ -49,6 +58,11 @@
 // The scene's state, s, is window.stage, for poking at from the console. From the address bar: ?at=SECONDS freezes the
 // cut scene at that moment, words typed as far as they'd be with no waiting (for screenshots); ?beat=N starts the cut
 // scene at beat N; ?play skips it; ?x=..&y=..&dir=.. start her somewhere else.
+//
+// runScene(scene, { layout: 'full', root, onLeave, exitLabel, nextLabel, params }) is the game itself (play.html): the
+// screen fills the window, a tap anywhere on it is A, and the stick is a dot in a dashed ring in the bottom right corner
+// (WASD or the arrow keys on a keyboard). onLeave is called once she's left (or NEXT SCENE was pressed) and the screen is
+// black; s.stop() ends the scene so the next can have the page.
 
 import { W, H, C, useContext, screen, fill, text, measure, withAlpha, stepped, clamp, lerp, seg, easeOut, easeIn } from './pixel.js';
 import { DIRS, CELL_W, CELL_H, walkerFrame, drawWalker, HERO_LOOK } from './walker.js';
@@ -170,26 +184,53 @@ const markup = (scene) => `
   </div>
 </div>
 <p class="note">${esc(scene.note ?? 'Push the stick a little to walk, all the way to run, and press A by someone to talk. In the cut scene, A reads on and SKIP jumps to the end. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter for A, Esc to skip.')}</p>`;
+/** The game's own layout: just the screen, as big as the window allows, with the stick and two buttons over it. */
+const fullMarkup = (scene, nextLabel) => `
+<div class="full" data-mode="cut">
+  <canvas class="screen" width="${W}" height="${H}" aria-label="${esc(scene.label ?? scene.name)}"></canvas>
+  <div class="stick" role="application" aria-label="Movement stick. Drag the dot a little to walk, all the way out to run. On a keyboard: WASD or the arrow keys, and Shift to run.">
+    <div class="ring"><div class="dot"></div></div>
+  </div>
+  <div class="corner">
+    <button type="button" class="skip" hidden>SKIP</button>
+    <button type="button" class="next" hidden>${esc(nextLabel)}</button>
+  </div>
+  <p class="turn">Turn your phone sideways</p>
+</div>`;
+
+/** Seconds a scene takes to fade in, and to fade out as she leaves. */
+const FADE_IN = 0.5, FADE_OUT = 0.4;
 
 /** Put a scene on the page and run it. Returns its state (also window.stage). */
-export function runScene(scene) {
-  const root = document.getElementById('stage');
-  root.innerHTML = markup(scene);
+export function runScene(scene, opts = {}) {
+  const { layout = 'phone', onLeave = null, exitLabel, nextLabel = 'NEXT SCENE', params = new URLSearchParams(location.search) } = opts;
+  const full = layout === 'full';
+  const root = opts.root ?? document.getElementById('stage');
+  root.innerHTML = full ? fullMarkup(scene, nextLabel) : markup(scene);
   const $ = (sel) => root.querySelector(sel);
   const tv = $('.screen'), face = $('.face');
-  const g = tv.getContext('2d', { alpha: false }), fg = face.getContext('2d');
+  const g = tv.getContext('2d', { alpha: false }), fg = face?.getContext('2d');
   g.imageSmoothingEnabled = false;
-  fg.imageSmoothingEnabled = false;
+  if (fg) fg.imageSmoothingEnabled = false;
+  // Everything this scene listens to, so stop() can let go of it all at once.
+  const ac = new AbortController(), on = { signal: ac.signal };
 
-  // Whole-number zoom, so every pixel stays square.
-  const fit = () => {
+  // Whole-number zoom, so every pixel stays square. Filling the window, that's whole device pixels (like the intro),
+  // falling back to a smooth fit when the whole-number one would be much smaller.
+  const fit = full ? () => {
+    const dpr = window.devicePixelRatio || 1, box = root.getBoundingClientRect();
+    const exact = Math.min(box.width / W, box.height / H), whole = Math.floor(exact * dpr) / dpr;
+    const z = whole >= exact * 0.8 && whole > 0 ? whole : exact;
+    tv.style.width = `${Math.floor(W * z)}px`;
+    tv.style.height = `${Math.floor(H * z)}px`;
+  } : () => {
     const room = tv.parentElement.clientWidth - 4;
     tv.style.width = `${W * Math.max(1, Math.min(4, Math.floor(room / W)))}px`;
   };
-  new ResizeObserver(fit).observe(root);
+  const resize = new ResizeObserver(fit);
+  resize.observe(root);
   fit();
 
-  const params = new URLSearchParams(location.search);
   const num = (k) => (params.has(k) && params.get(k) !== '' ? Number(params.get(k)) : null);
   const look = scene.look ?? HERO_LOOK;
   const beats = scene.cutscene ?? [];
@@ -201,6 +242,8 @@ export function runScene(scene) {
   const s = {
     scene, mode: 'free', me: { x: start.x, y: start.y, dir: start.dir, gait: 'stand', dist: 0 }, look,
     near: null, talk: null, cut: null, view: { x: 0, y: 0 }, player: null, frozen: num('at'),
+    // auto: a walk she's taking by herself (in, or out), mode 'auto'. fadeIn: when the picture began fading in.
+    auto: null, fadeIn: full && num('at') == null ? performance.now() / 1000 : null,
     stick() {
       // The phone's stick wins; otherwise the keyboard.
       if (!input.x && !input.y && input.keys.size) {
@@ -229,7 +272,60 @@ export function runScene(scene) {
     s.cut = null;
     s.talk = null;
     Object.assign(s.me, { x: start.x, y: start.y, dir: start.dir, gait: 'stand', dist: 0 });
+    // She comes in along scene.enter, if it has one: the stick is hers once she's on her mark.
+    if (scene.enter?.length && num('x') == null) {
+      const path = [...scene.enter, [start.x, start.y]];
+      walkBy(path, 'walk', () => {
+        s.mode = 'free';
+        Object.assign(s.me, { dir: start.dir, gait: 'stand' });
+      });
+    }
     scene.onFree?.(s);
+  }
+
+  // ---- In and out ----
+  /** She walks path by herself at gait, then done(now). hold: seconds to wait at the end; out: fade out on the way. */
+  function walkBy(path, gait, done, { hold = 0, out = false } = {}) {
+    const len = path.slice(1).reduce((n, [x, y], i) => n + Math.hypot(x - path[i][0], (y - path[i][1]) / DEPTH), 0);
+    s.mode = 'auto';
+    s.talk = null;
+    s.auto = { path, gait, done, hold, out, t0: performance.now() / 1000, dur: len / SPEED[gait], dist: s.me.dist, view: { ...s.view } };
+  }
+  function autoStep(now) {
+    const a = s.auto, t = now - a.t0;
+    if (a.path.length > 1) {
+      const p = along(a.path, Math.min(t, a.dur), a.gait);
+      Object.assign(s.me, { x: p.x, y: p.y, dir: p.dir, gait: t < a.dur ? a.gait : 'stand', dist: a.dist + p.dist });
+    }
+    if (t >= a.dur + a.hold) a.done(now);
+  }
+  /** Out she goes, on past the right edge of the picture with the camera held still, and the screen fades. */
+  function leave() {
+    const me = s.me, gait = me.gait === 'run' ? 'run' : 'walk';
+    const x = Math.max(me.x + 16, s.view.x + W + 20);
+    walkBy([[me.x, me.y], [x, me.y]], gait, left, { hold: 0.15, out: true });
+  }
+  /** NEXT SCENE: she stays put and the screen fades. */
+  function moveOn() {
+    if (s.mode === 'auto' || !onLeave) return;
+    walkBy([[s.me.x, s.me.y]], 'walk', left, { hold: FADE_OUT + 0.15, out: true });
+  }
+  /** Gone: on to whatever's next, or (on the scene's own page) back in at the start. */
+  function left(now) {
+    if (onLeave) {
+      s.stop();
+      onLeave(s);
+      return;
+    }
+    s.fadeIn = now;
+    endCut();
+  }
+  /** The fades over everything: in as a scene opens or she comes back, out as she leaves. */
+  function shade(now) {
+    const a = s.auto, outBy = a?.out ? a.t0 + Math.max(a.dur, FADE_OUT) : 0;
+    const k = Math.max(s.fadeIn != null ? 1 - seg(now, s.fadeIn, s.fadeIn + FADE_IN) : 0,
+      s.mode === 'auto' && a.out ? seg(now, outBy - FADE_OUT, outBy) : 0);
+    if (k > 0) cover(k);
   }
   function drawBeat(b, t, T, conv, clock) {
     useContext(g);
@@ -295,21 +391,44 @@ export function runScene(scene) {
     };
   }
   function freeFrame(now, dt) {
-    if (scene.update) scene.update(dt, s);
-    else walk(dt);
-    s.near = s.talk ? null : scene.reach ? scene.reach(s) : closest();
-    const view = (s.view = scene.camera ? scene.camera(s) : follow());
+    const e = scene.exit;
+    if (s.mode === 'auto') {
+      autoStep(now);
+      if (stopped) return;
+    } else {
+      if (scene.update) scene.update(dt, s);
+      else walk(dt);
+      if (e && !s.talk && s.me.x >= e.x && s.me.y >= e.y0 && s.me.y <= e.y1) leave();
+    }
+    s.near = s.talk || s.mode === 'auto' ? null : scene.reach ? scene.reach(s) : closest();
+    const view = (s.view = s.mode === 'auto' && s.auto.out ? s.auto.view : scene.camera ? scene.camera(s) : follow());
     s.player = { y: s.me.y, draw: () => drawWithShadow(g, view, { ...s.me, look }) };
     useContext(g);
     screen();
     g.globalAlpha = 1;
     scene.draw(g, view, now, s);
     g.globalAlpha = 1;
+    if (e && s.mode === 'free' && !s.talk) drawExit(e, view, now);
     if (s.near) {
       if (scene.prompt) scene.prompt(g, view, s.near, now);
       else drawBubble(g, s.near.x - view.x + 11, s.near.y - view.y - 50, now);
     }
     if (s.talk) drawDialog(g, s.talk, now);
+  }
+  /** The way out: an arrow nudging right, white on an ink outline like the bubbles, with where it goes over it. */
+  function drawExit(e, view, now) {
+    const x = Math.round(e.x - view.x) - 3 + (Math.floor(now * 2.5) % 2);
+    const y = Math.round((e.sign?.y ?? (e.y0 + e.y1) / 2 - 24) - view.y);
+    if (x < -4 || x > W + 60) return;
+    screen();
+    const arrow = (c, o) => {
+      fill(x - 9 - o, y - 1 - o, 6 + 2 * o, 3 + 2 * o, c);
+      for (let i = 0; i < 5; i++) fill(x - 3 + i - o, y - 4 + i - o, 1 + 2 * o, 9 - 2 * i + 2 * o, c);
+    };
+    arrow(C.ink, 1);
+    arrow(C.white, 0);
+    const label = exitLabel ?? e.label;
+    if (label) text(label, x + 1, y - 13, { font: 3, color: C.white, outline: C.ink, align: 'right' });
   }
 
   // ---- A, and skipping ----
@@ -343,7 +462,7 @@ export function runScene(scene) {
   };
 
   // ---- The phone ----
-  const ui = { mode: '', who: '', label: '', said: null, skip: null };
+  const ui = { mode: '', who: '', label: '', said: null, skip: null, hud: '', next: null };
   const set = (key, value, apply) => {
     if (ui[key] !== value) apply((ui[key] = value));
   };
@@ -380,9 +499,18 @@ export function runScene(scene) {
     set('skip', s.mode === 'cut', (v) => ($('.skip').hidden = !v));
   }
 
+  /** The game's layout has no phone: the stick shows while she's yours to steer, SKIP in a cut scene, NEXT SCENE (where
+   * there's no way out) while she's free. */
+  function drawHud() {
+    set('hud', s.mode === 'free' && s.talk ? 'talk' : s.mode, (v) => (box.dataset.mode = v));
+    set('skip', s.mode === 'cut', (v) => ($('.skip').hidden = !v));
+    set('next', s.mode === 'free' && !!onLeave && !scene.exit, (v) => ($('.next').hidden = !v));
+  }
+
   // ---- The clock ----
-  let last = performance.now() / 1000;
+  let last = performance.now() / 1000, stopped = false, raf = 0;
   function frame() {
+    if (stopped) return;
     const now = performance.now() / 1000, dt = Math.min(0.05, now - last);
     last = now;
     if (s.frozen != null && s.frozen < offsets.at(-1) + (beats.at(-1)?.dur ?? 0)) {
@@ -390,26 +518,48 @@ export function runScene(scene) {
       s.cut ??= { i: 0, t0: now, read: true, conv: null };
       frozenFrame(s.frozen);
     } else if (s.mode !== 'cut' || !cutFrame(now)) freeFrame(now, dt);
-    drawPhone();
-    requestAnimationFrame(frame);
+    if (stopped) return;
+    shade(now);
+    if (full) drawHud();
+    else drawPhone();
+    raf = requestAnimationFrame(frame);
   }
+  s.stop = () => {
+    stopped = true;
+    cancelAnimationFrame(raf);
+    resize.disconnect();
+    ac.abort();
+  };
   if (beats.length && !params.has('play')) startBeat(num('beat') ?? 0, performance.now() / 1000);
+  else if (full && num('at') == null) endCut(); // in the game, ?play still walks her in
 
   // ---- Input ----
-  $('.abtn').addEventListener('click', pressA);
-  $('.skip').addEventListener('click', skip);
-  const replay = $('.replay');
-  if (!beats.length) replay.hidden = true;
-  replay.addEventListener('click', () => {
-    s.frozen = null;
-    s.talk = null;
-    startBeat(0, performance.now() / 1000);
-  });
+  const box = full ? $('.full') : null;
+  $('.skip').addEventListener('click', skip, on);
+  if (full) {
+    $('.next').addEventListener('click', moveOn, on);
+    // A is a tap anywhere on the screen that isn't the stick or a button (a mouse click, on a computer).
+    box.addEventListener('pointerdown', (e) => {
+      if (e.button > 0 || e.target.closest('.stick, button')) return;
+      pressA();
+      e.preventDefault();
+    }, on);
+  } else {
+    $('.abtn').addEventListener('click', pressA, on);
+    const replay = $('.replay');
+    if (!beats.length) replay.hidden = true;
+    replay.addEventListener('click', () => {
+      s.frozen = null;
+      s.talk = null;
+      startBeat(0, performance.now() / 1000);
+    }, on);
+  }
 
-  const pad = $('.pad'), knob = $('.knob');
+  // The stick: the knob (the dot) follows the finger inside the ring, a little way out to walk, all the way to run.
+  const pad = $(full ? '.stick' : '.pad'), ring = full ? $('.ring') : pad, knob = $(full ? '.dot' : '.knob');
   let dragging = null;
   function moveStick(e) {
-    const r = pad.getBoundingClientRect(), radius = r.width / 2;
+    const r = ring.getBoundingClientRect(), radius = r.width / 2;
     let x = (e.clientX - r.left - radius) / radius, y = (e.clientY - r.top - radius) / radius;
     const m = Math.hypot(x, y);
     if (m > 1) {
@@ -418,27 +568,33 @@ export function runScene(scene) {
     }
     input.x = x;
     input.y = y;
-    knob.style.left = `${50 + x * 50}%`;
-    knob.style.top = `${50 + y * 50}%`;
+    if (full) knob.style.transform = `translate(${x * radius}px, ${y * radius}px)`;
+    else {
+      knob.style.left = `${50 + x * 50}%`;
+      knob.style.top = `${50 + y * 50}%`;
+    }
   }
-  function release() {
+  function release(e) {
+    if (e && e.pointerId !== dragging) return;
     dragging = null;
     input.x = input.y = 0;
-    knob.style.left = knob.style.top = '50%';
-    pad.style.cursor = 'grab';
+    knob.style.transform = '';
+    knob.style.left = knob.style.top = full ? '' : '50%';
+    pad.style.cursor = full ? '' : 'grab';
   }
   pad.addEventListener('pointerdown', (e) => {
+    if (dragging != null) return;
     dragging = e.pointerId;
     pad.setPointerCapture(e.pointerId);
-    pad.style.cursor = 'grabbing';
+    if (!full) pad.style.cursor = 'grabbing';
     moveStick(e);
     e.preventDefault();
-  });
+  }, on);
   pad.addEventListener('pointermove', (e) => {
     if (e.pointerId === dragging) moveStick(e);
-  });
-  pad.addEventListener('pointerup', release);
-  pad.addEventListener('pointercancel', release);
+  }, on);
+  pad.addEventListener('pointerup', release, on);
+  pad.addEventListener('pointercancel', release, on);
 
   const KEYS = {
     ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
@@ -455,17 +611,21 @@ export function runScene(scene) {
       skip();
       return;
     }
+    if (e.code === 'KeyN' && !e.repeat && full && s.mode === 'free') {
+      moveOn();
+      return;
+    }
     const k = KEYS[e.code];
     if (!k) return;
     input.keys.add(k);
     if (k !== 'shift') e.preventDefault();
-  });
+  }, on);
   addEventListener('keyup', (e) => {
     const k = KEYS[e.code];
     if (k) input.keys.delete(k);
-  });
-  addEventListener('blur', () => input.keys.clear());
+  }, on);
+  addEventListener('blur', () => input.keys.clear(), on);
 
-  requestAnimationFrame(frame);
+  raf = requestAnimationFrame(frame);
   return s;
 }

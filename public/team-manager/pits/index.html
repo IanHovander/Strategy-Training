@@ -28,7 +28,7 @@
       <li><b>The furniture:</b> plywood work tables skirted in team colours with laptops, parts bins, drills, tape, 4000's TV showing the match and 1357's bowl of buttons; rolling tool chests; battery carts with the chargers blinking. At one end the SPARE PARTS counter, at the other the PIT ADMIN desk, the safety glasses stand and the QUEUE sign pointing the way out.</li>
       <li><b>The robots:</b> the intro's own robots, the elevator, the arm and the defender, on the queue's own carts, with their team numbers on the bumpers.</li>
       <li><b>Empty pits:</b> where a robot is away, a whiteboard on an easel stands on its taped-out spot: IN QUEUE or ON FIELD and the match. It follows the arena's queue: 2468 and 1357 are queuing for match 43, the two robots in the arena's queue, and 5026 is called right after, as the queuer says.</li>
-      <li><b>People at work:</b> new poses on the same rig as everyone else: kneeling at a robot with a drill, leaning in with both hands on it or at a laptop, carrying a battery, and pushing a cart. 8192's battery runner keeps swapping batteries all morning.</li>
+      <li><b>People at work:</b> new poses on the same rig as everyone else: kneeling at a robot with a drill, leaning in with both hands on it or at a laptop, carrying a battery, and pushing a cart. 1024's battery runner keeps swapping batteries all morning.</li>
       <li><b>Safety glasses on everyone:</b> they're required in the pits, so every head in the scene wears a pair: clear lenses and a light grey rim like the arena's glasses-wearer's, painted onto the same hand-drawn faces from the front, the side and three-quarters, with the eyes and smiles still showing.</li>
       <li><b>No running:</b> the safety advisor walks the aisle up and down. Run, and she'll come over and tell you why not.</li>
       <li><b>The cut scene:</b> a slow pan down the row, the pit announcer's call, the plan given to the drive team close up, and 5026's robot rolling out down the aisle on its cart while the teammate stands its IN QUEUE board up on the empty spot and takes pit duty.</li>
@@ -36,6 +36,11 @@
   </section>
   <p class="foot">The hall is pits/set.js and the people pits/people.js, on the walker rig (walker.js) the whole game shares. The robots are sprites.js's and their carts field.js's, and the camera, the controller and the talking are stage.js.</p>
 </div>
-<script type="module" src="./scene.js"></script>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
 </body>
 </html>

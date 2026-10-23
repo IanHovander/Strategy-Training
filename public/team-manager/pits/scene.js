@@ -7,7 +7,8 @@
 // way too, as wide as they're drawn and a step deep, so she stops a step short of them and goes round. Eleven people
 // talk: the volunteer at SPARE PARTS, a student on each of four other teams, the judge, the teammate on pit duty,
 // 5026's mentor, the pit admin at his desk, and the safety advisor, who walks the aisle up and down and stops while
-// you talk to her. Whoever she talks to turns to face her (kneelers stay down and put the drill down for a moment;
+// you talk to her (in reach as she steps round you, too). Anyone standing still can be talked to from wherever she
+// stops beside them, as well as from in front. Whoever she talks to turns to face her (kneelers stay down and put the drill down for a moment;
 // someone bent over a laptop straightens up), and if she's walked up right in front of them she first takes a few
 // steps back and to their side, so the big screen shows them both, the way the arena does, instead of the back of her
 // head in front of their face. The words come once she's there.
@@ -17,7 +18,9 @@
 // round the safety advisor too, a step deeper or shallower than her. Only if she's right in front of them before
 // they've stepped aside do they stop for a moment. And nobody walks across a conversation: while she talks to someone,
 // a passer-by heading their way, or the safety advisor on her patrol, stops well short of the two of them (TALK_GAP)
-// and waits till they're done, so the faces over the dialog box stay clear. 8192's battery runner has a corner of the pit she can't walk into
+// and waits till they're done, so the faces over the dialog box stay clear; a passer-by waiting steps forward to the
+// front of the aisle while they wait, out from in front of the pits, where the box hides all but the top of their head,
+// and back into their lane as they walk on. 1024's battery runner has a corner of the pit she can't walk into
 // (people.js's RUN_LANE), and would wait for her if she ever got in the way.
 //
 // No running in the pits. It's a real rule at every event (batteries, tools and robots on carts in a crowded aisle), so
@@ -38,7 +41,7 @@
 // the view and one just past its right edge. Each walker's clock (and the battery runner's) runs behind by the time
 // they've spent waiting.
 
-import { runScene, dirToward, along, SPEED } from '../stage.js';
+import { dirToward, along, SPEED } from '../stage.js';
 import { conversation, drawBubble } from '../talk.js';
 import { clamp } from '../pixel.js';
 import { WORLD, drawWorld, drawCartBot, move } from './set.js';
@@ -51,7 +54,7 @@ for (const p of PEOPLE) p.lines = LINES[p.id];
 const nadia = PEOPLE.find((p) => p.id === NADIA_ID);
 /** The aisle's walkers: on their own clocks while you walk. */
 const AISLE = [NADIA_ID, 'pass1', 'pass2'];
-const RUNNER = 'runner8192';
+const RUNNER = 'runner1024';
 /** Everyone on a clock of their own that stops while they wait for her. */
 const MOVERS = [...AISLE, RUNNER];
 /** How far a step goes down the screen for a step across: the floor recedes (stage.js). */
@@ -83,9 +86,11 @@ const ROUND = { ahead: 40, gap: 13, same: 20, rate: 24, slow: 0.5 }, LANE = [101
  * little behind their feet to a step in front, so she stops a step short of them rather than on top of them. Anyone
  * standing still (at work, minding a pit, behind a desk) takes up a little more, HALF_STILL across and BEHIND_STILL
  * behind, so walking up from the side or from behind she stops with a gap between the two of them, not tucked in
- * against them as one figure; the people walking about keep the smaller box, so they never get stuck on her.
+ * against them as one figure; the people walking about keep the smaller box, so they never get stuck on her. She stops
+ * HALF_STILL plus move()'s margin (14) across from someone standing still, so they're in reach a little further across
+ * than that (REACH_STILL): wherever she stops beside them, she can talk to them.
  */
-const HALF = 8, BEHIND = 3, FRONT_OF = 4, HALF_STILL = 10, BEHIND_STILL = 7;
+const HALF = 8, BEHIND = 3, FRONT_OF = 4, HALF_STILL = 10, BEHIND_STILL = 7, REACH_STILL = 17;
 /** Someone bent over a robot or a laptop has their head and hands this far ahead of their feet, across. */
 const LEAN = 10;
 /**
@@ -156,19 +161,24 @@ const nearTalk = (p, o, [near, far] = TALK_GAP) => {
   return go !== 0 && d >= near && d < far && dy > -TALK_GAP[2] && dy < TALK_GAP[3];
 };
 
-/** The closest person in reach of her feet (nobody while she's walking somewhere by herself). */
+/**
+ * The closest person in reach of her feet (nobody while she's walking somewhere by herself): p.reach across if given,
+ * else REACH_STILL for anyone standing still (solid) and 14 for the safety advisor; p.reachY deep.
+ */
 function reach(s) {
   if (errand?.phase === 'come' || herWalk) return null;
   let best = null, bestD = Infinity;
   for (const p of PEOPLE) {
     const dx = Math.abs(p.x - s.me.x), dy = Math.abs(p.y - s.me.y);
-    if (dx < (p.reach ?? 14) && dy < (p.reachY ?? 12) && dx + dy < bestD) [best, bestD] = [p, dx + dy];
+    if (dx < (p.reach ?? (p.solid ? REACH_STILL : 14)) && dy < (p.reachY ?? 12) && dx + dy < bestD) [best, bestD] = [p, dx + dy];
   }
   return best;
 }
 
 /** How far in front of someone she stands to talk, at least, so the two heads aren't side by side at one height. */
 const FRONT = 5;
+/** Within this far across, in front of someone, she'd hide them: she steps aside to talk (however far their reach). */
+const IN_FRONT = 14;
 /** The aisle's back edge: out here she can walk round the front of a side drape. */
 const AISLE_Y = 100;
 
@@ -190,14 +200,14 @@ function slide(x, y, tx, ty) {
 }
 
 /**
- * Starting to talk to p: if she's standing in front of them (anywhere in reach across), she'd hide them, so she walks
+ * Starting to talk to p: if she's standing in front of them (within IN_FRONT across), she'd hide them, so she walks
  * back a little and to their side (p.side, or the side they face, first), down or up first and then across, and the words wait till she's there.
  * If a side drape's in the way she goes round its front, out in the aisle. p.aside: how far to the side, 16 pixels
  * unless given (a head's width, so the heads don't meet).
  */
 function stepAside(s, p) {
   const me = s.me;
-  if (Math.abs(me.x - p.x) >= (p.reach ?? 14) || me.y <= p.y) return;
+  if (Math.abs(me.x - p.x) >= IN_FRONT || me.y <= p.y) return;
   const aside = p.aside ?? 16;
   const faces = p.side ?? ([1, 2, 3].includes(p.dir) ? 1 : [5, 6, 7].includes(p.dir) ? -1 : Math.sign(me.x - p.x) || 1);
   const near = Math.max(me.y, p.y + FRONT);
@@ -231,14 +241,18 @@ function wordSpot([hx, hy], side, crowd) {
 /**
  * Someone walking the aisle (p: where their own way has them now), stepped round whoever's near ahead of them (`obs`,
  * as { x, y }): they ease off their way toward the nearest place in the aisle that clears everyone near by ROUND.gap,
- * and back once they're past. `waiting`: their clock is stopped (they'd walk into her), so they only step aside. Their
- * feet step with the ground they cover.
+ * and back once they're past. `waiting`: their clock is stopped (they'd walk into her), so they only step aside.
+ * `front`: they're waiting for a conversation to finish, so they step forward to the front of the aisle (LANE[1]),
+ * unless someone's standing there, and back to their way once they walk on. Their feet step with the ground they cover.
  */
-function goRound(p, obs, dt, waiting) {
+function goRound(p, obs, dt, waiting, front = false) {
   const st = (aside[p.id] ??= { off: 0, dist: 0, x: p.x, y: p.y, gait: p.gait });
   const go = p.gait === 'walk' ? Math.sign(Math.round(Math.sin((p.dir * Math.PI) / 4) * 4)) : 0;
   let want = 0;
-  if (go) {
+  if (go && front) {
+    want = st.off;
+    if (obs.every((o) => Math.abs(o.x - p.x) >= 16 || Math.abs(o.y - LANE[1]) >= ROUND.gap)) want = LANE[1] - p.y;
+  } else if (go) {
     want = st.off;
     const now = p.y + st.off;
     // Someone going their way is stepped round from as far behind as ahead: they're coming up to overtake.
@@ -261,7 +275,7 @@ function goRound(p, obs, dt, waiting) {
 /** How tall someone is over their feet, for the bubble: kneeling and sitting people are shorter. */
 const HEIGHT = { kneel: 41, sit: 44, lean: 46 };
 
-runScene({
+export const scene = {
   name: 'THE PITS',
   label: 'A row of eight team pits along the back of the event hall, the strategist in the aisle in front of them; the view follows her along the row',
   note: 'Push the stick a little to walk; the view follows her along the row. Stop by someone in the pits, at the SPARE PARTS counter or the PIT ADMIN desk and press A to talk. And walk, don\'t run: the safety advisor is watching. On a keyboard: arrow keys or WASD, Space or Enter to talk and read on, Esc to skip the cut scene. Shift runs, if you want to meet the safety advisor.',
@@ -330,14 +344,18 @@ runScene({
     const hard = (id) => (passer(id) && lastNadia?.still ? [me, lastNadia] : [me]);
     // The two in a conversation, if one's going on: her and whoever she's talking to (the safety advisor where she is).
     const talkers = s.talk ? [me, ...(s.talk.person ? [talkingTo(NADIA_ID) && lastNadia ? lastNadia : s.talk.person] : [])] : [];
-    const waiting = new Set();
+    // A passer-by waiting for a conversation (and not for her) steps forward out of its way (forTalk); whether they're
+    // near it is judged from their own lane, so stepping forward doesn't set them walking again.
+    const waiting = new Set(), forTalk = new Set();
     for (const id of MOVERS) {
       const p = at0[id], q = { ...p, y: p.y + offOf(id) };
+      const hit = () => hard(id).some((o) => blocks(q, o, passer(id) ? WAIT_PASSER : WAIT));
+      const talk = () => AISLE.includes(id) && talkers.some((o) => nearTalk(passer(id) ? p : q, o, id === NADIA_ID ? TALK_GAP_PATROL : TALK_GAP));
       if (id === NADIA_ID && (errand || talkingTo(NADIA_ID))) held[id] += dt;
-      else if (['walk', 'carry'].includes(p.gait)
-        && (hard(id).some((o) => blocks(q, o, passer(id) ? WAIT_PASSER : WAIT)) || (AISLE.includes(id) && talkers.some((o) => nearTalk(q, o, id === NADIA_ID ? TALK_GAP_PATROL : TALK_GAP))))) {
+      else if (['walk', 'carry'].includes(p.gait) && (hit() || talk())) {
         held[id] += dt;
         waiting.add(id);
+        if (passer(id) && !hit()) forTalk.add(id);
       } else if (passer(id) && p.gait === 'walk' && overtaking(q, me)) held[id] += dt * (1 - ROUND.slow);
     }
     const everyone = folk(crewT, { clocks: clocks() });
@@ -347,8 +365,10 @@ runScene({
     if (waiting.has(RUNNER)) Object.assign(runner, runner.gait === 'carry' ? { frame: 0 } : { gait: 'stand', frame: 0 });
 
     // The safety advisor on her patrol, going round her if she's in the way.
+    // While she's talking to her, she stays where she'd stepped to (her patrol and her steps round are held).
     const pn = now[NADIA_ID], patrolAt = [pn.x, pn.y];
     if (!errand && !talkingTo(NADIA_ID)) Object.assign(pn, goRound(pn, [me], dt, waiting.has(NADIA_ID)));
+    else if (!errand) pn.y = Math.round(pn.y + offOf(NADIA_ID));
 
     // No running in the pits.
     if (s.mode === 'free' && !s.talk && !errand && !herWalk && me.gait === 'run') {
@@ -417,7 +437,7 @@ runScene({
     // the first where they meet.
     const passed = [];
     for (const id of AISLE.filter((id) => id !== NADIA_ID)) {
-      Object.assign(now[id], goRound(now[id], [me, pn, ...passed], dt, waiting.has(id)));
+      Object.assign(now[id], goRound(now[id], [me, pn, ...passed], dt, waiting.has(id), forTalk.has(id)));
       passed.push(now[id]);
     }
 
@@ -431,7 +451,7 @@ runScene({
     else if (other?.gait === 'kneel') Object.assign(other, { frame: 0, dir: toward(other, me) });
     // Who's in her way: everyone at work or standing about, the aisle's walkers and the battery runner (who all wait or
     // go round before they'd touch her; if one ever ends up on top of her, move() lets her step out), and the corner of
-    // 8192's pit the runner works in.
+    // 1024's pit the runner works in.
     // Anyone leaning in takes up the floor under their head too, so she can't walk up head to head with them.
     solids = [...people.filter((p) => p.solid || MOVERS.includes(p.id)).map((p) => {
       const lean = p.gait === 'lean' ? Math.round(Math.sin((p.dir * Math.PI) / 4) * LEAN) : 0;
@@ -444,4 +464,4 @@ runScene({
       more: [...people.map((p) => ({ y: p.y, draw: () => drawFolk(g, view, p) })), s.player],
     });
   },
-});
+};

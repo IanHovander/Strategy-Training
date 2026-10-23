@@ -34,6 +34,11 @@
   </section>
   <p class="foot">The scene is in this folder: layout.js, place.js, people.js, cutscene.js, lines.js and scene.js. It runs on the shared stage.js (the controller, the camera, talking and the cut scene clock) and talk.js, and draws everyone with walker.js and cast.js, the robot in the shop with sprites.js and the colours and letters with pixel.js.</p>
 </div>
-<script type="module" src="./scene.js"></script>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
 </body>
 </html>

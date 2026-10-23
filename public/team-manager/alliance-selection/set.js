@@ -26,7 +26,7 @@ import { drawStands, drawWalkway } from '../bleachers.js';
 import { tones } from '../cast.js';
 import {
   WORLD, NEAR_TOP, SPOTS, SIGN_Y, SIGN_POST, SIGN_HALF, SIGN_TOP, MIC, MC_HOME, BAND, LINE_AREA, NEAR_GATE, WAIT, REPS_SIGN, BOARD, BARRIER_Y,
-  WALK_MAX_Y,
+  WALK_MAX_Y, ENDS, FRONT_FLOOR,
 } from './layout.js';
 
 // The arena's concrete and its speckle (field.js, bleachers.js), and field.js's steel.
@@ -289,9 +289,9 @@ export function drawSet(g, view, t, o = {}) {
 // or through anybody and she stops far enough in front of someone that their face clears the top of her head.
 const SIDE = 18;
 const REGIONS = [
-  { x0: SIDE, x1: WORLD.w - SIDE, y0: 147, y1: WALK_MAX_Y },
-  { x0: SIDE, x1: 128, y0: 70, y1: WALK_MAX_Y },
-  { x0: WORLD.w - 128, x1: WORLD.w - SIDE, y0: 70, y1: WALK_MAX_Y },
+  { x0: SIDE, x1: WORLD.w - SIDE, y0: FRONT_FLOOR, y1: WALK_MAX_Y },
+  { x0: SIDE, x1: ENDS, y0: 70, y1: WALK_MAX_Y },
+  { x0: WORLD.w - ENDS, x1: WORLD.w - SIDE, y0: 70, y1: WALK_MAX_Y },
   BAND,
   LINE_AREA,
   { x0: NEAR_GATE.x0 + 3, x1: NEAR_GATE.x1 - 3, y0: 138, y1: 149 },
@@ -320,7 +320,9 @@ const PROPS = [
   // The floor behind the backups and the queuer, between them and the near wall: anyone there would be hidden
   // behind them but for the top of her head.
   stop(222, 152, 48, 8),
-  stop(REPS_SIGN.x, REPS_SIGN.y - 1, 9, 3),
+  // The TEAM REPS sign: its post, and deep in front of it, like someone standing, so walking up to it from below she
+  // halts with her head under its panel, not covering its words; from either side she walks round it.
+  stop(REPS_SIGN.x, REPS_SIGN.y + 9, 9, 13),
   ...LEGS.map((x) => stop(x, BOARD.y - 1, 9, 3)),
   // The floor behind the display's screen, from the top of the floor past the end (row 70) to a step in front of its
   // legs, so she stands in front of the screen, never in among its legs.

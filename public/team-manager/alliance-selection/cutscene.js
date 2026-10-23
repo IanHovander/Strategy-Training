@@ -3,16 +3,17 @@
 // to 8, then tilts down to the team reps waiting their turn in front of the field, the strategist at the front corner by the gate with her whiteboard, 5026's
 // rep, ranked eleventh. MC Robin skates in along the front of the crowd in her pink blazer, through the gate and up to
 // the mic, and lands it with a spin. She welcomes everyone, thanks the volunteers and sponsors, gets a cheer for every
-// team, and explains the rules plainly while she skates the order the picks go in: the top eight are the captains,
-// round one picks one to eight (sign 1 to sign 8) and round two eight to one (back again), a captain can invite any
-// team ranked below them (even another captain), and a team that turns an invitation down can't be picked by anyone
-// else. Then she calls the eight captains out by seed, and each runs on through the gate to their sign as she does.
+// team, and explains the rules plainly, a page at a time, while she skates the order the picks go in: the top eight are
+// the captains, round one picks one to eight (sign 1 to sign 8) and round two eight to one (back again), a captain can
+// invite any team ranked below them (even another captain), and a team that turns an invitation down can't be picked by
+// anyone else. Then she calls the eight captains out by seed, and each runs on through the gate to their sign as she
+// does.
 // Then two picks, the way FIRST runs them. Alliance One's captain walks to the mic ("you are on the clock", and a cut to
 // the display past the red end as its clock starts counting down from 45) and invites 2468, a captain; Robin skates over to 2468 with "would you prefer to
 // join or form your own alliance?", 2468 accepts, and every captain below moves up a spot while 9152, ranked ninth,
 // runs on as the new number eight. Alliance Two's captain invites 5026: Robin skates out through the gate, round in
-// front of her to the open floor on her right and holds out the mic; she steps out to it, accepts, and runs onto the
-// field to stand at her captain's left. A four-step fade skips to the
+// front of her to the open floor on her right and holds out the mic; she steps out to it, accepts, Robin congratulates
+// her, and she runs onto the field to stand at her captain's left. A four-step fade skips to the
 // end of round two: eight alliances of three across the field, the display full with the backups, the whole arena on
 // its feet for every team, and a send-off that ends on the first frame of walking about.
 //
@@ -25,13 +26,16 @@
 // the distance covered; Robin rolling at SKATE_SPEED, posing once she stops), and holds the end of it for as long as
 // the words take to read. Paths keep clear of everyone standing: Robin and anyone running to the right of the mic pass
 // in front of it (FRONT, 8 pixels nearer than the mic's foot), anyone walking past the captains does it a step in front
-// of their line (PASS), and nobody walks through anybody: Sam steps aside from the gate while 9152's rep runs through
-// it, and again while Robin and the strategist go through it. While a page of words is up, the dialog box covers the
-// bottom of the screen, so every shot with words keeps the faces in the top 88 rows: the shots along the line sit at
-// LINE_VIEW, low enough that the signs clear the top film bar, and the captains' run on opens lower, on the gate, while
-// Robin calls them out.
+// of their line (PASS), and nobody walks through anybody. Sam, the volunteer at the gate, stands in front of the near
+// wall with his head on the same rows as the legs of anyone on the field, so he keeps out from in front of where they
+// go: he steps aside from the gate while Robin skates in through it, steps back into the lane between the waiting reps
+// and her while the captains come out and the first picks are made, comes back to the gate's left while the camera is
+// on the mic, and goes off to the left of everyone's way while she runs on. While a page of words is up, the dialog box
+// covers the bottom of the screen, so every shot with words keeps the faces in the top 88 rows: the shots along the
+// line sit at LINE_VIEW, low enough that the signs clear the top film bar, and the captains' run on opens lower, on the
+// gate, while Robin calls them out.
 //
-//   makeCutscene({ drawWorld, lookOf, crowd })   the 22 beats, in stage.js's form ({ dur, draw(g, t, c), say })
+//   makeCutscene({ drawWorld, lookOf, crowd })   the 26 beats, in stage.js's form ({ dur, draw(g, t, c), say })
 // drawWorld(g, view, t, frame) is the scene's: the whole world at 1x into g, seen from view = { x, y } (whole pixels),
 // t the cut scene's clock, and frame = { people: [{ x, y, dir, gait, dist, look, skater }], cheer: 0 to 1 or undefined,
 // board: { rows: eight [captain, pick, pick] ('' for nobody yet), hot: 0-7 or null, clock: seconds or null, backups:
@@ -46,8 +50,8 @@ import { placeCard, bars, cover, along } from '../stage.js';
 import { HERO_NAME } from '../cast.js';
 import {
   WORLD, SPOTS, LINE_Y, capSpot, pickSpot, AT_MIC, MC_HOME, GATE_OUT, GATE_IN, waitSlot, PRIYA_AT, SAM_AT, SAM_ASIDE,
-  REF_AT, START, backupSpot, DECLINED_AT, SKATE_SPEED, MC_NAME, repTag, FIRST_CAPTAINS, ALLIANCES, DECLINED, BACKUPS, WAITING,
-  SIGN_POST, walkView,
+  SAM_LANE, SAM_FAR, REF_AT, START, backupSpot, DECLINED_AT, SKATE_SPEED, MC_NAME, repTag, FIRST_CAPTAINS, ALLIANCES, DECLINED,
+  BACKUPS, WAITING, SIGN_POST, walkView,
 } from './layout.js';
 
 // ---- The camera ----
@@ -63,10 +67,12 @@ const view = (x, y, top = 0) => ({ x: Math.round(clamp(x, 0, MAX.x)), y: Math.ro
 /** An eased pan from one view to another, k from 0 to 1 (from or to a view above the world, if either is). */
 const pan = (a, b, k) => view(lerp(a.x, b.x, easeInOut(clamp(k, 0, 1))), lerp(a.y, b.y, easeInOut(clamp(k, 0, 1))), ABOVE);
 /**
- * The shots along the line: the signs' panels well clear of the top film bar, the captains' feet at row 85 and Robin's
- * at 92, the waiting reps' heads along the bottom; with words up, every face stays above the dialog box.
+ * The shots along the line: the signs' panels clear of the top film bar (from row 15), the first row under the bar
+ * below the shoes of the stands' front row (they reach row 49), the captains' feet at row 80 and Robin's at 87, and the
+ * waiting reps along the bottom, the strategist's shoulders under her hair; with words up, every face stays above the
+ * dialog box.
  */
-const LINE_VIEW = 35;
+const LINE_VIEW = 40;
 /**
  * The arena with the line full: the stands on their feet over all eight alliances, the faces along the line just
  * clear of the dialog box (seen from 12 rows higher, the box would cover them).
@@ -95,10 +101,10 @@ const HER_SHOT = { focus: { x: waitSlot(0).x - 41, y: 130 }, zoom: 2 };
 /**
  * The audience display past the red end, its header just under the film bar: as far right as the view goes without
  * cutting anyone at its left edge, Alliance Eight whole there (Alliance Seven's right pick ends at x 513). From the top
- * of the world, so the front row of the stands above it shows its faces under the bar, and the backups' last line still
- * ends above the dialog box.
+ * of the world, so the front row of the stands above it shows its faces under the bar. With the backups on it and the
+ * words up, a little lower (BACKUPS_SHOT), so their last line ends 4 rows above the dialog box, not on its border.
  */
-const BOARD_SHOT = view(514, 0);
+const BOARD_SHOT = view(514, 0), BACKUPS_SHOT = view(514, 4);
 /** Walking about starts here: the walkabout's own camera on her where she stands (layout.js walkView). */
 const WALK_VIEW = view(walkView(START.x, START.y).x, walkView(START.x, START.y).y);
 /**
@@ -282,6 +288,8 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   const ENTRY = [[530, 194], [470, 192], [380, 190], [372, 180], [372, 160], pt(GATE_OUT), pt(GATE_IN), [372, 122], [400, 121], HOME];
   const beats = [];
   let places = opening(ENTRY);
+  /** Her place in the waiting crowd: the front corner by the gate. */
+  const HER = slotOf('5026');
 
   /**
    * One beat: from where the last left everyone, `moves(t)` says where whoever moves is t seconds in; shot(t) the
@@ -321,11 +329,17 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   // 1. open: close on the crowd as it fades in; a cut to the arena, the stands over the empty line of signs, held on
   // signs 1 to 6 and panned along to 3 to 8; then down to the reps waiting in front of the field, the place card
   // sliding in as the camera settles on them, over the cargo ship and the empty floor (not over the crowd or the
-  // signs), and out at the top left as Robin comes in from the right.
+  // signs), and out at the top left as Robin comes in from the right. Along the line, the bottom film bar is at row 120,
+  // so Sam and she stand a few steps nearer than their places till the camera tilts down (their heads behind the bar,
+  // not poking up out of it onto the empty field), and walk up to them as it does.
   const LINE_AT = 1.4, TILT_AT = 3.6, CARD_AT = 4.6;
   const card = (T) => placeCard(T - CARD_AT, 'ALLIANCE SELECTION', 'SATURDAY 12:40 PM'); // font 3 has no comma
   beat({
     name: 'open', dur: 5.5,
+    moves: (t) => ({
+      sam: trip([[370, 168], pt(SAM_AT)], t, TILT_AT, 'walk', SAM_AT.dir, SAM_AT.dir),
+      '5026': trip([[HER.x, HER.y + 4], [HER.x, HER.y]], t, TILT_AT + 0.3, 'walk', 4, 4),
+    }),
     shot: (t) => (t < LINE_AT ? standsDrift(t / LINE_AT) : at1x(t < TILT_AT
       ? pan(LINE_FROM, LINE_TO, seg(t, LINE_AT + 0.3, TILT_AT - 0.1))
       : pan(LINE_TO, REPS_SHOT, seg(t, TILT_AT, 5.4)))),
@@ -396,9 +410,8 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   });
 
   // 5. herTurn: back to the reps; she turns to you, board in hand.
-  const HER = slotOf('5026');
   beat({
-    name: 'herTurn', dur: 2.5,
+    name: 'herTurn', dur: 2.0,
     moves: (t) => ({ '5026': still(HER.x, HER.y, turn(4, 0, t - 0.3)), mc: still(ASIDE[0], ASIDE[1], 0, 'stand') }),
     shot: () => HER_SHOT,
     cheer: (t) => lerp(1, 0.15, seg(t, 0, 0.6)),
@@ -407,40 +420,44 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     ), 0.3),
   });
 
-  // 6. rules: Robin skates out to sign 1 as she says who the captains are, then skates the order the picks go in, timed
-  // to the pages as they turn by themselves: sign 1 to sign 8 as "round one, they pick one to eight" comes up, and once
-  // she's there back from 8 to 1 for "round two goes back, eight to one"; then home beside the mic, before the last
-  // page. The camera follows her.
-  const RULES = pages(
-    ["HERE'S HOW IT WORKS: OUR TOP EIGHT", 'SEEDS ARE THE ALLIANCE CAPTAINS.'],
-    ['ROUND ONE, THEY PICK ONE TO EIGHT.', 'ROUND TWO GOES BACK, EIGHT TO ONE.'],
-    ['A CAPTAIN CAN INVITE ANY TEAM RANKED', 'BELOW THEM. EVEN ANOTHER CAPTAIN!'],
-    ['TURN AN INVITE DOWN AND NOBODY ELSE', 'CAN PICK YOU. AND WATCH THE CLOCK!'],
-  );
-  const RULES_AT = 0.3;
+  // 6 to 10. rules: Robin explains the rules a page at a time, skating the order the picks go in under the page that
+  // says it. Each page is a beat of its own, so however fast the pages are read, each skate goes with its own words:
+  // out to sign 1 as she says who the captains are (rules), sign 1 to sign 8 for round one (roundOne), back from 8 to 1
+  // for round two (roundTwo), home beside the mic as she says a captain can invite any team ranked below them
+  // (anyBelow), and the last rule from there (turnDown). The camera follows her. After the first, each skate sets off
+  // as far into its beat as follow() looks ahead, so the view runs on from one beat into the next without a jump, and
+  // each beat lasts till the view has settled after she stops; their words come up straight away, so the box stays up.
+  // As she sets off, Sam steps back from the gate into the lane between the waiting reps and her (SAM_LANE), out of
+  // the way of the captains about to come through it and of everyone walking the front of the line from now on.
   const SIGN1 = [SPOTS[0], 122], SIGN8 = [SPOTS[7], 122];
-  const R1 = [ASIDE, [HOME[0] + 4, 121], SIGN1], R2 = [SIGN1, SIGN8], R3 = [SIGN8, SIGN1], R4 = [SIGN1, [HOME[0] + 4, 121], HOME];
-  /** When she sets off on each: R2 as the round order's page starts typing, R3 and R4 a moment after she pulls up. */
-  const RT = [0.6, pageAt(RULES, RULES_AT, 1)];
-  RT.push(RT[1] + timeOf(R2, SKATE_SPEED) + 0.4);
-  RT.push(RT[2] + timeOf(R3, SKATE_SPEED) + 0.3);
-  const RULES_HOME = RT[3] + timeOf(R4, SKATE_SPEED);
-  if (RULES_HOME > pageAt(RULES, RULES_AT, 3)) throw new Error('cutscene.js: Robin should be home before the last rule');
-  const rulesMc = (t) => {
-    if (t < RT[1]) return glide(R1, t, RT[0], 'emcee', 0, 'emcee', 0);
-    if (t < RT[2]) return glide(R2, t, RT[1], 'emcee', 0, 'emcee', 0);
-    if (t < RT[3]) return glide(R3, t, RT[2], 'emcee', 0, 'emcee', 0);
-    return glide(R4, t, RT[3], 'emcee', HOME_DIR, 'emcee', 0);
-  };
-  beat({
-    // As long as her skate (so ?at= shows all of it and A can't cut it short); the last page holds on her at home.
-    name: 'rules', dur: RULES_HOME + 0.6,
-    // She looks back at the field while Robin explains.
-    moves: (t) => ({ mc: rulesMc(t), '5026': still(HER.x, HER.y, 4) }),
-    shot: (t) => at1x(view(follow((s) => rulesMc(s).x, t, 1.2, 0.7), LINE_VIEW)),
-    cheer: () => 0.1,
-    say: says('mc', RULES, RULES_AT),
-  });
+  /** How long follow() takes to come to rest once she stops, and how far ahead it looks. */
+  const SETTLE = 0.5, LOOK = 0.7;
+  const RULES = [
+    { name: 'rules', go: 0.6, at: 0.3, path: [ASIDE, [HOME[0] + 4, 121], SIGN1],
+      page: ["HERE'S HOW IT WORKS: OUR TOP EIGHT", 'SEEDS ARE THE ALLIANCE CAPTAINS.'] },
+    { name: 'roundOne', path: [SIGN1, SIGN8], page: ['ROUND ONE PICKS IN ORDER,', 'ONE TO EIGHT.'] },
+    { name: 'roundTwo', path: [SIGN8, SIGN1], page: ['ROUND TWO GOES BACK,', 'EIGHT TO ONE.'] },
+    { name: 'anyBelow', path: [SIGN1, [HOME[0] + 4, 121], HOME], face: HOME_DIR,
+      page: ['A CAPTAIN CAN INVITE ANY TEAM RANKED', 'BELOW THEM. EVEN ANOTHER CAPTAIN!'] },
+    { name: 'turnDown', path: null, page: ['TURN AN INVITE DOWN AND NOBODY ELSE', 'CAN PICK YOU. AND WATCH THE CLOCK!'] },
+  ];
+  const samLane = [pt(SAM_AT), [SAM_LANE.x, 156], pt(SAM_LANE)];
+  for (const r of RULES) {
+    const go = r.go ?? LOOK;
+    const mcAt = (t) => (r.path ? glide(r.path, t, go, 'emcee', r.face ?? 0, 'emcee', 0) : still(HOME[0], HOME[1], HOME_DIR, 'emcee'));
+    beat({
+      name: r.name,
+      dur: r.path ? go + timeOf(r.path, SKATE_SPEED) + SETTLE : 1.0,
+      // She looks back at the field while Robin explains.
+      moves: (t) => ({
+        mc: mcAt(t), '5026': still(HER.x, HER.y, 4),
+        ...(r === RULES[0] ? { sam: trip(samLane, t, 0, 'walk', SAM_LANE.dir) } : {}),
+      }),
+      shot: (t) => at1x(view(follow((u) => mcAt(u).x, t, 1.2, LOOK), LINE_VIEW)),
+      cheer: () => 0.1,
+      say: says('mc', pages(r.page), r.at ?? 0),
+    });
+  }
 
   // 7. captains: Robin calls the top eight out one by one, by seed, and each runs on through the gate to their sign as
   // she calls them, in single file: setting off so as to get there as their number types, but never sooner than

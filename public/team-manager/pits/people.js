@@ -14,7 +14,7 @@
 // Someone who already wears glasses (the 'glasses' head) keeps their own pair. Every head in every direction reads with
 // that one rule: the five cast.js templates, the strategist's own heads (walker.js) and the teammate's (teammate.js).
 //
-// Who's where (feet in world pixels; set.js has the hall): the volunteer at the SPARE PARTS counter; 8192 (Bit Shift)
+// Who's where (feet in world pixels; set.js has the hall): the volunteer at the SPARE PARTS counter; 1024 (Bit Shift)
 // with a student kneeling at the robot with a drill and a battery runner swapping batteries; 7777's pit minded by a
 // student while its robot plays match 42; 4000 (Gearheads) with two kneeling at their elevator and one at the TV;
 // 6060 (Robo Ravens) with their programmer at the laptop, a student leaning on the robot and a judge watching; 5026's
@@ -27,7 +27,7 @@
 //
 //   goggles(look)        the same look in safety glasses, id + '-sg'
 //   LOOKS                every look in the scene, all in glasses (the cut scene's 5026 crew too)
-//   PEOPLE               who you can talk to: { id, name, x, y, dir, gait, look, reachY, faceGait?, solid, at?(t) }
+//   PEOPLE               who you can talk to: { id, name, x, y, dir, gait, look, reach?, reachY, faceGait?, solid, at?(t) }
 //   CREW                 the rest of the crews, at work in the background
 //   folk(t, o)           everyone at t as poses { id, x, y, dir, gait, frame, look, solid }
 //   drawFolk(g, view, p) one of them and their shadow, at the view's scale
@@ -175,15 +175,15 @@ const BARE = {
   // carries her whiteboard. The blazer is mid grey so she reads against the navy drape and the battery carts.
   okafor: { ...person('okafor', BLAZER, null, 'bun', 'deep', 'grey', { ...KHAKI, hem: tones.black, board: CLIPBOARD }), sleeves: 'long', board: true },
   // The other teams' students.
-  ruth: person('ruth', ...team(8192), 'bob', 'light', 'auburn'),
+  ruth: person('ruth', ...team(1024), 'bob', 'light', 'auburn'),
   kai: person('kai', ...team(7777), 'cap', 'deep', 'black', {}, cap(['#ffc61a', '#ffe07a', '#a3650a'])),
   davi: person('davi', ...team(4000), 'curls', 'brown', 'brown'),
   lena: person('lena', ...team(6060), 'glasses', 'fair', 'chestnut'),
   oscar: person('oscar', ...team(1357), 'curls', 'tan', 'black'),
   // Their crews, faces from the crowd's rotation chosen so nobody's twin works next to them; 4000's cap in team teal.
-  // 8192's battery runner wears the team's white tee (its print in the team's blue), so the black battery she carries
+  // 1024's battery runner wears the team's white tee (its print in the team's blue), so the black battery she carries
   // shows against it from every side, as it wouldn't against the navy hoodie.
-  runner8192: crowdFace('runner8192', 0, tones.shirtWhite, TEAMS[8192].print),
+  runner1024: crowdFace('runner1024', 0, tones.shirtWhite, TEAMS[1024].print),
   gear2: crowdFace('gear2', 2, ...team(4000), cap([TEAL[1], TEAL[2], TEAL[0]])),
   gear3: crowdFace('gear3', 3, ...team(4000)),
   raven2: crowdFace('raven2', 6, ...team(6060)),
@@ -208,7 +208,7 @@ const kneeling = (id) => (t) => {
 /** Leaning on a robot or a laptop: the two frames in turn, slowly. */
 const leaning = (id) => (t) => ({ frame: Math.floor(t * 1.5 + phaseOf(id) * 2) % 2 });
 
-// 8192's battery runner, on a 12 second loop: at the battery cart swapping a battery (leaning in, facing the back), then
+// 1024's battery runner, on a 12 second loop: at the battery cart swapping a battery (leaning in, facing the back), then
 // out to the front of the pit with the fresh one in both hands, along in front of the robot's cart and back in at its
 // right end (two seconds of carrying, out where the aisle sees it), leaning in to put it in the robot, and straight back
 // to the cart to stand and watch.
@@ -280,24 +280,28 @@ export const NADIA_ID = 'nadia';
  * an away board, the side away from it (out in the aisle if a divider's in the way); Ms. Kowalski has the divider on
  * one side and the board on the other, so she gets the board's corner. Behind the desk she stands at its plain end.
  * reachY: how far in depth she can talk from (12, or more for someone set back: Bea and Tomas behind the counter and
- * the desk, and Ms. Kowalski, so that anywhere she can stand in front of her offers the talk).
+ * the desk, and Ms. Kowalski, so that anywhere she can stand in front of her offers the talk). reach: how far across
+ * (scene.js: 17 for anyone standing still, whom she stops 14 short of, or 14). The teammate reaches a little further
+ * both ways, to where the cut scene leaves the strategist, so the walking part starts with TALK TO TEAMMATE; and the
+ * safety advisor 16 deep, more than the 13 she steps round the strategist by (scene.js ROUND.gap), so she can be
+ * talked to as she goes by, not only while she stands at the ends of her patrol.
  */
 export const PEOPLE = [
   { id: 'bea', name: 'BEA, SPARE PARTS', x: 48, y: 74, dir: 0, gait: 'stand', look: LOOKS.bea, reachY: 14, solid: true },
-  { id: 'ruth', name: 'RUTH, 8192', x: 189, y: 90, dir: 2, gait: 'kneel', look: LOOKS.ruth, reachY: 12, aside: 20, solid: true, at: kneeling('ruth') },
+  { id: 'ruth', name: 'RUTH, 1024', x: 189, y: 90, dir: 2, gait: 'kneel', look: LOOKS.ruth, reachY: 12, aside: 20, solid: true, at: kneeling('ruth') },
   { id: 'kai', name: 'KAI, 7777', x: 314, y: 86, dir: 7, gait: 'stand', look: LOOKS.kai, reachY: 12, side: 1, solid: true },
   { id: 'davi', name: 'DAVI, 4000', x: 354, y: 97, dir: 2, gait: 'kneel', look: LOOKS.davi, reachY: 12, aside: 20, solid: true, at: kneeling('davi') },
   { id: 'lena', name: 'LENA, 6060 PROGRAMMER', x: 523, y: 82, dir: 2, gait: 'lean', look: LOOKS.lena, reachY: 12, solid: true, at: leaning('lena') },
   { id: 'okafor', name: 'MS. OKAFOR, JUDGE', x: 508, y: 97, dir: 2, gait: 'stand', look: LOOKS.okafor, reachY: 12, solid: true },
-  { id: 'teammate', name: TEAMMATE_NAME, x: 588, y: 92, dir: 0, gait: 'stand', look: LOOKS.teammate, reachY: 12, side: -1, solid: true },
+  { id: 'teammate', name: TEAMMATE_NAME, x: 588, y: 92, dir: 0, gait: 'stand', look: LOOKS.teammate, reach: 18, reachY: 17, side: -1, solid: true },
   { id: 'kowalski', name: 'MS. KOWALSKI, 5026 MENTOR', x: 648, y: 88, dir: 7, gait: 'stand', look: LOOKS.kowalski, reachY: 13, side: -1, solid: true },
   { id: 'oscar', name: 'OSCAR, 1357', x: 722, y: 92, dir: 7, gait: 'stand', look: LOOKS.oscar, reachY: 12, side: 1, solid: true },
   { id: 'tomas', name: 'TOMAS, PIT ADMIN', x: 776, y: 77, dir: 0, gait: 'sit', faceGait: 'sit', look: LOOKS.tomas, reachY: 14, aside: 16, side: -1, solid: true },
-  { id: NADIA_ID, name: 'NADIA, SAFETY ADVISOR', x: 104, y: 108, dir: 0, gait: 'stand', look: LOOKS.nadia, reachY: 12, aside: 20, solid: false, at: patrol },
+  { id: NADIA_ID, name: 'NADIA, SAFETY ADVISOR', x: 104, y: 108, dir: 0, gait: 'stand', look: LOOKS.nadia, reachY: 16, aside: 20, solid: false, at: patrol },
 ];
 /** The rest of the crews, busy in the background. Nobody here talks. */
 export const CREW = [
-  { id: 'runner8192', x: RUN_CART[0], y: RUN_CART[1], dir: 4, gait: 'lean', look: LOOKS.runner8192, solid: false, at: runner },
+  { id: 'runner1024', x: RUN_CART[0], y: RUN_CART[1], dir: 4, gait: 'lean', look: LOOKS.runner1024, solid: false, at: runner },
   { id: 'gear2', x: 403, y: 90, dir: 6, gait: 'kneel', look: LOOKS.gear2, solid: true, at: kneeling('gear2') },
   // 4000's TV watcher stands against the side drape in front of the tool chest, side on, so her face and the TV beside it
   // show, a head's width from Davi's (he kneels at the robot's front corner, in front of and below her).

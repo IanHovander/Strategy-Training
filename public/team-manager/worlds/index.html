@@ -35,6 +35,11 @@
   </section>
   <p class="foot">The art is the 2019 game, Deep Space; the eight divisions are the Championship's since 2023 (in 2019 Houston had six). The fields are field.js, the crowd bleachers.js and the people walker.js, all shared with the arena; this scene's own modules are in the worlds folder. The controller, the camera and the talking are stage.js, shared by every scene.</p>
 </div>
-<script type="module" src="./scene.js"></script>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
 </body>
 </html>

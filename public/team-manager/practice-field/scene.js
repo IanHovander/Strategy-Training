@@ -29,7 +29,7 @@
 // page's own clock, so the scene keeps the difference between that and the cut scene's last frame and adds it.
 
 import { W, H, useContext, camera, screen, clamp, lerp, seg, easeInOut } from '../pixel.js';
-import { runScene, drawWithShadow, dirToward } from '../stage.js';
+import { drawWithShadow, dirToward } from '../stage.js';
 import { drawBubble, conversation } from '../talk.js';
 import { HERO_LOOK } from '../walker.js';
 import { ROOM, FLOOR, SPOTS, START, STATION_WALL, CARPET } from './layout.js';
@@ -211,7 +211,7 @@ let shift = 0; // walking's world time is the page's clock plus this
 let robotFrom = null; // and the robot's clock is world time plus this, once the cut scene has handed over
 let freeAt = null; // when it did, on the page's clock
 
-runScene({
+export const scene = {
   ...SCENE_TEXT,
   world: { w: ROOM.w, h: ROOM.h },
   start: START,
@@ -259,4 +259,4 @@ runScene({
       ...(robotFrom != null && { robotU: robotFrom + T, enabled: true }),
     });
   },
-});
+};
