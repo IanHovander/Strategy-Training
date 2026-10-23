@@ -62,14 +62,18 @@ colour, so it can follow the new team colour or stay as a UI accent.
 
 | File | Where | What's 5026-specific | Change |
 | --- | --- | --- | --- |
-| `cutscene.js` | `SEEDS` ~47 and comments | '5026' as seed 4, alliance captain; it's also the key that leaves sign 4 to Riley and her | The new number (swap any seed that equals it). |
+| `cutscene.js` | `SEEDS` ~50 and comments | '5026' as seed 4, alliance captain; it's also the key that leaves sign 4 empty for her and puts 5026 on the audience display | The new number (swap any seed, or any of `PICKS`, that equals it). |
+| `cutscene.js` | call ~346 | MC Robin calls her up: "5026, COME ON UP!" | The new number. |
 | `cocaptain.js` | `COCAPTAIN_LOOK` ~79-90 | Riley, the co-captain, in the team's red pullover hoodie (`MERCH.hoodie`) with the panther badge and 5026 (`TEAMMATE_LOOK.badge`) | Follows `cast.js` and `teammate.js` once those change; nothing to do here. |
 | `handoff.js` | `drawHandoff()` ~112-115 | Riley's red sleeves in the insert (`COCAPTAIN_LOOK.pal.shirt`) | Follows `cocaptain.js`. |
-| `cutscene.js` | `rileySays` ~156, `herSays` ~157 | Riley's dark red name tag (`C.red0`) and hers (`C.red1`) | The team colour, or keep as a UI accent. |
-| `cutscene.js` | takeHim ~314 | Norbert the mascot handed over: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2009." | The new mascot or lucky charm, and its history. |
+| `cutscene.js` | `rileySays` ~172, `herSays` ~173 | Riley's dark red name tag (`C.red0`) and hers (`C.red1`) | The team colour, or keep as a UI accent. |
+| `cutscene.js` | takeHim ~307 | Norbert the mascot handed over: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2014." 2014 is the year 5026 started | The new mascot or lucky charm, and the year the new team started. |
 | `norbert-held.js` | `ROWS`, `PAL` ~23-43; `drawHud()` ~68 | Norbert drawn 12x14 for someone to hold, with his 26 ear; the corner with Norbert and his voltage | Redraw as the new mascot (with `norbert.js`). |
 | `handoff.js` | header; the glint ~109 | The 26 ear glinting as he's handed over | Follows `norbert.js`; reword. |
-| `index.html` | intro ~22; shots ~36-38; "How it's made" ~55-56 | Norbert, "the team's red hoodie with the panther badge", the 26 ear | Update. |
+| `index.html` | intro and "The shots"; "How it's made" | Norbert, "SINCE 2014", "5026, COME ON UP!", "the team's red hoodie with the panther badge", the 26 ear | Update. |
+| `teams.js` | `OURS` ~20 | '5026' on the scouting tablet: her robot's pinned row and "5026 RESPECTFULLY INVITES TEAM ..." | The new number. The other teams (7461, 6834) are made up; keep them made up. |
+| `tablet.js` | `pinned()` ~145-150 | Her robot's row: a team-red stripe (`C.red1`) and YOUR ROBOT in pale red (`C.red3`) | The team colour, or keep as a UI accent. |
+| `pick.js` | `drawPickScreen()` ~130-151 | Norbert's 26 ear glowing in the corner as the pick rewinds (`drawHud({ glow })`), and pulsing on a wrong pick's bet log | Follows `norbert.js` and `norbert-held.js`. |
 
 ### Team meeting (`public/team-manager/team-meeting/`)
 
@@ -206,3 +210,4 @@ These build the portraits and sprites in `public/team-manager/`; change them and
 | --- | --- | --- | --- |
 | `docs/blue-banner-design.md` | section 3, "The device and the clues" | Norbert's label "Property of 26, Class of 2015": the team started in 2014, so its first class graduated in 2015 | The new team's first graduating class, and its mascot. |
 | `docs/blue-banner-design.md` | section 5, "Building the opening" (the handoff) | "He's been to every event since 2014" | The year the new team started. |
+| `docs/blue-banner-design.md` | section 5, beat 1 (the selection puzzle) | "Your robot, 5026" in the tablet's table; Norbert's 26 ear glowing on the rewind | The new number and mascot. |
