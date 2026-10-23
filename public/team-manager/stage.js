@@ -35,6 +35,11 @@
 //   status(s)             the phone's status line under her name, if not STANDING, WALKING N and so on
 //   act(s), actLabel(s)   A when nobody's in reach, for a scene where A does something else (the opening's pick: A
 //                         picks a card), and what the phone's A button says for it then
+//   pointer(type, x, y, s)
+//                         a tap or a drag on the screen, for a scene with things on it to press or drag (the opening's
+//                         tablet, the van's seats): type 'down', then 'move' and 'up' if it took the 'down'; (x, y) in
+//                         screen pixels (0-255, 0-143). Return true from 'down' to take it, and the stage leaves it be.
+//   spriteOf(p)           where p is drawn, if not at their feet { x, y } (someone seated in the stands), for taps
 //   stick: false          in play.html, no stick on the screen: for a card with nobody to steer
 //   exit: { x, y0, y1, label, sign }
 //                         the way out, on the right (every scene is entered on the left and left on the right): once
@@ -64,8 +69,17 @@
 // scene at beat N; ?play skips it; ?x=..&y=..&dir=.. start her somewhere else.
 //
 // runScene(scene, { layout: 'full', root, onLeave, exitLabel, nextLabel, params }) is the game itself (play.html): the
-// screen fills the window, a tap anywhere on it is A, and the stick is a dot in a dashed ring in the bottom right corner
-// (WASD or the arrow keys on a keyboard). onLeave is called once she's left (or NEXT SCENE was pressed) and the screen is
+// screen fills the window and the stick is a dot in a dashed ring in the bottom right corner (WASD or the arrow keys on a
+// keyboard).
+//
+// Every spot on the screen can be tapped (or clicked), on either layout. A tap goes first to the scene's pointer(), if it
+// takes it; then, while she's free to walk: on someone, she walks over and talks to them; on the way out's arrow, she
+// heads out; anywhere else on the floor, she walks there. In a cut scene, a conversation or a scene with no walking, a
+// tap is A. Off the picture (the bars beside it), a tap is A.
+//
+// onStage(fn) hears what happens, for the sound (sound.js): fn(type, detail, s) with type 'scene', 'beat', 'free',
+// 'frame' (every frame), 'a', 'page', 'talk', 'talked', 'step' (each footfall: detail.gait), 'leave', 'gone', 'skip',
+// 'tap'. onLeave is called once she's left (or NEXT SCENE was pressed) and the screen is
 // black; s.stop() ends the scene so the next can have the page.
 
 import { W, H, C, useContext, screen, fill, text, measure, withAlpha, stepped, clamp, lerp, seg, easeOut, easeIn } from './pixel.js';
@@ -208,6 +222,13 @@ const FADE_IN = 0.5, FADE_OUT = 0.4;
 /** In the game: whether she's being steered from a keyboard, which hides the stick (for the next scene too) until a touch. */
 let byKeys = false;
 
+/** Who's listening to what happens on the stage (the sound). onStage returns a function that stops listening. */
+const listeners = new Set();
+export function onStage(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
 /** Put a scene on the page and run it. Returns its state (also window.stage). */
 export function runScene(scene, opts = {}) {
   const { layout = 'phone', onLeave = null, exitLabel, nextLabel = 'NEXT SCENE', params = new URLSearchParams(location.search) } = opts;
@@ -270,13 +291,16 @@ export function runScene(scene, opts = {}) {
     },
   };
   window.stage = s;
+  const emit = (type, detail) => listeners.forEach((fn) => fn(type, detail, s));
   scene.setup?.(s);
+  emit('scene', { scene, full });
 
   // ---- The cut scene ----
   function startBeat(i, now) {
     if (i >= beats.length) return endCut();
     const b = beats[i];
     s.mode = 'cut';
+    emit('beat', { i, beat: b });
     s.cut = {
       i, t0: now, read: !b.say,
       conv: b.say ? conversation(b.say.name, b.say.lines, now + (b.say.at ?? 0), { tag: b.say.tag }) : null,
@@ -286,7 +310,9 @@ export function runScene(scene, opts = {}) {
     s.mode = 'free';
     s.cut = null;
     s.talk = null;
+    s.goal = null;
     Object.assign(s.me, { x: start.x, y: start.y, dir: start.dir, gait: 'stand', dist: 0 });
+    emit('free');
     // She comes in along scene.enter, if it has one: the stick is hers once she's on her mark.
     if (scene.enter?.length && num('x') == null) {
       const path = [...scene.enter, [start.x, start.y]];
@@ -319,7 +345,9 @@ export function runScene(scene, opts = {}) {
   function leave() {
     const me = s.me, gait = me.gait === 'run' ? 'run' : 'walk';
     const x = me.x + clamp(s.view.x + W + 20 - me.x, 16, 48);
+    s.goal = null;
     walkBy([[me.x, me.y], [x, me.y]], gait, left, { hold: 0.15, out: true });
+    emit('leave');
   }
   /** NEXT SCENE: she stays put and the screen fades. */
   function moveOn() {
@@ -328,6 +356,7 @@ export function runScene(scene, opts = {}) {
   }
   /** Gone: on to whatever's next, or (on the scene's own page) back in at the start. */
   function left(now) {
+    emit('gone');
     if (onLeave) {
       s.stop();
       onLeave(s);
@@ -385,22 +414,45 @@ export function runScene(scene, opts = {}) {
     }
     return best;
   }
+  /** Where a tap sent her: { x, y, person } in the world. The stick takes over the moment it's pushed. For someone to
+   * talk to, she tries spots round them, nearest first, until they're in reach: beside, in front, behind. */
+  function goTo(x, y, person = null) {
+    const spots = person
+      ? [[0, 0], [-16, 0], [16, 0], [0, 12], [-14, 10], [14, 10], [0, -12], [-14, -10], [14, -10]]
+        .map(([dx, dy]) => [x + dx, y + dy])
+        .sort((a, b) => Math.hypot(a[0] - s.me.x, a[1] - s.me.y) - Math.hypot(b[0] - s.me.x, b[1] - s.me.y))
+      : [[x, y]];
+    const [gx, gy] = spots.shift();
+    s.goal = { x: gx, y: gy, person, spots, best: Infinity, since: performance.now() / 1000 };
+  }
   function walk(dt) {
-    const st = s.stick(), me = s.me;
-    if (s.talk || st.mag < 0.2) {
+    const st = s.stick(), me = s.me, now = performance.now() / 1000;
+    if (st.mag >= 0.2) s.goal = null;
+    const goal = s.goal, gx = goal ? goal.x - me.x : 0, gy = goal ? (goal.y - me.y) / DEPTH : 0, far = Math.hypot(gx, gy);
+    // On her way somewhere: there, or no nearer for half a second (something's in the way), she stops.
+    if (goal) {
+      if (far < goal.best - 0.5) [goal.best, goal.since] = [far, now];
+      if (far < 2 || now - goal.since > 0.5) {
+        const next = goal.person && goal.spots.shift();
+        if (next) Object.assign(goal, { x: next[0], y: next[1], best: Infinity, since: now });
+        else s.goal = null;
+      }
+    }
+    if (s.talk || (!s.goal && st.mag < 0.2)) {
       me.gait = 'stand';
       return;
     }
-    me.dir = dirToward(st.x, st.y);
-    me.gait = st.mag < 0.68 ? 'walk' : 'run';
-    const a = (me.dir * Math.PI) / 4, v = (scene.speed ?? SPEED)[me.gait] * dt;
+    const steer = s.goal ? { x: gx, y: gy } : st;
+    me.dir = dirToward(steer.x, steer.y);
+    me.gait = s.goal ? (far > 72 ? 'run' : 'walk') : st.mag < 0.68 ? 'walk' : 'run';
+    // A tap's walk goes straight at the spot; the stick's, along the eight ways she faces.
+    const a = s.goal ? Math.atan2(gx, gy) : (me.dir * Math.PI) / 4, v = Math.min((scene.speed ?? SPEED)[me.gait] * dt, s.goal ? far : Infinity);
     const step = (b) => scene.move(me.x, me.y, Math.sin(b) * v, Math.cos(b) * v * DEPTH);
     const ahead = ([x, y]) => (x - me.x) * Math.sin(a) + ((y - me.y) / DEPTH) * Math.cos(a);
     let [nx, ny] = step(a);
     // Stopped by a corner, a table or someone: an eighth of a turn either way, if that still takes her the way she's
     // pushed, so she slips round it instead of walking on the spot. Square against a wall, neither way gets her on.
     // Which way she faces while she slips round holds a moment after, so it doesn't flicker frame to frame.
-    const now = performance.now() / 1000;
     if (ahead([nx, ny]) < v * 0.25) {
       let best = 0, got = Math.max(ahead([nx, ny]), v * 0.4);
       for (const turn of [-1, 1]) {
@@ -410,9 +462,11 @@ export function runScene(scene, opts = {}) {
       if (best) me.slip = { turn: best, at: now, dir: me.dir };
     }
     if (me.slip?.dir === me.dir && now - me.slip.at < 0.15) me.dir = (me.dir + me.slip.turn + 8) % 8;
+    const before = frameOf(me);
     me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
     me.x = nx;
     me.y = ny;
+    if (frameOf(me) !== before && frameOf(me) % 4 === 0) emit('step', { gait: me.gait });
   }
   function follow() {
     const ww = scene.world?.w ?? W, wh = scene.world?.h ?? H;
@@ -432,6 +486,11 @@ export function runScene(scene, opts = {}) {
       if (e && !s.talk && s.me.x >= e.x && s.me.y >= e.y0 && s.me.y <= e.y1) leave();
     }
     s.near = s.talk || s.mode === 'auto' ? null : scene.reach ? scene.reach(s) : closest();
+    // Walked over to someone tapped: once they're the one in reach, she talks to them.
+    if (s.goal?.person && s.near === s.goal.person) {
+      s.goal = null;
+      pressA();
+    }
     const view = (s.view = s.mode === 'auto' && s.auto.out ? s.auto.view : scene.camera ? scene.camera(s) : follow());
     s.player = { y: s.me.y, draw: () => drawWithShadow(g, view, { ...s.me, look }) };
     useContext(g);
@@ -440,7 +499,7 @@ export function runScene(scene, opts = {}) {
     scene.draw(g, view, now, s);
     g.globalAlpha = 1;
     if (e && s.mode === 'free' && !s.talk) drawExit(e, view, now);
-    if (s.near) {
+    if (s.near && !s.talk) {
       if (scene.prompt) scene.prompt(g, view, s.near, now);
       else drawBubble(g, s.near.x - view.x + 11, s.near.y - view.y - 50, now);
     }
@@ -466,6 +525,7 @@ export function runScene(scene, opts = {}) {
     arrow(C.ink, 1);
     arrow(C.white, 0);
     const label = exitLabel ?? e.label;
+    s.exitAt = { x0: x - (label ? measure(label, { font: 3 }) : 10) - 4, x1: x + 6, y0: y - 16, y1: y + 8 };
     if (label && !onHer(x - measure(label, { font: 3 }) - 1, x + 2, y - 14, y - 6)) {
       text(label, x + 1, y - 13, { font: 3, color: C.white, outline: C.ink, align: 'right' });
     }
@@ -474,32 +534,66 @@ export function runScene(scene, opts = {}) {
   // ---- A, and skipping ----
   function pressA() {
     const now = performance.now() / 1000;
+    emit('a');
     if (s.mode === 'cut') {
       const c = s.cut, b = beats[c.i];
       if (c.conv && !c.read) {
         if (now < c.conv.start) c.conv.start = now; // the words come straight away
-        else if (!advance(c.conv, now)) {
+        else if (advance(c.conv, now)) emit('page');
+        else {
           c.read = true;
           if (now - c.t0 >= b.dur) startBeat(c.i + 1, now);
         }
       } else if (now - c.t0 >= (b.hold ?? 0)) startBeat(c.i + 1, now);
     } else if (s.talk) {
-      if (!advance(s.talk, now)) {
+      if (advance(s.talk, now)) emit('page');
+      else {
         const p = s.talk.person;
         s.talk = null;
         scene.onTalked?.(s, p);
+        emit('talked', { person: p });
       }
     } else if (s.near) {
       const p = s.near, at = scene.faceTo?.(p) ?? p;
       if (!scene.update) s.me.dir = dirToward(at.x - s.me.x, (at.y - s.me.y) / DEPTH);
       s.talk = conversation(p.name, p.lines, now, { person: p });
       s.near = null;
+      s.goal = null;
       scene.onTalk?.(s, p);
+      emit('talk', { person: p });
     } else scene.act?.(s);
   }
   const skip = () => {
-    if (s.mode === 'cut') endCut();
+    if (s.mode !== 'cut') return;
+    emit('skip');
+    endCut();
   };
+
+  // ---- Taps ----
+  /** Who's drawn at (x, y) in the world, nearest the front: a tap on them, or on their A bubble. */
+  function personAt(x, y) {
+    let best = null;
+    for (const p of scene.people ?? []) {
+      const at = scene.spriteOf?.(p) ?? p;
+      const tall = /sit|floor|kneel/.test(p.gait ?? p.faceGait ?? '') ? 34 : 50; // seated, they're shorter
+      const onBody = Math.abs(x - at.x) <= 10 && y >= at.y - tall && y <= at.y + 4;
+      const onBubble = s.near === p && Math.abs(x - (at.x + 11)) <= 9 && y >= at.y - 62 && y <= at.y - 40;
+      if ((onBody || onBubble) && (!best || at.y > (scene.spriteOf?.(best) ?? best).y)) best = p;
+    }
+    return best;
+  }
+  /** A tap at (x, y) on the screen (see the header): the scene's, someone to talk to, the way out, a spot to walk to, or A. */
+  function tap(x, y) {
+    emit('tap', { x, y });
+    if (x < 0 || x >= W || y < 0 || y >= H) return pressA();
+    if (s.mode !== 'free' || s.talk || scene.update) return pressA();
+    const wx = x + s.view.x, wy = y + s.view.y, e = scene.exit, out = s.exitAt;
+    const p = personAt(wx, wy);
+    if (p) return s.near === p ? pressA() : goTo(p.x, p.y, p);
+    if (e && out && x >= out.x0 && x <= out.x1 && y >= out.y0 && y <= out.y1) return goTo(e.x + 6, clamp(s.me.y, e.y0 + 1, e.y1 - 1));
+    goTo(wx, wy);
+  }
+
 
   // ---- The phone ----
   const ui = { mode: '', who: '', label: '', said: null, skip: null, hud: '', next: null };
@@ -560,6 +654,7 @@ export function runScene(scene, opts = {}) {
       frozenFrame(s.frozen);
     } else if (s.mode !== 'cut' || !cutFrame(now)) freeFrame(now, dt);
     if (stopped) return;
+    emit('frame', { now });
     shade(now);
     if (full) drawHud();
     else drawPhone();
@@ -582,12 +677,6 @@ export function runScene(scene, opts = {}) {
     box.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'touch' && byKeys) steer(false);
     }, { ...on, capture: true });
-    // A is a tap anywhere on the screen that isn't the stick or a button (a mouse click, on a computer).
-    box.addEventListener('pointerdown', (e) => {
-      if (e.button > 0 || e.target.closest('.stick, button')) return;
-      pressA();
-      e.preventDefault();
-    }, on);
   } else {
     $('.abtn').addEventListener('click', pressA, on);
     const replay = $('.replay');
@@ -598,6 +687,31 @@ export function runScene(scene, opts = {}) {
       startBeat(0, performance.now() / 1000);
     }, on);
   }
+
+  // Taps and drags on the screen (and, in the game, on the bars beside it): screen pixels, then tap() or the scene's own.
+  const surface = full ? box : tv;
+  const toScreen = (e) => {
+    const r = tv.getBoundingClientRect();
+    return [Math.floor(((e.clientX - r.left) / r.width) * W), Math.floor(((e.clientY - r.top) / r.height) * H)];
+  };
+  let held = null; // the pointer the scene took on 'down'
+  surface.addEventListener('pointerdown', (e) => {
+    if (e.button > 0 || e.target.closest('.stick, button')) return;
+    const [x, y] = toScreen(e);
+    if (scene.pointer?.('down', x, y, s)) {
+      held = e.pointerId;
+      surface.setPointerCapture(e.pointerId);
+    } else tap(x, y);
+    e.preventDefault();
+  }, on);
+  surface.addEventListener('pointermove', (e) => {
+    if (e.pointerId === held) scene.pointer('move', ...toScreen(e), s);
+  }, on);
+  for (const type of ['pointerup', 'pointercancel']) surface.addEventListener(type, (e) => {
+    if (e.pointerId !== held) return;
+    held = null;
+    scene.pointer(type === 'pointerup' ? 'up' : 'cancel', ...toScreen(e), s);
+  }, on);
 
   // The stick: the knob (the dot) follows the finger inside the ring, a little way out to walk, all the way to run.
   const pad = $(full ? '.stick' : '.pad'), ring = full ? $('.ring') : pad, knob = $(full ? '.dot' : '.knob');
