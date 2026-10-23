@@ -389,7 +389,19 @@ export function runScene(scene, opts = {}) {
     me.dir = dirToward(st.x, st.y);
     me.gait = st.mag < 0.68 ? 'walk' : 'run';
     const a = (me.dir * Math.PI) / 4, v = (scene.speed ?? SPEED)[me.gait] * dt;
-    const [nx, ny] = scene.move(me.x, me.y, Math.sin(a) * v, Math.cos(a) * v * DEPTH);
+    const step = (b) => scene.move(me.x, me.y, Math.sin(b) * v, Math.cos(b) * v * DEPTH);
+    const ahead = ([x, y]) => (x - me.x) * Math.sin(a) + ((y - me.y) / DEPTH) * Math.cos(a);
+    let [nx, ny] = step(a);
+    // Stopped by a corner, a table or someone: an eighth of a turn either way, if that still takes her the way she's
+    // pushed, so she slips round it instead of walking on the spot. Square against a wall, neither way gets her on.
+    if (ahead([nx, ny]) < v * 0.25) {
+      let best = 0, got = Math.max(ahead([nx, ny]), v * 0.4);
+      for (const turn of [-1, 1]) {
+        const p = step(a + (turn * Math.PI) / 4);
+        if (ahead(p) > got) [best, got, nx, ny] = [turn, ahead(p), p[0], p[1]];
+      }
+      me.dir = (me.dir + best + 8) % 8;
+    }
     me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
     me.x = nx;
     me.y = ny;
