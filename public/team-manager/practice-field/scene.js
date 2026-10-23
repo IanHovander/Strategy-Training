@@ -53,6 +53,7 @@ import { robotAt, robotThing } from './robot.js';
 import { LOOKS, PEOPLE, peopleThings, peopleBlocks } from './people.js';
 import { SCENE_TEXT, LINES, EXIT_LABEL } from './words.js';
 import { makeCutscene, zoomShot, HANDOFF } from './cutscene.js';
+import { approach } from '../arena/approach.js';
 
 // ---- The floor canvas, drawn once ----
 // The sun's patches read the pixels back to relight them, so the canvas is made for reading. The end wall goes in
@@ -448,6 +449,8 @@ export const scene = {
     return handedOver() ? null : ENTER;
   },
   people,
+  // A tap on someone: she finds her way over to them, round whoever and whatever's in the way (arena/approach.js).
+  pointer: (type, x, y, s) => type === 'down' && approach(scene, s, x, y),
   reach,
   faceTo,
   // Once she's talked to Kai, he doesn't come over to tell her again (keepOff).

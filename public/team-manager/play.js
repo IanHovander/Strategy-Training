@@ -5,9 +5,10 @@
 //
 // From the address bar: ?scene=pits starts at that scene (the address keeps up as you go, so reloading starts the scene
 // you're in over), and stage.js's own options (?at, ?beat, ?play, ?x, ?y, ?dir) apply to the first scene. On a keyboard,
-// N moves on to the next scene too.
+// N moves on to the next scene too, and M turns the sound off and on (sound.js; ?mute starts it off).
 import { W, H, C, fill, text, dither } from './pixel.js';
 import { runScene } from './stage.js';
+import './sound.js'; // the sound: it listens to the stage, and puts its mute button in the corner
 
 /** The season in order: each is a folder with a scene.js that exports `scene`. */
 const SCENES = ['opening', 'team-meeting', 'practice-field', 'van', 'pits', 'arena', 'alliance-selection', 'worlds'];

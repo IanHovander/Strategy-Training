@@ -47,6 +47,7 @@ import { light, afterLights } from './light.js';
 import { lookOf, CROWD, TALKERS, MC_LINES, mcPatrol } from './people.js';
 import { MC_LOOK, drawSkater } from './mc.js';
 import { makeCutscene } from './cutscene.js';
+import { approach } from '../arena/approach.js';
 import {
   WORLD, START, EXIT, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, BAND, FRONT_FLOOR, SKATE_SPEED, signTop, capSpot,
   walkView,
@@ -225,6 +226,8 @@ export const scene = {
   exit,
   cutscene,
   people: [...TALKERS, mc],
+  // A tap on someone: she finds her way over to them, round whoever and whatever's in the way (arena/approach.js).
+  pointer: (type, x, y, s) => type === 'down' && approach(scene, s, x, y),
 
   setup() {
     makeSetLayers();

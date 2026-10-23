@@ -35,6 +35,7 @@ import { drawBackdrop, things, blocked } from './place.js';
 import { CAST, circle, after, TALKERS, occupied, within } from './people.js';
 import { makeCutscene } from './cutscene.js';
 import { LINES } from './lines.js';
+import { approach } from '../arena/approach.js';
 
 /**
  * Everything that stands on the lawn, back to front: props (place.js things) and people (drawn with their shadow, and
@@ -231,6 +232,8 @@ export const scene = {
   exit: EXIT,
   cutscene,
   people: PEOPLE,
+  // A tap on someone: she finds her way over to them, round whoever and whatever's in the way (arena/approach.js).
+  pointer: (type, x, y, s) => type === 'down' && approach(scene, s, x, y),
 
   setup(s) {
     // The backdrop's layers are baked the first time it's drawn, and everyone's frames are made the first time they're

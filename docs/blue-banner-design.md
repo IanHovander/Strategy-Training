@@ -163,8 +163,8 @@ wishes out loud they'd known it, and then Norbert answers. Wanting comes first, 
   player then sees its ceiling.
 - **Every failure passes three tests.** The information to get it right was on screen. The cause shows up in one
   picture. The retry is less than a minute away.
-- **The first lesson should surprise experienced students too.** "The average skips the matches a robot didn't
-  play" does: it's true, it's visible in three empty boxes, and it's how real alliances are lost.
+- **The first lesson should surprise experienced students too.** "The average hides which way a robot is going"
+  does: it's true, it's visible in the last four boxes, and it's how real alliances are lost.
 - **The first long jump is a reward.** You get sent to Thursday because you did everything right and there was
   more to know. A reward makes the player want to go back; a punishment makes them want to quit.
 
@@ -177,28 +177,29 @@ It's my last year."
 
 You're seed 4, an alliance captain. Seeds 1 to 3 pick quickly over the MC. Then it's your turn: **45 seconds** on the
 scouting tablet, with your robot pinned at the top for reference and two cards to choose from. Each card shows the team
-number, its average (big), one short note and its ten qualification matches as a strip of boxes: seven on Friday, three
-on Saturday morning. The team numbers are made up.
+number, its average (big), one short note and its ten qualification matches as a strip of boxes: six on Friday, four
+on Saturday morning, set a little apart so the last four read together. The team numbers are made up.
 
 | Card | The tablet says | The truth |
 |---|---|---|
-| **Your robot, 5026** | avg 30, all ten boxes filled | — |
-| **7461** | **avg 41**, the biggest number on the screen; "BIG. FAST. LOUD FANS." Seven boxes filled, then **three empty** | It sat dead for all three Saturday matches. The scouts left the boxes blank, and the app's average skips blanks. |
-| **6834** | avg 31, all ten boxes filled; "NEVER BROKEN DOWN." | Steady, and still running. The right pick. |
+| **Your robot, 5026** | avg 30 | — |
+| **7461** | **avg 38**, the biggest number on the screen; "BIG. FAST. LOUD FANS." Friday 45, 42, 47, 43, 41, 46; Saturday **31, 27, 30, 28** | Fading: 44 a match on Friday, 29 on Saturday, about two thirds of it. Something's wrong with it, and it hasn't been fixed. |
+| **6834** | avg 35; "NEW INTAKE FRIDAY NIGHT." Friday 26, 28, 27, 29, 26, 26; Saturday **47, 49, 48, 48** | Rising: 27 on Friday, then a new intake, and 48 a match since, about 10% better than 7461 at its best. The right pick. |
 
-**The trap is that the average skips the matches the robot didn't play.** The senior strategist's page is from Friday
-night, when 7461 really was the best robot at the event. On Saturday morning it died three times, and an average that
-leaves out the blank boxes still says 41.
+**The trap is that the average hides the trend.** The senior strategist's page is from Friday night, when 7461 really
+was the best robot at the event. On Saturday morning it started limping, and an average over all ten matches still
+puts it on top, 38 to 35.
 
-**It's fair** because the empty boxes are on screen, the other card says it has never broken down, and the three seeds
-above you passed on a 41. A sharp player asks why.
+**It's fair** because the Saturday boxes are on screen, set apart, the other card says what changed, and the three
+seeds above you passed on the bigger average. A sharp player asks why.
 
 **After the pick:** "6834 ACCEPTS!" (or 7461), then the bet log's stamp, GOOD CALL or BAD CALL, with one picture and
-one line. The picture is 7461's strip, its blank boxes turning over to show what they were:
+one line. The picture is 7461's strip (and, for the right pick, 6834's over it), Saturday's four boxes lighting up, red
+for 7461 and green for 6834:
 
-> FRIDAY 41 · SATURDAY 0, 0, 0
+> FRIDAY 44 · SATURDAY 29
 >
-> **Look at the matches, not the average.**
+> **Look at the trend, not the average.**
 
 A wrong pick rewinds to the start of the pick clock, Norbert's 26 ear glowing in the corner, and she thinks:
 *"...didn't this just happen?"* A right pick goes on to the quarterfinals (beat 2); for now that's a "to be continued"
@@ -208,8 +209,10 @@ look ("Building the opening", part 3).
 **Why not "averages don't add up"?** The first version of this puzzle had 7461 and your robot both climbing to Level 3
 and feeding from the same loading station, so the pair would score far less than the sum of their averages. The 2019
 rules don't support that: the second climber still gets Level 2 (6 points), and each alliance has two loading stations,
-so the overlap costs about 6 points, not 20. Students who know Deep Space would call the trap unfair. A blank box that
-the average quietly skips is just as real a scouting mistake, and the evidence is right there on the card.
+so the overlap costs about 6 points, not 20. Students who know Deep Space would call the trap unfair. A robot that's
+fading (or rising) while its average stands still is just as real a scouting mistake, and the evidence is right there
+on the card. (A second version had 7461 sit dead on Saturday, its boxes left blank and skipped by the average; it was
+too easy to miss, and the trend reads more clearly.)
 
 The tablet is built in `public/team-manager/opening/` (`pick.js`, `tablet.js`, `teams.js`).
 

@@ -134,3 +134,5 @@ html:has(body.game) { height: 100%; }
   text-align: center; font: 10px/1.6 var(--pixel); color: var(--muted); pointer-events: none;
 }
 @media (orientation: portrait) and (max-width: 600px) { .full .turn { display: block; } }
+/* On a scene's own page, a drag on the screen is the game's (the opening's cards), not a page scroll. */
+.view .screen { touch-action: none; }

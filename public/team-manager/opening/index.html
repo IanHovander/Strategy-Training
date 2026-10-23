@@ -56,13 +56,14 @@
       <li><b>Riley</b> is a new character on the walker rig. A senior in the team's red hoodie with the panther badge, black jeans, and a hand-drawn head: a tall curly top over short sides, held back by a white sweatband, so Riley stands out from her, the teammate and every rep. Riley hugs Norbert in the walker's clap pose and holds him out in the drive pose.</li>
       <li><b>Norbert</b> is drawn three ways. In someone's arms he's a new 12x14 sprite, drawn by hand from the 16x19 corner one. In the handoff he's the full 36x44 sprite at twice the size. After the handoff he's in the corner, with 12.4V beside him: enough charge to rewind a few minutes, not yet enough to reach Thursday (12.9V comes after the semifinal).</li>
       <li><b>Her phone</b> is a dark-mode texting screen, with her fingers round its edge and her thumb on the side. The words use the game's 5x7 letters.</li>
-      <li><b>The pick</b> is the scouting tablet (pick.js, tablet.js, teams.js): the clock and its draining bar, her robot pinned for reference, and two cards, each with the team number, a big average, one note and its ten matches as boxes. 7461 shows 41, the biggest number on the screen, but its three Saturday boxes are blank: it sat dead, and the app's average skips blanks. 6834 shows 31 and never broke. The lesson, in one line: look at the matches, not the average.</li>
+      <li><b>The pick</b> is the scouting tablet (pick.js, tablet.js, teams.js): the clock and its draining bar, her robot pinned for reference, and two cards, each with the team number, a big average, one note and its ten matches as boxes. 7461 shows 38, the biggest number on the screen, but it's fading: 44 a match on Friday, 29 on Saturday morning, two thirds of it. 6834 shows 35, but it's rising: 27 on Friday, a new intake Friday night, then 48 a match on Saturday, about 10% better than 7461 at its best. The Saturday boxes are set apart so the last four matches read together, and after the pick they light up, red and green. The lesson, in one line: look at the trend, not the average.</li>
     </ul>
   </section>
   <p class="foot">The scene is in this folder: cutscene.js (the shots), cocaptain.js, phone.js, handoff.js, norbert-held.js, pick.js, tablet.js, teams.js and scene.js. It borrows alliance selection's set.js, people.js, mc.js and layout.js, and runs on the shared stage.js.</p>
 </div>
 <script type="module">
   import { runScene } from '../stage.js';
+  import '../sound.js';
   import { walkerFrame, HERO_LOOK, CELL_W, CELL_H, FOOT_X, FOOT_Y } from '../walker.js';
   import { useContext, screen } from '../pixel.js';
   import { scene } from './scene.js';

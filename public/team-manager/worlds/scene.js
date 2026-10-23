@@ -47,6 +47,7 @@ import { setupFields, visibleDivisions, drawFloors, drawStandsAll, drawField, mo
 import { drawHall, drawGateways, drawUnlit, drawBeams, PROPS, PROP_BLOCKS } from './hall.js';
 import { PEOPLE, BLOCKS, lookOf, standingIn, reach, prompt, faceTo, talkingSeat, warm } from './people.js';
 import { makeCutscene } from './cutscene.js';
+import { approach } from '../arena/approach.js';
 
 /**
  * Everything that stops her besides the fields' own things: everyone standing about, the two tables, the hems'
@@ -167,6 +168,8 @@ export const scene = {
   exit: EXIT,
   move: (x, y, dx, dy) => move(x, y, dx, dy, STOPS),
   people: PEOPLE,
+  // A tap on someone: she finds her way over to them, round whoever and whatever's in the way (arena/approach.js).
+  pointer: (type, x, y, s) => type === 'down' && approach(scene, s, x, y),
   reach,
   prompt: (g, view, p, t) => prompt(g, view, p, t, where.x),
   faceTo: (p) => faceTo(p, where),

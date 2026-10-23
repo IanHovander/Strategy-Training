@@ -20,9 +20,10 @@
 // front row who'd point at it out there say something else here (LINES).
 import { W, useContext, screen } from '../pixel.js';
 import { WORLD_W, makeFloor, drawFieldLive } from '../field.js';
-import { PEOPLE, STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt } from '../bleachers.js';
+import { PEOPLE, STANDING, TIERS, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt } from '../bleachers.js';
 import { gateParts, gateFloor, pitsParts, moveOut, EXIT } from './gate.js';
 import { makeCutscene } from './cutscene.js';
+import { approach } from './approach.js';
 
 // The people in the front row are sitting down: the phone shows them that way.
 for (const p of PEOPLE) p.faceGait = p.standing ? 'stand' : 'sit';
@@ -124,10 +125,14 @@ export const scene = {
   // table the barrier stops her except at its gap. People stop her too.
   move,
   people: TALKERS,
+  // A tap on someone: she finds her way over to them, round whoever and whatever's in the way (arena/approach.js).
+  pointer: (type, x, y, s) => type === 'down' && approach(scene, s, x, y),
   reach: (s) => byId[inReach(s.me.x, s.me.y)?.id] ?? null,
   // She looks up at someone in the stands, and straight at someone standing on the floor beside her.
   faceTo: (p) => (p.standing ? p : seatOf(p)),
   prompt: (g, view, p, t) => drawPrompt(g, view.x, p, t),
+  // Where they're drawn, for taps: the front row sits on its tier (bleachers.js drawStands), feet on its footboard.
+  spriteOf: (p) => (p.standing ? p : { x: p.x, y: TIERS[p.tier] }),
   setup() {
     if (FLOOR) return;
     // The floor, with the chute's lane taped out on it at the way out.

@@ -623,7 +623,12 @@ nameInput.setAttribute('autocapitalize', 'characters');
 nameInput.setAttribute('enterkeyhint', 'done');
 nameInput.style.cssText = 'position:fixed;left:50%;top:30%;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;pointer-events:none';
 document.body.append(nameInput);
-nameInput.addEventListener('input', () => (ui.name = nameInput.value = cleanName(nameInput.value)));
+/** The name changing: a blip for a letter in, a lower one for a letter out, nothing if it didn't change. */
+function setName(name) {
+  if (name.length !== ui.name.length) chip.sfx(name.length > ui.name.length ? 'key' : 'erase');
+  ui.name = nameInput.value = name;
+}
+nameInput.addEventListener('input', () => setName(cleanName(nameInput.value)));
 const NAME_BUTTONS = { back: [52, 102, 64, 20], ok: [140, 102, 64, 20] };
 const inside = ([x, y, w, h], px, py) => px >= x && px < x + w && py >= y && py < y + h;
 
@@ -678,7 +683,13 @@ function drawBoot(now) {
 
 // ---- Clock, input and the loop ----
 const chip = new Chip();
-chip.muted = params.has('mute');
+// Sound off is remembered in this browser, for the game too (sound.js keeps the same setting).
+const MUTED = 'bluebanner.muted';
+try {
+  chip.muted = params.has('mute') || localStorage.getItem(MUTED) === '1';
+} catch {
+  chip.muted = params.has('mute');
+}
 
 // ---- Soundtracks. Both count time in seconds from the start of the intro. ----
 
@@ -888,10 +899,9 @@ window.addEventListener('keydown', (e) => {
       e.preventDefault();
       if (!e.repeat) press(e.key === 'Enter' ? 'start' : 'b');
     } else if (document.activeElement !== nameInput && !ui.leaving) {
-      if (e.key === 'Backspace') ui.name = ui.name.slice(0, -1);
-      else if (e.key.length === 1) ui.name = cleanName(ui.name + e.key);
+      if (e.key === 'Backspace') setName(ui.name.slice(0, -1));
+      else if (e.key.length === 1) setName(cleanName(ui.name + e.key));
       else return;
-      nameInput.value = ui.name;
       e.preventDefault();
     }
     return;
@@ -928,6 +938,11 @@ const muteButton = document.getElementById('mute');
 const locked = () => chip.ready && !chip.running && !chip.muted;
 function toggleMute() {
   chip.setMuted(!chip.muted);
+  try {
+    localStorage.setItem(MUTED, chip.muted ? '1' : '0');
+  } catch {
+    // Storage blocked: it lasts the visit.
+  }
   muteButton?.setAttribute('aria-pressed', String(chip.muted));
 }
 muteButton?.addEventListener('click', (e) => {
@@ -940,6 +955,7 @@ function updateMuteLabel() {
   if (!muteButton) return;
   const label = chip.muted ? 'Sound off' : locked() ? 'Tap for sound' : 'Sound on';
   if (muteButton.textContent !== label) muteButton.textContent = label;
+  if (muteButton.getAttribute('aria-pressed') !== String(chip.muted)) muteButton.setAttribute('aria-pressed', String(chip.muted));
 }
 
 function render() {

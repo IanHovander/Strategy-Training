@@ -54,6 +54,7 @@ import { WORLD, EXIT, QUEUE, drawWorld, drawCartBot, move } from './set.js';
 import { LOOKS, PEOPLE, folk, drawFolk, NADIA_ID, RUN_LANE } from './people.js';
 import { LINES, RUN_WARNING } from './lines.js';
 import { makeCutscene, START, END } from './cutscene.js';
+import { approach } from '../arena/approach.js';
 
 // Everyone you can talk to gets their lines.
 for (const p of PEOPLE) p.lines = LINES[p.id];
@@ -358,6 +359,10 @@ export const scene = {
   look: LOOKS.hero,
   cutscene,
   people: PEOPLE,
+  // A tap on someone: she finds her way over to them, round whoever and whatever's in the way (arena/approach.js).
+  // No running in the pits, so taps walk her there in legs short enough not to break into a run (the floor and the way
+  // out too: stage.js runs her to a spot over 72 pixels off).
+  pointer: (type, x, y, s) => type === 'down' && approach(scene, s, x, y, { walk: true }),
   onFree() {
     walkT0 = null;
     herWalk = null;
