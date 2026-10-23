@@ -194,6 +194,12 @@ export function makeCutscene(world) {
   ]);
   /** Everyone else in the pits at T: the crews at work and, in the opening, the aisle's walkers. */
   const others = (T, opening = false) => [...folk(T, { except: [...OWN, ...AISLE] }), ...(opening ? aisle(T) : [])];
+  /**
+   * The aisle's walkers on the walking part's clocks (scene.js), k seconds before walking starts: the safety advisor
+   * coming back to the near end of her patrol and stopping there to look round, one passer-by walking on up the aisle
+   * ahead of the strategist and the other far off at the other end.
+   */
+  const walkers = (T, k) => folk(T, { clocks: Object.fromEntries(AISLE.map((id) => [id, k])) }).filter((p) => AISLE.includes(p.id));
 
   // 5026 at work on the robot, as the pan finds them and through the call.
   const atWork = (T) => [
@@ -344,16 +350,16 @@ export function makeCutscene(world) {
         ]);
       },
     },
-    // B5b rolling out, with no words on the screen, in three beats (ROLL_PARTS) drawn from one function of the time
-    // since it began: the robot eases off its spot, slants out into the aisle and goes, Noor pushing and Eli leading.
-    // The board, folded against the table behind the robot, shows as it goes; once Noor's by, the teammate bends over
-    // it, lifts it, and it stands on its legs on the empty spot. The camera goes with the cart, never faster, to the end
-    // of the hall, where the robot passes the QUEUE sign and goes out of the right of the screen; the beat ends as Noor
-    // follows it.
-    ...ROLL_PARTS.slice(0, -1).map((from, i) => ({
-      dur: ROLL_PARTS[i + 1] - from,
-      draw: (g, t, c) => rollOut(g, from + t, c),
-    })),
+    // B5b rolling out, with no words on the screen, and held against A: the robot eases off its spot, slants out into
+    // the aisle and goes, Noor pushing and Eli leading. The board, folded against the table behind the robot, shows as
+    // it goes; once Noor's by, the teammate bends over it, lifts it, and it stands on its legs on the empty spot. The
+    // camera goes with the cart, never faster, to the end of the hall, where the robot passes the QUEUE sign and goes
+    // out of the right of the screen through the way out; the beat ends as Noor follows it.
+    {
+      dur: ROLL_END,
+      hold: ROLL_END,
+      draw: rollOut,
+    },
     // B6 pit duty: the camera comes back to our pit, no quicker than it went down the row; the strategist steps back to
     // the front of it as it finds her, and once it's settled she and the teammate turn to each other.
     {
@@ -371,16 +377,25 @@ export function makeCutscene(world) {
         ], { pit5026: 'sign' });
       },
     },
-    // B7 hand over: the bars go, and she and the teammate turn to you.
+    // B7 later: a fade to black on the two of them as B6 left them, and up again on the near end of the hall, the film
+    // bars going. The safety advisor is back at her end of the aisle, the aisle's walkers on the clocks walking will
+    // carry on from (walkers()), and the strategist comes in from off the left edge once it's hers (scene.js's enter).
     {
-      dur: 0.8,
+      dur: LATER,
+      hold: LATER,
       draw(g, t, c) {
-        shoot(g, c.T, PIT, [
-          ...others(c.T),
-          still(HERO, t < 0.3 ? toward(HERO, MATE_END) : END.hero.dir, LOOKS.hero),
-          still(MATE_END, t < 0.3 ? toward(MATE_END, HERO) : 0, LOOKS.teammate),
-          still(MS_K, 7, LOOKS.kowalski),
-        ], { pit5026: 'sign', bars: 1 - seg(t, 0, 0.6) });
+        if (t < (FADE[1] + FADE[2]) / 2) {
+          shoot(g, c.T, PIT, [
+            ...others(c.T),
+            still(HERO, toward(HERO, MATE_END), LOOKS.hero),
+            still(MATE_END, toward(MATE_END, HERO), LOOKS.teammate),
+            still(MS_K, 7, LOOKS.kowalski),
+          ], { pit5026: 'sign' });
+          cover(seg(t, FADE[0], FADE[1]));
+          return;
+        }
+        shoot(g, c.T, { ...ROW, ...END.view }, [...others(c.T), ...walkers(c.T, t - LATER)], { pit5026: 'sign', bars: 1 - seg(t, ...BARS_OFF) });
+        cover(1 - seg(t, FADE[2], FADE[3]));
       },
     },
   ];
