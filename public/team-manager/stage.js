@@ -394,14 +394,17 @@ export function runScene(scene, opts = {}) {
     let [nx, ny] = step(a);
     // Stopped by a corner, a table or someone: an eighth of a turn either way, if that still takes her the way she's
     // pushed, so she slips round it instead of walking on the spot. Square against a wall, neither way gets her on.
+    // Which way she faces while she slips round holds a moment after, so it doesn't flicker frame to frame.
+    const now = performance.now() / 1000;
     if (ahead([nx, ny]) < v * 0.25) {
       let best = 0, got = Math.max(ahead([nx, ny]), v * 0.4);
       for (const turn of [-1, 1]) {
         const p = step(a + (turn * Math.PI) / 4);
         if (ahead(p) > got) [best, got, nx, ny] = [turn, ahead(p), p[0], p[1]];
       }
-      me.dir = (me.dir + best + 8) % 8;
+      if (best) me.slip = { turn: best, at: now, dir: me.dir };
     }
+    if (me.slip?.dir === me.dir && now - me.slip.at < 0.15) me.dir = (me.dir + me.slip.turn + 8) % 8;
     me.dist += Math.hypot(nx - me.x, ny - me.y) || v * 0.3;
     me.x = nx;
     me.y = ny;
