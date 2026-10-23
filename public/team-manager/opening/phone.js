@@ -18,7 +18,7 @@ import { HERO_LOOK } from '../walker.js';
 /** Who's texting: the senior strategist, out sick (a placeholder name). */
 export const SENDER = 'JULES';
 /** When things happen, seconds into the shot: the dots, the first message, the dots again, the second. */
-export const PHONE_TIMES = { dots: 0.3, first: 1.2, dots2: 1.4, second: 1.85 };
+export const PHONE_TIMES = { dots: 0.2, first: 0.8, dots2: 0.95, second: 1.3 };
 
 /** The phone: its outline's left, top and width; it runs on past the bottom of the picture. */
 const PH = { x: 66, y: 3, w: 124 };
