@@ -24,6 +24,10 @@
 //   6 NOTEBOOK the frozen moment shrinks onto a page of her scouting notebook as a pencil sketch (her still in colour),
 //              and the pages flip back through earlier moments, each sketched with its time, faster and faster, to
 //              12:38; then the last sketch fills the screen in colour. The notebook is what survives every loop.
+// and, for the rewinds that come again and again:
+//   7 QUICK    WIND's short version, under two seconds: a tick, the world drains, and Norbert turns a small key in his
+//              corner without leaving it, three clicks and a spin, while the world races back around her
+//   8 GAME     as the game would do it: the whole of WIND the first time, then QUICK for every rewind after that
 //
 // From the address bar: ?effect=1-4, ?dir=forward, ?auto=SECONDS (jump by itself that long after the start, then
 // again each time round), ?mute.
@@ -48,7 +52,7 @@ useContext(g);
 
 const params = new URLSearchParams(location.search);
 const opts = {
-  effect: clamp(Number(params.get('effect')) || 5, 1, 6),
+  effect: clamp(Number(params.get('effect')) || 8, 1, 8),
   dir: params.get('dir') === 'forward' ? 1 : -1,
   norbert: true,
   auto: params.has('auto') ? Number(params.get('auto')) || 12 : null,
@@ -156,12 +160,14 @@ function hms(s, withSeconds = true) {
 }
 
 // ---- On top: Norbert in the corner, the tape's words, the clock card ----
-function hud(glow = 0) {
+function hud(glow = 0, key = null) {
   if (!opts.norbert || J?.norbertOut) return;
   useContext(g);
   screen();
   drawNorbert(3, 2, { glow });
-  text('12.9V', 21, 4, { font: 3, color: glow > 0 ? C.yel2 : C.steel2 });
+  // While his key turns beside him, it stands where the voltage goes.
+  if (key) drawKey(CORNER_KEY.x, CORNER_KEY.y, key.angle, key.size * CORNER_KEY.size);
+  else text('12.9V', 21, 4, { font: 3, color: glow > 0 ? C.yel2 : C.steel2 });
 }
 /** Two arrowheads, pointing left (rewind) or right (forward), 5 wide each. */
 function arrows(x, y, dir, c) {
@@ -230,19 +236,24 @@ const PLANS = {
   4: { freeze: 1.4, open: 0.7, travel: 1.8, collapse: 0.35, card: 1.3, arrive: 0.8 },
   5: { freeze: 0.5, hop: 0.45, turn: 0.4, wind: 1.5, spin: 0.55, home: 0.8 },
   6: { freeze: 0.5, close: 0.8, flip: 2.8, open: 1.0 },
+  7: { stop: 0.25, wind: 0.5, spin: 0.6, land: 0.4 },
 };
+/** Rewinds so far with 8 GAME: the first gets all of WIND, the rest QUICK. */
+let gameJumps = 0;
 function jump() {
   if (J || rec.length < 20) return;
-  const plan = PLANS[opts.effect], parts = Object.entries(plan);
+  const kind = opts.effect === 8 ? (gameJumps++ ? 7 : 5) : opts.effect;
+  const plan = PLANS[kind], parts = Object.entries(plan);
   let at = 0;
   const times = Object.fromEntries(parts.map(([k, d]) => [k, [at, (at += d)]]));
   J = {
-    kind: opts.effect, dir: opts.dir, t0: performance.now() / 1000, last: rec[rec.length - 1], frames: rec.slice(),
+    kind, dir: opts.dir, t0: performance.now() / 1000, last: rec[rec.length - 1], frames: rec.slice(),
     times, end: at, cues: new Set(), center: null, her: null, herMask: null, landed: null,
   };
   J.from = eventTime(J.last.sim);
   J.to = J.dir < 0 ? CLOCK0 : eventTime(J.last.sim) + 9 * 60;
   if (J.kind === 5) J.clicks = ratchet(plan.wind);
+  if (J.kind === 7) J.clicks = [0.03, 0.2, 0.34];
   if (J.kind === 6) {
     J.flips = [];
     let t = 0;
@@ -318,6 +329,7 @@ function stepJump(now, dt) {
   const u = now - J.t0, d = J.dir;
   if (J.kind === 5) return stepWind(u);
   if (J.kind === 6) return stepBook(u);
+  if (J.kind === 7) return stepQuick(u);
   let glow = 0, k;
   if (J.kind === 1) {
     cue('tick', u, 0, () => { sound.tick(); sound.hum(J.end - 0.2); });
@@ -561,6 +573,50 @@ function stepWind(u) {
   return false;
 }
 
+// ---- 7 QUICK: the short rewind, for every time after the first ----
+/** The small key, beside Norbert in his corner, about half the size of the one in his back. */
+const CORNER_KEY = { x: 27, y: 12, size: 0.55 };
+
+function stepQuick(u) {
+  const d = J.dir, T = J.times;
+  cue('tick', u, 0, () => sound.tick());
+  let k;
+  if ((k = part('stop', u)) !== null) {
+    // Everything stops where it is; the key pops out beside him.
+    frozen(u, seg(k, 0, 0.8), null);
+    g.putImageData(out, 0, 0);
+    hud(1, { angle: 0, size: easeBack(seg(k, 0.2, 1)) });
+    return false;
+  }
+  let angle, prog;
+  if ((k = part('wind', u)) !== null) {
+    const w = u - T.wind[0], n = J.clicks.filter((c) => c <= w).length, since = n ? w - J.clicks[n - 1] : 1;
+    angle = d * CLICK_TURN * (Math.max(0, n - 1) + (n ? easeOut(clamp(since / CLICK_TIME, 0, 1)) : 0));
+    prog = 0.3 * (n / J.clicks.length);
+    for (let i = 0; i < n; i++) cue(`click${i}`, u, T.wind[0] + J.clicks[i], () => sound.ratchet(d));
+  } else if ((k = part('spin', u)) !== null) {
+    cue('whirr', u, T.spin[0], () => sound.whirr(T.spin[1] - T.spin[0], d));
+    const s = u - T.spin[0];
+    angle = d * (CLICK_TURN * (J.clicks.length - 1) + 14 * s + 40 * s * s);
+    prog = 0.3 + 0.7 * easeIn(k);
+  }
+  if (angle !== undefined) {
+    const world = paint(travelTo(prog), { her: false, words: false });
+    still(world.data, out.data, 1);
+    herOver(u, T.wind[0]);
+    g.putImageData(out, 0, 0);
+    hud(1, { angle, size: 1 });
+    return false;
+  }
+  // Landed: the colour comes back in four steps and the key goes back in.
+  k = part('land', u) ?? 1;
+  cue('chime', u, T.land[0], () => sound.chime(d));
+  still(paint(landing()).data, out.data, 1 - k);
+  g.putImageData(out, 0, 0);
+  hud(1 - k, k < 0.5 ? { angle: 0, size: 1 - seg(k, 0, 0.5) } : null);
+  return k >= 1 || u >= J.end;
+}
+
 // ---- 6 NOTEBOOK: flipping back through her scouting notebook ----
 const FLIPS = 9;
 /** Page n's moment: n = 0 is now, n = FLIPS is where she lands. */
@@ -684,7 +740,7 @@ function show() {
 }
 for (const b of buttons) {
   b.addEventListener('click', () => {
-    if (b.dataset.effect) opts.effect = Number(b.dataset.effect);
+    if (b.dataset.effect) [opts.effect, gameJumps] = [Number(b.dataset.effect), 0];
     else opts.dir = Number(b.dataset.dir);
     show();
   });
@@ -696,7 +752,10 @@ canvas.addEventListener('click', jump);
 addEventListener('keydown', (e) => {
   if (e.target.closest?.('button') && (e.key === ' ' || e.key === 'Enter')) return;
   const key = e.key.toLowerCase();
-  if ('123456'.includes(key) && key) opts.effect = Number(key);
+  if ('12345678'.includes(key) && key) {
+    opts.effect = Number(key);
+    gameJumps = 0;
+  }
   else if (key === 'r') opts.dir = -1;
   else if (key === 'f') opts.dir = 1;
   else if (key === 'n') opts.norbert = !opts.norbert;
