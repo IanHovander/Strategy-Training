@@ -52,6 +52,7 @@ function wake() {
   if (!started && kit.ready()) {
     started = true;
     applyPlace(true);
+    kit.prepare(); // the events' crowds, in the background, after this scene's own
   }
 }
 for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
