@@ -18,7 +18,7 @@ import { HERO_LOOK } from '../walker.js';
 import { COCAPTAIN_LOOK } from './cocaptain.js';
 
 /** Seconds into the insert: he sets off, he's in her hands, the co-captain's are gone, the glint. */
-export const HANDOFF = { go: 0.3, there: 1.05, gone: 1.55, glint: [1.3, 1.75] };
+export const HANDOFF = { go: 0.15, there: 0.7, gone: 1.1, glint: [0.95, 1.35] };
 
 const LW = W / 2, LH = H / 2;
 let lens = null;
@@ -115,7 +115,7 @@ export function drawHandoff(g, t) {
   arm(1, n.x + 8 - back, n.y + 34, coSkin, coSleeve);
   // Her bare arms come in from the right and take him by his right side.
   const herSkin = HERO_LOOK.pal.skin;
-  const reach = Math.round((1 - easeInOut(seg(t, 0.2, HANDOFF.there - 0.05))) * 70);
+  const reach = Math.round((1 - easeInOut(seg(t, 0.05, HANDOFF.there - 0.05))) * 70);
   arm(-1, n.x + BIG_W - 6 + reach, n.y + 23, herSkin, null);
   arm(-1, n.x + BIG_W - 8 + reach, n.y + 35, herSkin, null);
 

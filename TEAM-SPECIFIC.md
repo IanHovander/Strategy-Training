@@ -62,14 +62,15 @@ colour, so it can follow the new team colour or stay as a UI accent.
 
 | File | Where | What's 5026-specific | Change |
 | --- | --- | --- | --- |
-| `cutscene.js` | `SEEDS` ~47 and comments | '5026' as seed 4, alliance captain; it's also the key that leaves sign 4 to Riley and her | The new number (swap any seed that equals it). |
+| `cutscene.js` | `SEEDS` ~50 and comments | '5026' as seed 4, alliance captain; it's also the key that leaves sign 4 empty for her and puts 5026 on the audience display | The new number (swap any seed, or any of `PICKS`, that equals it). |
+| `cutscene.js` | call ~346 | MC Robin calls her up: "5026, COME ON UP!" | The new number. |
 | `cocaptain.js` | `COCAPTAIN_LOOK` ~79-90 | Riley, the co-captain, in the team's red pullover hoodie (`MERCH.hoodie`) with the panther badge and 5026 (`TEAMMATE_LOOK.badge`) | Follows `cast.js` and `teammate.js` once those change; nothing to do here. |
 | `handoff.js` | `drawHandoff()` ~112-115 | Riley's red sleeves in the insert (`COCAPTAIN_LOOK.pal.shirt`) | Follows `cocaptain.js`. |
-| `cutscene.js` | `rileySays` ~156, `herSays` ~157 | Riley's dark red name tag (`C.red0`) and hers (`C.red1`) | The team colour, or keep as a UI accent. |
-| `cutscene.js` | takeHim ~314 | Norbert the mascot handed over: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2009." | The new mascot or lucky charm, and its history. |
+| `cutscene.js` | `rileySays` ~172, `herSays` ~173 | Riley's dark red name tag (`C.red0`) and hers (`C.red1`) | The team colour, or keep as a UI accent. |
+| `cutscene.js` | takeHim ~307 | Norbert the mascot handed over: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2014." 2014 is the year 5026 started | The new mascot or lucky charm, and the year the new team started. |
 | `norbert-held.js` | `ROWS`, `PAL` ~23-43; `drawHud()` ~68 | Norbert drawn 12x14 for someone to hold, with his 26 ear; the corner with Norbert and his voltage | Redraw as the new mascot (with `norbert.js`). |
 | `handoff.js` | header; the glint ~109 | The 26 ear glinting as he's handed over | Follows `norbert.js`; reword. |
-| `index.html` | intro ~22; shots ~36-38; "How it's made" ~55-56 | Norbert, "the team's red hoodie with the panther badge", the 26 ear | Update. |
+| `index.html` | intro and "The shots"; "How it's made" | Norbert, "SINCE 2014", "5026, COME ON UP!", "the team's red hoodie with the panther badge", the 26 ear | Update. |
 
 ### Team meeting (`public/team-manager/team-meeting/`)
 
