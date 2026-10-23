@@ -21,7 +21,7 @@
 // The way in and out. The row is closed off at each end by an end drape, the back drape's full height, seen end-on like
 // the side drapes, from the back as far as the aisle; the aisle runs on past both, out of the hall. You come in along
 // it from the left, from the rest of the hall, and leave along it at the right, to the field: there the arena's light
-// comes in through the opening and lies on the concrete in hard-edged bands, brighter toward the edge, and the QUEUE
+// comes in through the opening and lies on the concrete in two hard-edged steps, fanning out from it, and the QUEUE
 // sign stands at the aisle's near edge pointing on. EXIT is the walking part's way out (stage.js scene.exit).
 //
 // It's drawn like the arena: the floor once into a layer, the hall wall, drapes and banners once into another, then
@@ -695,7 +695,7 @@ function adminDesk() {
   rect(786, yTop + 3, 14, 2, C.ink);
 }
 
-/** Safety glasses for anyone who needs a pair, under the sign on the drape's end post. */
+/** Safety glasses for anyone who needs a pair, under their sign, in the corner against the right end drape. */
 function glassesStand() {
   // The sign, yellow all round its words like the QUEUE sign (two pixels each side of the longest), clear of the end
   // drape's top rail, and hung high enough that its words show over the head of anyone standing at the desk's end below it.

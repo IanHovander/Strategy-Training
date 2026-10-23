@@ -876,7 +876,7 @@ export function things(t, o = {}) {
 
 // ---- Where she can walk ----
 /** True where her feet can't go: the wall, the world's edges, the tree's trunk, the bench, the easel, the table, the bags,
- *  the walkway's post. (The way out is past the right edge on the path: scene.js exit takes her there.) */
+ *  the walkway's post. (The way out is past the right edge, on the path or the lawn: scene.js exit takes her there.) */
 export function blocked(x, y) {
   if (y < WALL_Y + 4 || y > 258 || x < 8 || x > 504) return true;
   // A trunk: its own half width (four pixels, six at the roots) and hers, so she never stands over it.

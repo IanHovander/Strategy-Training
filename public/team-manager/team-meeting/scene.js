@@ -6,9 +6,10 @@
 //
 // The way in and out, as every scene in the game has them (entered on the left, left on the right): as the lawn fades in
 // she comes back out of the robotics shop's roll-up door on the left (stage.js enter: along the shop's floor from behind
-// the wall, so she's out of sight under the fade, then out of the door to her mark); the way out is the path on the
-// right, running on under the covered walkway round to the cafeteria (stage.js exit, TO THE CAFETERIA), where the
-// practice field is.
+// the wall, so she's out of sight under the fade, then out of the door to her mark); the way out is the right edge,
+// the path running on under the covered walkway, or the lawn beside it, round to the cafeteria (stage.js exit, TO THE
+// CAFETERIA), where the practice field is. The top of the lawn is left clear between the two (people.js), so holding
+// right from her mark walks her straight out.
 //
 // Everything stands on the floor the arena's way (field.js): the lawn, the wall, the path, the walkway's roof and the
 // floor's shade are one backdrop drawn first, then everything that stands up (the tree, the bench, the easel, the

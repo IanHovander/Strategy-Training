@@ -282,7 +282,7 @@ export const NADIA_ID = 'nadia';
  * reachY: how far in depth she can talk from (12, or more for someone set back: Bea and Tomas behind the counter and
  * the desk, and Ms. Kowalski, so that anywhere she can stand in front of her offers the talk). reach: how far across
  * (scene.js: 17 for anyone standing still, whom she stops 14 short of, or 14). The teammate reaches a little further
- * both ways, to where the cut scene leaves the strategist, so the walking part starts with TALK TO TEAMMATE; and the
+ * both ways, to the spot at the front of the pit where the two of them talk in the cut scene; and the
  * safety advisor 21 deep, more than she steps round the strategist by (scene.js ROUND: 13 coming toward her, 20 when
  * one overtakes the other), so she can be talked to as she goes by, not only while she stands at the ends of her
  * patrol; out in the open aisle there's nobody else that deep for it to reach past.

@@ -7,9 +7,18 @@
 // Once the cut scene is over she's 3000's first pick, stepped out in front of the line beside her captain, and free to
 // walk: along the front of the line, out through the gate to the floor in front where the backups wait with the lead
 // queuer, and past both ends. Everyone standing stops her, as do the signs' posts, the mic, the display and the field's
-// own walls and corner pieces (set.js moveIn). She can talk to her captain and partners, the captains who made the big
-// decisions, the team that turned an invitation down (whose rep, standing with their back to you, turns round to talk),
-// the top backup, Priya, Sam, the head referee and Robin.
+// own walls and corner pieces (set.js moveIn).
+//
+// In the play-through every scene is walked from left to right. She starts on the left of the line, where the cut
+// scene leaves her (its last beat walks her out of the line to START, and its last frame is walking about's first, so
+// there's no walk in from the edge: she's been on the field since her captain picked her). She leaves on the right:
+// through the gate, along the floor in front and out through the gap in the belt barrier past the red end, under the
+// audience display, the way she left the arena that morning (scene.exit, layout.js EXIT, drawn by set.js). Nobody
+// stands near it: the head referee waits well left of it and Robin's patrol keeps to the field.
+//
+// She can talk to her captain and partners, the captains who made the big decisions, the team that turned an
+// invitation down (whose rep, standing with their back to you, turns round to talk), the top backup, Priya, Sam, the
+// head referee and Robin.
 //
 // Robin keeps skating the strip in front of the line (people.js mcPatrol, a loop of about twenty seconds) on her own
 // clock: it starts as walking starts, which is where the cut scene left her, mic up beside the mic stand. When the
@@ -27,7 +36,7 @@ import { lookOf, CROWD, TALKERS, MC_LINES, mcPatrol } from './people.js';
 import { MC_LOOK, drawSkater } from './mc.js';
 import { makeCutscene } from './cutscene.js';
 import {
-  WORLD, START, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, SKATE_SPEED, SIGN_TOP, capSpot, walkView,
+  WORLD, START, EXIT, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, SKATE_SPEED, SIGN_TOP, capSpot, walkView,
 } from './layout.js';
 
 /** The display once it's over: every alliance, the backups, no clock. */
@@ -133,9 +142,11 @@ const cutscene = makeCutscene({ drawWorld, lookOf: (k) => (k === 'mc' ? MC_LOOK 
 export const scene = {
   name: 'ALLIANCE SELECTION',
   label: 'The arena at alliance selection: the empty field with eight numbered signs across it and a microphone in the middle, the alliances standing at their signs, the team reps and the backups on the floor in front, the stands full above; the view follows the strategist',
-  note: 'Push the stick a little to walk, all the way to run; the view follows her. Your captain and partners are beside you on the field, the other captains along the line, and Robin skates in front of it; out through the gate are the backups, the team that said no, Priya, Sam and the head referee. Press A by someone to talk. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.',
+  note: 'Push the stick a little to walk, all the way to run; the view follows her. Your captain and partners are beside you on the field, the other captains along the line, and Robin skates in front of it; out through the gate are the backups, the team that said no, Priya, Sam and the head referee. Press A by someone to talk. The way out is past the red end, under the display: through the gap in the barrier. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk.',
   world: WORLD,
   start: START,
+  // Out through the gap in the barrier past the red end, below the display (layout.js, set.js): on to the next scene.
+  exit: EXIT,
   cutscene,
   people: [...TALKERS, mc],
 

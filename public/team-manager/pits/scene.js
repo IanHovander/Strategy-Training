@@ -1,6 +1,8 @@
 // The pits, put together: the hall (set.js), the people in it (people.js), what they say (lines.js) and the cut scene
-// (cutscene.js), on the shared stage (stage.js). The cut scene ends with the strategist in front of 5026's pit; then
-// she's yours to walk the row, stop by the pits and talk to people.
+// (cutscene.js), on the shared stage (stage.js). The cut scene ends on the near end of the hall, and the strategist
+// comes in along the aisle from off its left edge (enter, to START); then she's yours to walk the row, stop by the pits
+// and talk to people, and leave at its far end, where the aisle runs on out to the field past the QUEUE sign (set.js
+// EXIT: in play.html the arena comes next; on this page she comes back in at the near end).
 //
 // Walking: the aisle the length of the hall, into each pit's open front as far as its robot or its board, and in front
 // of the counter and the desk at the ends (set.js move()); anyone standing, kneeling at work or walking about is in the
@@ -35,19 +37,20 @@
 // does it, before the view's worked out and she's drawn: a stage.js `walkTo(path)` would be cleaner.
 //
 // Clocks. The cut scene runs the crews and the hall's blinking lights on its own clock, and leaves the aisle empty from
-// the pit announcer's call on. So that nothing jumps when it hands over, the walking part carries on from the cut
-// scene's last moment for the crews and the hall (crewT), and starts the aisle's walkers on clocks of their own from
-// where they're all off the screen: she at the far end of her patrol by the SPARE PARTS counter, one passer-by behind
-// the view and one just past its right edge. Each walker's clock (and the battery runner's) runs behind by the time
-// they've spent waiting.
+// the pit announcer's call to its last shot. So that nothing jumps when it hands over, the walking part carries on from
+// the cut scene's last moment for the crews and the hall (crewT), and starts the aisle's walkers on clocks of their own
+// at END.aisleT, which the cut scene's last shot (the near end of the hall, after a fade) runs up to: the safety advisor
+// at the near end of her patrol by the SPARE PARTS counter, looking round, one passer-by up the aisle ahead and one at
+// the far end. Each walker's clock (and the battery runner's) runs behind by the time they've spent waiting. Walking in and out
+// (stage.js's enter and exit) isn't running, whatever her gait: the safety advisor only watches while she's yours.
 
 import { dirToward, along, SPEED } from '../stage.js';
 import { conversation, drawBubble } from '../talk.js';
 import { clamp } from '../pixel.js';
-import { WORLD, drawWorld, drawCartBot, move } from './set.js';
+import { WORLD, EXIT, drawWorld, drawCartBot, move } from './set.js';
 import { LOOKS, PEOPLE, folk, drawFolk, NADIA_ID, RUN_LANE } from './people.js';
 import { LINES, RUN_WARNING } from './lines.js';
-import { makeCutscene, END } from './cutscene.js';
+import { makeCutscene, START, END } from './cutscene.js';
 
 // Everyone you can talk to gets their lines.
 for (const p of PEOPLE) p.lines = LINES[p.id];
@@ -105,6 +108,11 @@ const WORD = [24, 32], WORD_Y = [104, 110], CLEAR = 14, NEAR_CLEAR = 10;
 const BRISK = 44, STROLL = 22;
 /** She doesn't rejoin her patrol closer to the strategist than this (pixels across, pixels deep). */
 const REJOIN = { x: 28, y: 14 };
+/**
+ * The way out (set.js EXIT) is hers while she's within `near` pixels of it, or walking out: a passer-by coming in from
+ * the field waits outside while their feet are still at x or further, where none of them shows.
+ */
+const AT_DOOR = { near: 64, x: WORLD.w + 10 };
 
 const cutscene = makeCutscene({ drawWorld, drawCartBot, drawFolk, folk, LOOKS });
 /** Seconds into the cut scene when it hands over: the crews carry on from there. */
@@ -292,9 +300,13 @@ const HEIGHT = { kneel: 41, sit: 44, lean: 46 };
 export const scene = {
   name: 'THE PITS',
   label: 'A row of eight team pits along the back of the event hall, the strategist in the aisle in front of them; the view follows her along the row',
-  note: 'Push the stick a little to walk; the view follows her along the row. Stop by someone in the pits, at the SPARE PARTS counter or the PIT ADMIN desk and press A to talk. And walk, don\'t run: the safety advisor is watching. On a keyboard: arrow keys or WASD, Space or Enter to talk and read on, Esc to skip the cut scene. Shift runs, if you want to meet the safety advisor.',
+  note: 'Push the stick a little to walk; the view follows her along the row. Stop by someone in the pits, at the SPARE PARTS counter or the PIT ADMIN desk and press A to talk. And walk, don\'t run: the safety advisor is watching. The way out to the field is at the far end, past the QUEUE sign. On a keyboard: arrow keys or WASD, Space or Enter to talk and read on, Esc to skip the cut scene. Shift runs, if you want to meet the safety advisor.',
   world: WORLD,
-  start: END.hero,
+  start: START,
+  // In along the aisle from off the left edge, from the rest of the hall, as the cut scene ends; out along it at the
+  // far end, past the QUEUE sign, to the field (set.js EXIT).
+  enter: [[-24, START.y]],
+  exit: EXIT,
   look: LOOKS.hero,
   cutscene,
   people: PEOPLE,
@@ -334,7 +346,7 @@ export const scene = {
   },
   draw(g, view, t, s) {
     const me = (her = s.me);
-    // The clocks: the crews carry on from the cut scene, the aisle's walkers start from the far end.
+    // The clocks: the crews carry on from the cut scene, and so do the aisle's walkers (END.aisleT), on clocks of their own.
     if (walkT0 == null) {
       walkT0 = t;
       held = Object.fromEntries(MOVERS.map((id) => [id, 0]));
@@ -346,15 +358,20 @@ export const scene = {
     }
     const dt = Math.max(0, Math.min(0.1, t - lastT));
     lastT = t;
-    const crewT = CUT_END + (t - walkT0), aisleT = t - walkT0;
+    const crewT = CUT_END + (t - walkT0), aisleT = END.aisleT + (t - walkT0);
     const clocks = () => Object.fromEntries(MOVERS.map((id) => [id, (id === RUNNER ? crewT : aisleT) - held[id]]));
     const talkingTo = (id) => s.talk?.person?.id === id;
     const offOf = (id) => aside[id]?.off ?? 0;
 
     // Who has to wait: each mover's clock stops while their next step would take them into her (the runner's into her,
     // a passer-by's into the safety advisor standing still too) or an aisle walker's across her conversation, and the
-    // safety advisor's while she talks to her or is off her patrol on an errand. A passer-by she's overtaking slows.
+    // safety advisor's while she talks to her or is off her patrol on an errand. A passer-by she's overtaking slows,
+    // unless she's walking out (stage.js walks her on regardless). And the way out is hers while she's at it: a
+    // passer-by about to come in from the field waits outside, out of the picture (AT_DOOR), so nobody walks into her
+    // on her way out.
     const at0 = byId(folk(crewT, { clocks: clocks() }));
+    const leaving = s.mode === 'auto' && s.auto?.out;
+    const atDoor = leaving || (s.mode === 'free' && me.x >= EXIT.x - AT_DOOR.near);
     const passer = (id) => AISLE.includes(id) && id !== NADIA_ID;
     const hard = (id) => (passer(id) && lastNadia?.still ? [me, lastNadia] : [me]);
     // The two in a conversation, if one's going on: her and whoever she's talking to (the safety advisor where she is).
@@ -365,12 +382,15 @@ export const scene = {
     for (const id of MOVERS) {
       const p = at0[id], q = { ...p, y: p.y + offOf(id) };
       if (id === NADIA_ID && (errand || talkingTo(NADIA_ID))) held[id] += dt;
-      else if (['walk', 'carry'].includes(p.gait)
+      else if (passer(id) && atDoor && p.dir === 6 && p.x >= AT_DOOR.x) {
+        held[id] += dt;
+        waiting.add(id);
+      } else if (['walk', 'carry'].includes(p.gait)
         && (hard(id).some((o) => blocks(q, o, passer(id) ? WAIT_PASSER : WAIT))
           || (AISLE.includes(id) && talkers.some((o) => nearTalk(q, o, id === NADIA_ID ? TALK_GAP_PATROL : TALK_GAP, passer(id) ? crewStill : []))))) {
         held[id] += dt;
         waiting.add(id);
-      } else if (passer(id) && p.gait === 'walk' && overtaking(q, me)) held[id] += dt * (1 - ROUND.slow);
+      } else if (passer(id) && p.gait === 'walk' && !leaving && overtaking(q, me)) held[id] += dt * (1 - ROUND.slow);
     }
     const everyone = folk(crewT, { clocks: clocks() });
     const now = byId(everyone);

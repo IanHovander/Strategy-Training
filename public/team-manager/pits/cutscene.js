@@ -1,6 +1,7 @@
-// The pits' cut scene: 41.3 seconds, plus however long the words take to read. Saturday morning in the row of pits.
+// The pits' cut scene: 42.1 seconds, plus however long the words take to read. Saturday morning in the row of pits.
 // 5026's robot is getting its last fix when the pit announcer calls match 44; the strategist arrives with the plan on
-// her board, gives it to the drive team, and the robot rolls out down the aisle to the queue. Then she's yours to walk.
+// her board, gives it to the drive team, and the robot rolls out down the aisle to the queue. Then she's yours to walk,
+// from the near end of the row, where she comes in along the aisle, to the way out to the field at its far end.
 //   B0 open          the left end of the hall fades in under the place card: the SPARE PARTS counter, 3000's empty pit
 //                    (its robot's on the field for match 42) and 1024 at work; the safety advisor standing watch and
 //                    two students from other rows walking the aisle
@@ -42,12 +43,13 @@
 // 5026's crew itself (the strategist, Noor, Eli, the teammate and Ms. Kowalski) and the robot while it's rolling, and
 // leaves the teammate and Kowalski out of folk(). The aisle's walkers (the safety advisor and the two from other rows)
 // are the cut scene's too in the opening, on paths of their own that drop behind the pan, and they stay away from the
-// call on, so nobody blinks out, the jump in c.T after a long read never shows, and the aisle is clear for the robot.
+// call on, so nobody blinks out, the jump in c.T after a long read never shows, and the aisle is clear for the robot;
+// after the fade in B7 they're back, on the walking part's own clocks.
 // Nothing moves in a say beat once its time is up: its t runs on while the words are read, so people arrive and turn
 // before then and hold still after.
 //
 //   START               where the walking part has her stop once she's walked in from off the left edge
-//   END                 the view on the cut scene's last frame, and the aisle's walkers' clock then: walking starts there
+//   END                 the view on the cut scene's last frame, and the aisle's walkers' clocks then: walking starts there
 //   makeCutscene(world) the beats; world = { drawWorld, drawCartBot, drawFolk, folk, LOOKS } (set.js and people.js)
 
 import { lerp, seg } from '../pixel.js';
@@ -57,15 +59,17 @@ import { SCRIPT } from './lines.js';
 
 /**
  * Where the walking part begins: she comes into the hall along the aisle from off its left edge (scene.js's enter)
- * and stops here, at the near end of the row in front of the SPARE PARTS counter, between the safety advisor's patrol
- * and the passers-by's lanes, with the whole row ahead of her and the way out at its far end. She turns to you there.
+ * and stops here, at the near end of the row in front of the SPARE PARTS counter, with the whole row ahead of her and
+ * the way out at its far end. She turns to you there. It's a step in front of the passers-by's lanes, and far enough
+ * down the aisle that her head is under the counter's sign, not in front of it.
  */
-export const START = { x: 40, y: 111, dir: 0 };
+export const START = { x: 40, y: 126, dir: 0 };
 /**
- * The cut scene's last frame: the near end of the hall, waiting for her. The aisle's walkers' clocks (scene.js) start
- * at 0 there, and this shot runs them up to it.
+ * The cut scene's last frame: the near end of the hall, waiting for her (view), and where the aisle's walkers' clocks
+ * (scene.js) are then, which this shot runs them up to: a second after the safety advisor gets back to her end of the
+ * aisle, so she's already standing there looking round as walking takes over, not stopping and turning just then.
  */
-export const END = { view: { x: 0, y: 0 } };
+export const END = { view: { x: 0, y: 0 }, aisleT: 1 };
 
 // ---- 5026's pit ----
 // Where everyone is when the pan gets there: Noor kneeling left of the robot with the drill, the teammate kneeling at
@@ -195,9 +199,9 @@ export function makeCutscene(world) {
   /** Everyone else in the pits at T: the crews at work and, in the opening, the aisle's walkers. */
   const others = (T, opening = false) => [...folk(T, { except: [...OWN, ...AISLE] }), ...(opening ? aisle(T) : [])];
   /**
-   * The aisle's walkers on the walking part's clocks (scene.js), k seconds before walking starts: the safety advisor
-   * coming back to the near end of her patrol and stopping there to look round, one passer-by walking on up the aisle
-   * ahead of the strategist and the other far off at the other end.
+   * The aisle's walkers on the walking part's clocks (scene.js) at k: the safety advisor coming back to the near end of
+   * her patrol and stopping there to look round, one passer-by walking on up the aisle ahead of the strategist and the
+   * other far off at the other end.
    */
   const walkers = (T, k) => folk(T, { clocks: Object.fromEntries(AISLE.map((id) => [id, k])) }).filter((p) => AISLE.includes(p.id));
 
@@ -394,7 +398,7 @@ export function makeCutscene(world) {
           cover(seg(t, FADE[0], FADE[1]));
           return;
         }
-        shoot(g, c.T, { ...ROW, ...END.view }, [...others(c.T), ...walkers(c.T, t - LATER)], { pit5026: 'sign', bars: 1 - seg(t, ...BARS_OFF) });
+        shoot(g, c.T, { ...ROW, ...END.view }, [...others(c.T), ...walkers(c.T, END.aisleT + t - LATER)], { pit5026: 'sign', bars: 1 - seg(t, ...BARS_OFF) });
         cover(1 - seg(t, FADE[2], FADE[3]));
       },
     },

@@ -11,22 +11,26 @@
 // the mic, its chain unhooked.
 // In front of the field: a taped line on the concrete with the reps' TEAM REPS sign beside it, and a belt barrier
 // along the bottom of the world on posts like the driver stations'. Past the red end: the audience display, a navy
-// screen on two truss legs showing the alliances as they're picked, the pick clock and all eight backups.
+// screen on two truss legs showing the alliances as they're picked, the pick clock and all eight backups; and below it
+// the way out, built like the arena's past its scoring table (arena/gate.js): the same belt barrier turns up at the
+// right and runs front to back to the display, with a gap in it, a short chute through the gap out past the right edge,
+// and a red EXIT sign on the gap's far post.
 // Everything is filled rectangles on whole pixels (pixel.js), outlined in ink, three tones lit from the upper left, in
 // the arena's own colours. The flat things (the concrete, the tape) are drawn once into a canvas; everything that stands
 // up is sorted in with the field and the people by its floor line, so it all draws back to front.
 //
 //   makeSetLayers()                       { floor, near }: the arena's floor (field.js) and the scene's own floor below it
 //   drawSet(g, view, t, o)                the whole world at view = { x, y } into g at 1x (see below)
-//   moveIn(x, y, dx, dy, blockers, movers)  where a step ends up: the open floor, the front of the field and the gate
+//   moveIn(x, y, dx, dy, blockers, movers)  where a step ends up: the open floor, the front of the field, the gate and
+//                                           the way out
 
-import { C, useContext, camera, screen, rect, text, rnd } from '../pixel.js';
+import { W, C, useContext, camera, screen, rect, text, rnd } from '../pixel.js';
 import { FIELD, STATION, floorY, makeFloor, drawFieldLive } from '../field.js';
 import { drawStands, drawWalkway } from '../bleachers.js';
 import { tones } from '../cast.js';
 import {
   WORLD, NEAR_TOP, SPOTS, SIGN_Y, SIGN_POST, SIGN_HALF, SIGN_TOP, MIC, MC_HOME, BAND, LINE_AREA, NEAR_GATE, WAIT, REPS_SIGN, BOARD, BARRIER_Y,
-  WALK_MAX_Y, ENDS, FRONT_FLOOR,
+  WALK_MAX_Y, ENDS, FRONT_FLOOR, FENCE_X, GAP, FENCE_LIMIT,
 } from './layout.js';
 
 // The arena's concrete and its speckle (field.js, bleachers.js), and field.js's steel.
@@ -158,20 +162,107 @@ function repsSign() {
   text('REPS', x, y - 33, { font: 3, color: C.ink, align: 'center' });
 }
 
-/** The belt barrier along the bottom of the world: posts every 48 pixels like the driver stations', a blue belt between. */
-const POSTS = Array.from({ length: Math.floor((WORLD.w - 16) / 48) + 1 }, (_, i) => 8 + i * 48);
+/**
+ * One of the barrier's posts, its foot at (x, y): an ink base with its lit top, an ink post with a light steel core.
+ * tall: how high it stands (the EXIT sign's is taller).
+ */
+function post(x, y, tall = 22) {
+  rect(x - 3, y - 1, 7, 2, C.ink);
+  rect(x - 2, y - 1, 5, 1, C.steel1);
+  rect(x - 1, y - tall, 3, tall - 1, C.ink);
+  rect(x, y - tall + 1, 1, tall - 2, C.steel3);
+}
+/** A belt running across from x0 to x1 at depth y, from post top to post top: its lit top and shaded face, in ink. */
+function beltAcross(x0, x1, y) {
+  rect(x0, y - 20, x1 - x0, 1, C.ink);
+  rect(x0, y - 19, x1 - x0, 1, C.blue2);
+  rect(x0, y - 18, x1 - x0, 1, C.blue1);
+  rect(x0, y - 17, x1 - x0, 1, C.ink);
+}
+/**
+ * A belt running front to back, from the post at depth y0 back there to the one at y1 nearer: seen from the front,
+ * its top is a line straight down the screen from the one post's top to the other's (as at the arena's red end).
+ */
+const beltDown = (x, y0, y1) => rect(x, y0 - 19, 1, y1 - y0, C.blue2);
+
+/**
+ * The belt barrier along the bottom of the world: posts every 48 pixels like the driver stations', a blue belt between,
+ * to the corner past the red end where the barrier on the right (wayOut) comes down to meet it.
+ */
+const POSTS = [...Array.from({ length: Math.floor((FENCE_X - 24) / 48) + 1 }, (_, i) => 8 + i * 48), FENCE_X];
 function barrier() {
-  const y = BARRIER_Y, first = POSTS[0], last = POSTS[POSTS.length - 1];
-  rect(first, y - 20, last - first, 1, C.ink);
-  rect(first, y - 19, last - first, 1, C.blue2);
-  rect(first, y - 18, last - first, 1, C.blue1);
-  rect(first, y - 17, last - first, 1, C.ink);
-  for (const x of POSTS) {
-    rect(x - 3, y - 1, 7, 2, C.ink);
-    rect(x - 2, y - 1, 5, 1, C.steel1);
-    rect(x - 1, y - 22, 3, 21, C.ink);
-    rect(x, y - 21, 1, 20, C.steel3);
+  const y = BARRIER_Y;
+  beltAcross(POSTS[0], POSTS[POSTS.length - 1], y);
+  for (const x of POSTS) post(x, y);
+}
+
+// ---- The way out ----
+// The barrier on the right runs front to back on FENCE_X, from a post just right of the display's screen and in front
+// of its legs, down to the corner of the barrier along the bottom, with the gap (layout.js GAP) between its far post
+// and its near one. Through the gap two belts run out past the right edge of the world, a chute like the arena's, each
+// on a post of its own at the edge. The EXIT sign hangs off the gap's far post, which stands
+// a little taller to carry it, on the post's left, the way into the gap: low enough to keep clear of the display's
+// legs above it, and behind her as she walks out (she's always nearer than the far post in the gap), so she passes in
+// front of it. Hung that way it's also wholly behind the dialog box in the cut scene's shots of the display, which
+// only reach this corner's left side.
+/**
+ * The gap's far post and near post, and the posts on FENCE_X behind the gap, back to front from the display; in front
+ * of it there's just the near post and the corner.
+ */
+const FAR = GAP.y0 - 4, NEAR = GAP.y1 + 4;
+const FENCE_BACK = [124, 140, FAR];
+/** The chute's outer posts, at the right edge of the world. */
+const CHUTE_OUT = WORLD.w - 8;
+
+/** The EXIT sign's panel, inside its ink outline, and how tall the post carrying it stands: up to the outline's top. */
+const EXIT_SIGN = { w: 27, h: 11 };
+const EXIT_POLE = 22 + EXIT_SIGN.h + 2;
+/**
+ * The EXIT sign on the post with its foot at (x, y), as at the arena's way out: a red panel lit from the upper left,
+ * the word and an arrow in white, in ink, its outline's right edge on the post's left side, its top level with the
+ * post's and its bottom edge just above the belts.
+ */
+function exitSign(x, y) {
+  const { w, h } = EXIT_SIGN, x0 = x - 1 - w, y0 = y - EXIT_POLE + 1;
+  rect(x0 - 1, y0 - 1, w + 2, h + 2, C.ink);
+  rect(x0, y0, w, h, C.red1);
+  rect(x0, y0, w, 1, C.red2);
+  rect(x0, y0, 1, h, C.red2);
+  rect(x0 + w - 1, y0 + 1, 1, h - 1, C.red0);
+  rect(x0 + 1, y0 + h - 1, w - 1, 1, C.red0);
+  text('EXIT', x0 + 3, y0 + 3, { font: 3, color: C.white });
+  // The arrow, a three-pixel point on a two-pixel tail.
+  const ax = x0 + 20, ay = y0 + 3;
+  rect(ax, ay + 2, 2, 1, C.white);
+  rect(ax + 2, ay, 1, 5, C.white);
+  rect(ax + 3, ay + 1, 1, 3, C.white);
+  rect(ax + 4, ay + 2, 1, 1, C.white);
+}
+
+/**
+ * The barrier on the right, the chute and the sign, each sorted in by its floor line: every post with the belt back to
+ * the post behind it, the chute's belts (just behind the gap's posts on the same line) and the last belt down to the
+ * corner (just behind the bottom barrier's corner post, which is drawn with it). Nothing when it's off the screen.
+ */
+function wayOut(viewX) {
+  if (viewX + W < FENCE_X - 30) return [];
+  const parts = [];
+  FENCE_BACK.forEach((y, i) => parts.push({ y, draw: () => {
+    if (i) beltDown(FENCE_X, FENCE_BACK[i - 1], y);
+    if (y === FAR) {
+      post(FENCE_X, y, EXIT_POLE);
+      exitSign(FENCE_X, y);
+    } else post(FENCE_X, y);
+  } }));
+  parts.push({ y: NEAR, draw: () => post(FENCE_X, NEAR) });
+  parts.push({ y: BARRIER_Y - 0.5, draw: () => beltDown(FENCE_X, NEAR, BARRIER_Y) });
+  for (const y of [FAR, NEAR]) {
+    parts.push({ y: y - 0.5, draw: () => {
+      beltAcross(FENCE_X + 2, WORLD.w + 8, y);
+      post(CHUTE_OUT, y);
+    } });
   }
+  return parts;
 }
 
 // ---- The audience display ----
@@ -274,27 +365,30 @@ export function drawSet(g, view, t, o = {}) {
     { y: REPS_SIGN.y, draw: repsSign },
     { y: BOARD.y, draw: () => board(o.board) },
     { y: BARRIER_Y, draw: barrier },
+    ...wayOut(view.x),
     ...(o.people ?? []),
   ];
   drawFieldLive(g, view.x, t, { camY: view.y, robots: false, ends: false, nearGate: NEAR_GATE, more });
 }
 
 // ---- Where she can walk ----
-// The open floor in front of the field and past both ends (stopping 18 pixels short of the world's sides, clear of the
-// belt barrier's end posts); on the field, the band in front of the line and the line itself; and the gate joining the
-// band to the floor in front. Everything standing in them stops her: the field's
-// corner depots and loading stations by the band, the HABs and the cargo ship behind it, the sign posts, the mic, the
+// The open floor in front of the field and past both ends (stopping 18 pixels short of the world's left side, clear of
+// the belt barrier's end post, and at FENCE_LIMIT on the right, short of the barrier there); on the field, the band in
+// front of the line and the line itself; the gate joining the band to the floor in front; and the gap in the barrier
+// on the right, out past the edge of the world (beyond FENCE_LIMIT only along it). Everything standing in them stops
+// her: the field's corner depots and loading stations by the band, the HABs and the cargo ship behind it, the sign posts, the mic, the
 // TEAM REPS sign, the display (its legs, and the floor behind its screen, so she's never lost behind it), and anyone
 // standing: a box about as wide as a person's shoulders and deeper in front of them than behind, so nobody walks into
 // or through anybody and she stops far enough in front of someone that their face clears the top of her head.
 const SIDE = 18;
 const REGIONS = [
-  { x0: SIDE, x1: WORLD.w - SIDE, y0: FRONT_FLOOR, y1: WALK_MAX_Y },
+  { x0: SIDE, x1: FENCE_LIMIT, y0: FRONT_FLOOR, y1: WALK_MAX_Y },
   { x0: SIDE, x1: ENDS, y0: 70, y1: WALK_MAX_Y },
-  { x0: WORLD.w - ENDS, x1: WORLD.w - SIDE, y0: 70, y1: WALK_MAX_Y },
+  { x0: WORLD.w - ENDS, x1: FENCE_LIMIT, y0: 70, y1: WALK_MAX_Y },
   BAND,
   LINE_AREA,
   { x0: NEAR_GATE.x0 + 3, x1: NEAR_GATE.x1 - 3, y0: 138, y1: 149 },
+  { x0: FENCE_LIMIT, x1: WORLD.w + 48, y0: GAP.y0, y1: GAP.y1 },
 ];
 const inside = (x, y, r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
 

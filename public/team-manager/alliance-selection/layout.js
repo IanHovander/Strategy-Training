@@ -4,7 +4,8 @@
 // the floor carries on to the bottom of the world, and that's where the team reps wait their turn. It's only as deep as
 // the waiting reps need: walking about down there, the view stops 64 rows down (WORLD.h - 144), so the faces along the
 // line stay in frame over her head. Past either end of the field the floor runs up beside the field to the walkway, as in
-// the arena; there the view rises to keep the stands' front row whole along the top (walkView).
+// the arena; there the view rises to keep the stands' front row whole along the top (walkView). Past the red end, below
+// the audience display, is the way out: a gap in a belt barrier, as at the arena's red end (FENCE_X, GAP, EXIT).
 
 import { W, H, clamp } from '../pixel.js';
 import { WORLD_W, FIELD } from '../field.js';
@@ -127,6 +128,25 @@ export const BOARD = { x: 720, y: 118 };
 /** The belt barrier along the bottom of the world (its floor line), and as far down as anyone walks. */
 export const BARRIER_Y = 204;
 export const WALK_MAX_Y = 198;
+
+// ---- The way out ----
+/**
+ * She leaves on the right, the way the arena's walkabout does: past the red end the floor is roped off from the rest of
+ * the hall by a belt barrier running front to back a little in from the right edge, from beside the audience display's
+ * screen down to the belt barrier along the bottom, and there's a gap in it with a short chute out to the right. The
+ * barrier's line, and the gap: the band of floor she walks out along. It's below the display's legs, so the EXIT sign
+ * on the gap's far post stands clear of them, and as high up the floor as that allows, so on a big screen with no room
+ * beside the picture the sign and the arrow stay above the stick's ring in the bottom right corner.
+ */
+export const FENCE_X = 764;
+export const GAP = { y0: 160, y1: 182 };
+/** Anywhere but the gap, her feet stop this far short of the barrier's line. */
+export const FENCE_LIMIT = FENCE_X - 5;
+/**
+ * scene.exit: once she's at the barrier's line in the gap, out she walks through the chute (stage.js). The arrow sits
+ * at the gap, a little lower than stage.js would put it, so its words run along the floor clear of the EXIT sign.
+ */
+export const EXIT = { x: FENCE_LIMIT - 3, y0: GAP.y0, y1: GAP.y1, label: 'ON TO WORLDS', sign: { y: 152 } };
 /**
  * The floor past each end of the field, ENDS pixels wide, runs from the walkway (row 70) to the bottom; the floor in
  * front of the field joins it from FRONT_FLOOR down (above that, the corner depots stand between the two).
