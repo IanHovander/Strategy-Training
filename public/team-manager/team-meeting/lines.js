@@ -16,7 +16,7 @@
 //   okafor    the engineer who mentors the team, at the thank-you card: safety, gracious professionalism
 //   brandt    the teacher who signs the forms, on the bench: forms, the van at six, a dad joke
 
-import { HERO_NAME } from '../cast.js';
+import { HERO_NAME, HAS_NAME } from '../cast.js';
 
 export const LINES = {
   tessa: [
@@ -32,7 +32,7 @@ export const LINES = {
     ['SO WE WEIGH IT FIRST THING AT LOAD-IN.', 'I MADE A PACKING LIST. AND A BACKUP.'],
   ],
   teammate: [
-    [`${HERO_NAME} OF THE WEEK, EVERYBODY.`, 'CAN I HAVE YOUR AUTOGRAPH NOW?'],
+    [HAS_NAME ? `STRATEGIST OF THE WEEK: ${HERO_NAME}!` : `${HERO_NAME} OF THE WEEK, EVERYBODY.`, 'CAN I HAVE YOUR AUTOGRAPH NOW?'],
     ['FOR THE RECORD, I CLAPPED THE LOUDEST.', 'I HAVE WITNESSES.'],
     ['REAL TALK, A WHOLE REGIONAL MAKES MY', 'STOMACH DO A LEVEL 3 CLIMB.'],
     ['VAN PLAN: BACK ROW, SNACKS, AND YOU', 'TEACHING ME THE PICK LIST. DEAL?'],

@@ -22,6 +22,7 @@ import {
 import { Chip, Player, BEAT, INTRO_BEATS } from './chip.js';
 import { SONGS } from './songs.js';
 import { beam } from './lights.js';
+import { NAME_MAX, cleanName, savedName, saveName } from './player.js';
 import { drawHero, heroIdle } from './hero.js';
 
 // The working title. Change it here; the logo is sized from the text.
@@ -595,7 +596,7 @@ function drawTitle(t, B) {
   cover(1 - seg(t, 0, 0.6), C.white);
 }
 
-// ---- Menu: NEW SEASON starts the game (play.html, every scene so far in turn) ----
+// ---- Menu: NEW SEASON asks your name, then starts the game (play.html, every scene so far in turn) ----
 const MENU = ['NEW SEASON', 'REPLAY INTRO'];
 function box(x, y, w, h) {
   fill(x, y, w, h, C.ink);
@@ -611,6 +612,56 @@ function drawMenu(now) {
     text(label, 24, 15 + i * 14, { color: C.ink });
     if (i === ui.cursor && (!ui.leaving || Math.floor(now * 8) % 2)) text('>', 14, 15 + i * 14, { color: C.ink });
   });
+}
+
+// ---- Your name ----
+// It goes on the strategist's name tag all season (player.js keeps it). Typed on the keyboard, or on a phone's own: a
+// text box no one sees takes the typing, so the phone's keyboard comes up, and the screen draws what's in it.
+const nameInput = Object.assign(document.createElement('input'), { type: 'text', maxLength: NAME_MAX, autocomplete: 'off', spellcheck: false });
+nameInput.setAttribute('aria-label', 'Your name');
+nameInput.setAttribute('autocapitalize', 'characters');
+nameInput.setAttribute('enterkeyhint', 'done');
+nameInput.style.cssText = 'position:fixed;left:50%;top:30%;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;pointer-events:none';
+document.body.append(nameInput);
+nameInput.addEventListener('input', () => (ui.name = nameInput.value = cleanName(nameInput.value)));
+const NAME_BUTTONS = { back: [52, 102, 64, 20], ok: [140, 102, 64, 20] };
+const inside = ([x, y, w, h], px, py) => px >= x && px < x + w && py >= y && py < y + h;
+
+function askName() {
+  ui.state = 'name';
+  ui.name = nameInput.value = savedName();
+  nameInput.focus();
+}
+function confirmName() {
+  const name = ui.name.trim();
+  if (!name) return chip.sfx('cursor');
+  saveName(name);
+  chip.sfx('select');
+  ui.leaving = true;
+  nameInput.blur();
+  setTimeout(() => location.assign(`./play.html?name=${encodeURIComponent(name)}`), 450);
+}
+function drawName(now) {
+  screen();
+  fill(0, 0, W, H, '#f4f6ff');
+  box(6, 6, 244, 132);
+  text('NEW SEASON', 128, 18, { align: 'center', color: C.ink });
+  text("WHAT'S YOUR NAME?", 128, 40, { align: 'center', color: C.ink });
+  // The name, in a field with a blinking cursor where the next letter goes.
+  fill(70, 56, 116, 20, C.ink);
+  fill(71, 57, 114, 18, C.white);
+  text(ui.name, 78, 62, { color: C.ink });
+  if (ui.name.length < NAME_MAX && Math.floor(now * 2.5) % 2) fill(78 + measure(ui.name) + (ui.name ? 1 : 0), 69, 5, 1, C.ink);
+  text('IT GOES ON YOUR NAME TAG ALL SEASON.', 128, 84, { font: 3, align: 'center', color: C.steel1 });
+  for (const [key, label] of [['back', 'BACK'], ['ok', 'OK']]) {
+    const [x, y, w, h] = NAME_BUTTONS[key], dim = key === 'ok' && !ui.name.trim();
+    fill(x, y, w, h, C.ink);
+    fill(x + 1, y + 1, w - 2, h - 2, dim ? '#c9cfe6' : key === 'ok' ? C.blue1 : C.white);
+    if (!dim && key === 'ok') fill(x + 1, y + 1, w - 2, 1, C.blue2);
+    const blink = key === 'ok' && ui.leaving && Math.floor(now * 8) % 2;
+    if (!blink) text(label, x + w / 2, y + 7, { align: 'center', color: key === 'ok' && !dim ? C.white : C.ink });
+  }
+  text('ENTER: OK   ESC: BACK', 128, 128, { font: 3, align: 'center', color: C.steel2 });
 }
 
 function drawBoot(now) {
@@ -747,7 +798,7 @@ class SongTrack {
 }
 
 let track = SONG ? new SongTrack(SONG) : new ChipTrack();
-const ui = { state: 'boot', cursor: 0, leaving: false, woke: false, pending: false };
+const ui = { state: 'boot', cursor: 0, leaving: false, woke: false, pending: false, name: '' };
 // The picture always runs on its own clock. The music joins it at the current moment as soon as the audio is
 // actually running, which on some phones is only after a later tap, or again after the phone interrupted it.
 const clock = { perf0: 0, audio: false };
@@ -800,6 +851,15 @@ function press(key) {
     return;
   }
   if (ui.leaving) return;
+  if (ui.state === 'name') {
+    if (key === 'start') confirmName();
+    else if (key === 'b') {
+      ui.state = 'menu';
+      nameInput.blur();
+      chip.sfx('cursor');
+    }
+    return;
+  }
   if (key === 'up' || key === 'down') {
     ui.cursor = (ui.cursor + (key === 'up' ? MENU.length - 1 : 1)) % MENU.length;
     chip.sfx('cursor');
@@ -807,11 +867,8 @@ function press(key) {
     ui.state = 'play';
   } else if (key === 'a' || key === 'start') {
     chip.sfx('select');
-    if (ui.cursor === 0) {
-      // The cursor blinks while the select sound plays, then the season starts.
-      ui.leaving = true;
-      setTimeout(() => location.assign('./play.html'), 450);
-    } else {
+    if (ui.cursor === 0) askName();
+    else {
       ui.state = 'play';
       playFrom(0);
     }
@@ -824,6 +881,21 @@ const KEYS = {
 };
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // Typing a name: Enter and Esc are OK and BACK, and the rest goes to the name (the text box takes it when it has the
+  // focus; otherwise it's typed in here).
+  if (ui.state === 'name') {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      if (!e.repeat) press(e.key === 'Enter' ? 'start' : 'b');
+    } else if (document.activeElement !== nameInput && !ui.leaving) {
+      if (e.key === 'Backspace') ui.name = ui.name.slice(0, -1);
+      else if (e.key.length === 1) ui.name = cleanName(ui.name + e.key);
+      else return;
+      nameInput.value = ui.name;
+      e.preventDefault();
+    }
+    return;
+  }
   if (e.code === 'KeyM') return toggleMute();
   // Named keys map to buttons; any other letter or digit counts as A. Tab, Shift and the like are left alone.
   const key = KEYS[e.code] ?? (e.key.length === 1 ? 'a' : null);
@@ -835,6 +907,12 @@ window.addEventListener('keydown', (e) => {
 canvas.addEventListener('click', (e) => {
   const r = canvas.getBoundingClientRect();
   const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
+  if (ui.state === 'name') {
+    if (inside(NAME_BUTTONS.ok, x, y)) press('start');
+    else if (inside(NAME_BUTTONS.back, x, y)) press('b');
+    else nameInput.focus(); // a tap anywhere else brings the phone's keyboard back up
+    return;
+  }
   if (ui.state === 'menu' && x < 110 && y > 8 && y < 44) {
     const i = y < 26 ? 0 : 1;
     if (i !== ui.cursor) ui.cursor = i;
@@ -878,6 +956,7 @@ function render() {
   const t = timeNow();
   if (clock.audio) track.pump();
   if (ui.state === 'menu') return drawMenu(now);
+  if (ui.state === 'name') return drawName(now);
   if (t < 0) {
     screen();
     return fill(0, 0, W, H, C.ink);

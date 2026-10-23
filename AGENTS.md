@@ -29,5 +29,10 @@ tunnel), and `npm start` (Node, same Wi-Fi only).
   the day of an event.
 - **`public/js/config.js` contains a shared relay (TURN) login that is public on purpose.** Copies of this project
   are welcome to use it. Leave it unchanged, so a replacement arrives by syncing (docs, section 2).
+- **Team-specific content goes in `TEAM-SPECIFIC.md`.** The project features FRC team 5026, the Iron Panthers, and
+  other teams should be able to make it theirs. Whenever you add or move anything specific to 5026 (the number, the
+  name, the panther logo, the red team colours, merch, the mascot, real team members, chants, lines that assume it's
+  5026), add an entry for it to `TEAM-SPECIFIC.md` (file, where, what, what to change it to), or update the entry.
+  Prefer the shared values (`HERO_NAME` from `player.js`, `tones`/`MERCH` in `cast.js`) over writing it out again.
 - Ask the human before outward-facing steps (creating repos, pushing, account settings), and let them do
   their own logins.

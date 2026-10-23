@@ -12,9 +12,12 @@
 import { C } from './pixel.js';
 import { HERO_LOOK, leftFacing } from './walker.js';
 import { TEAMMATE_LOOK } from './teammate.js';
+import { savedName } from './player.js';
 
-// The two people the story follows don't have names yet; the dialog box calls them this.
-export const HERO_NAME = 'STRATEGIST';
+// The strategist is whoever's playing: the name they typed starting a new season (player.js), or STRATEGIST until
+// they have. HAS_NAME says which, for a line that reads differently with a name. The teammate has no name yet.
+export const HERO_NAME = savedName() || 'STRATEGIST';
+export const HAS_NAME = HERO_NAME !== 'STRATEGIST';
 export const TEAMMATE_NAME = 'TEAMMATE';
 
 export const BASE = { k: C.ink, E: '#3a2218', w: '#e6ddd4', M: '#8f4636', T: '#f6f1ea', m: '#c97a70' };
