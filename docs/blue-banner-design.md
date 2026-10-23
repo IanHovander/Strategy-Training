@@ -54,7 +54,7 @@ across loops:
 
 - He's in a slightly different seat each time.
 - There's a zip tie on him that nobody remembers adding.
-- An old label is stitched inside his bow: *"Property of 26, Class of 2009."*
+- An old label is stitched inside his bow: *"Property of 26, Class of 2015."* (The team started in 2014, so its first class graduated in 2015.)
 - A battery in the cart never appears in the battery log. A sharp scout notices. (It's inside Norbert.)
 - At big moments, before the reveal, Norbert's ear glows (see section 4, the bet log).
 - One field volunteer turns up at every event, never seems to age, and once says "Picking 3000 *again*?"
@@ -316,7 +316,7 @@ the music clock, and the opening should feel like it. A first pass to time and t
 | Card | 2 | ALLIANCE SELECTION · SATURDAY 12:38 PM. The music comes in. |
 | Wide, then Robin | 4 | The arena, Robin skating to the mic: "WELCOME TO ALLIANCE SELECTION!" |
 | Close on the co-captain | 2, silent | The co-captain turns to her. A wordless beat with a hold, so A can't skip it. |
-| The handoff | 4 | "YOU'RE UP. THE LIST IS YOURS." Then Norbert: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2009." |
+| The handoff | 4 | "YOU'RE UP. THE LIST IS YOURS." Then Norbert: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2014." |
 | Her | 1.5 | "...OKAY." |
 | The dashboard | 45 s clock | The pick (beat 1 in section 5). |
 

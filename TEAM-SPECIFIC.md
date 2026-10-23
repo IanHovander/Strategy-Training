@@ -199,3 +199,10 @@ These build the portraits and sprites in `public/team-manager/`; change them and
 | `strategist/strategist.txt`, `strategist/build.py` | palette ~14-16; comment ~31 | Shirt reds #ff6a55 #d3212f #a1172a; "the team's red 5026 shirt" | New colours; rebuild `hero.js`. |
 | `teammate/palette.txt`, `portrait.py`, `build.py` | palette ~14-16; "The badge" ~88-100; comments | Hoodie reds; the panther badge and "5026" (a `DIG` table for 5, 0, 2, 6); a portrait of a real 5026 member | New colours, logo and number (add digits to `DIG`), a new face or a generic one; rebuild `teammate.js`. |
 | `norbert/norbert.txt` (and `README.md` ~41-46) | whole file | Norbert, the team mascot | Replace or delete. |
+
+## The design notes (`docs/blue-banner-design.md`)
+
+| File | Where | What's 5026-specific | Change |
+| --- | --- | --- | --- |
+| `docs/blue-banner-design.md` | section 3, "The device and the clues" | Norbert's label "Property of 26, Class of 2015": the team started in 2014, so its first class graduated in 2015 | The new team's first graduating class, and its mascot. |
+| `docs/blue-banner-design.md` | section 5, "Building the opening" (the handoff) | "He's been to every event since 2014" | The year the new team started. |
