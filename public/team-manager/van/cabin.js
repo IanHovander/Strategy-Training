@@ -7,7 +7,7 @@
 // median's yellow line and guardrail. Now and then a car in the passing lane overtakes, down the screen. The van rides
 // a pixel up now and then, the trailer a moment later.
 //
-// Everything is in world pixels (layout.js has the coordinates, 256 x 184): world (x, y) is screen (x - ox, y - oy).
+// Everything is in world pixels (layout.js has the coordinates, 256 x 208): world (x, y) is screen (x - ox, y - oy).
 // The road is drawn once into a strip that tiles every 120 pixels and is scrolled, like field.js's floor; the trailer,
 // the van's tub, each row's seats, the steering wheel and the van's front are drawn once each into layers and blitted;
 // only the roadside, the passing cars, the tyres' tread and the turn signals are drawn live. Boxes are field.js's
@@ -387,15 +387,6 @@ function spareBumper(x0, w, top, cols) {
   text('5026', Math.round(x0 + w / 2 - measure('5026', { font: 3 }) / 2), top + 1, { font: 3, color: C.white });
 }
 
-/** A box on the floor: its top, then the face toward you, outlined, the top's far edge lit. Returns the face's top. */
-function crate(x, w, y, deep, tall, top, face, edge) {
-  rect(x - 1, y - tall - deep - 1, w + 2, tall + deep + 2, C.ink);
-  rect(x, y - tall - deep, w, deep, top);
-  rect(x, y - tall - deep, w, 1, edge);
-  rect(x, y - tall, w, tall, face);
-  return y - tall;
-}
-
 function makeTub() {
   return layer(CABIN.w, CABIN.h, () => {
     const { x0, x1 } = BODY, [k0, k1, k2] = RAMP.trim, [m0, m1, m2] = RAMP.mat, [b0, b1, b2] = RAMP.body;
@@ -443,37 +434,16 @@ function makeTub() {
   });
 }
 
-/** The cargo well: spare bumpers against the tailgate, a toolbox, the duffels and the cooler. */
+/**
+ * The cargo well: spare bumpers stood up on edge against the tailgate. Nothing lies on the floor in front of them: the
+ * back bench's headrests and the back row's heads would hide it all but for scraps between the heads, which read as
+ * stray blocks of colour (the bags and the toolbox ride in the trailer).
+ */
 function cargo() {
-  const floor = Y.cargo + 18;
-  // Both colours of bumper, stood on edge against the tailgate: a match can put 5026 on either alliance. They stand
-  // high enough that the back row's headrests leave their numbers whole.
+  // Both colours of bumper: a match can put 5026 on either alliance. They stand high enough that the back row's
+  // headrests leave their numbers whole.
   spareBumper(129, 31, Y.cargo + 2, [C.blue0, C.blue1, C.blue2]);
   spareBumper(97, 31, Y.cargo + 2, [C.red0, C.red1, C.red2]);
-  // The duffels, slumped in front of them: rounded, lit on top, a strap across.
-  const duffel = (x, w, y, h, [d0, d1, d2]) => {
-    rect(x + 1, y - h - 1, w - 2, h + 2, C.ink);
-    rect(x, y - h, w, h, C.ink);
-    rect(x + 1, y - h, w - 2, h - 1, d1);
-    rect(x + 2, y - h, w - 4, 2, d2);
-    rect(x + 1, y - 2, w - 2, 1, d0);
-    rect(x + 3, y - h + 1, 1, 1, d2);
-    rect(x + Math.round(w / 2) - 1, y - h, 2, h, C.steel0);
-  };
-  duffel(126, 17, floor - 1, 8, RAMP.sign);
-  duffel(111, 16, floor + 1, 8, [C.steel0, C.steel1, STEEL]);
-  // The toolbox: grey, its yellow handle folded over the lid, the latches.
-  const lid = crate(96, 15, floor + 2, 3, 6, C.steel2, C.steel1, C.steel3);
-  rect(99, lid - 4, 9, 2, C.ink);
-  rect(100, lid - 4, 7, 1, C.yel1);
-  rect(100, lid - 4, 2, 1, C.yel2);
-  for (const lx of [98, 108]) rect(lx, lid + 1, 2, 2, C.yel1);
-  // The cooler: blue, its white lid lit, the handle on the end.
-  const cl = crate(144, 15, floor + 2, 3, 7, C.steel3, C.blue1, C.white);
-  rect(144, cl, 15, 1, C.blue0);
-  rect(144, cl + 1, 1, 6, C.blue2);
-  rect(147, cl + 3, 9, 1, C.blue0);
-  rect(157, cl + 2, 2, 3, C.ink);
 }
 
 // ---- The seats, drawn once per row ----
@@ -561,27 +531,31 @@ function makeSeats(r) {
 
 // ---- The steering wheel and the van's front, drawn once ----
 /**
- * The wheel, seen from in front: an oval ring 15 across and 10 down round WHEEL, white along its lit top arc, mid steel
- * down its sides and shade along its bottom, ink round the outside, a small hub on a spoke down to the column. It's
- * open inside, so his shirt shows through it and it reads as a ring at 1:1, not as stripes across his lap. His hands go
- * over the rim at ten and two (drawCabin's opts.hands, people.js drawHands), where his forearms reach it.
+ * The wheel, seen from in front: a steel ring 15 across and 11 down round WHEEL, ink round it inside and out, lit from
+ * the upper left (a white glint and light steel along its top arc and left side, mid steel down its right side and
+ * along the bottom, so the whole ring shows against his shirt and the seat behind it), with a 5x3 hub in the middle on
+ * one-pixel spokes out to nine and three and down to the column. Through the openings between hub and rim his shirt
+ * shows in the wheel's shadow (stage.js's shadow tone), darker than the shirt above it, so the ring and hub read as a
+ * wheel at 1:1 and at x2 rather than as stripes across his chest. His hands go over the rim at ten and two (drawCabin's
+ * opts.hands, people.js drawHands), and the rim's sides stay clear below them, so the ring closes.
  */
 const RIM = [
-  '.....kkkkk.....',
-  '...kkWWWWWkk...',
-  '..kWL.....Lmk..',
-  '.kLl.......mdk.',
-  'kLl.........mdk',
-  'kl....kHk....dk',
-  '.km....s....dk.',
-  '..kmd..s..ddk..',
-  '...kkdddddkk...',
-  '.....kkkkk.....',
+  '....kkkkkkk....',
+  '..kkGGWWWWWkk..',
+  '.kGWkkkkkkkLLk.',
+  '.kWkokkkkkokmk.',
+  'kLkokHHHHskokmk',
+  'kLkskHssshkskmk',
+  'kLkoksssshkokmk',
+  '.kdkokkkkkokdk.',
+  '.kddkoosookddk.',
+  '..kkdddddddkk..',
+  '....kkkkkkk....',
 ];
 function makeWheel() {
   return layer(CABIN.w, CABIN.h, () => {
     const { x: cx, y: cy } = WHEEL, [, k1, k2] = RAMP.trim;
-    const pal = { k: C.ink, W: C.white, L: C.steel3, l: C.steel2, m: STEEL, d: C.steel1, s: C.steel2, H: C.steel3 };
+    const pal = { k: C.ink, G: C.white, W: C.steel3, L: C.steel3, m: C.steel2, d: C.steel2, s: STEEL, H: C.steel2, h: C.steel1, o: SHADOW };
     // The column, down into the dash.
     rect(cx - 2, cy + 3, 5, Y.dash - cy - 3, C.ink);
     rect(cx - 1, cy + 4, 3, Y.dash - cy - 5, k1);
@@ -602,9 +576,9 @@ function makeFront() {
     rect(CABIN_IN.x0, Y.windshield - 2, CABIN_IN.x1 - CABIN_IN.x0, 1, k0);
     for (let x = CABIN_IN.x0 + 4; x < CABIN_IN.x1 - 4; x += 3) rect(x, Y.windshield - 1, 2, 1, k0);
     // The gauges' hood in front of the driver, and the phone mount on the passenger's side, empty: Owen has it.
-    rect(137, Y.dash - 3, 21, 5, C.ink);
-    rect(138, Y.dash - 2, 19, 3, k1);
-    rect(138, Y.dash - 2, 19, 1, k2);
+    rect(137, Y.dash - 4, 21, 6, C.ink);
+    rect(138, Y.dash - 3, 19, 4, k1);
+    rect(138, Y.dash - 3, 19, 1, k2);
     rect(117, Y.dash - 4, 7, 6, C.ink);
     rect(118, Y.dash - 3, 1, 4, C.steel2);
     rect(122, Y.dash - 3, 1, 4, C.steel1);

@@ -10,8 +10,9 @@
 // props and their business) and script.js (the words, the shot list and the seat picker). This file only joins them:
 //   outside shots   drawOutside straight onto the screen, people.js's profiles in its windows
 //   cabin shots     drawCabin at 1:1 into a buffer the size of the cabin's world, people.js's rows between its seats and
-//                   the pretzels over everything while they're in the air; then the part the shot's camera frames is
-//                   copied to the screen at a whole-number zoom
+//                   the pretzels in the air with the row they're going along, or over everything while they're thrown
+//                   back over a seat; then the part the shot's camera frames is copied to the screen at a whole-number
+//                   zoom
 //   both            the film bars, the place card and the fade in, as every scene's cut scene has them
 //
 // One clock runs the road. A shot's camera, poses and bag go by the shot's own t, but the road, the roadside, the
@@ -22,14 +23,14 @@
 // The dialog box covers the bottom of the picture, so a shot can say which rows of people are under it (under): they're
 // left out while it's up, rather than leaving the crowns of their heads poking out over its top edge.
 
-import { W, H, useContext, screen, lerp } from '../pixel.js';
+import { W, H, useContext, screen, lerp, seg, easeInOut } from '../pixel.js';
 import { bars, cover, placeCard } from '../stage.js';
 import { drawBubble } from '../talk.js';
 import { HERO_NAME } from '../cast.js';
 import { CABIN, FRAME, SEATS_AT, bounce } from './layout.js';
 import { drawCabin } from './cabin.js';
 import { drawOutside } from './outside.js';
-import { SEATS, LOOKS, SLUMP, drawRow, drawProfiles, drawBag, drawHands, bagAt } from './people.js';
+import { SEATS, LOOKS, SLUMP, drawRow, drawProfiles, drawBag, drawHands, bagAt, bagRow } from './people.js';
 import { NAMES, LINES, CARD, HINT, NOTE, LABEL, PICK_START, pick, SHOTS } from './script.js';
 
 // ---- The van's clock ----
@@ -74,21 +75,26 @@ function holdWords(shot) {
 
 // ---- The cabin, framed ----
 let buf = null;
-/** The cabin's world drawn at 1:1, the pretzels in the air over it, and the camera's part of it on the screen. */
+/**
+ * The cabin's world drawn at 1:1 with the pretzels on their way, and the camera's part of it on the screen. The bag
+ * between two hands (or a lap and a lap) is along the way between them, lifted in an arc (a throw over a seat back, a
+ * little hop from lap to lap, none from hands to a lap), riding the van. It can come across later than it comes up the
+ * screen (kx), so a throw back over a seat goes up past a head before it hooks over to the hands. Between two people in
+ * one row it's drawn with that row (people.js drawRow's opts.air), under the seats and heads in front as it is on a lap;
+ * thrown back over a seat, it's drawn over everything.
+ */
 function cabinShot(g, shot, t, clock) {
-  const opts = { ...shot.rows?.(t), ...(shot.under && boxUp(shot, t) && { hide: shot.under }) };
-  const bg = buf.getContext('2d');
-  drawCabin(bg, 0, 0, clock, { ...shot.cabin?.(t), hands: drawHands, row: (g2, r, ox, oy) => drawRow(g2, r, ox, oy, clock, opts) });
-  // The bag between two hands (or a lap and a lap): along the way between them, lifted in an arc (a throw over a seat
-  // back, a little hop from lap to lap, none from hands to a lap), riding the van. It can come across later than it
-  // comes up the screen (kx), so a throw back over a seat goes up past a head before it hooks over to the hands.
   const flight = shot.bag?.(t);
+  let air = null;
   if (flight) {
     const [x0, y0] = bagAt(flight.from), [x1, y1] = bagAt(flight.to), k = flight.k, arc = flight.arc ?? 6;
-    const x = Math.round(lerp(x0, x1, flight.kx ?? k));
-    const y = Math.round(lerp(y0, y1, k)) - Math.round(arc * Math.sin(Math.PI * k)) + bounce(clock);
-    drawBag(bg, x, y);
+    const row = bagRow(flight.from) === bagRow(flight.to) ? bagRow(flight.from) : null;
+    air = { x: Math.round(lerp(x0, x1, flight.kx ?? k)), y: Math.round(lerp(y0, y1, k)) - Math.round(arc * Math.sin(Math.PI * k)), row, held: flight.held };
   }
+  const opts = { ...shot.rows?.(t), ...(shot.under && boxUp(shot, t) && { hide: shot.under }), ...(air?.row && { air }) };
+  const bg = buf.getContext('2d');
+  drawCabin(bg, 0, 0, clock, { ...shot.cabin?.(t), hands: drawHands, row: (g2, r, ox, oy) => drawRow(g2, r, ox, oy, clock, opts) });
+  if (air && !air.row) drawBag(bg, air.x, air.y + bounce(clock));
   const cam = shot.cam(t);
   useContext(g);
   screen();
@@ -96,23 +102,40 @@ function cabinShot(g, shot, t, clock) {
   g.drawImage(buf, cam.x, cam.y, W / cam.s, H / cam.s, 0, 0, W, H);
 }
 
-// ---- The cut scene ----
-// Who's speaking on the page in the dialog box: the phone shows them. stage.js reads a beat's say.look every frame, so
-// it's worked out from the page on screen; a plain page is said by say.name, a page with a name by that name.
+// ---- Who's talking, on the phone ----
+// The phone shows whoever says the page in the dialog box, in their seat (stage.js's faceGait): a beat's plain pages are
+// said by the beat's speaker (say.look), and a page with a name of its own (hers, or Mr. Adeyemi's as Owen calls the
+// exit) carries that person's look. Owen and Bea are shown on their phones, everyone else sitting. (Facing you, the
+// rig's seated pose reads as standing at the phone's size; turned in the seat it reads as sitting, as her own picture
+// does. stage.js draws the speaker facing you for now; faceDir is the turn to use once it takes one.)
+//
+// In the cut scene the phone shows a beat's speaker only while their words are up. Before they start, the big screen
+// is still the shot before anyone speaks (the whole van before Owen calls the exit, the pan down from the trailer, the
+// bag sliding across to her), so the phone keeps her own picture, as it does through the beats without words; and once
+// they've been read, it goes back to her. stage.js shows a beat's say.look from the beat's first frame, so a speaker's
+// look here is a getter that's empty outside those words (stage.js then shows her). A frozen frame (?at=) always shows
+// her: stage.js doesn't show a frozen beat's speaker.
 const ID_OF = { [HERO_NAME]: 'hero', ...Object.fromEntries(Object.entries(NAMES).map(([id, name]) => [name, id])) };
-function speakerOf(say) {
-  const conv = stage?.cut?.conv;
-  const page = conv && conv.pages === say.lines ? conv.pages[conv.page] : null;
-  const id = page ? ID_OF[Array.isArray(page) ? say.name : page.name] : say.look;
-  return LOOKS[id] ?? LOOKS[say.look];
+const ON_PHONE = ['owen', 'bea'];
+const seated = (id) => ({ look: LOOKS[id], faceGait: ON_PHONE.includes(id) ? 'phone' : 'sit', faceDy: 6, faceDir: 1 });
+/** Whether beat i's words are in the dialog box now (live). */
+const wordsUp = (i) => {
+  const c = stage?.cut;
+  return c?.i === i && !!c.conv && !c.read && performance.now() / 1000 >= c.conv.start;
+};
+/** obj (a beat's say, or one of its pages) with id's seated picture, its look there only while beat i's words are up. */
+function speaker(obj, id, i) {
+  const { look, ...face } = seated(id);
+  return Object.defineProperty(Object.assign(obj, face), 'look', { get: () => (wordsUp(i) ? look : undefined), enumerable: true });
 }
+const withFaces = (pages, i) => pages.map((page) => (Array.isArray(page) ? page : speaker({ ...page }, ID_OF[page.name], i)));
 
+// ---- The cut scene ----
 const cutscene = SHOTS.map((shot, i) => ({
   dur: shot.dur,
-  say: shot.say && {
-    name: shot.say.name, lines: shot.say.lines, at: shot.say.at, auto: shot.say.auto, tag: shot.say.tag,
-    get look() { return speakerOf(shot.say); },
-  },
+  say: shot.say && speaker({
+    name: shot.say.name, lines: withFaces(shot.say.lines, i), at: shot.say.at, auto: shot.say.auto, tag: shot.say.tag,
+  }, shot.say.look, i),
   draw(g, t, c) {
     const clock = vanClock(i, c.T);
     holdWords(shot);
@@ -130,16 +153,21 @@ const cutscene = SHOTS.map((shot, i) => ({
 }));
 
 // ---- Picking a seat ----
-// Everyone but her, to talk to. The phone shows them seated.
+// Everyone but her, to talk to. The phone shows them in their seats.
 const PEOPLE = SEATS.filter((p) => p.id !== 'hero').map((p) => ({
-  id: p.id, col: p.col, name: NAMES[p.id], x: p.x, y: p.y, lines: LINES[p.id], look: LOOKS[p.id], faceGait: 'sit',
+  id: p.id, col: p.col, name: NAMES[p.id], x: p.x, y: p.y, lines: LINES[p.id], ...seated(p.id),
 }));
 const byId = Object.fromEntries(PEOPLE.map((p) => [p.id, p]));
 const [HX, HY] = SEATS_AT.hero;
 
-/** Where the bubble goes across from the picked head (11 to the right if not here), and who turns to her when picked. */
+/**
+ * Where the bubble goes across from the picked head (11 to the right if not here), and who turns to her when picked
+ * (the way they face). Only the teammate, beside her: the middle row would have to turn right round to the back to face
+ * her, and from behind Kai's headphones are gone and Rafi's knees swing out over the console, so the bubble marks them
+ * alone, as it does everyone else.
+ */
 const BUBBLE_DX = { teammate: 7, rafi: 7, owen: -11, tess: -11 };
-const BUBBLE_TURNS = ['teammate', 'rafi', 'kai'];
+const BUBBLE_TURNS = { teammate: 7 };
 
 /** The stick picks a seat: a flick (past 0.4 along its main axis) moves the pick once, and again every 0.35 s held. */
 const FLICK = 0.4, REPEAT = 0.35;
@@ -152,6 +180,20 @@ function stickDir(st) {
   // Two arrow keys at once: the one just pressed wins, then the stick keeps to that axis.
   const across = ax !== ay ? ax > ay : st.x && !was.x ? true : st.y && !was.y ? false : !!picker.held && picker.held[0] !== 0;
   return across ? [Math.sign(st.x), 0] : [0, Math.sign(st.y)];
+}
+
+// The camera in the seat picking: the whole van, and while you talk to the front seats a little lower (FRAME.frontTalk),
+// so the dialog box covers the bumper and the road instead of their hands, Owen's phone and the wheel. It eases down and
+// back over CAM_EASE seconds, as a function of the time since the talk started or ended; going down, the dialog box
+// waits for it (onTalk), so the box doesn't cover the hands and the phone while they're still sliding up into view.
+const FRONT = ['owen', 'adeyemi'];
+const CAM_EASE = 0.4;
+const camMove = { from: FRAME.all.y, to: FRAME.all.y, at: 0 };
+function pickCamera(s) {
+  const now = performance.now() / 1000, to = FRONT.includes(s.talk?.person?.id) ? FRAME.frontTalk.y : FRAME.all.y;
+  const y = () => Math.round(lerp(camMove.from, camMove.to, easeInOut(seg(now, camMove.at, camMove.at + CAM_EASE))));
+  if (to !== camMove.to) Object.assign(camMove, { from: y(), to, at: now });
+  return { x: 0, y: y() };
 }
 
 // The van's clock in the seat picking: on from the cut scene's last frame. The passing lane gets a car every 10 s here
@@ -185,14 +227,23 @@ export const scene = {
     picker.id = PICK_START;
     picker.wait = 0;
     s.me.gait = 'sit';
+    // The cut scene hands over on the whole van: forget any ease toward the front-seat framing from before a replay.
+    Object.assign(camMove, { from: FRAME.all.y, to: FRAME.all.y, at: 0 });
   },
-  camera: () => FRAME.all,
+  camera: pickCamera,
+  // Talking to the front seats, the box and its typing start once the camera has eased down to them (talk.js draws
+  // nothing before a conversation's start). A pressed while it waits shows the page in full straight away.
+  onTalk(s, p) {
+    if (FRONT.includes(p.id)) s.talk.start += CAM_EASE;
+  },
+  status: () => 'IN HER SEAT',
   move: (x, y) => [x, y],
   update(dt, s) {
     const dir = stickDir(s.stick());
-    // She stays in her seat, turned to whoever's picked if they're beside her: the phone shows her sitting.
+    // She stays in her seat: the phone shows her sitting, turned in it (facing you, the rig's seated pose reads as
+    // standing at the phone's size).
     s.me.gait = 'sit';
-    s.me.dir = picker.id === 'teammate' || picker.id === 'bea' ? 1 : 0;
+    s.me.dir = 1;
     if (s.talk) {
       // The stick does nothing while someone's talking, and has to come back to the middle before it picks again.
       picker.held = dir;
@@ -212,8 +263,8 @@ export const scene = {
   // side: the window seats on the right (Bea, Kai, Mr. Adeyemi) have it over their door top, and Owen and Tess by the
   // left-hand windows have it the other way, out toward the glass (Tess's from her head where she's slumped, asleep;
   // the picker never wakes her, but her Zs stop while it's hers). In the middle seats it comes in to 7, on the picked
-  // one's own hair and short of the next head along. And the teammate, Rafi or Kai, picked, turns to the strategist
-  // (BUBBLE_TURNS), so the bubble and the turned head say together whose it is. (Bea stays on her game until you talk.)
+  // one's own hair and short of the next head along. And the teammate, picked, turns to the strategist (BUBBLE_TURNS),
+  // so the bubble and the turned head say together whose it is. (Bea stays on her game until you talk.)
   prompt(g, view, p, t) {
     const [x, y] = p.id === 'tess' ? [p.x + SLUMP.dx, p.y + SLUMP.dy] : [p.x, p.y];
     drawBubble(g, x + (BUBBLE_DX[p.id] ?? 11) - view.x, y - view.y - 41, t);
@@ -223,7 +274,7 @@ export const scene = {
     const cars = !freeFrom || carCycle(clock) > carCycle(freeFrom.clock);
     const opts = {
       look: picker.id, with: s.talk?.person?.id, page: s.talk?.page, bag: 'hero', board: 1,
-      pose: BUBBLE_TURNS.includes(picker.id) ? { [picker.id]: { dir: 7, gait: 'sit' } } : undefined,
+      pose: BUBBLE_TURNS[picker.id] != null ? { [picker.id]: { dir: BUBBLE_TURNS[picker.id], gait: 'sit' } } : undefined,
       zs: picker.id !== 'tess',
     };
     drawCabin(g, view.x, view.y, clock, {

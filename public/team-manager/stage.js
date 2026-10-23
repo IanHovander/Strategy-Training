@@ -19,7 +19,8 @@
 //   people                who she can talk to: { name, x, y, lines, look }, (x, y) their feet and lines a conversation
 //                         (talk.js). The bubble shows over the closest one within 14 pixels across and 10 deep (reach
 //                         and reachY change that, per person). faceGait, if they aren't standing, is how the phone
-//                         shows them while you talk (faceDy moves that picture down, for the shorter poses).
+//                         shows them while you talk (faceDy moves that picture down, for the shorter poses; faceDir
+//                         turns it, 0 facing you if not given: someone seated reads better turned).
 // and, if it needs them:
 //   cutscene              a list of beats (below). Without one the scene starts with her walking.
 //   look                  who you steer (HERO_LOOK, the strategist, if not given)
@@ -35,10 +36,11 @@
 //
 // A cut scene is a list of beats. Each is { dur, draw(g, t, c) }: draw the whole screen t seconds into the beat; c.T is
 // seconds into the cut scene and c.k is t / dur (0 to 1). A beat can say something: say: { name, lines, at, auto, tag,
-// look, faceGait } types the pages in lines (a conversation, as in talk.js; name says who, for the pages that don't)
-// into the dialog box from `at` seconds into the beat, and the phone shows `look` (a walker look, in faceGait if they
-// aren't standing) as the one talking; a page of the form { name, lines, look, faceGait } shows its own speaker. Then the
-// beat waits at its end until it's been read: A finishes the typing, turns the page and, after the last page, moves on.
+// look, faceGait, faceDir, faceDy } types the pages in lines (a conversation, as in talk.js; name says who, for the
+// pages that don't) into the dialog box from `at` seconds into the beat, and while the words are up the phone shows
+// `look` (a walker look, posed and turned as for people, above) as the one talking; a page of the form { name, lines,
+// look, faceGait, faceDir, faceDy } shows its own speaker. Then the beat waits at its end until it's been read: A
+// finishes the typing, turns the page and, after the last page, moves on.
 // With auto the pages turn by themselves (A still hurries them). While a beat waits, t runs on past dur, so hold still
 // past it. A beat without words moves on after dur, or straight away on A. SKIP (or Esc) ends the cut scene.
 // Draw with pixel.js: the context is set and the camera is at the screen for you. cover, bars, placeCard and along
@@ -348,13 +350,15 @@ export function runScene(scene) {
   function drawPhone() {
     fg.clearRect(0, 0, CELL_W, CELL_H);
     const talking = s.talk?.person;
-    // Who to show: whoever says the page on screen (its own look, or the beat's), or whoever she's talking to.
-    const say = s.mode === 'cut' ? beats[s.cut.i].say : null;
-    const page = say && s.cut.conv ? s.cut.conv.pages[s.cut.conv.page] : null;
+    // Who to show: whoever says the page on screen while the words are up (its own look, or the beat's), or whoever
+    // she's talking to.
+    const words = s.mode === 'cut' && s.cut.conv && !s.cut.read && performance.now() / 1000 >= s.cut.conv.start;
+    const say = words ? beats[s.cut.i].say : null;
+    const page = say ? s.cut.conv.pages[s.cut.conv.page] : null;
     const who = say ? (page && !Array.isArray(page) && page.look ? page : say) : talking;
     if (who?.look) {
       const gait = who.faceGait ?? 'stand';
-      fg.drawImage(walkerFrame(0, gait, 0, who.look), 0, who.faceDy ?? (gait === 'sit' ? 6 : 0));
+      fg.drawImage(walkerFrame(who.faceDir ?? 0, gait, 0, who.look), 0, who.faceDy ?? (gait === 'sit' ? 6 : 0));
     } else fg.drawImage(walkerFrame(s.me.dir, s.me.gait, frameOf(s.me), look), 0, 0);
 
     const me = s.me;

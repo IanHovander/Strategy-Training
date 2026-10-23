@@ -17,16 +17,16 @@
 //
 // SHOTS is the cut scene, one entry per beat, everything in it a pure function of the beat's t (seconds). The scene
 // (scene.js) turns each into a stage.js beat: cabin shots draw cabin.js's front view with people.js's rows into a
-// 256 x 184 buffer and show the part cam(t) picks; outside shots draw outside.js's side view. This file imports only
+// 256 x 208 buffer and show the part cam(t) picks; outside shots draw outside.js's side view. This file imports only
 // pixel.js, cast.js and layout.js, never the art or the people, so it loads on its own.
 
-import { lerp, seg, easeInOut } from '../pixel.js';
+import { lerp, seg, easeIn, easeInOut } from '../pixel.js';
 import { HERO_NAME, TEAMMATE_NAME } from '../cast.js';
 import { FRAME } from './layout.js';
 
 /** Everyone's name in the dialog box (the strategist's is HERO_NAME, in her red tag). */
 export const NAMES = {
-  adeyemi: 'MR. ADEYEMI, DRIVING', owen: 'OWEN, NAVIGATING', tess: 'TESS, ASLEEP', rafi: 'RAFI, SNACKS',
+  adeyemi: 'MR. ADEYEMI, MENTOR', owen: 'OWEN, NAVIGATING', tess: 'TESS, ASLEEP', rafi: 'RAFI, SNACKS',
   kai: 'KAI, ROBOT DRIVER', teammate: TEAMMATE_NAME, bea: 'BEA, SCOUT',
 };
 /** The place card as the cut scene opens. */
@@ -106,7 +106,7 @@ const TALK = {
   // The robot. (In 2019 the competition robot was bagged at the end of build season and only came out at events, so
   // Tuesday's practice was on the practice bot.)
   talk3: [
-    ['THE PRACTICE BOT HIT LEVEL 3 TEN TIMES', 'IN A ROW ON TUESDAY. I COUNTED.'],
+    ['THE PRACTICE BOT HIT ROCKET LEVEL 3', 'TEN TIMES IN A ROW TUESDAY. I COUNTED.'],
     me('AND THE CLIMB?'),
     ['THE CLIMB IS... CONFIDENT. THE ZIP', 'TIES ARE BRAND NEW.'],
   ],
@@ -210,12 +210,13 @@ const say = (lines, at, look, name = TEAMMATE_NAME) => ({ name, lines, at, auto:
  *   cam(t)     { x, y, s }: the view's top-left in cabin world pixels, whole pixels, and the zoom
  *   rows(t)    people.js drawRow opts: pose, look, bag, board
  *   cabin(t)   cabin.js drawCabin opts: blink, cars
- *   bag(t)     the pretzel bag in the air, { from, to, k, arc, kx } between two people.js bagAt states (arc: how many
- *              pixels it lifts at the middle of the way, 6 if not given; kx: how far across it has come, k if not
- *              given), or null
+ *   bag(t)     the pretzel bag in the air, { from, to, k, arc, kx, held } between two people.js bagAt states (arc: how
+ *              many pixels it lifts at the middle of the way, 6 if not given; kx: how far across it has come, k if not
+ *              given; held: the teammate's hands still on it), or null
  *   outside(t) outside.js drawOutside opts: signs, car, lane, blink
  *   under      rows of people the dialog box covers in this framing: the scene leaves them out while the box is up
- *   wordsFrom  the earliest the words may come if A is pressed before say.at (seconds into the shot)
+ *   wordsFrom  the earliest the words may come if A is pressed before say.at (seconds into the shot): for a shot whose
+ *              speaker only comes into view, or whose business only happens, partway through
  *   card, fadeIn, fadeOut, bars ('on', or 'out' easing away across the beat), say (stage.js's, look a seat id)
  */
 export const SHOTS = [
@@ -240,10 +241,10 @@ export const SHOTS = [
   // right hand, out to the side where the back row can see them.
   {
     id: 'row2', view: 'cabin', dur: 3.2, bars: ON, cam: pan('front', 'row2', 0, 1.2), cabin: () => ROAD,
-    bag: (t) => (t >= 2.0 && t < 2.25 ? { from: 'rafi', to: 'rafi-up', k: easeInOut(seg(t, 2.0, 2.25)), arc: 0 } : null),
+    bag: (t) => (t >= 2.0 && t < 2.15 ? { from: 'rafi', to: 'rafi-up', k: easeInOut(seg(t, 2.0, 2.15)), arc: 0 } : null),
     rows: (t) => ({
-      pose: { owen: OWEN_MAP, ...(t >= 2.1 && { rafi: CHEER }) },
-      bag: t < 2.0 ? 'rafi' : t < 2.25 ? 'none' : 'rafi-up',
+      pose: { owen: OWEN_MAP, ...(t >= 2.0 && { rafi: CHEER }) },
+      bag: t < 2.0 ? 'rafi' : t < 2.15 ? 'none' : 'rafi-up',
       board: 0,
     }),
   },
@@ -257,12 +258,13 @@ export const SHOTS = [
         const k = seg(t, 0.2, 0.6);
         return { from: 'rafi-up', to: 'teammate-up', k, kx: k ** 3, arc: 3 };
       }
-      return t >= 1.1 && t < 1.4 ? { from: 'teammate-up', to: 'teammate', k: easeInOut(seg(t, 1.1, 1.4)), arc: 0 } : null;
+      // Brought down slowly in both hands until the fists reach the hair (1.29), then dropped into the lap.
+      return t >= 1.1 && t < 1.4 ? { from: 'teammate-up', to: 'teammate', k: easeIn(seg(t, 1.1, 1.4)), arc: 0, held: t < 1.29 } : null;
     },
     rows: (t) => ({
       pose: {
         ...(t < 0.3 && { rafi: CHEER }),
-        ...(t >= 0.45 && t < 1.15 && { teammate: CHEER }),
+        ...(t >= 0.45 && t < 1.29 && { teammate: CHEER }),
         ...(t >= 0.7 && t < 2.3 && { hero: SIT(1) }),
       },
       bag: t < 0.2 ? 'rafi-up' : t < 0.6 ? 'none' : t < 1.1 ? 'teammate-up' : t < 1.4 ? 'none' : 'teammate',
@@ -275,12 +277,14 @@ export const SHOTS = [
     rows: () => ({ bag: 'teammate', board: 0 }),
   },
   // Back down from the trailer to the two of them, the teammate turning to her on the way. Nerves: she looks down at
-  // her board.
+  // her board. A pressed early brings the words no sooner than 0.5 s in (wordsFrom), once the pan has lifted the back
+  // row's faces clear of the dialog box's top: before that the box would cover the face of whoever's talking.
   {
     id: 'talk1', view: 'cabin', dur: 2.0, bars: ON, cam: pan('trailer', 'talk', 0, 1.0), cabin: () => ROAD, bag: () => null,
     under: UNDER,
     rows: (t) => ({ pose: t < 0.5 ? {} : TALKING(0), bag: 'teammate', board: 0 }),
     say: say(TALK.talk1, 1.0, 'teammate'),
+    wordsFrom: 0.5,
   },
   // The scouting plan: she turns to the teammate and starts writing.
   {
@@ -294,7 +298,7 @@ export const SHOTS = [
   {
     id: 'talk3', view: 'outside', dur: 1.0, bars: ON,
     outside: () => ({ signs: [], car: null, lane: 0, blink: null, lift: 32 }),
-    say: say(TALK.talk3, 0.4, 'teammate'),
+    say: say(TALK.talk3, 0, 'teammate'),
   },
   // The pick list: she writes it down, then looks up.
   {
@@ -323,12 +327,15 @@ export const SHOTS = [
     outside: (t) => ({ signs: [{ kind: 'exit', at: 2.2 }], car: null, lane: Math.round(3 * easeInOut(seg(t, 1.0, 3.0))), blink: 'right' }),
   },
   // The whole van, framed a little higher so the film bar clears the spare bumpers' numbers: the right signal blinking,
-  // the front lamp and the mirror's on the screen's left. As Owen's words start, cut in close at x3 on the front seats
-  // over the dialog box: Owen turned to Mr. Adeyemi with the phone up, the hands on the wheel.
+  // the front lamp and the mirror's on the screen's left. As Owen's words start, cut in at x2 on the front seats over the
+  // dialog box: Owen turned to Mr. Adeyemi with the map up on his phone, the hands on the wheel. The words and the cut
+  // always come together, however early A is pressed (wordsFrom): over the whole van the box would hide the front row
+  // and his name tag would sit on his face.
   {
     id: 'arrive', view: 'cabin', dur: 1.8, bars: ON, cam: cut('arrive', 'call', 1.4), cabin: () => ({ blink: 'right', cars: false }), bag: () => null,
     rows: () => ({ pose: { owen: OWEN_TURNED }, bag: 'hero', board: 1 }),
     say: say(ARRIVE, 1.4, 'owen', NAMES.owen),
+    wordsFrom: 1.4,
   },
   // Cut back out to the whole van as the bars ease out, and the seat picking takes over on the same frame: the
   // teammate picked, her turned to them.

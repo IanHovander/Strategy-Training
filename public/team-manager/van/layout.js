@@ -8,8 +8,11 @@
 // People's (x, y) are their feet, as on the walker's rig (walker.js). The van's right side (the passenger side) is on
 // the screen's left in the cabin and toward you outside.
 
-/** The cabin view's world: one screen wide, a little taller than one. */
-export const CABIN = { w: 256, h: 184 };
+/**
+ * The cabin view's world: one screen wide, a little taller than one, with road below the front bumper so the camera can
+ * drop to put the front seats over the dialog box when you talk to them.
+ */
+export const CABIN = { w: 256, h: 208 };
 /** The van's middle, its body's outer edges (ink included) and the cabin inside its door tops. */
 export const VX = 128;
 export const BODY = { x0: 90, x1: 166 };
@@ -23,7 +26,7 @@ export const SEATS_AT = {
   owen: [109, 148], adeyemi: [147, 148],
 };
 /** The middle of the steering wheel's rim, in front of the driver. */
-export const WHEEL = { x: 147, y: 133 };
+export const WHEEL = { x: 147, y: 131 };
 /** Floor lines down the cabin view, top to bottom (a guide: cabin.js may move a band by a pixel or two). */
 export const Y = {
   trailerRoof: 0, trailerFace: 8, tongue: 30, hitch: 38, rearBumper: 40, tailgate: 44, cargo: 48,
@@ -41,18 +44,22 @@ export const ROAD = {
 /** Camera framings: the view's top-left in cabin world pixels, and its zoom. */
 export const FRAME = {
   all: { x: 0, y: 40, s: 1 },      // the whole van: the seat-picking view, and the cut scene's last shots
-  grille: { x: 85, y: 130, s: 3 }, // the scan opens close on the front: headlights, grille and plate, nobody's face
-  hood: { x: 64, y: 99, s: 2 },    // then out to the front seats' faces over the hood (the plate's letters all under the
-                                   // bar: any lower and the bar would cut them in half)
+  grille: { x: 85, y: 136, s: 3 }, // the scan opens close on the front: from the dash down, headlights, grille, plate
+  hood: { x: 64, y: 98, s: 2 },    // then out to the front seats' faces over the hood (the plate all under the bar)
   front: { x: 64, y: 76, s: 2 },   // the driver and the navigator, row 2's faces behind
-  row2: { x: 64, y: 50, s: 2 },    // the middle row, the back row's faces above it
+  row2: { x: 64, y: 44, s: 2 },    // the middle row, the back row's faces above it, the front row's hair all under the bar,
+                                   // and the spare bumpers' numbers whole over them (lower, the top bar cuts through them)
   row3: { x: 64, y: 36, s: 2 },    // the back row, the cargo behind it and the middle row's faces in front
   trailer: { x: 64, y: 8, s: 2 },  // the trailer's nose behind the van, over the back row's faces
   talk: { x: 53, y: 40, s: 2 },    // the strategist and the teammate, faces clear of the dialog box
-  close: { x: 85, y: 52, s: 3 },   // closer on the two of them: x3, their faces between the film bar and the dialog box
+  close: { x: 85, y: 53, s: 3 },   // closer on the two of them: x3, their faces between the film bar and the dialog box,
+                                   // the headrests' lit tops just under the bar (higher, the spare bumpers' bottom edge
+                                   // shows between them in slivers of red and blue)
   arrive: { x: 0, y: 32, s: 1 },   // the whole van a little higher, the spare bumpers' numbers clear of the film bar
-  call: { x: 85, y: 106, s: 3 },   // close on the front seats over the dialog box: their faces, Owen's phone, the hands on
+  call: { x: 64, y: 98, s: 2 },    // in on the front seats over the dialog box: their faces, Owen's phone, the hands on
                                    // the wheel, and behind them only row 2's laps (their heads would be cut by the bar)
+  frontTalk: { x: 0, y: 57, s: 1 }, // the seat picking, talking to the front seats: down so their hands clear the box (and
+                                    // the spare bumpers' bottom edge is off the top of the screen)
 };
 
 /**

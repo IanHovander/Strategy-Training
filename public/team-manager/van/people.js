@@ -10,13 +10,14 @@
 // walker.js's frame cache keeps them apart: Tess with her eyes shut (and an awake copy for when you talk to her), Kai in
 // white over-ear headphones, Bea's phone in a purple case, and the strategist without the board hanging from her hand
 // (hers lies on her lap instead). Two gaits were added to walker.js for the van: `steer` (arms forward to the wheel's rim,
-// with his hands drawn over the rim by drawHands once cabin.js has drawn the wheel) and `phone` (a phone held in both
-// hands in front of the chest).
+// with his hands drawn over its top at ten and two by drawHands once cabin.js has drawn the wheel) and `phone` (a phone
+// held in both hands in front of the chest).
 //
 // Their props are tiny sprites in the house style, a letter a pixel like the heads, ink outline and three tones lit from
 // the upper left: the bag of pretzels (blue, a yellow label, a crimped top), Rafi's trail mix (yellow with a red band),
-// her whiteboard (white in a steel frame, blue and red writing appearing as the conversation goes on) and the Zs rising
-// beside Tess's head. Everything is a pure function of t.
+// her whiteboard (white in a steel frame, blue and red writing appearing as the conversation goes on), the Zs rising
+// beside Tess's head and the map on Owen's phone, lit when he turns to show the driver. Everything is a pure function of
+// t.
 //
 //   SEATS                              [{ id, row, col, x, y, look }] the eight, back row first; x, y their feet (layout.js)
 //   LOOKS                              { [id]: look } for the phone's face when they speak
@@ -24,7 +25,7 @@
 //   drawProfiles(g, vx, vy, t, opts)   the three by the near windows in the outside view (outside.js's opts.inside)
 //   drawHands(g, ox, oy)               the driver's hands over the steering wheel's rim (cabin.js's opts.hands)
 //   drawBag(g, x, y, kind)             the pretzels or the trail mix, bottom middle at screen (x, y)
-//   bagAt(state)                       where the pretzel bag sits in each state, in cabin world pixels
+//   bagAt(state), bagRow(state)        where the pretzel bag sits in each state, in cabin world pixels, and whose row
 
 import { C, cam, useContext, screen, rect, text } from '../pixel.js';
 import { drawWalker, HERO_LOOK, leftFacing } from '../walker.js';
@@ -170,6 +171,20 @@ function drawBoard(x, y, k) {
   }));
 }
 
+// Owen's map app, the phone's face tipped toward the driver when he turns to show him the exit: the walker's phone gait
+// holds a dark slab (pal.pad) in both hands, seen from behind, so turned to the screen's right (dir 1) its two columns
+// over his hands (3 and 4 right of his feet, 22 to 20 up, ink round them already) light up pale blue with the route
+// climbing it in yellow. Facing his lap (dir 0) the screen is toward him, and only the slab shows.
+const MAP = [
+  'by',
+  'yb',
+  'yb',
+];
+const MAP_PAL = { b: C.blue3, y: C.yel1 };
+function drawMap(x, y) {
+  MAP.forEach((row, j) => [...row].forEach((ch, i) => rect(x + 3 + i, y - 22 + j, 1, 1, MAP_PAL[ch])));
+}
+
 // Zs rising beside someone asleep: two on staggered phases, each climbing away from her face (drift: pixels sideways
 // on the way up) and simply ending at the top. Every Z's ink outline goes down first and every white letter over the
 // lot, so where one Z passes another the two still read as Zs instead of merging into one ink blot.
@@ -187,21 +202,25 @@ function zs(x, y, t, rise, drift) {
 export const SLUMP = { dx: -4, dy: 1 };
 /**
  * Where the pretzel bag's bottom middle is in each state, in cabin world pixels: on a lap; held up in Rafi's raised
- * right hand (the cheer gait's hands come up beside his head, 36 pixels over his feet), out to the side, in the gap
+ * right hand (the cheer gait's hands come up beside his head, its bottom edge on his fist), out to the side, in the gap
  * between the teammate and Bea behind him: straight over his head it would sit on the teammate's chest and read as
  * theirs already; or caught in the teammate's two hands held up over their head, 40 over the feet, clear of the top of
- * their hair (the cheer gait's raised hands are hidden behind it, so drawRow puts a fist on each side of the bag), so
- * the throw goes a good way up the screen, which is back in the van.
+ * their hair (the cheer gait's raised arms are hidden behind it, so drawRow draws the forearms coming up out of it to a
+ * fist on each side of the bag), so the throw goes a good way up the screen, which is back in the van.
  */
 const BAG_AT = {
   rafi: [SEATS_AT.rafi[0] + 5, SEATS_AT.rafi[1] - 10],
-  'rafi-up': [SEATS_AT.rafi[0] + 10, SEATS_AT.rafi[1] - 36],
+  'rafi-up': [SEATS_AT.rafi[0] + 9, SEATS_AT.rafi[1] - 34],
   'teammate-up': [SEATS_AT.teammate[0], SEATS_AT.teammate[1] - 40],
   teammate: [SEATS_AT.teammate[0], SEATS_AT.teammate[1] - 10],
   hero: [SEATS_AT.hero[0] + 10, SEATS_AT.hero[1] - 10],
 };
 /** World [x, y] of the bag's bottom middle in that state ('none': it's in the air, so null). */
 export const bagAt = (state) => BAG_AT[state] ?? null;
+/** The row of whoever has the bag in that state: a bag going from one of them to another in the same row (a lap to a
+ * lap, or brought down from over a head) is drawn with that row, so the seats and heads in front cover it as they do on
+ * a lap; one thrown back over a seat flies over everything. */
+export const bagRow = (state) => ROW_OF[state.replace('-up', '')];
 
 /**
  * What someone is doing t seconds in: { dir, gait, dx, dy, awake }. Their idle business, unless the strategist is talking
@@ -233,6 +252,32 @@ const lookOf = (id, s) => (id === 'tess' && !s.awake ? TESS_ASLEEP : LOOKS[id]);
 const lapShift = (dir) => (dir === 1 || dir === 2 ? 2 : dir === 7 || dir === 6 ? -2 : 0);
 
 /**
+ * The pretzels held up over the teammate's head, their bottom middle at screen (bx, by): a fist grips each side of the
+ * bag near its foot, in their skin with ink round it, and their forearms, in the hoodie's red, come up to the fists out
+ * of the top corners of their hair (x, y: their feet on screen), where the cheer gait's raised hands would just poke out.
+ * As the bag is brought down the forearms shorten, and once the fists are down to the hair there are none.
+ */
+function heldUp(bx, by, x, y, look) {
+  const [d, s, S] = look.pal.skin, [, h1, h2] = look.pal.shirt, top = by - 3, bottom = y - 35;
+  for (const [fx, side] of [[bx - 5, -1], [bx + 4, 1]]) {
+    // Each row of the forearm leans out a little toward the bottom, two pixels in all: ink first, then the sleeve.
+    const at = (row) => fx + side * Math.round((2 * (row - top)) / Math.max(1, bottom - top));
+    for (let row = top; row <= bottom; row++) rect(at(row) - 1, row, 4, 1, C.ink);
+    for (let row = top; row <= bottom; row++) {
+      rect(at(row), row, 2, 1, h1);
+      rect(at(row), row, 1, 1, h2);
+    }
+  }
+  sprite(PRETZELS, BAG_PAL, bx, by);
+  for (const fx of [bx - 5, bx + 4]) {
+    rect(fx - 1, by - 5, 4, 4, C.ink);
+    rect(fx, by - 4, 2, 2, s);
+    rect(fx, by - 4, 1, 1, S);
+    rect(fx + 1, by - 3, 1, 1, d);
+  }
+}
+
+/**
  * Row r's people (3 the back bench, 2 the middle, 1 the front seats) in the cabin view, feet at (x - ox, y - oy), with
  * their props over them. No floor shadows: they're in their seats. opts:
  *   pose   { [id]: { dir, gait, dx, awake } } this frame's overrides (the cut scene's direction); they win over the rest
@@ -241,6 +286,9 @@ const lapShift = (dir) => (dir === 1 || dir === 2 ? 2 : dir === 7 || dir === 6 ?
  *          down (after the first page: page, the page on screen); the front row keep their eyes on the road
  *   bag    where the pretzels are: 'rafi' | 'rafi-up' | 'teammate-up' | 'teammate' | 'hero' (default) | 'none' (in the
  *          air: the scene draws it). Rafi holds them up over his head (cheer), the teammate in both fists over theirs.
+ *   air    { x, y, held } the bag in the air between two of this row (world x, y of its bottom middle, as bagAt): drawn
+ *          over the row's people, so the seats and heads in front cover it as they do on a lap; held: the teammate's
+ *          fists and forearms are still on it, bringing it down from over their head
  *   board  how much is written on her board, 0 to 1 (default 1)
  *   zs     false: no Zs over Tess (the seat picker's bubble is hers, so they'd crowd it)
  *   hide   rows to leave out altogether: the scene's talk shots have row 2 under the dialog box while it's up, and only
@@ -254,13 +302,14 @@ export function drawRow(g, r, ox, oy, t, opts = {}) {
   const row = SEATS.filter((p) => p.row === r).map((p) => ({ ...p, s: stateOf(p.id, t, opts) }));
   // The back row's knees stay behind the middle row's seat back. Rows are stacked 26 pixels apart here where a van's are
   // 8, so in the gaps between the middle row's headrests you'd see the back row's laps, and anyone turned in their seat
-  // pokes a knee out there beside her board, a stray scrap of jeans. So the back row is drawn down to the front of its
-  // cushion only (their props, the board and the bags, go over the top as before).
+  // pokes a knee out there beside her board, a stray scrap of jeans. So the back row is drawn down to the top of the
+  // middle row's headrests only (their props, the board and the bags, go over the top as before): in the front seats'
+  // shot the film bar comes down to just there, and anything lower showed in the gaps as slivers of skin and red.
   const tuck = r === 3;
   if (tuck) {
     g.save();
     g.beginPath();
-    g.rect(0, 0, g.canvas.width, ROWS[3] - 11 - oy);
+    g.rect(0, 0, g.canvas.width, ROWS[3] - 14 - oy);
     g.clip();
   }
   for (const p of row) {
@@ -271,47 +320,51 @@ export function drawRow(g, r, ox, oy, t, opts = {}) {
     const x = p.x - ox + p.s.dx, y = p.y - oy + p.s.dy, lap = lapShift(p.s.dir);
     if (p.id === 'hero') drawBoard(x + lap, y - 12, opts.board ?? 1);
     if (p.id === 'rafi') sprite(TRAIL, BAG_PAL, x - 4 + lap, y - 10);
+    if (p.id === 'owen' && p.s.gait === 'phone' && p.s.dir === 1) drawMap(x, y);
     // Her Zs start by her ear and rise over her window and the door top, staying beside her head and inside the van:
     // clear of the back row's faces.
     if (p.id === 'tess' && !p.s.awake && opts.zs !== false) zs(x - 9, y - 29, t, 10, -2);
     // The pretzels, wherever they've got to in this row: exactly at bagAt, so a throw starts and lands where they sit.
-    // Held up over the teammate's head, a fist grips each side of the bag near its foot, in their skin, ink round it.
+    // Held up over the teammate's head, their fists and forearms hold it there.
     const at = bagAt(bag), holder = bag.replace('-up', '');
     if (at && holder === p.id) {
       const bx = at[0] - ox + p.s.dx, by = at[1] - oy + p.s.dy;
-      sprite(PRETZELS, BAG_PAL, bx, by);
-      if (bag === 'teammate-up') {
-        const [d, s, S] = p.look.pal.skin;
-        for (const fx of [bx - 5, bx + 4]) {
-          rect(fx - 1, by - 5, 4, 4, C.ink);
-          rect(fx, by - 4, 2, 2, s);
-          rect(fx, by - 4, 1, 1, S);
-          rect(fx + 1, by - 3, 1, 1, d);
-        }
-      }
+      if (bag === 'teammate-up') heldUp(bx, by, x, y, lookOf(p.id, p.s));
+      else sprite(PRETZELS, BAG_PAL, bx, by);
     }
+  }
+  // The bag on its way between two of this row, over their laps and under the row in front.
+  const air = opts.air;
+  if (air && air.row === r) {
+    const bx = Math.round(air.x - ox), by = Math.round(air.y - oy), mate = row.find((p) => p.id === 'teammate');
+    if (air.held && mate) heldUp(bx, by, mate.x - ox + mate.s.dx, mate.y - oy + mate.s.dy, lookOf(mate.id, mate.s));
+    else sprite(PRETZELS, BAG_PAL, bx, by);
   }
   Object.assign(cam, saved);
   useContext(prev);
 }
 
 /**
- * Mr. Adeyemi's hands on the steering wheel, at ten and two. cabin.js draws the wheel's rim over his arms and then these
- * (drawCabin's opts.hands), so he holds the rim instead of reaching behind it: a 2x2 fist in his skin each side, lit
- * on its upper left, with ink round its sides and under it; its top runs on into his forearm. ox, oy as for drawRow.
+ * Mr. Adeyemi's hands on the steering wheel, at ten and two on its top arc. cabin.js draws the wheel's rim over his
+ * arms and then these (drawCabin's opts.hands), so he holds the rim instead of reaching behind it: a 2x2 fist in his
+ * skin over each upper corner of the rim, lit on its upper left, ink all round it, so it stands apart from the rim and
+ * from his shirt. The rim's sides stay clear below the fists, so the wheel reads as a closed ring with both hands on
+ * top. The steer gait's forearms end at nine and three, under the rim, except one pixel of his right fist that pokes
+ * out past the rim's left edge: it's inked over, so the arm reads as going behind the rim.
  */
-const HANDS = [[WHEEL.x - 7, WHEEL.y - 3], [WHEEL.x + 6, WHEEL.y - 3]]; // their top left pixels, on the rim's upper sides
+const HANDS = [[WHEEL.x - 6, WHEEL.y - 4], [WHEEL.x + 5, WHEEL.y - 4]]; // their top left pixels, on the rim's top corners
 export function drawHands(g, ox, oy) {
   const prev = useContext(g), saved = { ...cam };
   screen();
   const [d, s, S] = ADEYEMI.pal.skin;
   for (const [hx, hy] of HANDS) {
     const x = hx - ox, y = hy - oy;
-    rect(x - 1, y, 4, 3, C.ink);
+    rect(x - 1, y - 1, 4, 4, C.ink);
     rect(x, y, 2, 2, s);
     rect(x, y, 1, 1, S);
     rect(x + 1, y + 1, 1, 1, d);
   }
+  rect(WHEEL.x - 8 - ox, WHEEL.y - oy, 1, 1, C.ink); // the steer gait's fist tip at nine o'clock
   Object.assign(cam, saved);
   useContext(prev);
 }

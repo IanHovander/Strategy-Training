@@ -23,6 +23,7 @@
 // and blitted after; each frame only places them and draws what moves on them (wheels, lamps).
 
 import { C, useContext, screen, cam, rect, fill, disk, dither, text, withAlpha, layer, blit, rnd } from '../pixel.js';
+import { tones } from '../cast.js';
 import { SIDE, ROAD, bounce, trailerBounce, blinkOn, RAMP } from './layout.js';
 
 const SHADOW = 'rgba(5, 6, 13, 0.45)';
@@ -33,7 +34,8 @@ const WELL = '#101219'; // inside the wheel arches
 const BADGE_INK = '#16161b'; // the panther badge's black, as on the team's merch
 /** How fast each layer streams left, in pixels a second. The car overtakes this much faster than the van drives. */
 const SPEED = { hills: 3, ridge: 10, car: 45 };
-const STRIP = { y: 40, w: 768, h: 104 }; // the ground: three screens long so the roadside trees don't repeat too soon
+const STRIP = { y: 28, w: 768, h: 116 }; // the ground: three screens long so the roadside trees don't repeat too soon, and tall
+// enough above the far bank (row 58) for the tallest tree's crown, outline and all
 const VAN_MID = SIDE.vx + SIDE.len / 2; // 170, where the car's middle passes the van's
 
 // ---- Pixel buffers ----
@@ -372,7 +374,8 @@ const SIGNS = {
   exit: {
     ox: 46, oy: 124,
     draw(ox, oy) {
-      // EVENT CENTER on the main panel, 1/2 MILE under it, the EXIT 42 tab on top at the right. Tall posts: the panel
+      // EVENT CENTER on the main panel, RIVERTON 1/2 MILE under it (the city the open shot's RIVERTON 12 sign counted
+      // down to, so the two say where the regional is), the EXIT 42 tab on top at the right. Tall posts: the panel
       // clears the van's roof, and the tab's top clears the film bar.
       const w = 83, h = 24, x = ox - 41, y = oy - 109;
       post(x + 15, y + h, oy);
@@ -381,7 +384,7 @@ const SIGNS = {
       text('EXIT 42', x + w - 25, y - 8, { color: C.white, align: 'center' });
       panel(x, y, w, h);
       text('EVENT CENTER', ox, y + 4, { color: C.white, align: 'center' });
-      text('1/2 MILE', ox, y + 15, { font: 3, color: C.white, align: 'center' });
+      text('RIVERTON  1/2 MILE', ox, y + 15, { font: 3, color: C.white, align: 'center' });
     },
   },
 };
@@ -655,6 +658,12 @@ function makeTrailer() {
     const k = (x - TR.box + 1) / nose;
     for (let y = Math.round(TR.top - D + (D / 2) * k); y < Math.round(TR.top - (D / 2) * k); y++) b.put(x, y, R[2]);
   }
+  // The roof's ribs, the bows across it that the cabin view shows as rows: here they run across the top face from its
+  // far edge to its near one, one every six pixels along, the V-nose's narrowing top included. The lit far edge stays.
+  for (let x = 4; x < TR.len - 1; x += 6) {
+    const k = x < TR.box ? 0 : (x - TR.box + 1) / nose;
+    for (let y = Math.round(TR.top - D + (D / 2) * k) + 1; y < Math.round(TR.top - (D / 2) * k); y++) b.put(x, y, R[1]);
+  }
   // The side, toward you.
   b.box(0, TR.top, TR.box, TR.bottom - TR.top, R[1]);
   b.row(TR.top, 0, TR.box, R[2]);
@@ -735,18 +744,20 @@ function hitch(tx, ty, vx, vy) {
 }
 
 // ---- The overtaking car ----
-// A blue sedan in the passing lane, seen like the van from the side and a little above: the top faces of its trunk,
-// roof and hood, the raked rear window and windshield between them, the side windows, its wheels on the lane's near
-// edge. A sedan stands a good deal lower than a high-roof van: its roof's top face stays under the top face of the
-// van's while it passes behind (their far edges meet on the same row), so it reads as a car going by behind, not a roof
-// box on the van, and then shows whole as it pulls ahead. Its top faces are shaded like any box's: the far rows a step
-// darker, the near rows in the paint's light tone, a highlight along the near edge where the roof turns down.
+// A green sedan in the passing lane (highway green, like the cabin view's green car; not blue, so its glass and roof
+// don't run on from the van's blue-glinting windshield as it pulls past the nose), seen like the van from the side and a
+// little above: the top faces of its trunk, roof and hood, the raked rear window and windshield between them, the side
+// windows, its wheels on the lane's near edge. A sedan stands a good deal lower than a high-roof van: its roof's top
+// face stays under the top face of the van's while it passes behind (their far edges meet on the same row), so it reads
+// as a car going by behind, not a roof box on the van, and then shows whole as it pulls ahead. Its top faces are shaded
+// like any box's: the far rows a step darker, the near rows in the paint's light tone, a highlight along the near edge
+// where the roof turns down.
 const CAR = { len: 110, wr: 8, axles: [22, 90] };
 let carLayer = null;
 const CBOX = { x: -2, y: -56, w: CAR.len + 4, h: 58 };
 function makeCar() {
   const b = buffer(CBOX.x, CBOX.y, CBOX.w, CBOX.h);
-  const K = [C.blue0, C.blue1, C.blue2], D = 10, T = RAMP.trim, GL = C.night1;
+  const K = RAMP.sign, H = tones.shirtGreen[2], D = 10, T = RAMP.trim, GL = C.night1;
   const roof = -28, belt = -21, deck = -22;
   // The near outline of the top, back to front: the trunk lid, the rear window, the roof, the windshield, the hood.
   const top = (x) => (x < 22 ? deck
@@ -755,17 +766,18 @@ function makeCar() {
     : x < 90 ? roof + Math.round(((x - 70) * (belt - roof)) / 20)
     : belt + Math.round(((x - 90) * 4) / 19));
   // Top faces (the near top edge, D rows deep): body paint on the trunk, roof and hood, dark glass on the windows. The
-  // paint: the far rows in the mid tone, a blue0 seam, the near six rows lit, the near edge's highlight.
+  // paint: the far rows in the mid tone, a dark seam, the near six rows lit, the near edge's highlight (cast.js's green
+  // shirt's light tone, as along the beltline).
   for (let x = 0; x < 109; x++) {
     const glass = (x >= 22 && x < 38) || (x >= 70 && x < 90);
     for (let y = top(x) - D; y < top(x); y++) {
       const near = top(x) - y;
-      b.put(x, y, glass ? GL : near === 1 ? C.blue3 : near <= 6 ? K[2] : near === 7 ? K[0] : K[1]);
+      b.put(x, y, glass ? GL : near === 1 ? H : near <= 6 ? K[2] : near === 7 ? K[0] : K[1]);
     }
   }
-  // The glass gets a glint: a stepped streak down the windshield, a shorter one up the rear window.
-  for (let k = 0; k < 5; k++) b.box(76 + k * 2, top(76) - D + 1 + k * 2, 2, 1, C.blue3);
-  for (let k = 0; k < 4; k++) b.box(26 + k * 2, top(26) - 3 - k * 2, 2, 1, C.blue3);
+  // The glass gets a glint in light steel: a stepped streak down the windshield, a shorter one up the rear window.
+  for (let k = 0; k < 5; k++) b.box(76 + k * 2, top(76) - D + 1 + k * 2, 2, 1, C.steel3);
+  for (let k = 0; k < 4; k++) b.box(26 + k * 2, top(26) - 3 - k * 2, 2, 1, C.steel3);
   // The side: the greenhouse between the pillars, then the body below the beltline.
   for (let x = 0; x < 109; x++) for (let y = top(x); y <= -6; y++) b.put(x, y, K[1]);
   for (let y = roof + 2; y < belt - 1; y++) {
@@ -774,9 +786,9 @@ function makeCar() {
     b.put(54, y, K[1]);
     b.put(55, y, K[0]);
   }
-  for (let k = 0; k < 2; k++) b.box(44 + k, belt - 3 - k * 2, 1, 2, C.blue3);
+  for (let k = 0; k < 2; k++) b.box(44 + k, belt - 3 - k * 2, 1, 2, C.steel3);
   for (let x = 1; x < 108; x++) b.put(x, belt, K[2]);
-  for (let x = 1; x < 108; x++) b.put(x, belt + 1, C.blue3);
+  for (let x = 1; x < 108; x++) b.put(x, belt + 1, H);
   for (let y = -13; y <= -6; y++) b.row(y, 0, 109, K[0]);
   b.row(-14, 0, 109, K[1]);
   // Door seams and handles.
