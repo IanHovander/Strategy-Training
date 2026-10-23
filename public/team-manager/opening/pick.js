@@ -1,17 +1,17 @@
 // The pick: where the opening hands the player the decision (docs/blue-banner-design.md, section 5, beat 1). Seed 4 is
 // on the clock: 45 seconds, big and red at the top. Under it is the scouting tablet (tablet.js): her robot pinned for
-// reference, and two teams to pick from (teams.js). 7461 shows the biggest average on the screen, 41, but its last
-// three boxes are blank: it sat dead all Saturday morning, and the app's average skips blank boxes. 6834 shows 31,
-// all ten boxes filled, never broken down. 6834 is the right pick.
+// reference, and two teams to pick from (teams.js). 7461 shows the biggest average on the screen, 38, but it's
+// fading: 44 a match on Friday, 29 on Saturday morning. 6834 shows 35, but it's rising: 29 on Friday, a new intake
+// Friday night, 45 on Saturday. 6834 is the right pick.
 //
 // What happens, phase by phase:
 //   browse    the clock runs. The stick (or the arrow keys) moves between the cards; A picks the one the cursor's on.
 //             At 0:00 the clock says TIME! and Robin waits: the pick is still hers.
 //   confirm   "5026 RESPECTFULLY INVITES TEAM 6834", INVITE or BACK (the stick chooses, A presses). The clock runs on.
 //   accept    "6834 ACCEPTS!". On by itself after a moment, or on A.
-//   result    the bet log's stamp, GOOD CALL or BAD CALL, and the reveal: 7461's blank boxes turn over to 0, 0, 0
-//             (FRIDAY 41 · SATURDAY 0, 0, 0), and the one line to remember. A wrong pick: A rewinds. The right one: A
-//             carries on.
+//   result    the bet log's stamp, GOOD CALL or BAD CALL, and the reveal: Saturday's four boxes light up, red for
+//             7461 (FRIDAY 44 · SATURDAY 29), green for 6834, and the one line to remember. A wrong pick: A rewinds.
+//             The right one: A carries on.
 //   rewind    the tape runs back to 0:45, Norbert's 26 ear glowing in the corner. Then browse again, and her thought:
 //             "...DIDN'T THIS JUST HAPPEN?"
 //   end       TO BE CONTINUED: the quarterfinals aren't built yet.

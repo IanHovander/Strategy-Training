@@ -5,7 +5,7 @@
 // right left clear for SKIP and NEXT SCENE), the clock's draining bar, her robot pinned in a row for reference, then
 // one card per team she can pick, side by side, and a hint line at the bottom. A card has the team number, its
 // average (the biggest number on the screen: the tempting one), one short note, and its ten qualification matches as
-// a strip of boxes, Friday's seven then Saturday morning's three. A blank box is a match nobody scored.
+// a strip of boxes, Friday's six then Saturday morning's four, set a little apart. A blank box is a match nobody scored.
 //
 //   drawTablet({ t, left, on, hint, thought, glow, drag })
 //                                                      the tablet: t seconds since the clock slammed in, left the
@@ -31,14 +31,15 @@
 
 import { W, H, C, screen, fill, text, measure, withAlpha, dither, clamp, rnd } from '../pixel.js';
 import { drawHud } from './norbert-held.js';
-import { OURS, YOU, TEAMS, FRIDAY, avgOf } from './teams.js';
+import { OURS, YOU, TEAMS, FRIDAY, avgOf, fridayOf, saturdayOf } from './teams.js';
 
 export const PICK_CLOCK = 45;
 /** Good and bad, for the bet log's stamps: the palette has no green, so it's here. */
 const GOOD = '#3fd06a', GOOD0 = '#1d6b35';
 /** The lesson, in one line. */
-export const LESSON = 'LOOK AT THE MATCHES, NOT THE AVERAGE.';
-const WHY = `${TEAMS[0].num}'S ${avgOf(TEAMS[0])} SKIPPED THREE DEAD MATCHES.`;
+export const LESSON = 'LOOK AT THE TREND, NOT THE AVERAGE.';
+const [FADING, RISING] = TEAMS;
+const WHY = `${FADING.num} IS FADING. ${RISING.num} IS ON THE RISE.`;
 
 /** The clock's face: 0:45. */
 export const clockText = (s) => {
@@ -92,37 +93,30 @@ function line(parts, x, y, o = {}) {
 
 /**
  * Ten matches as a strip of boxes, Friday's then (a little apart) Saturday's. A score is a filled box with the number
- * in it; a blank is an empty dotted box. flip(i), from 0 to 1, turns blank box i over to show the 0 it really was.
- * o: w, h (a box), gap, split (the extra gap before Saturday), font (3 or 5), fillC (a scored box's colour).
+ * in it; a blank is an empty dotted box. o: w, h (a box), gap, split (the extra gap before Saturday), font (3 or 5),
+ * fillC (a scored box's colour), sat: [colour, lit colour] to light up Saturday's boxes (the reveal), satK from 0 to 1
+ * how many of them are lit so far, one after another.
  */
 function drawStrip(scores, x, y, o) {
-  const { w, h, gap = 1, split = 3, font = 3, fillC = C.night3, flip = () => 0 } = o;
+  const { w, h, gap = 1, split = 3, font = 3, fillC = C.night3, sat = null, satK = 1 } = o;
   const th = font === 3 ? 5 : 7;
   scores.forEach((v, i) => {
     const bx = x + i * (w + gap) + (i >= FRIDAY ? split : 0);
-    if (v != null) {
-      fill(bx, y, w, h, fillC);
-      fill(bx, y, w, 1, C.blue2);
-      text(String(v), bx + Math.ceil(w / 2), y + Math.ceil((h - th) / 2), { font, align: 'center', color: C.white });
-      return;
-    }
-    const k = clamp(flip(i), 0, 1);
-    if (k <= 0) {
+    if (v == null) {
       fill(bx, y, w, h, C.night0);
       dotted(bx, y, w, h, C.steel2);
       return;
     }
-    // Turning over: it squashes flat, then opens red with the 0 it was.
-    const sq = Math.round(h * Math.abs(1 - 2 * k)), top = y + Math.floor((h - sq) / 2);
-    if (k < 0.5) {
-      fill(bx, top, w, sq, C.night0);
-      if (sq > 1) dotted(bx, top, w, sq, C.steel2);
-    } else {
-      fill(bx, top, w, sq, C.red1);
-      fill(bx, top, w, 1, C.red2);
-      if (sq === h) text('0', bx + Math.ceil(w / 2), y + Math.ceil((h - th) / 2), { font, align: 'center', color: C.white });
-    }
+    const lit = sat && i >= FRIDAY && (i - FRIDAY + 1) / (scores.length - FRIDAY) <= satK + 1e-6;
+    fill(bx, y, w, h, lit ? sat[0] : fillC);
+    fill(bx, y, w, 1, lit ? sat[1] : C.blue2);
+    text(String(v), bx + Math.ceil(w / 2), y + Math.ceil((h - th) / 2), { font, align: 'center', color: C.white });
   });
+  // Saturday's boxes, once they're all lit, get a frame round them: the last four, the ones that matter.
+  if (sat && satK >= 1) {
+    const sx = x + FRIDAY * (w + gap) + split - 2, sw = (scores.length - FRIDAY) * (w + gap) - gap + 4;
+    frame(sx, y - 2, sw, h + 4, sat[1]);
+  }
   return 10 * w + 9 * gap + split;
 }
 /** FRI and SAT under a strip drawn at (x, y) with these boxes. */
@@ -320,8 +314,9 @@ function stamp(good, t, y) {
   text(word, x + box + 8, y + 6, { scale: 2, color: c, outline: C.ink });
 }
 
-/** Blank box i turning over to its 0: one after another, from `from` seconds in. */
-const flipper = (t, from) => (i) => (i < FRIDAY ? 0 : clamp((t - from - (i - FRIDAY) * 0.25) / 0.3, 0, 1));
+/** Saturday's boxes lighting up one after another from `from` seconds in: 0 to 1. */
+const lighting = (t, from) => clamp((t - from) / 0.9, 0, 1);
+const FADE = [C.red1, C.red2], RISE = [GOOD0, GOOD];
 /** A blink for "A: ..." lines once they're there. */
 const prompt = (str, y, t, at) => {
   if (t < at || (t - at) % 1 > 0.7) return;
@@ -332,9 +327,9 @@ const prompt = (str, y, t, at) => {
 };
 
 /**
- * The bet log after the pick: PICK 1, the stamp, and the reveal. A wrong pick (7461): its ten matches, the blanks
- * turning over to 0, 0, 0, and FRIDAY 41 · SATURDAY 0, 0, 0. The right one (6834): its ten matches over 7461's, the
- * same blanks turning over. Then the one line to remember, and A to rewind or carry on.
+ * The bet log after the pick: PICK 1, the stamp, and the reveal: Saturday's four boxes lighting up. A wrong pick (7461):
+ * its ten matches, Saturday's in red, and FRIDAY 44 · SATURDAY 29. The right one (6834): its ten matches, Saturday's in
+ * green, over 7461's in red, and SATURDAY 45 · 29. Then the one line to remember, and A to rewind or carry on.
  */
 export function drawResult(team, good, t, { glow = 0 } = {}) {
   screen();
@@ -344,23 +339,26 @@ export function drawResult(team, good, t, { glow = 0 } = {}) {
   text('BET LOG', W / 2, 4, { font: 3, align: 'center', color: C.steel2 });
   text(`PICK 1: ${team.num}`, W / 2, 11, { align: 'center', color: C.white });
   stamp(good, t, 23);
-  const dead = TEAMS[0];
+  const satK = lighting(t, 0.6);
   if (!good) {
     const o = { w: 15, h: 15, gap: 2, split: 6, font: 5 };
     const sw = 10 * o.w + 9 * o.gap + o.split, sx = Math.round(W / 2 - sw / 2);
-    drawStrip(dead.scores, sx, 58, { ...o, flip: flipper(t, 0.6) });
+    drawStrip(FADING.scores, sx, 58, { ...o, sat: FADE, satK });
     if (t > 1.6) {
-      line([['FRIDAY', C.blue3], [String(avgOf(dead)), C.yel1], ['·', C.steel2], ['SATURDAY', C.red3], ['0, 0, 0', C.red2]], W / 2, 79);
+      line([['FRIDAY', C.blue3], [String(fridayOf(FADING)), C.yel1], ['·', C.steel2], ['SATURDAY', C.red3], [String(saturdayOf(FADING)), C.red2]], W / 2, 79);
     }
   } else {
     const o = { w: 12, h: 11, gap: 1, split: 4, font: 3 };
     const sw = 10 * o.w + 9 * o.gap + o.split, lw = measure('0000') + 6, sx = Math.round(W / 2 - (sw + lw) / 2) + lw;
-    text(team.num, sx - lw, 60, { color: GOOD });
-    drawStrip(team.scores, sx, 58, o);
-    text(dead.num, sx - lw, 74, { color: C.steel2 });
-    drawStrip(dead.scores, sx, 72, { ...o, flip: flipper(t, 0.6) });
+    text(RISING.num, sx - lw, 60, { color: GOOD });
+    drawStrip(RISING.scores, sx, 58, { ...o, sat: RISE, satK });
+    text(FADING.num, sx - lw, 74, { color: C.steel2 });
+    drawStrip(FADING.scores, sx, 72, { ...o, sat: FADE, satK });
+    if (t > 1.6) {
+      line([['SATURDAY', C.steel3], [RISING.num, GOOD], [String(saturdayOf(RISING)), GOOD], ['·', C.steel2], [FADING.num, C.red3], [String(saturdayOf(FADING)), C.red2]], W / 2, 88, { font: 3 });
+    }
   }
-  if (t > 1.6) text(WHY, W / 2, 93, { font: 3, align: 'center', color: C.steel3 });
+  if (t > 1.6) text(WHY, W / 2, 95, { font: 3, align: 'center', color: C.steel3 });
   if (t > 2.0) text(LESSON, W / 2, 104, { align: 'center', color: C.yel2, outline: C.ink });
   prompt(good ? 'A: CONTINUE' : 'A: REWIND', 130, t, 2.4);
   drawHud({ glow });
