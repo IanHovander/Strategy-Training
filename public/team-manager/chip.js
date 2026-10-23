@@ -266,6 +266,9 @@ export class Chip {
       pop3: () => this.noise(t, 0.25, { vol: 0.25, type: 'highpass', hz: 2000 }),
       cursor: () => this.tone(t, 0.04, 1760, { wave: 'p50', vol: 0.07 }),
       select: () => [0, 0.06].forEach((d, i) => this.tone(t + d, 0.06, [1319, 1976][i], { wave: 'p50', vol: 0.07 })),
+      // Typing a name: a letter in, a letter out.
+      key: () => this.tone(t, 0.03, [1568, 1760, 1976][Math.floor(Math.random() * 3)], { wave: 'p25', vol: 0.06, decay: true }),
+      erase: () => this.tone(t, 0.05, 1175, { wave: 'p25', slide: 784, vol: 0.06, decay: true }),
     };
     S[name]?.();
   }
