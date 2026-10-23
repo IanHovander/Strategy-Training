@@ -113,6 +113,7 @@ html:has(body.game) { height: 100%; }
 }
 .full[data-mode="cut"] .stick, .full[data-mode="auto"] .stick { opacity: 0; pointer-events: none; }
 .full[data-mode="talk"] .stick { opacity: 0.3; pointer-events: none; }
+.full[data-stick="off"] .stick { display: none; }
 .full .corner {
   position: absolute; top: max(10px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px));
   display: flex; gap: 8px;

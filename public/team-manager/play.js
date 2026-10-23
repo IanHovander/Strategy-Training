@@ -21,6 +21,7 @@ const END = {
   start: { x: -100, y: -100 },
   move: (x, y) => [x, y],
   update() {}, // nobody to steer
+  stick: false,
   draw(g, view, t) {
     fill(0, 0, W, H, C.night0);
     dither(0, 96, W, 6, C.night0, C.night1);

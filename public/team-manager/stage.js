@@ -33,6 +33,7 @@
 //                         For a scene with no room to walk (the van): the stick picks who to talk to.
 //   hint, note            the phone's hint line and the note under the controls, if the usual ones don't fit
 //   status(s)             the phone's status line under her name, if not STANDING, WALKING N and so on
+//   stick: false          in play.html, no stick on the screen: for a card with nobody to steer
 //   exit: { x, y0, y1, label, sign }
 //                         the way out, on the right (every scene is entered on the left and left on the right): once
 //                         her feet are past x, between y0 and y1, she walks on out of the picture and the screen fades.
@@ -186,7 +187,7 @@ const markup = (scene) => `
 <p class="note">${esc(scene.note ?? 'Push the stick a little to walk, all the way to run, and press A by someone to talk. In the cut scene, A reads on and SKIP jumps to the end. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter for A, Esc to skip.')}</p>`;
 /** The game's own layout: just the screen, as big as the window allows, with the stick and two buttons over it. */
 const fullMarkup = (scene, nextLabel) => `
-<div class="full" data-mode="cut">
+<div class="full" data-mode="cut"${scene.stick === false ? ' data-stick="off"' : ''}>
   <canvas class="screen" width="${W}" height="${H}" aria-label="${esc(scene.label ?? scene.name)}"></canvas>
   <div class="stick" role="application" aria-label="Movement stick. Drag the dot a little to walk, all the way out to run. On a keyboard: WASD or the arrow keys, and Shift to run.">
     <div class="ring"><div class="dot"></div></div>
