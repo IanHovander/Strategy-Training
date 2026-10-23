@@ -22,7 +22,8 @@ export const SCENE_TEXT = {
   name: 'PRACTICE FIELD',
   label: "The school cafeteria after school, with half a 2019 field built from plywood on taped-down carpet and late sun "
     + "streaming through tall windows. 5026's robot runs timed hatch cycles while the drive team practises, and the "
-    + "strategist you're steering walks the floor around the field; the view follows her",
+    + "strategist you're steering walks the floor around the field; the view follows her. The side doors at the right-hand "
+    + "end of the room lead out to the parking lot",
   note: 'Push the stick a little to walk, all the way to run. Stay off the carpet while the robot is running: walk round '
     + 'the field instead, and press A by anyone to talk. In the cut scene, A reads on and SKIP jumps to the end. On a '
     + 'keyboard: arrow keys or WASD, Shift to run, Space or Enter to talk, Esc to skip.',

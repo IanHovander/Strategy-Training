@@ -1,6 +1,6 @@
 // The back lawn of the team's high school on a sunny afternoon, after the last bell: where 5026 holds its team meeting.
 // The light comes from the upper left, as everywhere in this game, so everything facing you is lit on its top and left
-// and the windows glint. The trees' shade lies on the grass right under their crowns, hard-edged like everything else
+// and the windows glint. The tree's shade lies on the grass right under its crown, hard-edged like everything else
 // here, and everything else standing on the floor has a short dark patch right under it, like the people's shadows.
 // Same scale and camera as the arena (field.js): 8 pixels to the foot across, 2.75 to the foot of depth, people 48
 // pixels tall on the walker's rig. Along the top runs the school's single-storey wall of sand-coloured block with its
@@ -9,17 +9,20 @@
 // IRON PANTHERS sign over the door and the team's banner beside it. Over the roof: the sky in four dithered bands, the
 // way the intro builds its night sky, flat clouds drifting right and dark treetops beyond. At the wall's foot a concrete
 // path with a bench, a big thank-you card for a sponsor on an easel, and bags dropped at the edge of the lawn; then the
-// grass, two trees and the folding table with the outreach demo's sign-up sheet.
+// grass, a tree and the folding table with the outreach demo's sign-up sheet. At the right end the path runs on under a
+// covered walkway, round the building to the cafeteria: the way out (its steel roof, its post, the CAFETERIA sign hung
+// under it and its shade on the path and the wall).
 //   drawBackdrop(g, view, t)   everything that never stands in front of anyone, seen from view = { x, y }
 //   things(t, o)               everything standing on the floor, as { y: floor line, draw() }, to sort in with people
 //   blocked(x, y)              where her feet can't go
 // Everything is in world pixels (layout.js) and drawn with pixel.js: filled rectangles, an ink outline on every object,
 // three tones per material and a one-pixel highlight on lit top edges.
 
-import { C, useContext, camera, screen, rect, disk, text, withAlpha, dither, fill, rnd, layer, blit } from '../pixel.js';
+import { C, useContext, camera, screen, rect, disk, text, measure, withAlpha, dither, fill, rnd, layer, blit } from '../pixel.js';
 import { eleBot } from '../sprites.js';
 import {
   WORLD, ROOF_Y, WALL_TOP, WALL_Y, SHOP_DOOR, WINDOWS, BANNER, PATH, LAWN_Y, TREES, shadeOf, BENCH, EASEL, TABLE, BAGS,
+  WALKWAY,
 } from './layout.js';
 
 const W = WORLD.w, H = WORLD.h;
@@ -501,7 +504,7 @@ function paintLawn() {
 }
 
 /**
- * Shade under the trees, centred under each crown, and a short contact shadow right under everything else
+ * Shade under the tree, centred under its crown, and a short contact shadow right under everything else
  * standing on the floor: the same as the people's (stage.js drawWithShadow), ink at 45 percent, so the props and the
  * people beside them read as lit alike, the arena's way.
  */
@@ -519,7 +522,59 @@ function paintShadows() {
     contact(EASEL.x - 12, EASEL.x + 13, EASEL.y, SHADOW);
     contact(TABLE.x0 - 1, TABLE.x1 + 2, TABLE.y, SHADOW);
     for (const b of BAGS) contact(b.x - 5, b.x + 5, b.y, SHADOW);
+    contact(WALKWAY.post - 5, WALKWAY.post + 5, WALKWAY.y, SHADOW);
   });
+}
+
+// ---- The way out: the covered walkway ----
+// The walkway's roof is 10 feet up, so seen 20 degrees down it's a box like field.js box(): its top face, from where it
+// meets the wall (10 feet up the wall, just under the school's roof edge) to its front edge (10 feet over the floor
+// line WALKWAY.y), then the fascia facing you. It's always over everyone's head (the tallest head on the path comes up
+// to 98), so it's part of the backdrop; only its post stands on the floor and sorts in with the people (walkwayPost()).
+// Steel, like the windows' frames: the deck lit from above with standing seams running back to the wall, the fascia lit
+// along its top edge. The shade under it is hard-edged like the trees': the path under it a step darker, and the wall
+// under the fascia, where the roof keeps the sun off it. Hung from the fascia, the school's sign for the way round.
+const ROOF_UP = 80;
+const deckFront = () => WALKWAY.y - ROOF_UP;
+function paintWalkway() {
+  const { x0 } = WALKWAY, w = W - x0, top = WALL_TOP, front = deckFront(), bottom = front + 7;
+  // The shade: the path under the roof, joints and specks a step darker too, and the curb's lit edge dimmed.
+  const { y0, y1 } = PATH;
+  rect(x0, y0, w, y1 - y0 - 2, CONCRETE.dark);
+  for (let i = 0; i < 40; i++) rect(x0 + Math.floor(rnd(i + 8100) * w), y0 + 1 + Math.floor(rnd(i + 8200) * (y1 - y0 - 4)), 1, 1, rnd(i + 8300) < 0.6 ? CONCRETE.joint : CONCRETE.mid);
+  for (let x = 20; x < W; x += 40) if (x >= x0) rect(x, y0, 1, y1 - y0 - 2, '#6a6f80');
+  rect(x0, y1 - 2, w, 1, CONCRETE.light);
+  // The wall under the fascia, in the roof's shade down to where the sun gets under it: the block a tone darker, its
+  // courses in the base course's deep mortar.
+  const shadeTo = 104;
+  rect(x0, bottom + 1, w, shadeTo - bottom - 1, SAND.shade);
+  for (let y = WALL_TOP + 7, k = 0; y < shadeTo; y += 6, k++) {
+    if (y <= bottom) continue;
+    rect(x0, y, w, 1, SAND.deep);
+    for (let x = (k % 2) * 6 + 3; x < W; x += 12) if (x >= x0 && rnd(x * 0.37 + k * 11) < 0.55) rect(x, y + 1, 1, Math.min(5, shadeTo - y - 1), SAND.deep);
+  }
+  // The roof: outlined, the deck (lit from above, a highlight where it meets the wall, standing seams every 6 pixels,
+  // each a lit pixel and a shaded one), then the fascia.
+  rect(x0 - 1, top - 1, w + 1, bottom - top + 2, C.ink);
+  rect(x0, top, w, front - top, C.steel2);
+  rect(x0, top, w, 1, C.steel3);
+  for (let x = x0 + 3; x < W; x += 6) {
+    rect(x, top + 1, 1, front - top - 1, C.steel3);
+    rect(x + 1, top + 1, 1, front - top - 1, C.steel1);
+  }
+  rect(x0, front, w, bottom - front, C.steel1);
+  rect(x0, front, w, 1, C.white);
+  rect(x0, front + 1, w, 1, C.steel3);
+  rect(x0, bottom - 1, w, 1, C.steel0);
+  // The sign, hung from the fascia on two rods: the school's blue, an ink border, white letters.
+  const label = 'CAFETERIA', sw = measure(label, { font: 3 }) + 8, sx = Math.round((WALKWAY.post + 4 + W) / 2 - sw / 2), sy = bottom + 3;
+  for (const rx of [sx + 4, sx + sw - 5]) rect(rx, bottom, 1, 3, C.ink);
+  rect(sx + sw, sy + 1, 1, 9, SAND.deep);
+  rect(sx, sy, sw, 10, C.ink);
+  rect(sx + 1, sy + 1, sw - 2, 8, C.blue1);
+  rect(sx + 1, sy + 1, sw - 2, 1, C.blue2);
+  rect(sx + 1, sy + 8, sw - 2, 1, C.blue0);
+  text(label, sx + 4, sy + 2, { font: 3, color: C.white });
 }
 
 // ---- Baked once ----
@@ -540,9 +595,10 @@ function bake() {
       paintPath();
       paintLawn();
       paintShadows();
+      paintWalkway();
     }),
     clouds: CLOUDS.map((c) => makeCloud(c.puffs)),
-    trees: CROWNS.map((_, i) => makeTree(i)),
+    trees: TREES.map((_, i) => makeTree(i)),
   };
 }
 
@@ -642,6 +698,25 @@ function drawTree(tr, i, who) {
   const hides = who.some((w) => tr.y > w.y1 && covers(tr, i, w) >= 24);
   if (hides) withAlpha(0.35, draw);
   else draw();
+}
+
+/** The walkway's post at the lawn's edge: square steel, lit on its left, a base plate bolted down and a knee brace up
+ *  under the fascia. */
+function walkwayPost() {
+  const x = WALKWAY.post, y = WALKWAY.y, top = deckFront() + 7;
+  rect(x - 3, top, 6, y - top, C.ink);
+  rect(x - 2, top, 1, y - top - 1, C.steel3);
+  rect(x - 1, top, 2, y - top - 1, C.steel2);
+  rect(x + 1, top, 1, y - top - 1, C.steel1);
+  // The knee brace, a stepped diagonal from the post up to the fascia on its right.
+  for (let k = 0; k < 6; k++) {
+    rect(x + 2 + k, top + 6 - k, 2, 2, C.ink);
+    rect(x + 3 + k, top + 6 - k, 1, 1, C.steel2);
+  }
+  // The base plate.
+  rect(x - 5, y - 3, 10, 4, C.ink);
+  rect(x - 4, y - 2, 8, 1, C.steel3);
+  rect(x - 4, y - 1, 8, 1, C.steel1);
 }
 
 /** A park bench facing the lawn: steel ends and armrests, a two-slat back, the seat at the bleachers' height. */
@@ -784,11 +859,13 @@ export function things(t, o = {}) {
     { y: EASEL.y, draw: easel },
     { y: TABLE.y, draw: table },
     ...BAGS.map((b) => ({ y: b.y, draw: () => bag(b) })),
+    { y: WALKWAY.y, draw: walkwayPost },
   ];
 }
 
 // ---- Where she can walk ----
-/** True where her feet can't go: the wall, the world's edges, tree trunks, the bench, the easel, the table, the bags. */
+/** True where her feet can't go: the wall, the world's edges, the tree's trunk, the bench, the easel, the table, the bags,
+ *  the walkway's post. (The way out is past the right edge on the path: scene.js exit takes her there.) */
 export function blocked(x, y) {
   if (y < WALL_Y + 4 || y > 258 || x < 8 || x > 504) return true;
   // A trunk: its own half width (four pixels, six at the roots) and hers, so she never stands over it.
@@ -801,5 +878,7 @@ export function blocked(x, y) {
   // The table, and a step in front of it: walking up to it she stops where she's across it from Nadia (people.js within()),
   // or, at either end, close enough beside her to talk.
   if (x >= TABLE.x0 - 2 && x <= TABLE.x1 + 2 && y >= TABLE.y - 8 && y <= TABLE.y + 6) return true;
+  // The walkway's post: its own half width and hers, from its base plate's back edge to a step in front.
+  if (Math.abs(x - WALKWAY.post) < 10 && y >= WALKWAY.y - 3 && y <= WALKWAY.y + 2) return true;
   return BAGS.some((b) => Math.abs(x - b.x) <= 5 && y >= b.y - 3 && y <= b.y + 2);
 }

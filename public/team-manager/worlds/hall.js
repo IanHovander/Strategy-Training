@@ -217,12 +217,13 @@ export function drawHall(g, view, t, { lights = 1 } = {}) {
 }
 
 // ---- The curtains ----
-// Cloth hangs in pleats about 5 pixels apart, never quite even: each is 4 to 6 pixels wide, a lit column on its left
-// (the light is up to the left), then mid, then two columns in shade. Worked out once for the whole hall.
+// Cloth hangs in broad folds, like a theatre drape, never quite even: each is 8 to 12 pixels wide, a lit column on its
+// left (the light is up to the left), a wide flat band of mid, then two columns in shade. Worked out once for the whole
+// hall.
 const PLEATS = (() => {
-  const a = new Uint8Array(WORLD.w + 8);
+  const a = new Uint8Array(WORLD.w + 16);
   for (let x = 0, i = 0; x < a.length; i++) {
-    const w = 4 + Math.floor(rnd(i * 1.7 + 5) * 3);
+    const w = 8 + Math.floor(rnd(i * 1.7 + 5) * 5);
     for (let j = 0; j < w && x + j < a.length; j++) a[x + j] = j === 0 ? 0 : j < w - 2 ? 1 : 2;
     x += w;
   }
@@ -335,7 +336,7 @@ function bigScreen(view, k, at, t) {
   cable(x + 16, y);
   cable(x + w - 16, y);
   // Drawn again only when what it shows changes: once a second while the clock runs. Archimedes' two screens share one.
-  const key = `${m.blue} ${m.red} ${m.playing ? m.clock : final} ${m.qual}`;
+  const key = `${m.blue} ${m.red} ${m.playing ? m.clock : final} ${m.sandstorm} ${m.qual}`;
   let shown = screens.get(k);
   if (shown?.key !== key) {
     shown = { key, l: layer(w, h, () => { camera(x, y, 1); screenArt(k, m, final, x, y, w, h); }) };
@@ -366,7 +367,8 @@ function screenArt(k, m, final, x, y, w, h) {
     rect(bx, by + 10, bw, 1, T[0]);
     text(String(n), bx + bw / 2, by + 2, { color: C.white, align: 'center' });
   });
-  if (m.playing) text(clockText(m.clock), cx, by + 3, { font: 3, color: C.yel2, align: 'center' });
+  // The clock, in the sand's orange through the sandstorm, so its fifteen seconds read as a period of their own.
+  if (m.playing) text(clockText(m.clock), cx, by + 3, { font: 3, color: m.sandstorm ? C.org1 : C.yel2, align: 'center' });
   else if (final) text('FINAL', cx, by + 3, { font: 3, color: C.yel2, align: 'center' });
 }
 
@@ -411,15 +413,18 @@ function endWall(view, x0, side) {
 }
 function wallArt(x0, side) {
   const x1 = x0 + WALL, left = side === 'left';
-  const face = left ? WALLS[2] : WALLS[0], hole = left ? '#1b1e2b' : WALLS[2], lip = left ? WALLS[1] : '#4a5166';
+  // Both faces are a step darker than the wall's top (WALLS[0]), as a box's face toward you is darker than its top; the
+  // right wall's faces the light, so it's a step lighter than the left's.
+  const face = left ? WALLS[2] : WALLS[1], hole = left ? '#1b1e2b' : WALLS[2], lip = left ? WALLS[1] : '#4a5166';
   const top = TOP, bottom = 144, cap = HEM + 6, cx = left ? x0 : x0 + 1, cw = WALL - 1;
   rect(x0, top, WALL, bottom - top, face);
   // From the skirting toward you, the floor runs along the wall's foot, so the wall shows as a box does (field.js
   // box()): its top, seen from above, in the lit concrete, speckled like the face.
   rect(cx, cap, cw, bottom - cap, WALLS[0]);
+  // Speckles: a step lighter than the face on it, a step darker than the top on the top.
   for (let i = 0; i < 90; i++) {
     const y = TOP + Math.floor(rnd(i * 3 + x0) * 208);
-    rect(x0 + 1 + Math.floor(rnd(i * 7 + x0 + 1) * (WALL - 2)), y, 1, 1, WALLS[1]);
+    rect(x0 + 1 + Math.floor(rnd(i * 7 + x0 + 1) * (WALL - 2)), y, 1, 1, y < cap && !left ? WALLS[0] : WALLS[1]);
   }
   // Panel seams, each with its lower lip catching the light, and the tie holes left by the forms in rows between, down
   // as far as the floor at the curtains' hem.
@@ -610,11 +615,13 @@ export const PROPS = [
  * The tables' footprints, which stop her (with field.js's margins round them): the table top, from just behind its back
  * edge to its front, and the barriers' (their posts' floor line and a little behind it, down to the curtain). The people
  * working a table have footprints of their own (people.js), and the floor between them and the barrier stays open, as
- * it does in every aisle: it's the way along the aisle.
+ * it does in every aisle: it's the way along the aisle. Walking straight along a walkway into a barrier's end post, she
+ * slides round it (slide: as far as fields.js move() takes her up or down) down into the aisle under it, instead of
+ * stopping dead.
  */
 export const PROP_BLOCKS = [
   ...[BUTTON_TABLE, INFO_DESK].map(({ x0, x1, back, front }) => ({ x0, x1, y0: back - 2, y1: front })),
-  ...BARRIERS.map(({ x0, x1 }) => ({ x0, x1, y0: BARRIER_Y - 16, y1: BARRIER_Y })),
+  ...BARRIERS.map(({ x0, x1 }) => ({ x0, x1, y0: BARRIER_Y - 16, y1: BARRIER_Y, slide: 18 })),
 ];
 
 // ---- The light ----

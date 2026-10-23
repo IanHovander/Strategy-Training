@@ -15,7 +15,8 @@
 //   6 home       cut back to the station as the robot runs home to it, the coach cheering it in
 //   7 time       cut close on the mentor in profile with her stopwatch, the scouting lead beside her: nine point two
 //   8 hooray     cut close on the drive team, out from behind the wall in a row, arms up in a V, hopping
-//   9 tables     cut to the other end of the room, panning slowly: the custodian wants his tables back
+//   9 tables     cut to the other end of the room, by the side doors, panning slowly: the custodian wants his tables
+//                back
 //  10 her        cut to the hallway doors: the strategist runs in, the mentor calling the time over to her as she comes;
 //                she stops for it, and once it's been read she runs on round the front of the field to her mark, with
 //                no dialog box over her, Kai stepping over to his place in front of the carpet's tape to meet her. The
@@ -432,9 +433,11 @@ export function makeCutscene(world) {
       bars(1);
     }),
     // 9 tables: the other end of the room, the folded tables, the shutter and the vending machines, in a slow pan
-    // that lasts about as long as his words. The next cycle (level 3) starts off screen.
+    // that lasts about as long as his words. The next cycle (level 3) starts off screen. It sets off from just inside
+    // the end wall, the EXIT sign over the side doors whole in the frame (and the scout at the left edge whole too),
+    // and leaves the sign behind before it stops.
     beat(4.8, (g, t, tc, c) => {
-      shoot(g, lerp(424, 404, ease(tc, 0, 4.8)), 28, 1, c.T, { robotU: 12 + t, enabled: true });
+      shoot(g, lerp(436, 404, ease(tc, 0, 4.8)), 28, 1, c.T, { robotU: 12 + t, enabled: true });
       bars(1);
     }, { ...SAY.tables, auto: true, look: look('flores') }),
     // 10 her: the doors, her run in, the call, her run on once it's been read; the camera follows her as stage.js will,

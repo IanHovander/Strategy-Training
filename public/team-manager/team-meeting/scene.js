@@ -4,10 +4,16 @@
 // on the grass, plays the co-captains' shout-outs and updates, ends on "IRON PANTHERS!", and fades back in on the lawn
 // with the meeting broken up into small groups for her to walk about and talk to.
 //
-// Everything stands on the floor the arena's way (field.js): the lawn, the wall, the path and the floor's shade are
-// one backdrop drawn first, then everything that stands up (the trees, the bench, the easel, the table, the bags and
-// every person) is sorted back to front by its floor line and drawn through pixel.js's camera, a prop before a person
-// when they share a line. Whoever sits on the bench has their feet three pixels in front of it, so they draw after it.
+// The way in and out, as every scene in the game has them (entered on the left, left on the right): as the lawn fades in
+// she comes back out of the robotics shop's roll-up door on the left (stage.js enter: along the shop's floor from behind
+// the wall, so she's out of sight under the fade, then out of the door to her mark); the way out is the path on the
+// right, running on under the covered walkway round to the cafeteria (stage.js exit, TO THE CAFETERIA), where the
+// practice field is.
+//
+// Everything stands on the floor the arena's way (field.js): the lawn, the wall, the path, the walkway's roof and the
+// floor's shade are one backdrop drawn first, then everything that stands up (the tree, the bench, the easel, the
+// table, the bags, the walkway's post and every person) is sorted back to front by its floor line and drawn through
+// pixel.js's camera, a prop before a person when they share a line. Whoever sits on the bench has their feet three pixels in front of it, so they draw after it.
 // The cut scene and the walkable part share that one composition: the cut scene places the meeting with its cue, the
 // walkable part has the after-meeting groups and her.
 //
@@ -21,7 +27,7 @@ import { W, H, useContext, camera, screen, seg, clamp, lerp, easeInOut } from '.
 import { walkerFrame } from '../walker.js';
 import { drawWithShadow, cover, frameOf } from '../stage.js';
 import { drawBubble } from '../talk.js';
-import { WORLD, START } from './layout.js';
+import { WORLD, START, ENTER, EXIT, SHOP_DOOR, WALL_Y } from './layout.js';
 import { drawBackdrop, things, blocked } from './place.js';
 import { CAST, circle, after, TALKERS, occupied, within } from './people.js';
 import { makeCutscene } from './cutscene.js';
@@ -137,6 +143,26 @@ function follow(s) {
   };
 }
 
+/**
+ * Her, for drawing: as stage.js has her, except while her feet are inside the shop (walking in, stage.js enter), when
+ * only what shows through the door's opening is drawn, so she comes out from behind the wall beside it.
+ */
+function inShop(g, view, player, me) {
+  if (me.y >= WALL_Y) return player;
+  const { x0, x1, y0 } = SHOP_DOOR;
+  return {
+    y: player.y,
+    draw() {
+      g.save();
+      g.beginPath();
+      g.rect(x0 - view.x, y0 - view.y, x1 - x0, WALL_Y - y0);
+      g.clip();
+      player.draw();
+      g.restore();
+    },
+  };
+}
+
 // ---- The A bubble ----
 // It goes just over the head of whoever she's in reach of (people.js TALKERS bubble), nudged a little away from her. But
 // beside someone, a little behind them (people.js within() gives the A up to 6 pixels back), her face may be right where
@@ -195,6 +221,8 @@ export const scene = {
   note: 'Push the stick a little to walk, all the way to run; the view follows her across the lawn. Stand by anyone with an A over them and press A to talk: eleven of the team have something to say. In the cut scene, A reads on and SKIP jumps to the end. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter for A, Esc to skip.',
   world: WORLD,
   start: START,
+  enter: ENTER,
+  exit: EXIT,
   cutscene,
   people: PEOPLE,
 
@@ -247,7 +275,7 @@ export const scene = {
   draw(g, view, t, s) {
     drawBackdrop(g, view, t);
     const me = s.me, her = [{ x0: me.x - 8, x1: me.x + 8, y0: me.y - 48, y1: me.y }];
-    standing(g, view, things(t, { who: her }), after(t, { me, talking: s.talk?.person?.id }), [s.player]);
+    standing(g, view, things(t, { who: her }), after(t, { me, talking: s.talk?.person?.id }), [inShop(g, view, s.player, me)]);
     if (s.freeAt != null) cover(1 - seg(t, s.freeAt, s.freeAt + FADE));
   },
 };

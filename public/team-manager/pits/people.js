@@ -275,8 +275,8 @@ export const NADIA_ID = 'nadia';
 /**
  * The people you can talk to. Their lines come from lines.js (the scene adds them). aside, side: where she stands to
  * talk to them if she's walked up in front of them (scene.js): this far to the side (16 if not given: a head's width,
- * so the two heads don't meet; 20 beside a kneeler, whose head is down level with hers, and beside the safety advisor,
- * out in the aisle at her own height), on this side first (-1 left, 1 right; the side they face if not given). Beside
+ * so the two heads don't meet; 20 beside a kneeler, whose head is down level with hers), on this side first (-1 left,
+ * 1 right; the side they face if not given; the safety advisor comes over to her side instead, scene.js). Beside
  * an away board, the side away from it (out in the aisle if a divider's in the way); Ms. Kowalski has the divider on
  * one side and the board on the other, so she gets the board's corner. Behind the desk she stands at its plain end.
  * reachY: how far in depth she can talk from (12, or more for someone set back: Bea and Tomas behind the counter and
@@ -298,7 +298,7 @@ export const PEOPLE = [
   { id: 'kowalski', name: 'MS. KOWALSKI, 5026 MENTOR', x: 648, y: 88, dir: 7, gait: 'stand', look: LOOKS.kowalski, reachY: 13, side: -1, solid: true },
   { id: 'oscar', name: 'OSCAR, 1357', x: 722, y: 92, dir: 7, gait: 'stand', look: LOOKS.oscar, reachY: 12, side: 1, solid: true },
   { id: 'tomas', name: 'TOMAS, PIT ADMIN', x: 776, y: 77, dir: 0, gait: 'sit', faceGait: 'sit', look: LOOKS.tomas, reachY: 14, aside: 16, side: -1, solid: true },
-  { id: NADIA_ID, name: 'NADIA, SAFETY ADVISOR', x: 104, y: 108, dir: 0, gait: 'stand', look: LOOKS.nadia, reachY: 21, aside: 20, solid: false, at: patrol },
+  { id: NADIA_ID, name: 'NADIA, SAFETY ADVISOR', x: 104, y: 108, dir: 0, gait: 'stand', look: LOOKS.nadia, reachY: 21, solid: false, at: patrol },
 ];
 /** The rest of the crews, busy in the background. Nobody here talks. */
 export const CREW = [

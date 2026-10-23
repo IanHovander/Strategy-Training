@@ -1,8 +1,10 @@
 // The way out of the arena, past the red end. The floor past the scoring table is roped off from the rest of the hall
 // by a belt barrier, the same posts and belts as across the backs of the driver stations (field.js), running front to
 // back a little in from the right edge. In front of the scoring table there's a gap in it, and through the gap two more
-// belts make a short chute out to the right, the way the crowd is let on and off an event's floor; an EXIT sign stands
-// on the gap's far post. She leaves through the chute (scene.exit), and stage.js walks her on out of the picture.
+// belts make a short chute out to the right, the way the crowd is let on and off an event's floor; an EXIT sign hangs
+// from a tall pole on the gap's far post, out over the chute and high enough to clear her head anywhere in the gap, so
+// she walks out under it, never across it. It hangs to the right of the pole, clear of the bubble over the scorekeeper's
+// head. She leaves through the chute (scene.exit), and stage.js walks her on out of the picture.
 //
 // The posts are field.js's stanchions: an ink base, an ink post with a light steel core, the belt from its top (19
 // pixels up) to the next post's. Seen from here a belt running front to back is a line straight down the screen from one
@@ -31,7 +33,14 @@ const OUT = [FENCE_X, WORLD_W - 8];
 const LIMIT = FENCE_X - 5;
 const BELT = [C.yel1, C.yel0];
 
-/** One post, its feet at (x, y). tall: the sign's post, which stands higher. */
+/**
+ * How high the EXIT sign's pole stands, and the sign's panel on it: its bottom edge (the outline's) clears the top of her
+ * head with her feet at the front of the gap's far belt, GAP.y0, even running (the rig's hair reaches 48 pixels up).
+ */
+const SIGN = { w: 27, h: 11, under: GAP.y0 - 48 - 2 };
+const POLE = FAR - SIGN.under + SIGN.h + 2;
+
+/** One post, its feet at (x, y). tall: the sign's pole, which stands higher. */
 function post(x, y, tall = 22) {
   rect(x - 3, y - 1, 7, 2, C.ink);
   rect(x - 1, y - tall, 3, tall, C.ink);
@@ -45,9 +54,12 @@ function beltAcross(x0, x1, y) {
   rect(x0, y - 19, x1 - x0, 1, BELT[1]);
 }
 
-/** The EXIT sign on the far post of the gap: a red panel lit from the upper left, the word and an arrow in white. */
-function exitSign(x, y) {
-  const w = 27, h = 11, x0 = x - 13, y0 = y - 30 - h;
+/**
+ * The EXIT sign on the pole on the gap's far post: a red panel lit from the upper left, the word and an arrow in white,
+ * hung off the pole's right side, out over the chute. Its outline's bottom row is at SIGN.under.
+ */
+function exitSign(x) {
+  const { w, h } = SIGN, x0 = x + 2, y0 = SIGN.under - h;
   rect(x0 - 1, y0 - 1, w + 2, h + 2, C.ink);
   rect(x0, y0, w, h, C.red1);
   rect(x0, y0, w, 1, C.red2);
@@ -65,7 +77,7 @@ function exitSign(x, y) {
 
 /**
  * The barrier, the chute and the sign, each sorted in by its floor line: every post with the belt back to the post
- * behind it, the chute's belts with their far posts, and the sign on the gap's far post, which stands taller to carry it.
+ * behind it, the chute's belts with their far posts, and the sign on the gap's far post, a tall pole to carry it.
  * camX: the view, so nothing is handed over when the right end is off the screen.
  */
 export function gateParts(camX) {
@@ -74,8 +86,8 @@ export function gateParts(camX) {
   BACK.forEach((y, i) => parts.push({ y, draw: () => {
     if (i) beltDown(FENCE_X, BACK[i - 1], y);
     if (y === FAR) {
-      post(FENCE_X, y, 30);
-      exitSign(FENCE_X, y);
+      post(FENCE_X, y, POLE);
+      exitSign(FENCE_X);
     } else post(FENCE_X, y);
   } }));
   FRONT.forEach((y, i) => parts.push({ y, draw: () => {

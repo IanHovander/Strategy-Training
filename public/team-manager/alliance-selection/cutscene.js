@@ -29,8 +29,9 @@
 // of their line (PASS), and nobody walks through anybody. Sam, the volunteer at the gate, stands in front of the near
 // wall with his head on the same rows as the legs of anyone on the field, so he keeps out from in front of where they
 // go: he steps aside from the gate while Robin skates in through it, steps back into the lane between the waiting reps
-// and her while the captains come out and the first picks are made, comes back to the gate's left while the camera is
-// on the mic, and goes off to the left of everyone's way while she runs on. While a page of words is up, the dialog box
+// and her as Robin starts on the rules and stays there while the captains come out and the first picks are made, comes
+// back to the gate's left while the camera is on the mic, and goes off to the left of everyone's way while she runs
+// on. While a page of words is up, the dialog box
 // covers the bottom of the screen, so every shot with words keeps the faces in the top 88 rows: the shots along the
 // line sit at LINE_VIEW, low enough that the signs clear the top film bar, and the captains' run on opens lower, on the
 // gate, while Robin calls them out.
@@ -646,7 +647,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   // she passes rather than brushes by), on to the open floor on her right, and holds out the mic; she turns as Robin
   // passes and steps out of the crowd to it. They meet a few steps along to her right, far enough that the close-up of
   // them leaves out the mic stand and Alliance Two's captain at it (their shoes would sit along its top), with each
-  // head between two of the near wall's posts (one every 32 pixels, from 400), and a couple of steps forward of her
+  // head between two of the near wall's posts (432, 464 and 496 here), and a couple of steps forward of her
   // waiting place, so the film bar covers the captains' feet on the line above their heads and the belt barrier in
   // front of their own: she stands at MEET, Robin a skate's length to her right. Sam waits on the gate's left
   // (SAM_ASIDE).

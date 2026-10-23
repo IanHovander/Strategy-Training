@@ -139,21 +139,32 @@ export function drawField(g, view, t, k, o = {}) {
 const local = (x) => x - ox(divisionAt(x));
 /** Past a field's driver stations: the open floor, which joins the next division's into one aisle (and the pads). */
 const inEnd = (x) => local(x) <= EDGE || local(x) >= PITCH - EDGE;
-const hits = (x, y, blocks) => blocked(local(x), y) || blocks.some((b) => x > b.x0 - 5 && x < b.x1 + 5 && y > b.y0 - 2 && y < b.y1 + 2);
+/** Whether her feet at (x, y) are on box b, with field.js's margins round it (5 across, 2 deep). */
+const on = (x, y, b) => x > b.x0 - 5 && x < b.x1 + 5 && y > b.y0 - 2 && y < b.y1 + 2;
+const hits = (x, y, blocks) => blocked(local(x), y) || blocks.some((b) => on(x, y, b));
 
 /** The rows she can stand on at x: the open floor past a field's ends, the walkway beside it. */
 const band = (x) => (inEnd(x) ? OPEN_Y : WALK_Y);
-/** How far up or down she slides round the corner of something in her way, instead of stopping dead against it. */
+/**
+ * How far up or down she slides round the corner of something in her way, instead of stopping dead against it: SLIDE
+ * rows, or further where a box she's walked into says so (its slide: someone standing, a barrier's end post), the
+ * furthest of any she's against.
+ */
 const SLIDE = 8;
+const slideOf = (x, y, blocks) => blocks.reduce((n, b) => (b.slide > n && on(x, y, b) ? b.slide : n), SLIDE);
+/** How far below a walkway she steps up onto it round a driver station's corner (move()). */
+const CORNER = 16;
+/** The rows from y up to the walkway's front row. */
+const rowsUp = (y) => Array.from({ length: Math.ceil(y - WALK_Y[1]) + 1 }, (_, i) => Math.max(WALK_Y[1], y - i));
 /**
  * Going along from x to nx at row y and stopped there: the nearest row, up or down (up first if both are as near), no
- * more than SLIDE away, where the same step is clear and that she can get to from where she is: as a signed distance,
- * or 0 if there's none.
+ * further than the slide of whatever stopped her, where the same step is clear and that she can get to from where she
+ * is: as a signed distance, or 0 if there's none.
  */
 function slideRow(x, nx, y, blocks) {
   const [lo, hi] = band(x), [nlo, nhi] = band(nx), top = Math.max(lo, nlo), bottom = Math.min(hi, nhi);
   const open = [true, true]; // whether every row between y and y -/+ d is clear at x
-  for (let d = 1; d <= SLIDE; d++) {
+  for (let d = 1, most = slideOf(nx, y, blocks); d <= most; d++) {
     for (const [i, yy] of [[0, y - d], [1, y + d]]) {
       open[i] &&= yy >= top && yy <= bottom && !hits(x, yy, blocks);
       if (open[i] && !hits(nx, yy, blocks)) return yy - y;
@@ -165,15 +176,24 @@ function slideRow(x, nx, y, blocks) {
 /**
  * Step her from (x, y) by (dx, dy), along and then across, as field.js does in the arena: the walkway beside each field,
  * the open floor in the aisles and on the pads. Each division's queue, sign, scoring table and reset cart stop her, and
- * so does every world box in blocks ({ x0, x1, y0, y1 }: tables, people). Walking straight along into the corner of one
- * (a queue's top corner, someone's shoulder), she slides round it, up or down at her own pace, rather than stopping dead.
+ * so does every world box in blocks ({ x0, x1, y0, y1, slide }: tables, people, barriers). Walking straight along into
+ * the corner of one (a queue's top corner, someone's shoulder, a barrier's end post), she slides round it, up or down at
+ * her own pace, rather than stopping dead.
  */
 export function move(x, y, dx, dy, blocks = []) {
   // Her run reaches sixteen pixels ahead of her feet (the leading leg in its longest stride): far enough from either end
   // wall that it never crosses the wall's edge.
   let nx = clamp(x + dx, WALL + 17, WORLD.w - WALL - 17);
-  // Off the open floor into a field's driver stations: back to the edge she came from.
-  if (y > WALK_Y[1] && !inEnd(nx)) nx = ox(divisionAt(nx)) + (x - ox(divisionAt(nx)) < FIELD.mid ? EDGE : PITCH - EDGE);
+  // Off the open floor into a field's driver stations: back to the edge she came from. Walking straight along the
+  // aisle just below a walkway (no more than CORNER rows below it), she steps up round the station's corner onto the
+  // walkway instead, at her own pace, as she slides round anything else, if nothing's in the way.
+  if (y > WALK_Y[1] && !inEnd(nx)) {
+    const k = divisionAt(nx), edge = ox(k) + (x - ox(k) < FIELD.mid ? EDGE : PITCH - EDGE);
+    if (Math.abs(dy) < 0.01 && y - WALK_Y[1] <= CORNER && !rowsUp(y).some((yy) => hits(edge, yy, blocks))) {
+      y = Math.max(WALK_Y[1], y - Math.abs(nx - x));
+    }
+    if (y > WALK_Y[1]) nx = edge;
+  }
   if (hits(nx, y, blocks)) {
     const side = Math.abs(dy) < 0.01 && nx !== x ? slideRow(x, nx, y, blocks) : 0;
     if (side) {

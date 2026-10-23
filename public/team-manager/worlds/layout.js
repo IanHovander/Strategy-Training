@@ -73,13 +73,14 @@ export const MATE = { x: START.x - 22, y: 56, dir: 2 };
  * their head across a division's name or score. Each aisle has two runs, one under the screen and one under the sign,
  * a gap too narrow to pass between them on the line between the two divisions (so each run belongs to one division's
  * field, sorted in with its things), and they stop short of the walkways at both ends: the screen's run far enough
- * along that nobody standing at the walkway's mouth has their face against the screen's edge. The pads have one each.
+ * along that there's room (19 pixels) between it and the red driver station to walk up from the aisle onto the walkway,
+ * and that nobody standing there has their face against the screen's edge. The pads have one each.
  */
 export const BARRIER_Y = 70;
 export const BARRIERS = [
   { x0: WALL + 6, x1: ox(0) + 88 },
-  ...DIVISIONS.slice(1).flatMap((_, i) => [{ x0: ox(i + 1) - 112, x1: ox(i + 1) - 12 }, { x0: ox(i + 1) - 4, x1: ox(i + 1) + 88 }]),
-  { x0: ox(DIVISIONS.length) - 112, x1: WORLD.w - WALL - 6 },
+  ...DIVISIONS.slice(1).flatMap((_, i) => [{ x0: ox(i + 1) - 104, x1: ox(i + 1) - 12 }, { x0: ox(i + 1) - 4, x1: ox(i + 1) + 88 }]),
+  { x0: ox(DIVISIONS.length) - 104, x1: WORLD.w - WALL - 6 },
 ];
 /**
  * Two tables on the floor (hall.js draws them, people.js puts someone behind each): along x0-x1, floor lines back to
@@ -90,22 +91,27 @@ export const INFO_DESK = { x0: ox(HOME) + PITCH + 38, x1: ox(HOME) + PITCH + 94,
 
 // ---- The matches ----
 // Every division plays its own qualification matches, out of step with the others: two and a half minutes of play,
-// then half a minute to reset. The scores climb a few points at a time and hold at the end until the next match.
-export const PLAY = 150, RESET = 30;
+// then half a minute to reset. The scores climb a few points at a time and hold at the end until the next match. The
+// clock counts down the period being played, as the audience display does: the 2019 sandstorm's first fifteen seconds
+// (from 0:15), then the two and a quarter minutes after it, straight on with no pause between (from 2:15).
+export const PLAY = 150, RESET = 30, SANDSTORM = 15;
 /** into: seconds since this match started (past PLAY, it's over and the field is being reset). */
 export function matchState(k, t) {
   const u = Math.max(0, t + DIVISIONS[k].offset * 9 + 25), n = Math.floor(u / (PLAY + RESET)), into = u - n * (PLAY + RESET);
   const p = Math.min(1, into / PLAY);
   const total = (seed) => 34 + Math.floor(rnd(seed) * 48); // what an alliance ends on: 34 to 81
   const sofar = (seed, lag) => Math.round(total(seed) * Math.min(1, Math.floor(p * 15 + lag) / 15));
+  const sandstorm = into < SANDSTORM;
   return {
     qual: DIVISIONS[k].qual + n,
-    clock: Math.ceil(PLAY - Math.min(PLAY, into)), // seconds left: 150 down to 0, then 0 through the reset
+    // Seconds left in the period: 15 down to 1, then 135 down to 0, and 0 through the reset.
+    clock: sandstorm ? Math.ceil(SANDSTORM - into) : Math.ceil(PLAY - Math.min(PLAY, into)),
+    sandstorm,
     playing: into < PLAY,
     into,
     blue: sofar(k * 97 + n * 13 + 1, 0),
     red: sofar(k * 131 + n * 17 + 5, 0.5),
   };
 }
-/** Seconds as the match clock shows them: 2:30. */
+/** Seconds as the match clock shows them: 2:15. */
 export const clockText = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;

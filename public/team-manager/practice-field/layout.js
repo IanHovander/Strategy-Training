@@ -19,9 +19,9 @@ export const ROOM = { w: 704, h: 212, wallY: 84, shown: 192 };
 export const roomY = (ft) => ROOM.wallY + ft * DEEP;
 /** The way out: the end wall on the right, the cafeteria's outside wall, two and a half feet of it showing at the edge
  *  of the world, cut away 5 pixels up (h) the way the worlds hall's end walls are, and the side doors in it out to the
- *  parking lot, propped open. y0-y1 is the opening's floor band, 12 feet wide, out in the front half of the room where
- *  the floor is clear, below the custodian's cart. She came in through the hallway doors at the other end of the room
- *  (DOORWAY). */
+ *  parking lot, standing open (they swing outward, out of the picture). y0-y1 is the opening's floor band, 12 feet
+ *  wide, out in the front half of the room where the floor is clear, below the custodian's cart. She came in through
+ *  the hallway doors at the other end of the room (DOORWAY). */
 export const END_WALL = { x0: ROOM.w - 20, x1: ROOM.w, h: 5 };
 export const SIDE_DOOR = { y0: 148, y1: 181 };
 /** Where her feet can go at all: the floor, short of the walls and the edges of the world. At the front she can go 8

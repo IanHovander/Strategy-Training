@@ -11,6 +11,11 @@
 // The matches carry on from the cut scene into walking: the cut scene keeps its own clock for the field and the crowd
 // (cutscene.js), and walking adds the difference between that and the page's clock on the cut scene's last frame, so no
 // robot jumps as the bars go. Skipped with ?play, walking just runs on the page's clock.
+//
+// It's match 42 on the field, as the pits' boards say: 3000 and 7777 are out there (ON FIELD, MATCH 42), so they keep
+// their places as the blue arm and the red defender, and the two elevators are teams from another row of pits. 5026's
+// robot is on its way to the queue for match 44 (the pits sent it), so it isn't on the field, and the two people in the
+// front row who'd point at it out there say something else here (LINES).
 import { WORLD_W, makeFloor, drawFieldLive } from '../field.js';
 import { PEOPLE, STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt } from '../bleachers.js';
 import { gateParts, moveOut, EXIT } from './gate.js';
@@ -20,8 +25,36 @@ import { makeCutscene } from './cutscene.js';
 for (const p of PEOPLE) p.faceGait = p.standing ? 'stand' : 'sit';
 let FLOOR = null;
 
-/** Where she stops once she's walked in: on the open floor past the blue end, behind Priya the queuer. */
-const START = { x: 50, y: 68, dir: 0 };
+/** The numbers on the field in match 42: the blue elevator, the red elevator, the blue arm and the red defender. */
+const TEAMS = ['2718', '1618', '3000', '7777'];
+/**
+ * Lines of the arena's own for people bleachers.js shares with other scenes: Rosa and Milo, who'd otherwise point at
+ * 5026's robot on the field, talk about it coming up in match 44 instead.
+ */
+const LINES = {
+  rosa: [
+    ['YOU ARE ON 5026? MY KID BUILT OUR', 'ELEVATOR. TWO STAGES!'],
+    ["MATCH 44, RIGHT? I DON'T KNOW THE", 'RULES, BUT I KNOW WHEN TO SCREAM.'],
+  ],
+  milo: [
+    ['IS YOUR ROBOT ON SOON? I WANT TO', 'SEE IT GET A HATCH ON LEVEL 3!'],
+    ["WHEN I'M IN HIGH SCHOOL I'M JOINING", '5026. SAVE ME A SPOT.'],
+  ],
+};
+/**
+ * Who she can talk to here: bleachers.js's people, with the arena's lines where it has its own. The stands still draw
+ * the shared ones (drawStands keeps the one she's talking to sitting still by who it is), so reach hands over the copy
+ * for whoever bleachers.js finds in reach, and draw hands the stands back the shared one.
+ */
+const TALKERS = PEOPLE.map((p) => (LINES[p.id] ? { ...p, lines: LINES[p.id] } : p));
+const byId = Object.fromEntries(TALKERS.map((p) => [p.id, p]));
+const seated = (p) => (p ? PEOPLE.find((q) => q.id === p.id) : null);
+
+/**
+ * Where she stops once she's walked in: on the open floor past the blue end, behind Priya the queuer, level with the
+ * front of the walkway, so straight on to the right is straight down it.
+ */
+const START = { x: 50, y: 64, dir: 0 };
 
 /**
  * The arena seen through a camera at camX, t seconds into its day: the floor, the stands and the crowd, the walkway,
@@ -38,7 +71,7 @@ function drawWorld(g, camX, t, o = {}) {
     const q = o.turned?.[p.id] != null ? { ...p, dir: o.turned[p.id] } : p;
     return { y: p.y, draw: () => drawStanding(g, camX, q) };
   });
-  drawFieldLive(g, camX, t, { who: o.who ?? [], more: [...standing, ...gateParts(camX), ...(o.more ?? [])] });
+  drawFieldLive(g, camX, t, { teams: TEAMS, who: o.who ?? [], more: [...standing, ...gateParts(camX), ...(o.more ?? [])] });
 }
 
 const cutscene = makeCutscene(drawWorld, { PEOPLE });
@@ -58,8 +91,8 @@ export const scene = {
   // The walkway and the floor past the ends are as far as she goes: the field is for drive teams, and past the scoring
   // table the barrier stops her except at its gap.
   move: moveOut,
-  people: PEOPLE,
-  reach: (s) => inReach(s.me.x, s.me.y),
+  people: TALKERS,
+  reach: (s) => byId[inReach(s.me.x, s.me.y)?.id] ?? null,
   faceTo: seatOf,
   prompt: (g, view, p, t) => drawPrompt(g, view.x, p, t),
   setup() {
@@ -70,6 +103,6 @@ export const scene = {
   },
   draw(g, view, t, s) {
     const camX = view.x, x = Math.round(s.me.x) - camX, y = Math.round(s.me.y);
-    drawWorld(g, camX, t + ahead, { talkingTo: s.talk?.person, who: [{ x0: x - 8, x1: x + 8, y1: y }], more: [s.player] });
+    drawWorld(g, camX, t + ahead, { talkingTo: seated(s.talk?.person), who: [{ x0: x - 8, x1: x + 8, y1: y }], more: [s.player] });
   },
 };

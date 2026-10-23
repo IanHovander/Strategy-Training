@@ -103,6 +103,8 @@ const LEAN = 10;
 const WORD = [24, 32], WORD_Y = [104, 110], CLEAR = 14, NEAR_CLEAR = 10;
 /** The safety advisor's pace coming over to have a word (brisk), and going back to her patrol (people.js's). */
 const BRISK = 44, STROLL = 22;
+/** She doesn't rejoin her patrol closer to the strategist than this (pixels across, pixels deep). */
+const REJOIN = { x: 28, y: 14 };
 
 const cutscene = makeCutscene({ drawWorld, drawCartBot, drawFolk, folk, LOOKS });
 /** Seconds into the cut scene when it hands over: the crews carry on from there. */
@@ -440,9 +442,17 @@ export const scene = {
     } else if (errand?.phase === 'talk') {
       Object.assign(pn, { x: errand.to[0], y: errand.to[1], gait: 'stand', frame: 0 });
       if (!s.talk) {
-        // Back to her patrol, round in front of the strategist again if it's on her far side.
-        const round = Math.sign(patrolAt[0] - me.x) !== Math.sign(errand.to[0] - me.x) ? [[Math.round(me.x), Math.min(LANE[1], Math.round(me.y) + 14)]] : [];
-        Object.assign(errand, { phase: 'back', t0: t, wait: 0, path: [errand.to, ...round, patrolAt] });
+        // Back to her patrol, round in front of the strategist again if it's on her far side. If where she left it is
+        // where the strategist stands (she'd stopped her there to talk), she rejoins it a few steps further on, her
+        // clock moved on to match, so she never walks back into her.
+        let rejoin = patrolAt;
+        for (let k = 0; k < 8 && Math.abs(rejoin[0] - me.x) < REJOIN.x && Math.abs(rejoin[1] - me.y) < REJOIN.y; k++) {
+          held[NADIA_ID] -= 0.5;
+          const q = byId(folk(crewT, { clocks: clocks() }))[NADIA_ID];
+          rejoin = [q.x, q.y];
+        }
+        const round = Math.sign(rejoin[0] - me.x) !== Math.sign(errand.to[0] - me.x) ? [[Math.round(me.x), Math.min(LANE[1], Math.round(me.y) + 14)]] : [];
+        Object.assign(errand, { phase: 'back', t0: t, wait: 0, path: [errand.to, ...round, rejoin] });
       }
     }
     if (errand?.phase === 'back') {

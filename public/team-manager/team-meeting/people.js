@@ -34,7 +34,7 @@
 //
 // After the meeting it breaks up into small groups (after()): the co-captains still talking at the head of the old
 // circle, the teammate waiting for her, the build lead on the path looking in at the robot, the programmer under the
-// left tree with a laptop (he doesn't look up from it, even to talk), the teacher and the scouting lead on the bench,
+// tree with a laptop (he doesn't look up from it, even to talk), the teacher and the scouting lead on the bench,
 // the outreach lead behind the sign-up table, the drive team in a huddle near it, the mentor reading the thank-you card
 // from beside it, the freshman by himself on the grass, and the rest in twos and threes.
 //
@@ -565,7 +565,7 @@ const AFTER = [
   // The mentor on the path just right of the thank-you card, turned to it, clear of it so it reads whole (the card's
   // right edge is at x 227; she's 230 to 244), with her bag at her feet. Left of it she'd stand in front of the robot.
   { id: 'okafor', x: 238, y: 153, dir: 6, gait: 'stand' },
-  // The programmer in the left tree's shade with a laptop on his lap.
+  // The programmer in the tree's shade with a laptop on his lap.
   { id: 'kenji', x: 86, y: 199, dir: 0, gait: 'floor' },
   // The teacher and the scouting lead on the bench.
   { id: 'brandt', x: 342, y: BENCH.y + 3, dir: 0, gait: 'sit' },
@@ -584,7 +584,7 @@ const AFTER = [
   { id: 'eli', x: 214, y: 210, dir: 0, gait: 'floor' },
   // The rest: three standing by the path left of the shop (two facing each other, the third a step in front with her
   // back to you, her head below their chins), a pair sitting where the circle was, one by the bench, one on the grass,
-  // one in the right tree's shade.
+  // one on the grass at the lawn's right end, clear of the way up to the walkway.
   { id: 's1', x: 96, y: 160, dir: 2, gait: 'stand' },
   { id: 's4', x: 112, y: 158, dir: 6, gait: 'stand' },
   { id: 's3', x: 104, y: 178, dir: 4, gait: 'stand' },

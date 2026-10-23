@@ -110,11 +110,15 @@ const CUT_END = cutscene.reduce((n, b) => n + b.dur, 0);
 // by 4 pixels along and 2 of depth so her shadow never touches them.
 const STOPS = [...ROOM_BLOCKS, ...FIELD_BLOCKS, ...peopleBlocks()];
 const blocked = (x, y) => STOPS.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
-/** In the side doors' floor band, as far in as the end wall either side of them lets her (move()'s margins): there the
- *  floor runs on out through the wall. */
-const inDoorway = (y) => y >= SIDE_DOOR.y0 + 2 && y <= SIDE_DOOR.y1 - 2;
-/** The way out (stage.js): her feet in the doorway's mouth, just short of the threshold. */
-const EXIT = { x: END_WALL.x0 - 4, y0: SIDE_DOOR.y0 + 2, y1: SIDE_DOOR.y1 - 2, label: EXIT_LABEL };
+/** The side doors' floor band, where the floor runs on out through the wall: the rows the walk outside shows in, from
+ *  the one under the wall behind the doors to the one over the wall in front (room.js drawEndWall: that wall's cut top
+ *  starts END_WALL.h above its floor line), less 2 pixels each side, move()'s margins. So her feet are always on the
+ *  walk as she goes out, and the wall in front never hides her shoes. */
+const DOOR_Y = { y0: SIDE_DOOR.y0 + 2, y1: SIDE_DOOR.y1 - END_WALL.h - 2 };
+const inDoorway = (y) => y >= DOOR_Y.y0 && y <= DOOR_Y.y1;
+/** The way out (stage.js): her feet in the doorway's mouth, just short of the threshold. The arrow points in at the
+ *  opening, low over the mat, so its label is on the floor clear of the custodian's cart. */
+const EXIT = { x: END_WALL.x0 - 4, ...DOOR_Y, label: EXIT_LABEL, sign: { y: SIDE_DOOR.y0 + 8 } };
 /** A step along, then across, as field.js does: each half refused if it would end in something. On the right she stops
  *  short of the end wall, except in the doorway, where she can walk on into it, and not out of the band once she's
  *  past where she'd stop. A step that goes nowhere because the carpet is in the way may bring Kai over (keepOff). */

@@ -71,8 +71,9 @@ function splitAt(things, k) {
 
 /**
  * The hall from view { x, y } at world time t. o: lights and beams (the cut scene's lamps, 0 to 1), the talking seat
- * (bleachers.js keeps that person sitting still), the teammate's { x, y, dir, gait, dist } if not at MATE, and her: the
- * stage's s.player and her x while walking, or hero { x, y, dir, gait, dist } in the cut scene.
+ * (bleachers.js keeps that person sitting still) and whoever she's talking to (talking, who turns to her), the
+ * teammate's { x, y, dir, gait, dist } if not at MATE, and her: the stage's s.player and her x while walking, or hero
+ * { x, y, dir, gait, dist } in the cut scene.
  */
 function drawWorld(g, view, t, o = {}) {
   warm(3, divisionAt(view.x + W / 2));
@@ -87,7 +88,7 @@ function drawWorld(g, view, t, o = {}) {
   const her = o.player ?? (o.hero ? { y: o.hero.y, draw: () => drawWithShadow(g, view, { ...o.hero, look: HERO_LOOK }) } : null);
   // Everyone and everything standing in view, with how far across each is drawn: the people, the tables, her.
   const ks = visibleDivisions(view);
-  const things = ks.flatMap((k) => standingIn(g, view, k, t, { mate: o.mate }))
+  const things = ks.flatMap((k) => standingIn(g, view, k, t, { mate: o.mate, talking: o.talking, her: at }))
     .map((p) => ({ x0: p.x - HALF, x1: p.x + HALF, y: p.y, draw: p.draw }));
   for (const p of PROPS) {
     if (p.x1 > view.x && p.x0 < view.x + W) {
@@ -137,7 +138,7 @@ export const scene = {
   },
   draw(g, view, t, s) {
     where = s.me;
-    drawWorld(g, view, t + shift, { player: s.player, playerX: s.me.x, talkingSeat: talkingSeat(s) });
+    drawWorld(g, view, t + shift, { player: s.player, playerX: s.me.x, talkingSeat: talkingSeat(s), talking: s.talk?.person });
   },
   cutscene,
 };

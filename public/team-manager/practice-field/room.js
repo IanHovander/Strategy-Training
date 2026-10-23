@@ -5,7 +5,7 @@
 // The back wall, left to right: the double doors to the hallway under their EXIT sign; six tall windows, with a clock and
 // school posters on the piers between them; the team's banner over the lunch tables folded against the wall; the serving
 // line with its shutter down; two vending machines under the lunch menu. At the right-hand end, the outside wall, with
-// the side doors out to the parking lot propped open in it (the way out). The wall is painted block over a glazed tile
+// the side doors out to the parking lot standing open in it (the way out). The wall is painted block over a glazed tile
 // wainscot, dim and low in contrast because the sun is behind it (like the arena's stands), so the people in front of it
 // read, and the sky in the glass is the brightest thing on it. Outside: a late-afternoon sky in flat dithered bands, the
 // sun low in the first window, and the trees and the school's other wing as silhouettes against it.
@@ -28,7 +28,8 @@
 //                                                        into a ROOM.w x ROOM.h canvas at world coordinates: the patches
 //                                                        and the shafts
 //   drawEndWall(ctx)                                     once, last, into the same canvas: the end wall on the right as
-//                                                        far as the side doors, the doors' opening and the mat inside
+//                                                        far as the side doors, the doors' opening, the mat inside
+//                                                        and the daylight through the doors on the floor
 //   roomThings(g, view, t, o)                            the furniture, [{ y, draw }] to sort in by floor line; o.door 0-1
 //   drawSunAir(g, view, t)                               the dust in the shafts, last of all, every frame
 //   ROOM_BLOCKS                                          the furniture's footprints and the end wall's, for move()
@@ -913,14 +914,15 @@ function doorway(half) {
 // the floor line at the back, its face, the back wall's painted block and glazed tile a step lighter, as it faces the
 // light; from there down, its thickness cut away 5 pixels up, a box like field.js's running down the right edge of the
 // room, the top of the block lit along its edge toward the room. Out in the front half of the room it breaks for the
-// side doors to the parking lot, propped open: the cut end of the wall behind the opening shows its face, with the
-// doors' aluminium frame at its inner edge; across the opening the threshold, and beyond it the walk outside in the
-// late sun, the same straw as the sun's patches on the tiles, so the way out is the brightest thing at this end of the
-// room. A rubber mat lies on the tiles inside, and a red EXIT sign sticks out from the wall over the opening on a
-// bracket, the same as the one over the hallway doors she came in by at the other end.
+// side doors to the parking lot, standing open (they swing outward, so only their frame and threshold show): the cut
+// end of the wall behind the opening shows its face, with the doors' aluminium frame at its inner edge; across the
+// opening the threshold, and beyond it the walk outside in the late sun, the same straw as the sun's patches on the
+// tiles, so the way out is the brightest thing at this end of the room, and its daylight lies on the floor inside
+// (drawDoorLight). A rubber mat lies on the tiles inside, and a red EXIT sign sticks out from the wall over the opening
+// on a bracket, the same as the one over the hallway doors she came in by at the other end.
 // The face and the wall behind the opening go into the floor canvas (drawEndWall); the wall in front of the opening
 // stands on the floor (roomThings), so it hides her feet as she walks out between the two.
-const CAP = [WALL[1], WALL[2], '#4a5372']; // the block's cut top: shade, mid, and its lit edge a step past the wall's
+const CAP = [WALL[2], '#4a5372', '#5c6688']; // the block's cut top, lit from above: shade, mid, lit, past the wall's own
 const DAY = ['#cdb87e', '#e6d39a', '#f2e3b0']; // the walk outside in the sun: the tiles' straw in the sun's patches
 
 /** The wall's thickness from floor line y0 to y1, cut away END_WALL.h up: its top speckled, the face toward you below. */
@@ -933,7 +935,8 @@ function endWallRun(y0, y1) {
   }
 }
 
-/** The end wall into the floor canvas, last: its face, the wall as far as the side doors, the opening and the mat. */
+/** The end wall into the floor canvas, last: its face, the wall as far as the side doors, the opening, the mat and the
+ *  daylight on the floor. */
 export function drawEndWall(ctx) {
   const prev = useContext(ctx);
   screen();
@@ -971,13 +974,47 @@ export function drawEndWall(ctx) {
   rect(x0, y1 - h, 3, 2, STEEL[2]);
   rect(x0, y1 - h, 3, 1, STEEL[3]);
   // The mat inside the doors: flat black rubber in the carpet's darkest grey, a border round it a step up, flecked.
-  const mx = x0 - 27, mw = 23, my = y0 + 4, mh = y1 - y0 - 9;
+  const mx = x0 - 27, mw = 23, my = gy + 3, mh = gh - 6;
   rect(mx - 1, my - 1, mw + 2, mh + 2, C.ink);
   rect(mx, my, mw, mh, C.carpet0);
   rect(mx + 1, my + 1, mw - 2, mh - 2, C.carpet1);
   rect(mx + 2, my + 2, mw - 4, mh - 4, C.carpet0);
   for (let i = 0; i < 12; i++) rect(mx + 3 + Math.floor(rnd(i + 860) * (mw - 6)), my + 3 + Math.floor(rnd(i + 880) * (mh - 6)), 1, 1, C.carpet1);
   useContext(prev);
+  drawDoorLight(ctx);
+}
+
+// The daylight in through the open doors, lying on the tiles and the mat inside: the opening's floor band carried on
+// into the room as far as DOOR_LIGHT.reach, in two flat steps like the shafts, the brighter one by the threshold and
+// reaching just past the mat, two columns of checkerboard between them and again where it gives out. The steps' far
+// edges slant the way the window patches' sides do. It relights what's under it to fixed colours as the shafts do: the
+// tiles the colours of a shaft's rim in the bright step and of its upper step in the dim one, the mat a few steps down
+// from the tiles so it still reads as a mat, ink left alone; all of it dimmer than the walk outside, which is in the
+// sun. So the way out shows from across the room, and on a phone it lies clear of the stick in the corner.
+const DOOR_LIGHT = { reach: 56, step: 38 };
+const DOOR_HI = fixedLight([[C.carpet0, '#6c6552'], [C.carpet1, '#857c60']], SHAFT_RIM);
+const DOOR_LO = fixedLight([[C.carpet0, '#544e3e'], [C.carpet1, '#6c6552']], SHAFT_HI);
+/** How (x, y) is lit, u pixels in from the threshold along the band: the bright step, the dim one, or not at all. */
+function doorStep(x, y, u) {
+  const { reach, step } = DOOR_LIGHT, even = (x + y) % 2 === 0;
+  if (u < step) return DOOR_HI;
+  if (u < step + 2) return even ? DOOR_LO : DOOR_HI;
+  if (u < reach - 2) return DOOR_LO;
+  if (u < reach) return even ? null : DOOR_LO;
+  return null;
+}
+function drawDoorLight(ctx) {
+  const x1 = END_WALL.x0, x0 = x1 - DOOR_LIGHT.reach, y0 = SIDE_DOOR.y0 + 1, y1 = SIDE_DOOR.y1 - END_WALL.h - 1;
+  const w = x1 - x0, img = ctx.getImageData(x0, y0, w, y1 - y0), px = img.data;
+  for (let y = y0; y < y1; y++) {
+    const shear = Math.round(SUN.slope * (y - y0));
+    for (let x = x0; x < x1; x++) {
+      const f = doorStep(x, y, x1 - 1 - x + shear), k = ((y - y0) * w + x - x0) * 4;
+      if (!f || keyOf(px[k], px[k + 1], px[k + 2]) === INK) continue;
+      [px[k], px[k + 1], px[k + 2]] = f(px[k], px[k + 1], px[k + 2]);
+    }
+  }
+  ctx.putImageData(img, x0, y0);
 }
 
 /** The EXIT sign over the side doors, sticking out from the wall on a bracket: white on red, as over the hallway doors. */
@@ -1014,10 +1051,10 @@ export function roomThings(g, view, t, o = {}) {
   ];
   const door = o.door ?? 0;
   if (door > 0.25) things.push({ x0: DOORS.x0, x1: DOORS.x1, y: ROOM.wallY, draw: () => doorway(door < 0.75) });
-  // The end wall in front of the side doors, and the sign over them, sorted at the opening's near edge.
+  // The end wall in front of the side doors, sorted at the opening's near edge, and the sign over its middle.
   const near = SIDE_DOOR.y1;
   things.push({ x0: END_WALL.x0, x1: END_WALL.x1, y: near, draw: () => endWallRun(near, ROOM.h + END_WALL.h + 1) });
-  things.push({ x0: END_WALL.x0 - 22, x1: END_WALL.x0, y: near, draw: exitSign });
+  things.push({ x0: END_WALL.x0 - 22, x1: END_WALL.x0, y: (SIDE_DOOR.y0 + near) / 2, draw: exitSign });
   return things.filter((p) => p.x1 > vx0 && p.x0 < vx1).map((p) => ({ y: p.y, draw: p.draw }));
 }
 

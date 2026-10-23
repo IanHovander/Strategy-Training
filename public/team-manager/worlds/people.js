@@ -22,7 +22,7 @@ import { C } from '../pixel.js';
 import { walkerFrame, leftFacing, HERO_LOOK, FRAMES } from '../walker.js';
 import { look, stranger, student, tones, skinBody, SKIN, HAIR, TEAMMATE_NAME } from '../cast.js';
 import { TEAMMATE_LOOK } from '../teammate.js';
-import { drawPerson, drawWithShadow } from '../stage.js';
+import { drawPerson, drawWithShadow, dirToward } from '../stage.js';
 import { drawBubble } from '../talk.js';
 import { PEOPLE as SEATS, TIERS, STANDING as ARENA_STANDING } from '../bleachers.js';
 import { DIVISIONS, HOME, ox, divisionAt, START, MATE, BUTTON_TABLE, INFO_DESK } from './layout.js';
@@ -31,6 +31,8 @@ import { DIVISIONS, HOME, ox, divisionAt, START, MATE, BUTTON_TABLE, INFO_DESK }
 // Team shirts that cast.js doesn't have, in its order: shade, mid, lit.
 const TEAL = ['#0e5a5e', '#1c9a9a', '#5fd3c8'], PINK = ['#8e1f5c', '#d63a8a', '#ff86bd'];
 const LIME = ['#4a7a10', '#7cc21e', '#b8ec5a'], MAROON = ['#5e1a2a', '#8e2a3e', '#c4566a'];
+/** A mid grey from the palette's steels and field.js's: the scorekeepers' hoodies. */
+const STEEL = [C.steel1, '#5d6580', C.steel2];
 const SHIRT = { teal: TEAL, pink: PINK, lime: LIME, maroon: MAROON, yellow: tones.shirtYellow, purple: tones.shirtPurple };
 
 /** A white card on a blue lanyard, on the chest: every volunteer wears one. walker.js badge rectangles. */
@@ -172,12 +174,15 @@ const MIXED = Array.from({ length: 14 }, (_, i) => stranger(i));
 const TEAM = Object.fromEntries(Object.entries(SHIRT).map(([name, shirt]) => [name, Array.from({ length: 7 }, (_, i) => stranger(i, shirt))]));
 TEAM['5026'] = Array.from({ length: 7 }, (_, i) => student(i, 'tee'));
 const QUEUERS = [1, 4, 6, 2].map((face, i) => volunteer(`w-queuer${i}`, face, tones.shirtOrange, C.ink));
-// In Newton's front row right behind her when the walking starts, people in dark tops, so her red tee reads against
-// them (a white shirt there would read as part of her).
-const BEHIND_HER = [stranger(2, tones.hoodie), stranger(9, tones.black)];
+// In Newton's front row right behind her when the walking starts, people in mid-toned tops, neither red, white nor
+// near-black, so her red tee and her dark hair both read against them (a white shirt there would read as part of her,
+// a black one would swallow her hair).
+const BEHIND_HER = [stranger(2, tones.khaki), stranger(9, tones.shirtBlue)];
 const behindHer = (k, p) => k === HOME && p.tier === 0 && Math.abs(ox(HOME) + p.x - START.x) < 20;
+// The scorekeepers in grey hoodies: she stands in front of one to talk to Lena or Noor, and her hair would be lost
+// against a dark one.
 const SCOREKEEPERS = [5, 0, 3, 4].map((face, i) => dressed(`w-score${i}`, face,
-  { shirt: tones.hoodie, jeans: tones.black, cuff: tones.black, print: null }));
+  { shirt: STEEL, jeans: tones.black, cuff: tones.black, print: null }));
 
 // ---- Who sits where ----
 // The blocks of seats between each division's aisle stairs (bleachers.js), in the division's own x, and who fills
@@ -408,13 +413,15 @@ function crewOf(k) {
 // dir, look]
 const T = (name, face) => TEAM[name][face % 7], M = (i) => MIXED[i % MIXED.length];
 const AISLES = [
-  // Past Archimedes' blue end, by the left wall: a pair below the big screen, and one by the queue.
-  [58, 100, 2, M(3)], [80, 101, 6, M(8)], [106, 124, 0, T('pink', 2)],
+  // Past Archimedes' blue end, by the left wall: a pair below the big screen, and one by the queue, far enough up that
+  // the floor behind the pair and down to the bottom edge stays open.
+  [58, 100, 2, M(3)], [80, 101, 6, M(8)], [106, 110, 0, T('pink', 2)],
   // Archimedes and Curie: one of Wei's team with him. Nobody stands below them, where she stands to talk to him: one
   // above the other, her feet would be on their head.
   [ox(1) - 42, 92, 1, T('yellow', 5)],
-  // Curie and Daly.
-  [ox(2) - 36, 93, 2, T('purple', 0)], [ox(2) - 14, 94, 6, T('purple', 3)], [ox(2) + 4, 121, 0, M(6)],
+  // Curie and Daly: a pair, and someone by Daly's queue, far enough up that the floor below them in front of the queue
+  // stays open, as it does in every aisle.
+  [ox(2) - 36, 93, 2, T('purple', 0)], [ox(2) - 14, 94, 6, T('purple', 3)], [ox(2) + 4, 110, 0, M(6)],
   // Daly and Galileo: one of Jack's team with him, and the same room beside him as Wei has.
   [ox(3) - 42, 94, 1, T('lime', 1)],
   // Galileo and Hopper: one of Aylin's team with her.
@@ -451,22 +458,26 @@ const STANDING = DIVISIONS.map((_, k) => [
  * Whoever works a table (the scorekeepers, the button traders, the info desk) has the table in front of them already,
  * and behind them only ten rows: then the floor between the hem's barrier and them is as wide as the floor between the
  * barrier and every queue (scene.js QUEUES), the way along the aisle, and her head behind theirs is still above it.
+ * Walking straight into someone she slides round them (fields.js move()) up to 14 rows, half their footprint's depth:
+ * from where the walking starts, left into the teammate, that takes her down past the teammate's feet into the aisle.
  */
 export const BLOCKS = [...STANDING.flat().filter((p) => !p.driver), MATE_PERSON]
-  .map(({ x, y, table, across }) => ({ x0: x - 15, x1: x + 15, y0: y - (table || across ? 10 : 14), y1: y + 14 }));
+  .map(({ x, y, table, across }) => ({ x0: x - 15, x1: x + 15, y0: y - (table || across ? 10 : 14), y1: y + 14, slide: 14 }));
 
 /**
  * Everyone standing in division k near the view, each { x, y, draw() } to sort in with its field (drawFieldLive calls
  * draw() with no arguments; x is where they stand along the hall, for the scene to split an aisle between two fields).
- * The teammate stands at MATE, or wherever o.mate ({ x, y, dir, gait, dist }) says.
+ * The teammate stands at MATE, or wherever o.mate ({ x, y, dir, gait, dist }) says. o.talking: whoever she's talking
+ * to, who turns to her (o.her: where she stands) for as long as they talk, and back the way they were facing after.
  */
 export function standingIn(g, view, k, t, o = {}) {
   const near = (p) => Math.abs(p.x - view.x - 128) < 128 + 24;
+  const turned = (p) => (p === o.talking && o.her ? { ...p, dir: dirToward(o.her.x - p.x, (o.her.y - p.y) / 0.8) } : p);
   // The drivers' feet are hidden behind the alliance wall and each other, so they get no shadow, like the arena's
   // (bleachers.js drawStanding): a shadow wider than a body in profile would stick out beside the next driver's waist.
   const out = STANDING[k].filter(near)
-    .map((p) => ({ x: p.x, y: p.y, draw: () => (p.driver ? drawPerson : drawWithShadow)(g, view, p) }));
-  const mate = o.mate ? { ...o.mate, look: TEAMMATE_LOOK } : MATE_PERSON;
+    .map((p) => ({ x: p.x, y: p.y, draw: () => (p.driver ? drawPerson : drawWithShadow)(g, view, turned(p)) }));
+  const mate = o.mate ? { ...o.mate, look: TEAMMATE_LOOK } : turned(MATE_PERSON);
   if (divisionAt(mate.x) === k && near(mate)) out.push({ x: mate.x, y: mate.y, draw: () => drawWithShadow(g, view, mate) });
   return out;
 }
@@ -508,8 +519,9 @@ export const talkingSeat = (s) => s.talk?.person?.seat ?? null;
 
 // ---- Warming up ----
 // Frames to draw ahead, division by division: the crowd sitting (most of what's on screen), everyone standing, the
-// people to talk to as the phone shows them, the teammate's walk in the cut scene, and the crowd cheering. Last of all
-// her own walk and run in every direction, for the first steps after the cut scene.
+// people to talk to as the phone shows them, the teammate's walk in the cut scene, the people to talk to turned every
+// way (they turn to her as they talk), and the crowd cheering. Last of all her own walk and run in every direction, for
+// the first steps after the cut scene.
 let queue = null;
 function frames(k) {
   const seated = [...new Set([...SECTIONS[k].flatMap((s) => (s === 'mix' ? MIXED : TEAM[s])), ...SEATED_IN(k).map((p) => p.look),
@@ -518,7 +530,10 @@ function frames(k) {
     ...seated.map((lk) => [lk, 0, 'sit', 0]),
     ...STANDING[k].map((p) => [p.look, p.dir ?? 0, p.gait ?? 'stand', 0]),
     ...PEOPLE.filter((p) => p.k === k).map((p) => [p.look, 0, p.faceGait ?? 'stand', 0]),
-    ...(k === HOME ? [[TEAMMATE_LOOK, 0, 'stand', 0], [TEAMMATE_LOOK, MATE.dir, 'stand', 0], ...Array.from({ length: 8 }, (_, f) => [TEAMMATE_LOOK, 4, 'walk', f])] : []),
+    // The teammate waiting, turned to her, and walking or jogging up.
+    ...(k === HOME ? [[TEAMMATE_LOOK, 0, 'stand', 0], [TEAMMATE_LOOK, MATE.dir, 'stand', 0],
+      ...['walk', 'run'].flatMap((gait) => Array.from({ length: FRAMES[gait] }, (_, f) => [TEAMMATE_LOOK, 4, gait, f]))] : []),
+    ...PEOPLE.filter((p) => p.k === k && !p.seat).flatMap((p) => Array.from({ length: 8 }, (_, d) => [p.look, d, 'stand', 0])),
     ...seated.map((lk) => [lk, 0, 'cheer', 0]),
   ];
   list.next = 0;
