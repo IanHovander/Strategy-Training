@@ -14,8 +14,11 @@
 // In the stands, with the house down, phones come out: single pixels of white and pale yellow that come and go.
 //
 //   light(g, view, t, rig, people)   over a 1x view of the world already drawn into g (screen space, W x H)
-//   rig: { dark, spots, phones, glows }
+//   rig: { dark, spots, phones, glows, depth }
 //     dark    0 (house lights up, as walking about: nothing is drawn) to 1 (house lights down), in four hard steps
+//     depth   how far into the navy the dark goes with the house all the way down: DEPTH, about three quarters, if not
+//             given, so the arena is still there; HUSH, nearly all the way, for a moment that's only about whoever's in
+//             the light
 //     spots   [{ x, y, r, a, haze }]: the floor point (world) a lamp is aimed at, the pool's half-width there, how
 //             strong it is, 0 (off) to 1 (full), in four hard steps; haze: false for no shaft above it
 //     phones  0 to 1: how many phones are up in the stands (all of them if not given), as the dark allows
@@ -41,6 +44,8 @@ import { WORLD, SPOTS, capSpot, signY, MIC } from './layout.js';
 
 /** How dark the house gets: the share of navy laid over everything out of the light. */
 const DEPTH = 0.74;
+/** Nearly all the way: the arena gone but for a trace of its shapes, and only the people in the light left. */
+export const HUSH = 0.92;
 /** The dark's colour: the palette's deepest navy, so the arena reads as night, not as a grey veil. */
 const DARK = C.night0;
 /** The rows of a pool's oval for each pixel of its half-width: the floor recedes (20 degrees down). */
@@ -171,7 +176,7 @@ export function light(g, view, t, rig, people = []) {
   for (const r of rig.glows ?? []) sg.fillRect(r.x0 - view.x, r.y0 - view.y, r.x1 - r.x0, r.y1 - r.y0);
   sg.globalCompositeOperation = 'source-over';
   const prev = g.globalAlpha;
-  g.globalAlpha = dark * DEPTH;
+  g.globalAlpha = dark * (rig.depth ?? DEPTH);
   g.drawImage(sc, 0, 0);
   g.globalAlpha = prev;
 

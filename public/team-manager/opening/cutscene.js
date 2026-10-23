@@ -6,9 +6,11 @@
 // "YOU'VE GOT THIS." landing one at a time with a buzz. A card, ALLIANCE SELECTION, SATURDAY 12:38 PM, its minute
 // ticking over from the phone's 12:37, with MC Robin over the PA: "WELCOME TO ALLIANCE SELECTION!" Then the arena,
 // wide: the captains at their signs on the field, Robin by the mic, sign 4 standing empty, and down on the floor in
-// front, among the reps waiting their turn, Riley the co-captain and her, their backs to you.
-// Close on the two of them: a silent beat, Riley turning from the field to her, Norbert hugged to their chest; held so
-// A can't skip it. "THE LIST IS YOURS." Riley holds Norbert out: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2014."
+// front, apart from the reps waiting their turn, Riley the co-captain and her, their backs to you, a spotlight
+// snapping on over them.
+// Close on the two of them, the rest of the arena gone dark: a silent beat, Riley turning from the field to her,
+// Norbert hugged to their chest; held so A can't skip it. "THE LIST IS YOURS." Riley holds Norbert out: "AND TAKE HIM.
+// HE'S BEEN TO EVERY EVENT SINCE 2014."
 // A cutaway to the hands at twice the size (handoff.js): Norbert passed across from the co-captain's red sleeves to
 // her, his 26 ear glinting once. From then on he's in the top left corner with his voltage (norbert-held.js), and she
 // holds him. Close on her: "...OKAY." Meanwhile the first three alliances have picked: Robin calls "5026, COME ON UP!"
@@ -21,10 +23,10 @@
 // crisp), film bars throughout (the pick, a screen of the game's own, has none), and every frame a pure function of
 // time. The arena is alliance selection's own (its set, its reps, MC Robin, its layout, its lights). Seeds 1 to 3 and 5
 // to 8 stand at their signs along the arc; everyone else waits on the floor in front of the field in its knots, as in
-// alliance selection, she in the front corner by the gate (waitSlot(0), her place there) and Riley beside her, between
-// her and the crowd. The house lights are down: every captain stands in their sign's spotlight, and sign 4's is lit
-// with nobody in it, waiting for her; Riley and she stand in a softer one on the floor, which comes up full close on
-// them as the rest of the arena goes down to a glimmer (lightWorld), and a follow spot takes her up to the field. Once the first
+// alliance selection, and Riley has taken her aside, onto the open floor right of the gate. The house lights are
+// down: every captain stands in their sign's spotlight, and sign 4's is lit with nobody in it, waiting for her. In the
+// wide shot a spotlight snaps on over Riley and her; close on them, everything else goes out (lightWorld), nearly to
+// black, and it's just the two of them; and a follow spot takes her up to the field. Once the first
 // three alliances have picked, their first picks stand behind their captains and are gone from the crowd. While words
 // are up, the dialog box covers the bottom of the screen, so every shot with words keeps the faces in its top 88 rows.
 //
@@ -39,7 +41,7 @@ import { HERO_NAME } from '../cast.js';
 import { makeSetLayers, drawSet } from '../alliance-selection/set.js';
 import { lookOf } from '../alliance-selection/people.js';
 import { MC_LOOK, drawSkater } from '../alliance-selection/mc.js';
-import { light, pools, micSpot, followSpot, house } from '../alliance-selection/light.js';
+import { light, pools, micSpot, followSpot, house, HUSH } from '../alliance-selection/light.js';
 import {
   WORLD, capSpot, pickSpot, MC_HOME, waitSlot, GATE_OUT, GATE_IN, PRIYA_AT, SAM_FAR, REF_AT, RANKED, MC_NAME,
 } from '../alliance-selection/layout.js';
@@ -56,15 +58,20 @@ const OURS = SEEDS.indexOf('5026');
 /** Alliances 1 to 3's first picks, made while Norbert changes hands. */
 const PICKS = ['1357', '8812', '7040'];
 /**
- * Off the field, on the floor in front of it with the reps waiting their turn: she in the front corner by the gate
- * (alliance selection's place for her), a step nearer you; Riley a step to her left, between her and the crowd's
- * right-hand column (18 pixels from each).
+ * Off the field, on the floor in front of it, apart from the reps waiting their turn: Riley and she stand right below
+ * the gate and their own empty sign 4 beyond it (the two of them either side of its column, she on the right), so the
+ * first shot of them has their place on the field waiting straight above their heads, and her way up to it is
+ * straight through the gate. The waiting reps stand a knot's width further left than at alliance selection (AWAY),
+ * Priya with them, so nobody stands close by and the close-ups of the two of them have nothing round them but floor.
+ * Far enough down the floor that in the close-ups the feet of the captains and Robin on the field above are under the
+ * top film bar, and not so far that the belt barrier along the bottom of the floor runs across their shoes.
  */
-export const HER_AT = { x: waitSlot(0).x, y: waitSlot(0).y + 2 };
+export const HER_AT = { x: capSpot(OURS).x + 9, y: 180 };
 export const RILEY_AT = { x: HER_AT.x - 18, y: HER_AT.y - 2 };
+const AWAY = -60;
 /**
  * Everyone else waits in front of the field, in alliance selection's waiting places after hers, in its knots, facing as
- * they face there.
+ * they face there, but AWAY to the left, clear of the floor in front of the gate.
  */
 const WAITING = RANKED.map((r) => r.num).filter((num) => !SEEDS.includes(num));
 const HOME = { x: MC_HOME.x, y: MC_HOME.y };
@@ -76,10 +83,11 @@ const crowdOf = (picked) => [
   ...(picked ? PICKS.map((num, i) => ({ ...still(pickSpot(i, 1).x, pickSpot(i, 1).y), look: lookOf(num) })) : []),
   ...WAITING.map((num, n) => {
     if (picked && PICKS.includes(num)) return null;
-    const s = waitSlot(n + 1);
+    const s = { ...waitSlot(n + 1) };
+    s.x += AWAY;
     return { ...still(s.x, s.y, s.dir), look: lookOf(num) };
   }),
-  { ...still(PRIYA_AT.x, PRIYA_AT.y, PRIYA_AT.dir), look: lookOf('priya') },
+  { ...still(PRIYA_AT.x + AWAY, PRIYA_AT.y, PRIYA_AT.dir), look: lookOf('priya') },
   // Sam keeps the gate from left of everyone (SAM_FAR), out of the way of her walk up through it.
   { ...still(SAM_FAR.x, SAM_FAR.y, SAM_FAR.dir), look: lookOf('sam') },
   { ...still(REF_AT.x, REF_AT.y, REF_AT.dir), look: lookOf('ref') },
@@ -108,15 +116,21 @@ function drawWorld(g, view, t, { riley, her, mc, cheer, picked = false }) {
   drawSet(g, view, t, { people, cheer, board: picked ? BOARD_CALL : BOARD, exitSign: false });
 }
 
-/** The spotlight on Riley and her on the floor: soft in the wide shot, full close on them. */
+/**
+ * The cold open is a shade darker than alliance selection out of the light, so the waiting reps sink back and the
+ * captains, Robin and the two of them stand out.
+ */
+const DARKER = 0.84;
+/** The spotlight on Riley and her on the floor. */
 const pairSpot = (a) => ({ x: (RILEY_AT.x + HER_AT.x) / 2, y: HER_AT.y, r: 17, a });
 /**
  * The arena's lights (alliance selection's light.js), the house down: every sign's spotlight (sign 4's on nobody), the
- * mic's, a follow spot on Robin, the softer one on Riley and her, and a follow spot on her once she sets off. Close on
- * the two of them (hush), the line, the mic and Robin go down to a glimmer and theirs comes up full. Everyone in the
- * frame goes to the lights as drawWorld draws them, Norbert with whoever holds him.
+ * mic's and a follow spot on Robin (all but sign 4's as strong as line, 0 to 1), the one on Riley and her (pair: how
+ * strong), and a follow spot on her once she sets off. Close on the two of them (hush), every other light goes out and the dark goes nearly to black (HUSH): the
+ * waiting reps, the field and the stands are gone, and it's just the two of them in their light. Everyone in the frame
+ * goes to the lights as drawWorld draws them, Norbert with whoever holds him.
  */
-function lightWorld(g, view, t, { riley, her, mc, hush, picked = false }) {
+function lightWorld(g, view, t, { riley, her, mc, hush, pair = 1, line = 1, picked = false }) {
   const people = [...CROWD[picked ? 1 : 0], { ...mc, look: MC_LOOK, skater: true }];
   for (const p of [{ ...riley, look: COCAPTAIN_LOOK }, { ...her, look: HERO_LOOK }]) {
     people.push(p);
@@ -131,9 +145,9 @@ function lightWorld(g, view, t, { riley, her, mc, hush, picked = false }) {
       } });
     }
   }
-  const line = hush ? 0.25 : 1, set = her.x !== HER_AT.x || her.y !== HER_AT.y;
-  const spots = [...pools(line), micSpot(line), followSpot(mc, line), pairSpot(hush ? 1 : 0.5)];
-  light(g, view, t, house(set ? [...spots, followSpot(her, 1, 12)] : spots), people);
+  const set = her.x !== HER_AT.x || her.y !== HER_AT.y;
+  const spots = hush ? [pairSpot(1)] : [...pools((i) => (i === OURS ? 1 : line)), micSpot(line), followSpot(mc, line), pairSpot(pair)];
+  light(g, view, t, { ...house(set ? [...spots, followSpot(her, 1, 12)] : spots), depth: hush ? HUSH : DARKER }, people);
 }
 
 // ---- The camera ----
@@ -167,17 +181,19 @@ const closeUp = (x, y) => ({ focus: { x, y } });
 
 /**
  * The arena, wide, from the floor in front: the signs' panels just under the top film bar, captains 2 to 6 along the
- * arc whole, sign 4 empty in its spotlight between them, Robin by the mic, and the waiting reps along the bottom, Riley
- * and her among them, heads and shoulders over the bottom bar. It drifts a little to the left, toward the empty sign.
+ * arc whole, sign 4 empty in its spotlight in the middle, Robin by the mic, the waiting reps in the dark at the bottom
+ * left, and right below the empty sign, Riley and her, heads and shoulders over the bottom bar, looking up at it. It
+ * drifts a little to the left.
  */
-const WIDE_FROM = view(252, 40), WIDE_TO = view(240, 40);
+const WIDE_FROM = view(capSpot(OURS).x - W / 2 + 6, 40), WIDE_TO = view(capSpot(OURS).x - W / 2 - 6, 40);
 /**
  * Close on the two of them: Riley left of the middle, her right of it, both faces in the top half, clear of the dialog
- * box, and Norbert in the arms between, his feet at the box's top edge. Behind them the near wall and the field.
+ * box, and Norbert in the arms between, his feet at the box's top edge. Behind them, in the dark, the near wall; the
+ * feet of whoever's on the field above it are under the top film bar.
  */
-const PAIR_SHOT = closeUp(RILEY_AT.x + 9, 135);
+const PAIR_SHOT = closeUp(RILEY_AT.x + 9, RILEY_AT.y - 27);
 /** Close on her, Norbert in her arms, Riley at the left. */
-const HER_SHOT = closeUp(HER_AT.x - 2, 134);
+const HER_SHOT = closeUp(HER_AT.x - 2, HER_AT.y - 30);
 /** The audience display past the red end, its header under the film bar, the front row of the stands above it. */
 const BOARD_SHOT = view(514, 0);
 /** Her walk up to the field: the gate, sign 4 and Robin, her face clear of the dialog box once she's at the gate. */
@@ -264,15 +280,17 @@ export function makeCutscene() {
   const beats = [];
   /**
    * One beat in the arena: who(t) says where Riley, her and Robin are and what they're doing ({ riley, her, mc }, and
-   * picked: alliances 1 to 3 have picked), shot(t) the camera, cheer(t) the stands, hush: close on Riley and her, with
-   * the rest of the arena's lights down (lightWorld); on top go the film bars, and the corner once Norbert is hers
-   * (hud: true; hudIn: it slides down into place as the beat opens).
+   * picked: alliances 1 to 3 have picked), shot(t) the camera, cheer(t) the stands, pair(t) how strong the spotlight on
+   * Riley and her is and line(t) the captains' (full if not given), hush: close on the two of them, the rest of the
+   * arena gone dark (lightWorld);
+   * on top go the film bars, and the corner once Norbert is hers (hud: true; hudIn: it slides down into place as the
+   * beat opens).
    */
   function arena(o) {
     const b = {
       name: o.name, dur: o.dur,
       draw(g, t, c) {
-        shoot(g, o.shot(t), c.T, { ...o.who(t), cheer: o.cheer?.(t), hush: o.hush });
+        shoot(g, o.shot(t), c.T, { ...o.who(t), cheer: o.cheer?.(t), hush: o.hush, pair: o.pair?.(t), line: o.line?.(t) });
         useContext(g);
         screen();
         g.globalAlpha = 1;
@@ -307,9 +325,15 @@ export function makeCutscene() {
   card('card', 1.3, (t) => drawCard(t), { say: robinSays([['WELCOME TO ALLIANCE SELECTION!']], 0.1) });
 
   // 4. wide: the arena from the floor in front. The crowd cheers the welcome; Robin, by the mic, flings an arm up.
-  // Sign 4 stands empty; Riley and she wait with the reps, facing the field like everyone else.
+  // Sign 4 stands empty in its full light, the other captains and Robin in half light; Riley and she stand apart from
+  // the reps, right below it, in the dark, facing the field like everyone else, till a spotlight snaps on over them
+  // (PAIR_ON): the brightest things there are their empty place and the two of them. The line comes up full when
+  // Robin calls her.
+  const PAIR_ON = 0.35;
   arena({
     name: 'wide', dur: 1.2,
+    pair: (t) => (t < PAIR_ON ? 0 : 1),
+    line: () => 0.5,
     who: () => ({ riley: rileyHugs(4), her: herStands(4), mc: robin('flair', 0) }),
     shot: (t) => at1x(view(lerp(WIDE_FROM.x, WIDE_TO.x, seg(t, 0, 1.2)), WIDE_FROM.y)),
     cheer: () => 1,
