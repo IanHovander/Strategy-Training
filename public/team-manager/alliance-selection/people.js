@@ -42,8 +42,8 @@ import { HERO_LOOK } from '../walker.js';
 import { PEOPLE } from '../bleachers.js';
 import { along } from '../stage.js';
 import {
-  RANKED, ALLIANCES, BACKUPS, DECLINED, SPOTS, LINE_Y, capSpot, pickSpot, backupSpot, DECLINED_AT, PRIYA_AT, SAM_AT, REF_AT, MC_HOME,
-  SKATE_SPEED,
+  RANKED, ALLIANCES, BACKUPS, DECLINED, SPOTS, lineY, capSpot, pickSpot, backupSpot, DECLINED_AT, PRIYA_AT, SAM_AT, REF_AT, MC_HOME,
+  MIC, SKATE_SPEED,
 } from './layout.js';
 
 // ---- Colours ----
@@ -270,30 +270,32 @@ export const MC_LINES = [
 ];
 
 // ---- The MC's patrol ----
-// A loop along the strip in front of the line, never nearer the captains than 8 pixels (their feet are on LINE_Y): Robin
-// stops beside the mic, mic up, looks down the line and weaves off in front of the captains to past the red end of the
-// line, where she spins twice and lands in a pose with nobody under her flung-up arm; gives the far alliances a word,
-// then weaves the whole line, in front of the mic stand, to past the blue end, spins and poses again, and glides home.
-// The weave swings out in front of each captain and back in at each gap. Directions come from along(); her pushes step
-// with the distance rolled, which keeps adding up from one loop to the next.
+// A loop along the strip in front of the arc, never nearer the captains than 8 pixels (their feet are on the arc,
+// layout.js lineY): Robin stops beside the mic, mic up, looks down the line and weaves off in front of the captains to
+// the gap between the last two alliances on the red side, where she spins twice and lands in a pose with nobody under
+// her flung-up arm; gives the far alliances a word, then weaves the whole line, in front of the mic stand, to the gap
+// between the first two on the blue side, spins and poses again, and glides home. The weave swings out in front of
+// each captain and back in at each gap, as near the near wall as she goes at the arc's ends. Directions come from
+// along(); her pushes step with the distance rolled, which keeps adding up from one loop to the next.
 const HOME = { x: MC_HOME.x, y: MC_HOME.y };
-/** The weave's two depths: in at the gaps between alliances, out in front of a captain. */
-const IN = LINE_Y + 8, OUT = LINE_Y + 11;
-const RIGHT = [SPOTS[7] + 28, IN], LEFT = [SPOTS[0] - 32, IN];
+/** The weave's two depths at x: in at the gaps between alliances, out in front of a captain; never past row 140. */
+const IN = (x) => Math.min(139, Math.round(lineY(x)) + 8), OUT = (x) => Math.min(140, Math.round(lineY(x)) + 11);
+const gapX = (i) => (SPOTS[i] + SPOTS[i + 1]) / 2;
+const RIGHT = [gapX(6), IN(gapX(6)) + 1], LEFT = [gapX(0), IN(gapX(0)) + 1];
 /** The weave along the captains from x0 to x1: out in front of each captain, in at each gap (skipping the mic's). */
 const weave = (x0, x1) => {
   const pts = [];
   SPOTS.forEach((x, i) => {
-    pts.push([x, OUT]);
-    if (i < 7 && SPOTS[i + 1] - x < 40) pts.push([x + (SPOTS[i + 1] - x) / 2, IN]);
+    pts.push([x, OUT(x)]);
+    if (i < 7 && SPOTS[i + 1] - x < 60) pts.push([gapX(i), IN(gapX(i))]);
   });
-  const out = pts.filter(([x]) => x >= Math.min(x0, x1) && x <= Math.max(x0, x1));
+  const out = pts.filter(([x]) => x > Math.min(x0, x1) && x < Math.max(x0, x1));
   return x0 < x1 ? out : out.reverse();
 };
 const TO_RIGHT = [[HOME.x, HOME.y], ...weave(HOME.x, RIGHT[0]), RIGHT];
-// Back across the middle she passes in front of the mic stand (its foot is on row 128).
-const TO_LEFT = [RIGHT, ...weave(RIGHT[0], 400), [400, 134], [384, 134], ...weave(370, LEFT[0]), LEFT];
-const TO_HOME = [LEFT, [SPOTS[1], IN + 1], [SPOTS[3], IN + 1], [384, 133], [400, 132], [HOME.x, HOME.y]];
+// Back across the middle she passes in front of the mic stand (its foot is on row 129).
+const TO_LEFT = [RIGHT, ...weave(RIGHT[0], MIC.x + 10), [MIC.x + 10, 136], [MIC.x - 10, 136], ...weave(MIC.x - 10, LEFT[0]), LEFT];
+const TO_HOME = [LEFT, [SPOTS[1], IN(SPOTS[1]) + 1], [SPOTS[3], IN(SPOTS[3]) + 4], [MIC.x - 8, 136], [MIC.x + 8, 135], [HOME.x, HOME.y]];
 
 /** Turning on the spot from one direction to another, the short way round, a step at a time. */
 const turnDir = (from, to, u) => {

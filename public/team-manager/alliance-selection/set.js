@@ -4,11 +4,11 @@
 // The world is the arena's width and 208 rows deep: the top 144 rows are exactly the arena's, and below the field's
 // near wall the arena's concrete carries on to the bottom of the world, where the team reps wait their turn.
 //
-// On the field: eight numbered signs on posts in a line across the front, 1 at the blue end to 8 at the red end, built
-// like the QUEUE sign past the blue end (a flat yellow panel in ink on a plain post), each one's panel held up just
-// behind the heads of the alliance standing in front of it; and the microphone on its stand in the middle, its short
-// boom bringing the mic's dark head to the chin of whoever stands behind it. The near wall has a gate in it, left of
-// the mic, its chain unhooked.
+// On the field: eight numbered signs on posts in an arc across it (layout.js), 1 at the blue end to 8 at the red end,
+// built like the QUEUE sign past the blue end but in the audience display's navy, its number in yellow, on a plain
+// post, each one's panel held up just behind the heads of the alliance standing in front of it; and the microphone on
+// its stand in the gap in the middle, its short boom bringing the mic's dark head to the chin of whoever stands behind
+// it. The near wall has a gate in it, left of the mic, its chain unhooked. How it's all lit is light.js's.
 // In front of the field: a taped line on the concrete with the reps' TEAM REPS sign beside it, and a belt barrier
 // along the bottom of the world on posts like the driver stations'. Past the red end: the audience display, a navy
 // screen on two truss legs showing the alliances as they're picked, the pick clock and all eight backups; and below it
@@ -29,7 +29,7 @@ import { FIELD, STATION, floorY, makeFloor, drawFieldLive } from '../field.js';
 import { drawStands, drawWalkway } from '../bleachers.js';
 import { tones } from '../cast.js';
 import {
-  WORLD, NEAR_TOP, SPOTS, SIGN_Y, SIGN_POST, SIGN_HALF, SIGN_TOP, MIC, MC_HOME, BAND, LINE_AREA, NEAR_GATE, WAIT, REPS_SIGN, BOARD, BARRIER_Y,
+  WORLD, NEAR_TOP, SPOTS, signY, SIGN_POST, SIGN_HALF, signTop, MIC, MC_HOME, BAND, NEAR_GATE, WAIT, REPS_SIGN, BOARD, BARRIER_Y,
   WALK_MAX_Y, ENDS, FRONT_FLOOR, FENCE_X, GAP, FENCE_LIMIT,
 } from './layout.js';
 
@@ -94,18 +94,30 @@ export function makeSetLayers() {
 
 // ---- On the field ----
 /**
- * A numbered sign on its post, built exactly like the arena's QUEUE sign (field.js queueSign): a flat yellow panel in
- * ink with the alliance's number on it, up above its captain's head, on a plain post with an ink foot, rising just
- * right of the captain's head and under the panel's right-hand end.
+ * A numbered sign on its post, built like the arena's QUEUE sign (field.js queueSign) but in the audience display's
+ * colours: a navy panel in ink, lit along its top, with the alliance's number on it in yellow, up above its captain's
+ * head, on a plain post with an ink foot, rising just right of the captain's head and under the panel's right-hand
+ * end. Eight yellow panels across the field would be eight bright blocks over everyone's heads; this way each sign is
+ * a number, which is all it needs to say.
  */
 function spotSign(i) {
-  const x = SPOTS[i], px = x + SIGN_POST, y = SIGN_Y, top = SIGN_TOP;
+  const x = SPOTS[i], px = x + SIGN_POST, y = signY(i), top = signTop(i);
   rect(px - 4, y - 1, 9, 2, C.ink);
   rect(px - 1, top + 12, 3, y - top - 12, C.ink);
   rect(px, top + 13, 1, y - top - 13, C.steel3);
   rect(x - SIGN_HALF, top, 2 * SIGN_HALF + 1, 13, C.ink);
-  rect(x - SIGN_HALF + 1, top + 1, 2 * SIGN_HALF - 1, 11, C.yel1);
-  text(String(i + 1), x, top + 3, { color: C.ink, align: 'center' });
+  rect(x - SIGN_HALF + 1, top + 1, 2 * SIGN_HALF - 1, 11, C.night1);
+  rect(x - SIGN_HALF + 1, top + 1, 2 * SIGN_HALF - 1, 1, C.night3);
+  text(String(i + 1), x, top + 3, { color: C.yel1, align: 'center' });
+}
+
+/** Sign i on its own, into g seen from view = { x, y }: for the lights (light.js), which light it with its pool. */
+export function drawSign(g, view, i) {
+  const prev = useContext(g);
+  camera(view.x, view.y, 1);
+  spotSign(i);
+  screen();
+  useContext(prev);
 }
 
 /** A little picture drawn pixel by pixel from rows of letters, like cast.js's heads: '.' is see-through. */
@@ -276,6 +288,8 @@ function wayOut(viewX, sign = true) {
 // label, then two rows of three in the picks' columns), in the 3x5 font.
 const SCR = { w: 82, h: 88, legs: 14 };
 const SCR_X0 = BOARD.x - SCR.w / 2, SCR_Y0 = BOARD.y - SCR.legs - SCR.h;
+/** The display's face, inside its frame: it gives off its own light, so the arena's dark never covers it (light.js). */
+export const BOARD_FACE = { x0: SCR_X0 + 4, y0: SCR_Y0 + 4, x1: SCR_X0 + SCR.w - 4, y1: SCR_Y0 + SCR.h - 4 };
 const LEGS = [BOARD.x - 29, BOARD.x + 28];
 // Where things sit on the face: the alliance number, then the captain's and the two picks' columns; the rows' pitch.
 const COLS = [6, 14, 33, 52];
@@ -366,7 +380,7 @@ export function drawSet(g, view, t, o = {}) {
   g.restore();
   const more = [
     // The signs sort in just behind the picks standing on the same floor line.
-    ...SPOTS.map((_, i) => ({ y: SIGN_Y - 0.25, draw: () => spotSign(i) })),
+    ...SPOTS.map((_, i) => ({ y: signY(i) - 0.25, draw: () => spotSign(i) })),
     { y: MIC.y, draw: micStand },
     { y: REPS_SIGN.y, draw: repsSign },
     { y: BOARD.y, draw: () => board(o.board) },
@@ -380,7 +394,7 @@ export function drawSet(g, view, t, o = {}) {
 // ---- Where she can walk ----
 // The open floor in front of the field and past both ends (stopping 18 pixels short of the world's left side, clear of
 // the belt barrier's end post, and at FENCE_LIMIT on the right, short of the barrier there); on the field, the band in
-// front of the line and the line itself; the gate joining the band to the floor in front; and the gap in the barrier
+// front of the arc and the gaps between its alliances; the gate joining the band to the floor in front; and the gap in the barrier
 // on the right, out past the edge of the world (beyond FENCE_LIMIT only along it). Everything standing in them stops
 // her: the field's corner depots and loading stations by the band, the HABs and the cargo ship behind it, the sign
 // posts, the mic, the TEAM REPS sign, the display (its legs, and the floor behind its screen, so she's never lost
@@ -393,7 +407,6 @@ const REGIONS = [
   { x0: SIDE, x1: ENDS, y0: 70, y1: WALK_MAX_Y },
   { x0: WORLD.w - ENDS, x1: FENCE_LIMIT, y0: 70, y1: WALK_MAX_Y },
   BAND,
-  LINE_AREA,
   { x0: NEAR_GATE.x0 + 3, x1: NEAR_GATE.x1 - 3, y0: 138, y1: 149 },
   { x0: FENCE_LIMIT, x1: WORLD.w + 48, y0: GAP.y0, y1: GAP.y1 },
 ];
@@ -413,11 +426,12 @@ const PROPS = [
     footprint(mirrorX(a, FIELD.x0, 7.5 * FT), mirrorX(a, FIELD.x0, 7.5 * FT) + 7.5 * FT, 6.7, 20.3), // the HAB
   ]),
   footprint(FIELD.mid - 63, FIELD.mid + 63, 11.2, 15.8), // the cargo ship
-  ...SPOTS.map((x) => stop(x + SIGN_POST, SIGN_Y - 1, 6, 2)),
+  ...SPOTS.map((x, i) => stop(x + SIGN_POST, signY(i) - 1, 6, 2)),
   stop(MIC.x, MIC.y, 7, 2),
-  // The end of the pocket in the line behind the mic: she can stand at the mic (4 pixels right of its pole at most),
-  // but not in behind MC Robin's spot beside it, where Robin would stand in front of her, turned side-on, to talk.
-  stop(MC_HOME.x - 7, LINE_AREA.y1 - 4, 8, 5),
+  // The back of the gap in the middle of the arc, behind the mic: she can stand at the mic (4 pixels right of its pole
+  // at most), but not in behind MC Robin's spot beside it, where Robin would stand in front of her, turned side-on, to
+  // talk.
+  stop(MC_HOME.x - 7, MC_HOME.y - 7, 8, 5),
   // The floor behind the backups and the queuer, between them and the near wall: anyone there would be hidden
   // behind them but for the top of her head.
   stop(222, 152, 48, 8),

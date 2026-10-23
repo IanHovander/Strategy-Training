@@ -17,56 +17,62 @@ export const NEAR_TOP = 142;
 
 // ---- On the field ----
 /**
- * Eight spots across the front of the field, 1 at the blue (left) end, with room in the middle for the mic: the speaker
- * stands left of it and the MC right of it, so the right half sits a little closer together (34 apart, not 36) to keep
- * captain 5 clear of the MC's elbow.
+ * Eight spots in a shallow arc across the field, 1 at the blue (left) end to 8 at the red end, so each alliance stands
+ * as a clump of three with clear floor between it and the next. The field's elements set the arc: the middle of it is
+ * as far back as the cargo ship allows (its floor line is 111.45, and the picks stand 7 rows behind their captain),
+ * and its ends come forward to stand in front of the HABs (whose front edge is on row 123.8, x 176 to 236 and 548 to
+ * 608), the picks just clear of it and of the corner depots beside. So the line uses the field's whole length, 45
+ * pixels from spot to spot (a straight line between the HABs would have room for 36, a crowd), with 74 in the middle
+ * for the mic. Seen from the stands, the ends are nearer you than the middle: the line has depth.
  */
-export const SPOTS = [252, 288, 324, 360, 430, 464, 498, 532];
-export const LINE_Y = 120;
+export const SPOTS = [220, 265, 310, 355, 429, 474, 519, 564];
+/** The arc: the floor line of the captains' feet at x, 121 rows at the middle of the field to 132 at the ends. */
+const ARC = { back: 121, rise: 11, half: 172 };
+export const lineY = (x) => ARC.back + ARC.rise * ((x - FIELD.mid) / ARC.half) ** 2;
 /**
  * Captain i (0 to 7) stands on spot i; their picks close in behind, the first on the left, the second on the right, so
- * each alliance reads as a group of three with clear floor before the next. The picks stand as far back as the cargo
- * ship allows (its floor line is 111.45), 8 rows behind their captain, so their faces show over the captain's head.
+ * each alliance reads as a group of three, 28 pixels across. The picks stand 7 rows behind their captain, so their
+ * faces show over the captain's head.
  */
-export const capSpot = (i) => ({ x: SPOTS[i], y: LINE_Y });
-export const pickSpot = (i, k) => ({ x: SPOTS[i] + (k === 1 ? -7 : 7), y: LINE_Y - 8 });
+export const capSpot = (i) => ({ x: SPOTS[i], y: Math.round(lineY(SPOTS[i])) });
+export const pickSpot = (i, k) => ({ x: SPOTS[i] + (k === 1 ? -6 : 6), y: capSpot(i).y - 7 });
 /**
- * Each spot's numbered sign: the floor line its post stands on, at the picks' own (it sorts in just behind them, in
- * front of the cargo ship); how far right of its captain the post stands, just clear of the captain's head (16 columns,
- * x - 8 to x + 7), so it rises beside it rather than out of their hair, and behind the second pick once they're there
- * (their head spans x - 1 to x + 14); and how far the panel reaches either side of the captain: wide enough to sit on
- * the post (like the arena's QUEUE sign, whose panel is wider than its words), the number centred over the captain.
+ * Each spot's numbered sign: the floor line its post stands on, a row behind the picks' own (it sorts in just behind
+ * them, in front of the cargo ship); how far right of its captain the post stands, just clear of the captain's head
+ * (16 columns, x - 8 to x + 7), so it rises beside it rather than out of their hair, and behind the second pick once
+ * they're there (their head spans x - 2 to x + 13); and how far the panel reaches either side of the captain: wide
+ * enough to sit on the post (like the arena's QUEUE sign, whose panel is wider than its words), the number centred
+ * over the captain.
  */
-export const SIGN_Y = LINE_Y - 8;
+export const signY = (i) => capSpot(i).y - 8;
 export const SIGN_POST = 9;
 export const SIGN_HALF = 11;
 /**
- * The top row of the signs' panels: low enough that the picks' hair (their heads' top row is 46 above their feet) comes
- * over the panel's bottom two rows, so once the alliance is standing at it the post is hidden behind them and the panel
+ * The top row of a sign's panel: low enough that the picks' hair (their heads' top row is 46 above their feet) comes
+ * over the panel's bottom row, so once the alliance is standing at it the post is hidden behind them and the panel
  * reads as held up just behind their heads, with no stick coming down into anyone's. The number stays clear above.
  */
-export const SIGN_TOP = SIGN_Y - 46 - 11;
-/** The microphone on its stand in the middle of the field. Whoever's speaking stands just behind it, facing you. */
-export const MIC = { x: FIELD.mid, y: 128 };
-export const AT_MIC = { x: FIELD.mid - 11, y: 125 };
+export const signTop = (i) => signY(i) - 46 - 11;
+/**
+ * The microphone on its stand in the gap in the middle of the arc, a little in front of the line. Whoever's speaking
+ * stands just behind it, facing you, between alliances Four and Five.
+ */
+export const MIC = { x: FIELD.mid - 1, y: 129 };
+export const AT_MIC = { x: MIC.x - 11, y: 126 };
 /**
  * Where the MC waits between picks: on the stand's other side, clear of it (her outline 5 pixels from its foot), a step
  * in front of the line, turned three-quarters to the mic. Feet at 128 or less stay clear of the near wall's rail.
  */
-export const MC_HOME = { x: FIELD.mid + 19, y: 127, dir: 7 };
+export const MC_HOME = { x: MIC.x + 19, y: 128, dir: 7 };
 /**
- * The open strip of field in front of the line, where the MC skates and, once it's over, she walks. It stops short of
+ * The open floor of the field in front of the arc, where the MC skates and, once it's over, she walks. It stops short of
  * the corner depots and loading stations at both ends, so she always stands in front of them, and runs down to the
  * near wall's line (FIELD.y1, 142.25): her feet behind it, she's on the field, and walking up through the gate she can
- * turn along the strip as soon as she's through.
+ * turn along it as soon as she's through. At the back it reaches into the gaps between the alliances, as far as the
+ * picks' feet in the middle of the arc; everyone standing in it, the HABs and the cargo ship keep her out of the rest
+ * (set.js moveIn).
  */
-export const BAND = { x0: 194, x1: WORLD.w - 194, y0: 121, y1: 142 };
-/**
- * The line itself: walkable for her once it's over, between the people standing in it, but no further back than a row
- * in front of the signs' floor line, so the panels never come down over her head (her hair comes over a panel's bottom
- * row, as the picks' does).
- */
-export const LINE_AREA = { x0: 236, x1: 548, y0: SIGN_Y + 1, y1: 121 };
+export const BAND = { x0: 194, x1: WORLD.w - 194, y0: 116, y1: 142 };
 // ---- The gate ----
 /** The opening in the near wall, left of the mic. Open: its chain hangs off one post. */
 export const NEAR_GATE = { x0: 336, x1: 352, open: true };
@@ -79,13 +85,26 @@ export const GATE_IN = { x: 344, y: 134 };
 export const WAIT = { x0: 192, x1: 384, tapeY: 158 };
 export const REPS_SIGN = { x: 160, y: 172 };
 /**
- * The n-th place in the waiting crowd: 0 is the front corner by the gate (hers), then three rows of eleven. Hers stands
- * 36 pixels right of the crowd's right-hand column, so the MC passing between them has room on both sides.
+ * The waiting reps stand in knots of five or six, the way teams' reps do while they wait, in two staggered rows left of
+ * the gate, with clear floor between one knot and the next: the knots' middles 56 pixels apart and 32 rows, each knot
+ * about 38 pixels across and 11 deep, so the front row's heads come up in the gaps between the back row's knots. Most
+ * face the field; in each knot a couple have turned to talk. She stands apart, at the front corner by the gate.
+ */
+const KNOTS = [[336, 164], [280, 164], [224, 164], [308, 192], [252, 192], [196, 192]];
+const KNOT_SIZES = [6, 5, 5, 6, 5, 5];
+/** Where each of a knot's people stands round its middle, and which way they face (0-7, clockwise from facing you). */
+const IN_KNOT = [[-7, -4, 4], [3, -5, 4], [11, -1, 5], [-10, 3, 2], [0, 4, 4], [8, 6, 6]];
+/**
+ * The n-th place in the waiting crowd, { x, y, dir }: 0 is the front corner by the gate (hers), 36 pixels right of the
+ * nearest knot's right-hand edge, so the MC passing between them has room on both sides; then the knots in turn, the
+ * one by the gate first.
  */
 export function waitSlot(n) {
-  if (n === 0) return { x: 392, y: 162 };
-  const i = n - 1, row = Math.floor(i / 11);
-  return { x: 356 - (i % 11) * 15 - (row % 2) * 7, y: 166 + row * 9 };
+  if (n === 0) return { x: 392, y: 162, dir: 4 };
+  let i = n - 1, k = 0;
+  while (k < KNOTS.length - 1 && i >= KNOT_SIZES[k]) i -= KNOT_SIZES[k++];
+  const [dx, dy, dir] = IN_KNOT[i % IN_KNOT.length];
+  return { x: KNOTS[k][0] + dx, y: KNOTS[k][1] + dy, dir };
 }
 /** The queuer beside the waiting area, and the field volunteer at the gate. */
 export const PRIYA_AT = { x: 186, y: 162, dir: 2 };

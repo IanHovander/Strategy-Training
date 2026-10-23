@@ -21,7 +21,12 @@
 //
 // She can talk to her captain and partners, the captains who made the big decisions, the team that turned an
 // invitation down (whose rep, standing with their back to you, turns round to talk), the top backup, Priya, Sam, the
-// head referee and Robin.
+// head referee and Robin. The alliances at the ends of the arc stand right up against the near wall, with no floor in
+// front of them on the field, so from the floor in front, up against the wall, she talks to whoever is across it
+// (reach()).
+//
+// The house lights are halfway up, as the cut scene leaves them (light.js afterLights): the alliances in their pools,
+// Robin and her in follow spots, everything else in the half dark.
 //
 // Robin keeps skating the strip in front of the line (people.js mcPatrol, a loop of about twenty seconds) on her own
 // clock: it starts as walking starts, which is where the cut scene left her, mic up beside the mic stand. When the
@@ -38,11 +43,12 @@ import { H } from '../pixel.js';
 import { drawBubble } from '../talk.js';
 import { drawWithShadow, dirToward } from '../stage.js';
 import { makeSetLayers, drawSet, moveIn } from './set.js';
+import { light, afterLights } from './light.js';
 import { lookOf, CROWD, TALKERS, MC_LINES, mcPatrol } from './people.js';
 import { MC_LOOK, drawSkater } from './mc.js';
 import { makeCutscene } from './cutscene.js';
 import {
-  WORLD, START, EXIT, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, BAND, FRONT_FLOOR, SKATE_SPEED, SIGN_TOP, capSpot,
+  WORLD, START, EXIT, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, BAND, FRONT_FLOOR, SKATE_SPEED, signTop, capSpot,
   walkView,
 } from './layout.js';
 
@@ -55,8 +61,16 @@ const BOARD_FULL = { rows: ALLIANCES, hot: null, clock: null, backups: BACKUPS }
  */
 const REACH = { x: 14, y: 18 };
 const PICK_Y = 22;
-/** Captains, and first picks (who stand on their captain's left), for where the bubble goes; and both picks. */
-const CAPTAINS = new Set(ALLIANCES.map(([cap]) => cap)), FIRST_PICKS = new Set(ALLIANCES.map(([, first]) => first));
+/**
+ * Across the near wall: from the floor in front, up against the wall (no more than WALL_REACH rows from where the floor
+ * starts), she talks to whoever's on the field in front of her, as deep as the picks in the middle of the arc. The
+ * arc's ends stand right up against the wall, in front of the HABs, with no floor left in front of them on the field:
+ * from the floor is how she gets to them.
+ */
+const WALL_REACH = 8, ACROSS_Y = 36;
+/** Captains (and their alliance's number, for their sign), and first picks (who stand on their captain's left), for where
+ * the bubble goes; and both picks. */
+const CAPTAINS = new Map(ALLIANCES.map(([cap], i) => [cap, i])), FIRST_PICKS = new Set(ALLIANCES.map(([, first]) => first));
 const PICKS = new Set(ALLIANCES.flatMap(([, ...picks]) => picks));
 /**
  * Robin stops for her when she's this close to where Robin is, or will be LOOK_AHEAD seconds on; once stopped, she
@@ -223,15 +237,19 @@ export const scene = {
   },
   /**
    * Whoever's closest within reach: deeper than stage.js's, so she can talk to a pick from in front of the line, and
-   * further for Robin while she's stopped for her. Not through the near wall, though: across it only in the gate.
+   * further for Robin while she's stopped for her. Through the near wall only in the gate, or from right up against it
+   * on the floor in front, to whoever is on the field in front of her (WALL_REACH).
    */
   reach(s) {
     let best = null, bestD = Infinity;
     const inGate = s.me.x >= NEAR_GATE.x0 && s.me.x <= NEAR_GATE.x1;
+    const atWall = s.me.y > NEAR_TOP && s.me.y <= FRONT_FLOOR + WALL_REACH;
     for (const p of scene.people) {
-      if (p.y > NEAR_TOP !== s.me.y > NEAR_TOP && !inGate) continue;
+      const across = p.y > NEAR_TOP !== s.me.y > NEAR_TOP;
+      if (across && !inGate && !(atWall && p.y < NEAR_TOP)) continue;
       const dx = Math.abs(p.x - s.me.x), dy = Math.abs(p.y - s.me.y);
-      const rx = p === mc && mc.waiting ? WAITING_REACH : REACH.x, ry = PICKS.has(p.id) ? PICK_Y : REACH.y;
+      const rx = p === mc && mc.waiting ? WAITING_REACH : REACH.x;
+      const ry = across && atWall ? ACROSS_Y : PICKS.has(p.id) ? PICK_Y : REACH.y;
       if (dx < rx && dy < ry && dx + dy / 2 < bestD) [best, bestD] = [p, dx + dy / 2];
     }
     return best;
@@ -243,7 +261,7 @@ export const scene = {
    * so it sits on the sign's top right-hand corner, clear of the number, its point on the panel.
    */
   prompt(g, view, p, t) {
-    const x = p.x - view.x, y = p.y - view.y, above = SIGN_TOP - 13 - view.y;
+    const x = p.x - view.x, y = p.y - view.y, above = signTop(CAPTAINS.get(p.id) ?? 0) - 13 - view.y;
     if (CAPTAINS.has(p.id)) drawBubble(g, above >= 1 ? x : x + 9, Math.max(1, above), t);
     else drawBubble(g, x + (FIRST_PICKS.has(p.id) ? -11 : 11), y - (p === mc ? 53 : 50), t);
   },
@@ -262,5 +280,9 @@ export const scene = {
       s.player,
     ];
     drawSet(g, view, t, { people, board: BOARD_FULL, talkingTo: s.talk?.person });
+    // The house lights halfway up, as the cut scene leaves them: the alliances in their pools, Robin and her in follow
+    // spots.
+    const lit = [...CROWD.map((p) => turnedTo(p, s)), { ...mc, skater: true }, { ...s.me, look: s.look }];
+    light(g, view, t, afterLights(s.me, mc), lit);
   },
 };

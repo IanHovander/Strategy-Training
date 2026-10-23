@@ -17,24 +17,26 @@
 // the wide shot, whole-number 2x close-ups for the people talking (a 1x view drawn into a 256x144 canvas of its own,
 // a 128x72 window of it copied up crisp), film bars throughout (the pick, a screen of the game's own, has none), and
 // every frame a pure function of time. The arena is alliance selection's own (its set, its reps, MC Robin and her
-// skating, its layout), with the line already standing: seeds 1 to 8 at their signs, Riley at sign 4 (capSpot(3)) and
-// her a step to Riley's right, between the sign and the mic, a little nearer you, so the two of them can turn to each
-// other and still be seen. While words are up, the dialog box covers the bottom of the screen, so every shot with
+// skating, its layout, its lights), with the line already standing: seeds 1 to 8 at their signs along the arc, Riley
+// at sign 4 (capSpot(3)) and her a step to Riley's right, between the sign and the mic, a little nearer you, so the
+// two of them can turn to each other and still be seen. The house lights are down and every captain stands in their
+// sign's spotlight; close on Robin, and on the two of them, everyone else's light goes down to a glimmer (lightWorld). While words are up, the dialog box covers the bottom of the screen, so every shot with
 // words keeps the faces in its top 88 rows.
 //
 //   makeCutscene()   the beats, in stage.js's form ({ dur, draw(g, t, c), say, hold }), with b.name, b.at (when each
 //                    starts, for ?at=), and beats.total and beats.autoTotal (the length with words read at the pace
 //                    stage.js turns them by itself)
 
-import { W, H, C, useContext, screen, fill, text, measure, clamp, lerp, seg, easeOut, easeInOut, rnd } from '../pixel.js';
+import { W, H, C, useContext, camera, screen, fill, text, measure, clamp, lerp, seg, easeOut, easeInOut, rnd } from '../pixel.js';
 import { bars, along, drawWithShadow } from '../stage.js';
 import { HERO_LOOK } from '../walker.js';
 import { HERO_NAME } from '../cast.js';
 import { makeSetLayers, drawSet } from '../alliance-selection/set.js';
 import { lookOf } from '../alliance-selection/people.js';
 import { MC_LOOK, drawSkater } from '../alliance-selection/mc.js';
+import { light, pools, micSpot, followSpot, house } from '../alliance-selection/light.js';
 import {
-  WORLD, LINE_Y, capSpot, MC_HOME, waitSlot, PRIYA_AT, SAM_FAR, REF_AT, RANKED, MC_NAME, SKATE_SPEED,
+  WORLD, capSpot, MC_HOME, waitSlot, PRIYA_AT, SAM_FAR, REF_AT, RANKED, MC_NAME, SKATE_SPEED,
 } from '../alliance-selection/layout.js';
 import { COCAPTAIN_LOOK, COCAPTAIN_NAME } from './cocaptain.js';
 import { drawHeldNorbert, heldAt, heldShows, drawHud } from './norbert-held.js';
@@ -46,13 +48,17 @@ import { drawPick, PICK_CLOCK } from './pick.js';
 /** The eight captains by seed, left to right along the line; 5026 is the fourth (Riley stands at its sign). */
 export const SEEDS = ['4000', '2468', '3000', '5026', '7777', '8086', '5940', '9152'];
 const OURS = SEEDS.indexOf('5026');
-/** Riley at sign 4, and her a step to Riley's right and a little nearer you, short of the mic stand (MIC.x 392). */
+/**
+ * Riley at sign 4, and her a step to Riley's right and a little nearer you, short of the mic stand (MIC.x 391), both
+ * in sign 4's spotlight.
+ */
 export const RILEY_AT = capSpot(OURS);
-export const HER_AT = { x: RILEY_AT.x + 16, y: LINE_Y + 3 };
-/** Everyone else waits in front of the field, in alliance selection's waiting places (its slot 0 was hers). */
+export const HER_AT = { x: RILEY_AT.x + 16, y: RILEY_AT.y + 3 };
+/**
+ * Everyone else waits in front of the field, in alliance selection's waiting places (its slot 0 was hers), in its
+ * knots, facing as they face there.
+ */
 const WAITING = RANKED.map((r) => r.num).filter((num) => !SEEDS.includes(num));
-/** Most face the field; a few have turned to chat (index into WAITING: direction). */
-const CHAT = { 3: 6, 4: 2, 9: 3, 15: 6, 16: 2, 21: 5 };
 const HOME = { x: MC_HOME.x, y: MC_HOME.y };
 
 const still = (x, y, dir = 0, gait = 'stand') => ({ x, y, dir, gait, dist: 0 });
@@ -61,7 +67,7 @@ const CROWD = [
   ...SEEDS.map((num, i) => (i === OURS ? null : { ...still(capSpot(i).x, capSpot(i).y), look: lookOf(num) })).filter(Boolean),
   ...WAITING.map((num, n) => {
     const s = waitSlot(n + 1);
-    return { ...still(s.x, s.y, CHAT[n] ?? 4), look: lookOf(num) };
+    return { ...still(s.x, s.y, s.dir), look: lookOf(num) };
   }),
   { ...still(PRIYA_AT.x, PRIYA_AT.y, PRIYA_AT.dir), look: lookOf('priya') },
   // Sam keeps the gate from left of everyone (SAM_FAR): by the gate, his head would be at Riley's knees in the close-ups.
@@ -88,6 +94,31 @@ function drawWorld(g, view, t, { riley, her, mc, cheer }) {
   drawSet(g, view, t, { people, cheer, board: BOARD, exitSign: false });
 }
 
+/**
+ * The arena's lights (alliance selection's light.js), the house down: every captain in their sign's spotlight, Riley
+ * and her in sign 4's with Norbert, the mic's, and a follow spot on Robin. Close on someone (hush), the rest go down to
+ * a glimmer: on Robin ('mic'), the mic's spotlight and hers stay up; on the two of them ('pair'), sign 4's. Everyone
+ * in the frame goes to the lights as drawWorld draws them, Norbert with whoever holds him.
+ */
+function lightWorld(g, view, t, { riley, her, mc, hush }) {
+  const people = [...CROWD, { ...mc, look: MC_LOOK, skater: true }];
+  for (const p of [{ ...riley, look: COCAPTAIN_LOOK }, { ...her, look: HERO_LOOK }]) {
+    people.push(p);
+    if (p.holds && heldShows(p.dir)) {
+      const at = heldAt(p);
+      people.push({ x: p.x, y: p.y, draw: (lg, v) => {
+        const prev = useContext(lg);
+        camera(v.x, v.y, 1);
+        drawHeldNorbert(at.x, at.y);
+        screen();
+        useContext(prev);
+      } });
+    }
+  }
+  const pair = hush === 'mic' ? 0.25 : 1, mic = hush === 'pair' ? 0.25 : 1, line = hush ? 0.25 : 1;
+  light(g, view, t, house([...pools((i) => (i === OURS ? pair : line)), micSpot(mic), followSpot(mc, mic)]), people);
+}
+
 // ---- The camera ----
 const MAX = { x: WORLD.w - W, y: WORLD.h - H };
 const view = (x, y) => ({ x: Math.round(clamp(x, 0, MAX.x)), y: Math.round(clamp(y, -12, MAX.y)) });
@@ -99,6 +130,7 @@ let lens = null;
 function shoot(g, shot, T, frame) {
   if (!shot.focus) {
     drawWorld(g, shot.view, T, frame);
+    lightWorld(g, shot.view, T, frame);
     return;
   }
   lens ??= Object.assign(document.createElement('canvas'), { width: W, height: H });
@@ -108,6 +140,7 @@ function shoot(g, shot, T, frame) {
   lg.fillStyle = C.ink;
   lg.fillRect(0, 0, W, H);
   drawWorld(lg, v, T, frame);
+  lightWorld(lg, v, T, frame);
   const sx = clamp(Math.round(shot.focus.x - W / 4 - v.x), 0, W / 2), sy = clamp(Math.round(shot.focus.y - H / 4 - v.y), 0, H / 2);
   g.imageSmoothingEnabled = false;
   g.drawImage(lens, sx, sy, W / 2, H / 2, 0, 0, W, H);
@@ -115,8 +148,11 @@ function shoot(g, shot, T, frame) {
 const at1x = (v) => ({ view: v });
 const closeUp = (x, y) => ({ focus: { x, y } });
 
-/** The wide shot of the arena: the stands' front rows over the line, signs 1 to 6, then along a little as Robin comes. */
-const WIDE_FROM = view(232, 0), WIDE_TO = view(282, 0);
+/**
+ * The wide shot of the arena: the stands' front rows over the arc, signs 1 to 5 in their spotlights, Riley and her at
+ * 4, then along to 3 to 7 as Robin comes.
+ */
+const WIDE_FROM = view(196, 0), WIDE_TO = view(282, 0);
 /** Close on Robin at the mic, a little left of the middle, her head high in the frame. */
 const ROBIN_SHOT = closeUp(HOME.x + 10, 99);
 /**
@@ -141,8 +177,11 @@ function spin(from, to, u, turns = 2) {
   const k = 1 - (1 - clamp(u, 0, 1)) ** 2, steps = turns * 8 + ((to - from + 8) % 8);
   return (from + Math.floor(k * steps)) % 8;
 }
-/** Robin's way in: from past the right of the shot, along the front of the line (in front of captains 5 to 8), home. */
-const ENTRY = [[548, 133], [440, 133], [HOME.x + 4, 130], [HOME.x, HOME.y]];
+/**
+ * Robin's way in: from past the right of the shot, along the front of the arc (in front of captains 5 to 8, as near the
+ * near wall as anyone goes at its end), home.
+ */
+const ENTRY = [[592, 139], [540, 138], [470, 133], [HOME.x + 4, 131], [HOME.x, HOME.y]];
 const ENTRY_TIME = along(ENTRY, 1e9, 'walk', 1).dist / SKATE_SPEED;
 
 // ---- The words ----
@@ -217,7 +256,7 @@ export function makeCutscene() {
     const b = {
       name: o.name, dur: o.dur,
       draw(g, t, c) {
-        shoot(g, o.shot(t), c.T, { ...o.who(t), cheer: o.cheer?.(t) });
+        shoot(g, o.shot(t), c.T, { ...o.who(t), cheer: o.cheer?.(t), hush: o.hush });
         useContext(g);
         screen();
         g.globalAlpha = 1;
@@ -271,7 +310,7 @@ export function makeCutscene() {
 
   // 5. welcome: close on Robin, mic up.
   arena({
-    name: 'welcome', dur: 1.6,
+    name: 'welcome', dur: 1.6, hush: 'mic',
     who: () => ({ riley: rileyHugs(0), her: herStands(2), mc: robinHome(0) }),
     shot: () => ROBIN_SHOT,
     cheer: () => 0.8,
@@ -282,7 +321,7 @@ export function makeCutscene() {
   // feels it and turns to Riley. A held beat: A can't skip it.
   const CO = { dur: 2.0, looks: 0.55, turns: 1.35 };
   arena({
-    name: 'cocaptain', dur: CO.dur, hold: CO.dur,
+    name: 'cocaptain', dur: CO.dur, hold: CO.dur, hush: 'pair',
     who: (t) => ({
       riley: rileyHugs(turn(0, 1, t - CO.looks)),
       her: herStands(turn(2, 6, t - CO.turns)),
@@ -294,7 +333,7 @@ export function makeCutscene() {
 
   // 7. yourList: the handoff, in words. Same shot.
   arena({
-    name: 'yourList', dur: 0.6,
+    name: 'yourList', dur: 0.6, hush: 'pair',
     who: () => ({ riley: rileyHugs(1), her: herStands(6), mc: robinHome(0) }),
     shot: () => PAIR_SHOT,
     cheer: () => 0.15,
@@ -303,7 +342,7 @@ export function makeCutscene() {
 
   // 8. takeHim: Riley holds Norbert out to her, both hands, and she looks down at him.
   arena({
-    name: 'takeHim', dur: 0.6,
+    name: 'takeHim', dur: 0.6, hush: 'pair',
     who: () => ({
       riley: { ...still(RILEY_AT.x, RILEY_AT.y, 1, 'drive'), holds: true },
       her: herStands(7),
@@ -320,7 +359,7 @@ export function makeCutscene() {
   // 10. okay: close on her, Norbert hugged to her (the 'clap' pose, her board tucked under her arm), Riley beside her
   // turned to her, hands free now. Norbert's corner slides in at the top left, there from now on.
   arena({
-    name: 'okay', dur: 1.3,
+    name: 'okay', dur: 1.3, hush: 'pair',
     who: () => ({
       riley: still(RILEY_AT.x, RILEY_AT.y, 1),
       her: { ...still(HER_AT.x, HER_AT.y, 0, 'clap'), frame: 1, holds: true },
