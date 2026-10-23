@@ -10,7 +10,7 @@ import { W, H, C, fill, text, dither } from './pixel.js';
 import { runScene } from './stage.js';
 
 /** The season in order: each is a folder with a scene.js that exports `scene`. */
-const SCENES = ['team-meeting', 'practice-field', 'van', 'pits', 'arena', 'alliance-selection', 'worlds'];
+const SCENES = ['opening', 'team-meeting', 'practice-field', 'van', 'pits', 'arena', 'alliance-selection', 'worlds'];
 const load = (id) => import(`./${id}/scene.js`);
 
 /** After the last scene: the season so far, and back to the title. */

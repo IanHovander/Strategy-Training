@@ -47,8 +47,8 @@ listed below; they all need redrawing as the new logo.
 | `walk.html` | "How she's made" ~42, ~45 | "a 5026 parent... a 5026 alum... a scout from 7777", "two matches before 5026's" | New number (and rival). |
 | `scenes.html` | scene cards ~30-36 | "Iron Panthers on three", "5026's robot", "the second for 5026", "Newton, 5026's division" | New name, chant, number and division. |
 | `index.html`, `play.html`, every scene's `index.html` | `<link rel="icon">` | The panther favicon | Follows `public/img/favicon.png`. |
-| `assets/norbert.png` | whole file | Norbert, the team mascot (a penguin with "26" on one ear); used small in the time travel lab (`norbert.js`) | Replace or delete. |
-| `norbert.js` | `ROWS`, `PAL` | Norbert drawn small (16x19) for the corner of the screen, with his red 26 ear that glows | Redraw as the new team's mascot, or another lucky charm. |
+| `assets/norbert.png` | whole file | Norbert, the team mascot (a penguin with "26" on one ear); used small in the time travel lab and the opening (`norbert.js`) | Replace or delete. |
+| `norbert.js` | `ROWS`, `PAL`; `FRONT`, `BACK`, `FULL_PAL` | Norbert drawn small (16x19) for the corner of the screen and full size (36x44, the opening's handoff), with his red 26 ear that glows | Redraw as the new team's mascot, or another lucky charm. |
 | `time/lab.js`, `time/index.html` | `looks()` (`'5026'`), the page's intro | The strategist is found in the cut scene as 5026's rep; "the rep in the red tee" | The new number and shirt colour. |
 | `dashboard/data.js` | `YOU` | 5026 as seed 4, "YOUR ROBOT" | The new number. |
 | `songs/compete-to-win-3.mp3` | whole file | The intro song (generated); its words haven't been checked for the team's name | Listen, and replace it if it names the team. |
@@ -57,6 +57,19 @@ listed below; they all need redrawing as the new logo.
 
 The strategist's red dialog name tag (`tag: C.red1`, or a `RED` constant) appears in several scenes; it's her tee's
 colour, so it can follow the new team colour or stay as a UI accent.
+
+### The opening (`public/team-manager/opening/`)
+
+| File | Where | What's 5026-specific | Change |
+| --- | --- | --- | --- |
+| `cutscene.js` | `SEEDS` ~47 and comments | '5026' as seed 4, alliance captain; it's also the key that leaves sign 4 to Riley and her | The new number (swap any seed that equals it). |
+| `cocaptain.js` | `COCAPTAIN_LOOK` ~79-90 | Riley, the co-captain, in the team's red pullover hoodie (`MERCH.hoodie`) with the panther badge and 5026 (`TEAMMATE_LOOK.badge`) | Follows `cast.js` and `teammate.js` once those change; nothing to do here. |
+| `handoff.js` | `drawHandoff()` ~112-115 | Riley's red sleeves in the insert (`COCAPTAIN_LOOK.pal.shirt`) | Follows `cocaptain.js`. |
+| `cutscene.js` | `rileySays` ~156, `herSays` ~157 | Riley's dark red name tag (`C.red0`) and hers (`C.red1`) | The team colour, or keep as a UI accent. |
+| `cutscene.js` | takeHim ~314 | Norbert the mascot handed over: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2009." | The new mascot or lucky charm, and its history. |
+| `norbert-held.js` | `ROWS`, `PAL` ~23-43; `drawHud()` ~68 | Norbert drawn 12x14 for someone to hold, with his 26 ear; the corner with Norbert and his voltage | Redraw as the new mascot (with `norbert.js`). |
+| `handoff.js` | header; the glint ~109 | The 26 ear glinting as he's handed over | Follows `norbert.js`; reword. |
+| `index.html` | intro ~22; shots ~36-38; "How it's made" ~55-56 | Norbert, "the team's red hoodie with the panther badge", the 26 ear | Update. |
 
 ### Team meeting (`public/team-manager/team-meeting/`)
 
