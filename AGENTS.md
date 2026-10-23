@@ -34,5 +34,9 @@ tunnel), and `npm start` (Node, same Wi-Fi only).
   name, the panther logo, the red team colours, merch, the mascot, real team members, chants, lines that assume it's
   5026), add an entry for it to `TEAM-SPECIFIC.md` (file, where, what, what to change it to), or update the entry.
   Prefer the shared values (`HERO_NAME` from `player.js`, `tones`/`MERCH` in `cast.js`) over writing it out again.
+- **When you finish a change, post a link to see it.** Update the playable preview of the team manager (the private
+  claude.ai artifact made from `public/team-manager/`, kept at the same link) with the current files, check every scene
+  loads first, and give the human the link along with what changed. Changes that aren't in the game (docs, tools) get a
+  link to the file or commit instead.
 - Ask the human before outward-facing steps (creating repos, pushing, account settings), and let them do
   their own logins.
