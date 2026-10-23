@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Walkabout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="./stage.css">
+<style>
+  .dirs { display: grid; grid-template-columns: repeat(8, 1fr); text-align: center; font: 9px/1.4 var(--pixel); color: var(--muted); }
+  .rows { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: on the move</h1>
+  <p class="intro">Our strategist walking and running in all eight directions, steered from a phone the way the game will be: the big screen shows her, the phone in your hand is the controller. She's not on the drive team, so the field is off limits: walk the front of the bleachers the length of the field and talk to the people in the stands, or carry on past either end to the queue and the scoring table. It opens on a cut scene, a pan down the field mid-match from the red end to the blue end, where she comes in from the pits by the queue; the way out is on the right, past the scoring table, through the gap in the barrier.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div id="stage"></div>
+  </section>
+
+  <section class="card" aria-labelledby="sheet-h">
+    <h2 id="sheet-h">All eight directions</h2>
+    <div class="view"><canvas id="sheet" width="288" height="112" aria-label="Walking and running loops facing each of the eight directions"></canvas></div>
+    <div class="dirs" aria-hidden="true"><span>S</span><span>SE</span><span>E</span><span>NE</span><span>N</span><span>NW</span><span>W</span><span>SW</span></div>
+    <div class="rows" aria-hidden="true"><span>Top row: walking</span><span>Bottom row: running</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How she's made</h2>
+    <ul>
+      <li><b>One rig, every angle:</b> her body is a small 3D figure (rounded shapes for her torso and limbs), turned to each of the eight directions and drawn to pixels in her own colours, three tones each, with an ink outline.</li>
+      <li><b>Her face, by hand:</b> her head is drawn pixel by pixel for each direction in the title portrait's style: the lash line over brown eyes, the blush, the small smile, her near-black hair swept from the side part down to her shoulders.</li>
+      <li><b>Walking:</b> eight frames a stride, arms swinging against her legs, the board hanging from her left hand.</li>
+      <li><b>Running:</b> eight frames, leaning in, knees high, arms pumping, the board tucked under her arm so it doesn't flap.</li>
+      <li><b>No sliding feet:</b> the animation steps with the distance she covers, so her stride matches her speed.</li>
+      <li><b>The stands:</b> everyone in the bleachers is the same rig, seated, in their own clothes with their own hand-drawn head, and they cheer now and then. Five in the front row have something to say: a 5026 parent, a mentor, a 5026 alum, a nine-year-old fan and a scout from 7777. The volunteer at the gate has something to say too.</li>
+      <li><b>The field:</b> the 2019 game at the same scale as the people, 8 pixels to the foot, so it's two screens long and the view scrolls with her. Long side to you: both HABs with all three levels, loading stations in the corners, depots, the alignment tape, and four robots running cycles, the intro's own sprites.</li>
+      <li><b>The cargo ship:</b> two halves joined at the centre line, three bays a side in each, a hatch port 19 inches up and the cargo opening above its lip. Hatch panels show their six-inch hole, with orange behind it where there's cargo, and from above you can see into every bay.</li>
+      <li><b>The rockets:</b> the intro's rocket turned to face you: silver hull, alliance bands, nose cone and skirt, round cargo ports up the middle and hatch ports on the angled faces. The blue elevator brings hatches from the loading station and lifts them to level 2, then level 3. It's match 42 out there, two matches before 5026's.</li>
+      <li><b>The drive teams:</b> one at each station, turned to the field with their controllers up, with heads drawn in profile.</li>
+      <li><b>The cut scene:</b> the red end fades in under the place card, then the camera pans the length of the field in two eased moves, holding on the blue rocket as an elevator lifts a hatch panel to level 3 and the crowd gets to its feet, while the announcer calls it. At the blue end Priya calls the next matches into the queue, the film bars go, and the strategist walks in from the left. The robots and the crowd carry on from the cut scene into walking without a jump.</li>
+      <li><b>In and out:</b> she comes in on the left, at the queue, past a blue sign pointing back to the pits. Past the scoring table a belt barrier, the same posts as behind the driver stations, ropes off the floor; through the gap in it, under the EXIT sign on its tall pole, a short chute taped out on the floor leads off the right edge, and walking into it takes her out. People stop her as the carts and tables do.</li>
+      <li><b>Past the ends:</b> the arena floor carries on past both driver stations, behind a belt barrier. The blue end has the queue, with the next match's robots on their carts; the red end has the scoring table with the score up, and a reset cart of hatches and cargo.</li>
+      <li><b>Behind the glass:</b> the walkway is past the field's far wall, so her feet show through its clear panels, and a rocket she walks behind turns see-through so you never lose her.</li>
+    </ul>
+  </section>
+  <p class="foot">The walking sprite lives in walker.js and the full-height portrait on the title screen is hero.js. The controller, the camera and the talking are stage.js, shared by every scene.</p>
+</div>
+<script type="module">
+  import { DIRS, CELL_W, CELL_H, walkerFrame } from './walker.js';
+  import { runScene } from './stage.js';
+  import { scene } from './arena/scene.js';
+
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  runScene(scene);
+
+  // ---- All eight directions ----
+  const sheet = document.getElementById('sheet'), sg = sheet.getContext('2d');
+  sg.imageSmoothingEnabled = false;
+  function fitSheet() {
+    const room = sheet.parentElement.clientWidth - 4;
+    sheet.style.width = `${sheet.width * Math.max(1, Math.min(4, Math.floor(room / sheet.width)))}px`;
+  }
+  new ResizeObserver(fitSheet).observe(document.querySelector('.page'));
+  function drawSheet(now) {
+    const t = reduceMotion ? 0 : now / 1000;
+    sg.fillStyle = '#11184a';
+    sg.fillRect(0, 0, sheet.width, sheet.height);
+    sg.fillStyle = '#0d1338';
+    sg.fillRect(0, CELL_H, sheet.width, CELL_H);
+    DIRS.forEach((d, i) => {
+      sg.drawImage(walkerFrame(d, 'walk', Math.floor(t * 10)), i * CELL_W, 0);
+      sg.drawImage(walkerFrame(d, 'run', Math.floor(t * 14)), i * CELL_W, CELL_H);
+    });
+    requestAnimationFrame(drawSheet);
+  }
+  fitSheet();
+  requestAnimationFrame(drawSheet);
+</script>
+</body>
+</html>

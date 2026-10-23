@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05060d">
+<title>Blue Banner</title>
+<link rel="icon" href="../img/favicon.png">
+<style>
+  :root { --bg: #05060d; --fg: #c4cbe0; --muted: #7882a3; --line: #232838; color-scheme: dark; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; overflow: hidden; }
+  .stage {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+  .stage > div { width: 100%; height: 100%; display: grid; place-items: center; min-width: 0; min-height: 0; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: manipulation; cursor: pointer; outline: none; }
+  .bar {
+    position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom));
+    display: flex; gap: 8px; align-items: center;
+  }
+  button {
+    font: inherit; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 10px; cursor: pointer; opacity: 0.7;
+  }
+  button:hover, button:focus-visible { opacity: 1; border-color: var(--muted); }
+  button:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; }
+  .turn { display: none; position: fixed; left: 0; right: 0; top: max(14px, env(safe-area-inset-top)); text-align: center; color: var(--muted); font-size: 12px; pointer-events: none; }
+  @media (orientation: portrait) and (max-width: 600px) { .turn { display: block; } }
+</style>
+</head>
+<body>
+<main class="stage"><div><canvas id="screen" data-song="compete-to-win-3" width="256" height="144" aria-label="Blue Banner: an animated intro and title screen. Press any key or tap to start." tabindex="0"></canvas></div></main>
+<p class="turn">Turn your phone sideways for a bigger picture</p>
+<div class="bar"><button id="mute" type="button" aria-pressed="false" title="Mute (M)">Sound on</button></div>
+<script type="module" src="./intro.js"></script>
+</body>
+</html>
