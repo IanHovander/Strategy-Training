@@ -30,8 +30,10 @@
 // the screen, if she's off it), and comes over while the words type, her patrol stopped. She comes briskly, from the
 // side she's on (from the edge of the screen if she's off it), and stops a step to the strategist's side, that side if
 // there's room, clear of anyone standing there. If the strategist has run into the front half of the aisle, she walks
-// back to meet her, so the two of them stand near the pits and both faces show over the dialog box. Afterwards the
-// safety advisor walks back to where she left her patrol and carries on. Then she leaves you be for 20 seconds.
+// back to meet her, so the two of them stand near the pits and both faces show over the dialog box. Neither stops
+// behind the QUEUE sign, where its panel would cover them: the strategist steps out to the nearer side of it.
+// Afterwards the safety advisor walks back to where she left her patrol and carries on. Then she leaves you be for 20
+// seconds.
 // stage.js has no hook for running, so draw() keeps the count: a stage.js onRun(s, seconds) would be the cleaner place.
 // Nor has it one for moving her by herself (the steps aside to talk, the walk to meet the safety advisor), so camera()
 // does it, before the view's worked out and she's drawn: a stage.js `walkTo(path)` would be cleaner.
@@ -47,7 +49,7 @@
 import { dirToward, along, SPEED } from '../stage.js';
 import { conversation, drawBubble } from '../talk.js';
 import { clamp } from '../pixel.js';
-import { WORLD, EXIT, drawWorld, drawCartBot, move } from './set.js';
+import { WORLD, EXIT, QUEUE, drawWorld, drawCartBot, move } from './set.js';
 import { LOOKS, PEOPLE, folk, drawFolk, NADIA_ID, RUN_LANE } from './people.js';
 import { LINES, RUN_WARNING } from './lines.js';
 import { makeCutscene, START, END } from './cutscene.js';
@@ -104,6 +106,17 @@ const LEAN = 10;
  * WORD_Y the strategist walks back to meet her, so both faces clear the dialog box's name tag.
  */
 const WORD = [24, 32], WORD_Y = [104, 110], CLEAR = 14, NEAR_CLEAR = 10;
+/**
+ * Half the width of someone as drawn, a pixel to spare: neither of the two stops for a word where the QUEUE sign's panel
+ * (set.js QUEUE) would cover them, across its width, with their feet between its top row and the sign's foot.
+ */
+const BODY = 8;
+/**
+ * Stepping out from behind the sign for a word, the strategist goes up to SIGN_STEP pixels further along to stand
+ * SIGN_CREW across (a head's width) from anyone standing in the pits behind her.
+ */
+const SIGN_STEP = 20, SIGN_CREW = 16;
+const behindSign = (x, y) => x > QUEUE.x0 - BODY && x < QUEUE.x1 + BODY && y >= QUEUE.top && y < QUEUE.y;
 /** The safety advisor's pace coming over to have a word (brisk), and going back to her patrol (people.js's). */
 const BRISK = 44, STROLL = 22;
 /** She doesn't rejoin her patrol closer to the strategist than this (pixels across, pixels deep). */
@@ -182,16 +195,21 @@ const nearTalk = (p, o, [near, far] = TALK_GAP, crew = []) => {
 
 /**
  * The closest person in reach of her feet (nobody while she's walking somewhere by herself): p.reach across if given,
- * else REACH_STILL for anyone standing still (solid) and 14 for the safety advisor; p.reachY deep.
+ * else REACH_STILL for anyone standing still (solid) and 14 for the safety advisor; p.reachY deep. The safety advisor
+ * reaches deep, and her patrol takes her past the pits close to the people in them: if the strategist is facing someone
+ * standing still in reach and not the safety advisor, it's them she means, however close the safety advisor is.
  */
 function reach(s) {
   if (errand?.phase === 'come' || herWalk) return null;
-  let best = null, bestD = Infinity;
-  for (const p of PEOPLE) {
-    const dx = Math.abs(p.x - s.me.x), dy = Math.abs(p.y - s.me.y);
-    if (dx < (p.reach ?? (p.solid ? REACH_STILL : 14)) && dy < (p.reachY ?? 12) && dx + dy < bestD) [best, bestD] = [p, dx + dy];
-  }
-  return best;
+  const me = s.me;
+  const near = PEOPLE.filter((p) => Math.abs(p.x - me.x) < (p.reach ?? (p.solid ? REACH_STILL : 14)) && Math.abs(p.y - me.y) < (p.reachY ?? 12));
+  const faces = (p) => {
+    const k = (toward(me, p) - me.dir + 8) % 8;
+    return Math.min(k, 8 - k) <= 1;
+  };
+  const passing = near.some((p) => p.id === NADIA_ID && !faces(p)) && near.some((p) => p.solid && faces(p));
+  const d = (p) => Math.abs(p.x - me.x) + Math.abs(p.y - me.y);
+  return near.filter((p) => !(passing && p.id === NADIA_ID)).reduce((best, p) => (!best || d(p) < d(best) ? p : best), null);
 }
 
 /** How far in front of someone she stands to talk, at least, so the two heads aren't side by side at one height. */
@@ -258,7 +276,7 @@ function stepAside(s, p) {
 function wordSpot([hx, hy], side, crowd) {
   const y = clamp(Math.round(hy), WORD_Y[0], WORD_Y[1]);
   const spots = (s) => WORD.map((d) => clamp(Math.round(hx + s * d), 10, 822));
-  const clear = (gap) => (x) => Math.abs(x - hx) >= 20 && crowd.every((p) => Math.abs(p.y - y) >= gap || Math.abs(p.x - x) >= gap);
+  const clear = (gap) => (x) => Math.abs(x - hx) >= 20 && !behindSign(x, y) && crowd.every((p) => Math.abs(p.y - y) >= gap || Math.abs(p.x - x) >= gap);
   const x = spots(side).find(clear(CLEAR)) ?? spots(side).find(clear(NEAR_CLEAR)) ?? spots(-side).find(clear(CLEAR))
     ?? spots(-side).find(clear(NEAR_CLEAR)) ?? spots(side)[0];
   return [x, y];
@@ -414,12 +432,28 @@ export const scene = {
     const comeOver = () => {
       const mid = view.x + 128, off = Math.abs(pn.x - mid) > 120;
       const side = Math.sign(pn.x - (off ? mid : me.x)) || 1;
-      const [hx, hy] = me.y > WORD_Y[1] ? slide(me.x, me.y, me.x, WORD_Y[1]) : [me.x, me.y];
+      const [ux, uy] = me.y > WORD_Y[1] ? slide(me.x, me.y, me.x, WORD_Y[1]) : [me.x, me.y];
+      // Not behind the QUEUE sign, where its panel would cover her: out to the nearer side of it that's open, and a
+      // head's width clear of anyone standing in the pits behind (Oscar's beside it on one side, Tomas on the other),
+      // so she isn't stood in front of them either; if there's nowhere like that, the nearest spot clear of the sign.
+      let [hx, hy] = [ux, uy];
+      if (behindSign(ux, uy)) {
+        const spots = Array.from({ length: SIGN_STEP + 1 }, (_, k) => [QUEUE.x0 - BODY - k, QUEUE.x1 + BODY + k]).flat()
+          .sort((a, b) => Math.abs(a - ux) - Math.abs(b - ux));
+        const clearOf = (x) => crew.every((p) => !p.solid || p.y >= uy || Math.abs(p.x - x) >= SIGN_CREW);
+        for (const tx of [...spots.filter(clearOf), ...spots]) {
+          const [x, y] = slide(ux, uy, tx, uy);
+          if (Math.abs(x - tx) <= 0.01) {
+            [hx, hy] = [x, y];
+            break;
+          }
+        }
+      }
       const passers = AISLE.filter((id) => id !== NADIA_ID && aside[id]).map((id) => aside[id]);
       const to = wordSpot([hx, hy], side, [...crew, ...passers]);
       const from = off ? [side < 0 ? view.x - 10 : view.x + 266, to[1]] : [pn.x, pn.y];
       const round = Math.sign(to[0] - hx) !== side ? [[Math.round(hx), Math.min(LANE[1], Math.round(hy) + 14)]] : [];
-      const path = [from, ...round, to], mine = [[me.x, me.y], [hx, hy]];
+      const path = [from, ...round, to], mine = [[me.x, me.y], [ux, uy], [hx, hy]];
       const tN = along(path, 1e6, 'walk', BRISK).dist / BRISK, tS = along(mine, 1e6).dist / SPEED.walk;
       errand = { phase: 'come', t0: t, wait: 0, path, to };
       herWalk = { path: mine, t0: t + Math.max(0, tN - tS), end: t + Math.max(tN, tS), dist0: me.dist, face: () => nadia, keep: () => errand?.phase === 'come' };

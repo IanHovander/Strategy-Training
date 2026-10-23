@@ -21,8 +21,9 @@
 // The way in and out. The row is closed off at each end by an end drape, the back drape's full height, seen end-on like
 // the side drapes, from the back as far as the aisle; the aisle runs on past both, out of the hall. You come in along
 // it from the left, from the rest of the hall, and leave along it at the right, to the field: there the arena's light
-// comes in through the opening and lies on the concrete in two hard-edged steps, fanning out from it, and the QUEUE
-// sign stands at the aisle's near edge pointing on. EXIT is the walking part's way out (stage.js scene.exit).
+// comes in through the opening and lies on the concrete in two hard-edged steps, fanning out from it (the dashed lines
+// pale where it falls on them), and the QUEUE sign stands at the aisle's near edge pointing on. EXIT is the walking
+// part's way out (stage.js scene.exit).
 //
 // It's drawn like the arena: the floor once into a layer, the hall wall, drapes and banners once into another, then
 // everything that stands up back to front by its floor line, with the people sorted in. Boxes are field.js boxes (the
@@ -168,11 +169,12 @@ function drawFloor() {
     }
   }
   // Dashed yellow lines on the concrete, the arena's queue lines exactly (3 pixels on, 1 off): a lane down the middle of
-  // the aisle and its near edge, pale where the bright step of the light falls on them. Then the floor boxes the pits'
+  // the aisle and its near edge, running on off both ends of the picture with the aisle (the rhythm starts off the left
+  // edge, so the first gap there is a pixel like every other), pale where the bright step of the light falls on them. Then the floor boxes the pits'
   // power comes from: a steel plate flush with the floor, lit along its top edge, its lid's screws, and the black cable
   // from it taped down across to the pit it feeds.
   for (const y of [LANE_Y, EDGE_Y]) {
-    for (let x = 2; x < WORLD.w; x += 4) {
+    for (let x = -2; x < WORLD.w; x += 4) {
       for (let i = 0; i < 3 && x + i < WORLD.w; i++) rect(x + i, y, 1, 1, lit(x + i, y) === hi ? C.yel2 : C.yel1);
     }
   }
@@ -688,8 +690,7 @@ function adminDesk() {
   rect(748, yFront, 60, 1, C.blue0);
   for (let fx = 753; fx < 806; fx += 10) rect(fx, yFront + 3, 1, yFloor - yFront - 4, C.blue0);
   rect(748, yFloor - 1, 60, 1, C.blue0);
-  // Its sign, a panel on the skirt like SPARE PARTS's, the skirt's folds behind it: on the skirt's left, under the mic,
-  // so that where the cut scene's pan after the robot stops (its right edge at x 792) it's whole on the screen.
+  // Its sign, a panel on the skirt like SPARE PARTS's, the skirt's folds behind it: on the skirt's left, under the mic.
   rect(751, yFront + 5, 39, 11, C.ink);
   rect(752, yFront + 6, 37, 9, C.blue0);
   rect(752, yFront + 6, 37, 1, C.blue1);
@@ -736,9 +737,13 @@ function glassesStand() {
 
 /**
  * The arena's QUEUE sign (field.js), pointing the way out to the field: at the aisle's near edge where the row ends,
- * between 1357's pit and the desk, so the floor at the way out is clear (and the arrow stage.js puts there).
+ * between 1357's pit and the desk, so the floor at the way out is clear (and the arrow stage.js puts there). QUEUE: its
+ * post across and its floor line (y), and its panel's span across (x0 to x1) and top row: it hides anyone standing behind
+ * it with their feet between that row and the sign's foot (scene.js keeps the strategist and the safety advisor out from
+ * behind it when they stop to have a word).
  */
 const QUEUE_X = 744;
+export const QUEUE = { x: QUEUE_X, y: 134, x0: QUEUE_X - 14, x1: QUEUE_X + 16, top: 134 - 38 };
 function queueSign() {
   const x = QUEUE_X, y = 134;
   rect(x - 4, y - 1, 9, 2, C.ink);
@@ -821,7 +826,8 @@ export function drawWorld(g, view, t, o = {}) {
 // from pit to pit. 5026's spot is as it is while you walk: the board. The aisle stops short of each end of the picture:
 // the way out at the right is EXIT's, which stage.js walks her out of by herself. In front of the desk and the glasses
 // stand the floor stops a step short of EXIT's line (and of the end drape's post), so she never stands past it out of
-// the aisle, where she wouldn't leave, with the post across her face.
+// the aisle, where she wouldn't leave, with the post across her face. Out in the aisle the QUEUE sign's post stands in
+// the way of the rows near its foot, her starting row among them; move() takes her round its front.
 const AISLE = { x0: 10, x1: 822, y0: 100, y1: 138 };
 function open(x, y) {
   if (x < AISLE.x0 || x > AISLE.x1 || y > AISLE.y1) return false;
@@ -831,11 +837,13 @@ function open(x, y) {
   const p = PITS[Math.floor((x - 96) / 80)];
   return y >= 82 && x >= p.x0 + 6 && x <= p.x1 - 6;
 }
+/** The QUEUE sign's post, standing in the aisle's near half, and how far short of it she starts going round it. */
+const POST = { x0: QUEUE_X - 4, x1: QUEUE_X + 4, y0: 131, y1: 134 }, VEER = 28;
 const BLOCKS = [
   ...PITS.filter((p) => p.state === 'busy' && p.num !== '5026').map((p) => ({ x0: p.mid - 19, x1: p.mid + 19, y0: 84, y1: 90 })),
   ...PITS.filter((p) => p.state !== 'busy' || p.num === '5026').map((p) => ({ x0: p.mid - 17, x1: p.mid + 17, y0: 84, y1: 90 })),
   { x0: 792, x1: 828, y0: 83, y1: 90 }, // the safety glasses stand, and under its sign at the desk's end
-  { x0: QUEUE_X - 4, x1: QUEUE_X + 4, y0: 131, y1: 134 }, // the QUEUE sign's post
+  POST,
 ];
 const hits = (bs, x, y) => bs.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
 
@@ -855,6 +863,14 @@ export function move(x, y, dx, dy, extra = []) {
   // Walking on to the right in front of the glasses stand, where the floor stops short of the end drape (open()), she
   // goes on down round its post into the aisle, toward the way out, rather than treading on the spot in the corner.
   const corner = dx > 0 && dy > -0.01 && nx < x + dx && y < AISLE.y0 && x + dx > EXIT.x - 4;
-  const [, ny] = reach(nx, y, 0, corner ? Math.max(dy, dx * 0.8) : dy);
+  // Walking straight along the aisle toward the QUEUE sign's post on a row it stands across (her starting row is one),
+  // she bears down round its front, from VEER pixels short of it, and walks on: she passes in front of the sign, never
+  // behind its panel with her face hidden, or treading on the spot against the post. If she's against it already, she
+  // steps straight down. Not while she's stepping up: then she goes round behind it, as she's steering, so it never pulls
+  // her the wrong way.
+  const ahead = dx > 0 ? POST.x0 - 4 - x : x - (POST.x1 + 4);
+  const veer = dx !== 0 && Math.abs(dy) < 0.01 && ahead > -1 && ahead < VEER && hits([POST], POST.x0, y);
+  const post = dx !== 0 && dy > -0.01 && Math.abs(nx - x) < Math.abs(dx) && hits([POST], x + dx, y);
+  const [, ny] = reach(nx, y, 0, corner ? Math.max(dy, dx * 0.8) : post ? Math.max(dy, Math.abs(dx) * 0.8) : veer ? Math.abs(dx) * 0.5 : dy);
   return [nx, ny];
 }

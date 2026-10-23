@@ -61,9 +61,10 @@ import { SCRIPT } from './lines.js';
  * Where the walking part begins: she comes into the hall along the aisle from off its left edge (scene.js's enter)
  * and stops here, at the near end of the row in front of the SPARE PARTS counter, with the whole row ahead of her and
  * the way out at its far end. She turns to you there. It's a step in front of the passers-by's lanes, and far enough
- * down the aisle that her head is under the counter's sign, not in front of it.
+ * down the aisle that her head is under the counter's sign, not in front of it, with a couple of rows of floor between
+ * the top of her hair and the counter's bottom edge, so she doesn't look stuck to it.
  */
-export const START = { x: 40, y: 126, dir: 0 };
+export const START = { x: 40, y: 131, dir: 0 };
 /**
  * The cut scene's last frame: the near end of the hall, waiting for her (view), and where the aisle's walkers' clocks
  * (scene.js) are then, which this shot runs them up to: a second after the safety advisor gets back to her end of the

@@ -244,8 +244,10 @@ function runner(t) {
 
 // The safety advisor walks the aisle from end to end and back, and at each end stands and looks round. She keeps to its
 // back edge, close to the pits, so her face clears the dialog box when she talks, and a good step behind the lanes the
-// passers-by walk. She strolls, watching the pits, well below their pace (30), so one overtaking her is soon past.
-const PATROL = [[104, 103], [430, 105], [720, 102]], PATROL_BACK = [...PATROL].reverse();
+// passers-by walk. She strolls, watching the pits, well below their pace (30), so one overtaking her is soon past. Her
+// far end is in front of 1357's IN QUEUE board, short of Oscar beside it, so she doesn't stand in front of him looking
+// round, or in the way of anyone walking up to talk to him.
+const PATROL = [[104, 103], [430, 105], [700, 102]], PATROL_BACK = [...PATROL].reverse();
 const PATROL_SPEED = 22, LOOK_ROUND = 2.5;
 function patrol(t) {
   const one = along(PATROL, 1e6, 'walk', PATROL_SPEED).dist / PATROL_SPEED;
