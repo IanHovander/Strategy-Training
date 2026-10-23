@@ -44,13 +44,8 @@ memorization.
 ### Cold open: start with the boss fight
 
 **Saturday, 12:38 PM, alliance selection.** The senior strategist is out sick. The captain hands you a clipboard:
-"You're up. Who do we pick? 45 seconds." You have no data, only team names, a flashy robot and the loudest team in
-the stands. You pick on gut feel and lose in the quarterfinals when a climb fails.
-
-Cut to black. **Thursday, 6:40 AM, the van.** Norbert the mascot is in your lap. A teammate tells the joke you heard
-on Thursday.
-
-The first minute teaches why scouting exists: you had to decide and couldn't.
+"You're up. Who do we pick? 45 seconds." You have almost no data. The full design is in section 5: short rewinds
+until your calls are right, then the first long jump back, to the van on Thursday morning, as a reward.
 
 ### The device and the clues
 
@@ -69,7 +64,7 @@ across loops:
 The device is the team's own alumni's off-season project. For years they've quietly looped promising strategists,
 because every strategist has wished for a do-over. They call themselves the Blue Banner Society (name to be decided).
 
-They introduce themselves straight after the Event 2 twist (section 5), in the first minute of that loop, so the
+They introduce themselves straight after the Event 2 twist (section 6), in the first minute of that loop, so the
 reset that breaks the player's understanding is explained right away.
 
 ### The council's trial and the epilogue
@@ -106,6 +101,39 @@ up, so the player's belief holds.
 - A bad call that wins resets.
 - Good calls that lose do not reset. The season moves on.
 
+### How far back a jump goes
+
+Scouting is a call too. Deciding whom to ask in the van and where to send the scouts on Friday are bets, just like a
+pick. So one rule covers every jump:
+
+1. **A bad call sends you back to where you made it.** A bad pick or match call is a **rewind** of a few minutes:
+   a quick retry, not a punishment. A bad scouting call (the notebook had a hole that mattered, and you could have
+   filled it) is a **long jump** back to where you could have filled it. In the player's words: *if your notebook had
+   a hole that mattered, you go back to fill it.*
+2. **When every call was good, including scouting, the season moves on**, win or lose.
+3. **Unlocking a new anchor sends you there once, as a gift**, because now there are calls you can make there. This
+   happens twice in the first season: the opening (to the van) and meeting the goals at the Championship (to
+   kickoff).
+
+Holes you couldn't have reached never count against you. Before the kickoff anchor is unlocked, the robot's design
+isn't your call.
+
+The places a long jump can reach are **anchors**, earned in order:
+
+| Anchor | What you can change there | Earned by |
+|---|---|---|
+| Minutes back | the call you just made | always available |
+| Thursday morning, the van | what you know and who you ask; Friday's scouting plan | the opening (section 5) |
+| The week before an event, the practice field | what the drive team practices | to be decided (Event 2?) |
+| Kickoff, January | the robot's direction | meeting the goals at the Championship |
+
+**How far back Norbert can reach is shown as a battery voltage.** It's the unlogged battery inside him, read on the
+team's battery tester. The team rule is "under 12.5 volts, it doesn't play": at 12.4 he can only rewind minutes; at
+12.9 he reaches Thursday; one day the tester reads 13.4, which no battery the team owns can do. Good calls charge it.
+
+**The gift jump comes after the wish.** Before each one, the player sees what they couldn't know, the character
+wishes out loud they'd known it, and then Norbert answers. Wanting comes first, so the jump feels like a gift.
+
 ### What the player sees after the twist
 
 - **Goal card** on the strategist's whiteboard, shown at the start of every loop and on the pause screen.
@@ -126,7 +154,159 @@ up, so the player's belief holds.
 
 ---
 
-## 5. Banners
+## 5. The opening, in detail
+
+### What the opening has to do
+
+- **Be a fair fight, not a trick.** Save "you thought you won but you didn't" for Event 2, once the player trusts the
+  game. The opening's message is the honest version: *you did well, and it wasn't enough.* The success is real; the
+  player then sees its ceiling.
+- **Every failure passes three tests.** The information to get it right was on screen. The cause shows up in one
+  picture. The retry is less than a minute away.
+- **The first lesson should surprise experienced students too.** "Averages don't add up" does: it's true, it's
+  visual, and it's how real alliances are lost.
+- **The first long jump is a reward.** You get sent to Thursday because you did everything right and there was
+  more to know. A reward makes the player want to go back; a punishment makes them want to quit.
+
+### Beat 1: Saturday 12:38 PM, alliance selection
+
+Black screen, crowd noise. Card: **ALLIANCE SELECTION, SATURDAY 12:38 PM.** A text from the senior strategist:
+*"Sick. Can't come. You've got this. Notebook's in Norbert's bag."* The captain hands you the notebook: one page,
+averages and a few notes, nothing more. The captain sets the target without meaning to: "We've never made a final.
+It's my last year."
+
+You're seed 4, an alliance captain. Seeds 1 to 3 pick quickly over the MC. Then it's your turn: **45 seconds**, four
+cards. (Teams and numbers are placeholders to tune.)
+
+| Card | Notebook says | The truth |
+|---|---|---|
+| **Your robot** | avg 30: rocket hatches, Level 3 climb | — |
+| **1690, the showpiece** | **avg 41**: rocket hatches, Level 3 climb, sandstorm | Great robot, wrong partner: it does what you do |
+| **2056, the workhorse** | avg 31: cargo into the cargo ship, Level 2 climb, never broken | The best pick on what you know |
+| **6417** | avg 22: "?" | Broke a chain in each of its first five matches; since the fix, avg 36. The best pick, if you knew |
+| **1114, the wall** | avg 18: defense | Not yet (see pass 2) |
+
+**The trap is that averages don't add up.** The HAB has one Level 3 platform per alliance, so two Level 3 climbers
+only ever get 12 points between them, not 24. Both robots also feed hatches from the same loading station and queue
+behind each other. On paper you and 1690 make 71 points; together you average about 51. You and 2056 average 61.
+
+**It's fair** because the notebook says "Level 3 climb" on both cards, and because the top three seeds passed on a
+41-point robot. The MC even says so: "Nobody's taken 1690 yet. Their loss!" A sharp player asks why.
+
+**A wrong pick:** the quarterfinals play out quickly and you lose (dice nudged, as at Event 1). The replay shows it
+in one picture: both robots drive up to the one Level 3 platform and one has nowhere to go.
+
+> On paper: 41 + 30 = 71. Together: 51.
+> 2056 would have made 61, because it scores where you don't.
+
+Then it rewinds: "WELCOME TO ALLIANCE SELECTION! HOW ARE WE FEELING, EVERYBODY?!" The character: *"...didn't this
+just happen?"* Norbert's ear glows. The second rewind, the character starts finishing the MC's lines.
+
+### Beat 2: the quarterfinal endgame call
+
+With 2056 picked, the quarterfinals play quickly up to one frozen moment: **20 seconds left, you lead by 7.** Your
+partner can climb to Level 2 (+6, certain) or try Level 3 (+12, works half the time; if it fails, they end on Level 1
+for +3). The opposing climber gets to Level 3 (+12) 60% of the time, otherwise Level 1 (+3).
+
+- **Level 2:** a 13-point lead against at most 12. **Wins every time.**
+- **Level 3:** wins 70% of the time.
+
+Everything pushes toward Level 3: the crowd chants, the partner's driver says "We practiced it!", and 12 is a bigger
+number than 6. That's the trap, and it's the Learn lesson *When the sure thing is enough, take it*. A wrong call
+rewinds **only to the frozen moment**, not to selection: the pick was right, so it stays.
+
+### Beat 3: the semifinal, played fair
+
+The semifinal is against the #1 alliance, led by 4000, and the dice are honest. You'll almost certainly lose a close
+series. Then the bet log:
+
+> **Pick 1 ✓ · Endgame call ✓**
+> With what you knew: a 34% chance of reaching the final. The best calls possible gave 34%. **100%.**
+
+The player gets real credit: they played it perfectly. Then the notebook pages flip, and the gaps show up as "?"
+entries, each with a face beside it:
+
+- *6417: avg 22, why?* (the scout lead's portrait)
+- *4000: what happens when someone defends them?* (the drive coach's portrait)
+- *Our Level 3 climb: really "confident"?* (the programmer's portrait, asleep)
+
+> If you'd known these: **58%**.
+
+The character, quietly: *"If I'd just known..."* Norbert's ear glows. The battery tester reads 12.9 volts.
+
+### Beat 4: the van, Thursday 6:40 AM
+
+Norbert is in your lap. The navigator's GPS reads **ARRIVE IN 20 MIN**, and that's your timer. Every question costs
+time: 1 to 4 minutes, shown on the card before you ask. There are about 25 questions in the van and room for about 7,
+so one ride can't cover everything, and every reboot is a chance to learn more. The notebook keeps every answer.
+
+You choose the seat and the direction of each conversation. Every lead knows different things:
+
+| Lead | What matters now | What matters later | Dead ends |
+|---|---|---|---|
+| **Scout lead** (watched week 1 streams) | 6417 breaks early at every event, then gets good | which teams scout you back | the famous team's new auto |
+| **Drive coach** | at week 1, the one time anyone defended 4000, they scored half | your drivers' nerves in elims | a swerve drive on a seed that will never be pickable |
+| **Programmer** (asleep: waking them costs 3 min) | the climb logs: Level 3 is 6 out of 10, not "confident" | the unlogged battery (a Norbert clue) | |
+| **Captain** (senior) | the target, and their friend on 4000: "their strategist always picks the highest average" | the seniors' story | |
+| **Mentor** (driving, can't turn round) | perspective and calm | lore: "I had a strategist like you once..." | |
+| **Rookie** | asks the questions the player is afraid to ask, and is a good way to teach | | |
+
+**How you ask matters.** Ask the scout lead "Who's the best robot there?" and they say 1690, which you already know.
+Ask "Who got better as their last event went on?" and they say 6417. Good scouting questions ask about change,
+consistency and roles, not "best". That's a lesson students can take straight to real events.
+
+**Some time can be won back.** On the first ride, the navigator takes the GPS's dirt-road shortcut and you arrive 3
+minutes early. Next ride, say no: +3 minutes. A stop for snacks gives another 4, if you've learned on an earlier ride
+that the van is low on pretzels. Knowledge from earlier loops buys time, so reboots feel like an advantage.
+
+**Some answers don't matter.** The red herrings are interesting and change nothing. The recap after the event shows
+which was which: *"You learned 2468's auto: changed nothing. You skipped the programmer: your semifinal climb call
+depended on it."* That's the Learn lesson *A detail matters only if it moves an outcome across the line*, played
+rather than read.
+
+### Beat 5: Friday, short in the opening
+
+One decision: **where your scouts' extra eyes go on Friday afternoon** (pick two teams). Hearsay from the van isn't
+data. Put a scout on 6417 and the notebook confirms the trend from their matches: *last 6 matches: avg 36*. Skip it
+and the card still says 22, with only the scout lead's word behind it. This teaches *write down what robots do, not
+what people say*.
+
+Qualifications run as a montage. In the opening you seed 4th again, so selection is the same puzzle with better
+information (later loops re-roll the schedule; see section 2).
+
+### Beat 6: Saturday again
+
+- **Pick 1:** 6417, which is now visibly the best robot on the board for you.
+- **Pick 2 is yours this time:** 1114, the wall, matters now because the drive coach told you 4000 struggles when
+  defended.
+- **The semifinal plan:** defend 4000's captain (the Showdown already models defense assignments).
+- **The climb call in the semifinal** depends on what the programmer told you about the real Level 3 rate.
+
+With the right calls, the semifinal is about 58% and nudged in your favor: **you make the final**, the team's first.
+The final is played fair; you probably lose it, and that's fine. The target is met, the calls were good, and the
+season moves on.
+
+### Where each outcome sends you
+
+| What happened | Where you go |
+|---|---|
+| Bad pick | Rewind to 12:38 PM, alliance selection |
+| Bad endgame call | Rewind to the frozen moment, 20 seconds left |
+| Every call good, semifinal lost (the opening) | Gift jump to the van, Thursday 6:40 AM |
+| Pass 2: a key question skipped in the van and the target missed | Long jump to the van |
+| Pass 2: a bad pick or match call | Rewind to that call |
+| Pass 2: every call good | The season moves on, final won or lost |
+
+### Why the player wants to go again
+
+- They were told they played perfectly, and shown that perfect play wasn't enough.
+- The "?" entries are a mystery with faces attached. They know exactly whom to go and ask.
+- The timer means they can't learn everything, so every ride is a new plan.
+- Norbert and the 12.9 volts are a second mystery running alongside.
+
+---
+
+## 6. Banners
 
 **A banner is a badge of extreme skill and luck. The path is extremely narrow.** Most players won't win one, and
 winning one isn't the goal. No reset happens for failing to win a banner.
@@ -157,6 +337,16 @@ The alumni appear anyway: "Most strategists need us to reset them before they se
 There's one real banner in the game, and it's honestly rare. With **every** big call right, the Championship gives
 roughly a 5–10% chance (to be tuned), and the true odds are shown before the final.
 
+**The first time through, meeting the Championship's goals unlocks kickoff.** Norbert's tester reads 13.4 volts and
+the gift jump goes all the way back to January. Now the robot's direction is your call, with a whole season of
+notebook behind it, and there's a path to the world title. In the first season that path follows how 5026 actually
+won it, and the scales are tipped towards the player.
+
+Tip them honestly where possible: make the robot-direction calls raise the **true** odds (a better robot, the right
+partners), so the 5–10% becomes something like 40% because of what the player did. If the dice still need help,
+nudge only the final roll, and only when every call was right. The second visit to the Championship is the one-shot
+below.
+
 **Twist the knife:** the reset rule applies here too. If the player makes a bad call and luck carries them through
 Einstein, they get the confetti, the banner going up... and then the van, at Thursday of the Championship. A
 Championship banner only counts if it was earned twice: once by the strategist and once by the dice.
@@ -176,14 +366,15 @@ This makes the Championship a true one-shot:
 
 The lesson depends on the player trusting the odds.
 
-- Rig outcomes only in the scripted moments: the gentle nudge at Event 1, the forced banner at Event 2, and the one
-  "right call, lost anyway" beat (section 6).
+- Rig outcomes only in the scripted moments: the gentle nudge at Event 1 (including the opening), the forced banner
+  at Event 2, the one "right call, lost anyway" beat (section 7), and at most the final roll of the second
+  Championship.
 - **Never misstate the odds.** The game may choose which roll happens; the numbers it shows are always the true ones.
-- Everywhere else, including the whole Championship, the dice are fair.
+- Everywhere else the dice are fair.
 
 ---
 
-## 6. The season: each event teaches one lesson, and the next flips it
+## 7. The season: each event teaches one lesson, and the next flips it
 
 | Event | You are | The lesson | The tempting wrong answer |
 |---|---|---|---|
@@ -199,14 +390,14 @@ Underdog: add risk."), lived instead of read.
 
 **Building each event:** each one is a hand-built puzzle. Robots get set true abilities so the right reasoning wins
 about 70% of the time and the tempting picks about 30%. Every event's design should state its lesson, the tempting
-wrong answer, how the failure reveals it, and its hint ladder (section 8).
+wrong answer, how the failure reveals it, and its hint ladder (section 9).
 
 **The "right call, lost anyway" beat:** script it once, after the rule is known, somewhere low-stakes (a
 qualification match, or a semifinal at Event 3). The bet log shows all ✓ next to an L and the season moves on.
 
 ---
 
-## 7. What you do each loop
+## 8. What you do each loop
 
 The repeated work should be short and map to real strategy work:
 
@@ -225,7 +416,7 @@ strategy, and it gives the boss fight the human drafting feel that makes the Sho
 
 ---
 
-## 8. Making failure enjoyable
+## 9. Making failure enjoyable
 
 - **Every loop adds something permanent.** Notebook entries, and theories on your board confirmed or disproved. No
   run is wasted.
@@ -245,9 +436,13 @@ strategy, and it gives the boss fight the human drafting feel that makes the Sho
 
 ---
 
-## 9. Open questions
+## 10. Open questions
 
-- **Where does a reset send you?** Proposed: Thursday of the current event, not the start of the season.
+- **5026's real path to the 2019 title.** Who picked whom, what the robot's role was, and the key moments, so the
+  first season's road to the world title can follow it.
+- **The opening's numbers.** The averages, climb rates and odds in section 5 are placeholders. Check them against
+  the 2019 manual and tune them with the match model in `games/frc-strategy/alliance.js`.
+- **The practice-field anchor.** When it unlocks, and what the drive team can practice there.
 - **The council trial's season.** Which game, and whether it reuses the Showdown directly.
 - **Replaying after the ending.** Should a finished save unlock a "Society archive" to replay the season with new
   rolls, for players chasing the real banner?
