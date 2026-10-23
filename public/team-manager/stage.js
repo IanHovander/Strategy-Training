@@ -299,10 +299,11 @@ export function runScene(scene, opts = {}) {
     }
     if (t >= a.dur + a.hold) a.done(now);
   }
-  /** Out she goes, on past the right edge of the picture with the camera held still, and the screen fades. */
+  /** Out she goes, on past the right edge of the picture with the camera held still (or a few steps, at most), and the
+   * screen fades. */
   function leave() {
     const me = s.me, gait = me.gait === 'run' ? 'run' : 'walk';
-    const x = Math.max(me.x + 16, s.view.x + W + 20);
+    const x = me.x + clamp(s.view.x + W + 20 - me.x, 16, 48);
     walkBy([[me.x, me.y], [x, me.y]], gait, left, { hold: 0.15, out: true });
   }
   /** NEXT SCENE: she stays put and the screen fades. */

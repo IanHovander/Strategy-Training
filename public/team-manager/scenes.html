@@ -16,24 +16,26 @@
   .grid a:hover .card, .grid a:focus-visible .card { border-color: var(--blue); }
   .grid a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .grid h2 { color: var(--gold); }
+  .grid .all { grid-column: 1 / -1; }
+  .grid .all .card { border-color: var(--gold); }
   .grid p { margin: 0; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
 <div class="page">
   <h1>Blue Banner: scenes</h1>
-  <p class="intro">Every place in the season so far. Each one opens on a cut scene, then hands you the strategist to walk around and talk to people, steered from the phone beside the big screen.</p>
+  <p class="intro">Every place in the season so far, in story order. Each one opens on a cut scene, then hands you the strategist to walk around and talk to people. On its own page, the phone beside the big screen steers her; Play the season runs them all in turn, full screen.</p>
   <div class="grid">
-    <a href="./pits/"><section class="card"><h2>The pits</h2><p>Eight team pits along the hall at the regional. Crews kneel at their robots with drills, deploy code and carry batteries; the pits whose robot is away say IN QUEUE or ON FIELD. 5026's robot rolls out to the queue after the strategist gives the drive team the plan.</p></section></a>
-    <a href="./alliance-selection/"><section class="card"><h2>Alliance selection</h2><p>The eight captains on their numbered spots across the field, the mic in the middle, every other team's rep waiting outside. MC Robin skates in, explains the picks the way FIRST's process does, and two picks play out, the second for 5026.</p></section></a>
+    <a href="./" class="all"><section class="card"><h2>Play the season</h2><p>Everything in turn, full screen, the way it will run: the opening sizzle reel and the title screen, then NEW SEASON starts the scenes in story order. Each opens on its cut scene; then walk about and talk to people, coming in on the left, and leave on the right for the next one (the van has a NEXT SCENE button). Hold your phone sideways: tap anywhere for A, steer with the dot in the bottom right corner. On a computer: WASD or the arrow keys, Shift to run, Space for A.</p></section></a>
     <a href="./team-meeting/"><section class="card"><h2>Team meeting</h2><p>The whole team in a circle on the back lawn, in team merch, the shop door rolled up behind them. One co-captain gives the shout-outs, the other the updates on what's coming, then Iron Panthers on three.</p></section></a>
-    <a href="./van/"><section class="card"><h2>The van</h2><p>Eight in the van at dawn, towing the trailer: the mentor driving, a student navigating, two rows of three. The camera scans the cabin front to back and the strategist and the teammate talk; then you pick a seat to talk to anyone.</p></section></a>
     <a href="./practice-field/"><section class="card"><h2>Practice field</h2><p>Half a 2019 field built from plywood on carpet in the school cafeteria, late sun pouring through the tall windows, the drive team running timed hatch cycles while a mentor calls the times.</p></section></a>
-    <a href="./worlds/"><section class="card"><h2>World Championship</h2><p>Eight division fields side by side in Houston's hall, every one drawn by the arena's own field code, each match on its own clock. The camera glides the length of the hall to Newton, 5026's division.</p></section></a>
+    <a href="./van/"><section class="card"><h2>The van</h2><p>Eight in the van at dawn, towing the trailer: the mentor driving, a student navigating, two rows of three. The camera scans the cabin front to back and the strategist and the teammate talk; then you pick a seat to talk to anyone.</p></section></a>
+    <a href="./pits/"><section class="card"><h2>The pits</h2><p>Eight team pits along the hall at the regional. Crews kneel at their robots with drills, deploy code and carry batteries; the pits whose robot is away say IN QUEUE or ON FIELD. 5026's robot rolls out to the queue after the strategist gives the drive team the plan.</p></section></a>
     <a href="./walk.html"><section class="card"><h2>The arena</h2><p>The walkway between the bleachers and the 2019 field, with the queue and the scoring table past the ends.</p></section></a>
-    <a href="./"><section class="card"><h2>The intro</h2><p>The opening sizzle reel and the title screen.</p></section></a>
+    <a href="./alliance-selection/"><section class="card"><h2>Alliance selection</h2><p>The eight captains on their numbered spots across the field, the mic in the middle, every other team's rep waiting outside. MC Robin skates in, explains the picks the way FIRST's process does, and two picks play out, the second for 5026.</p></section></a>
+    <a href="./worlds/"><section class="card"><h2>World Championship</h2><p>Eight division fields side by side in Houston's hall, every one drawn by the arena's own field code, each match on its own clock. The camera glides the length of the hall to Newton, 5026's division.</p></section></a>
   </div>
-  <p class="foot">Characters: <a href="./hero.html">the strategist</a> and <a href="./teammate.html">the teammate</a>. The scenes share stage.js (the controller, the camera, talking and the cut scene clock) and cast.js (how everyone else is put together).</p>
+  <p class="foot">To skip the intro, <a href="./play.html">play.html</a> starts straight at the first scene (and <a href="./play.html?scene=pits">play.html?scene=pits</a> at any of them). Characters: <a href="./hero.html">the strategist</a> and <a href="./teammate.html">the teammate</a>. The scenes share stage.js (the controller, the camera, talking and the cut scene clock) and cast.js (how everyone else is put together).</p>
 </div>
 </body>
 </html>
