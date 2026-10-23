@@ -57,16 +57,43 @@ export const SCREEN = { x0: -98, x1: -18, y0: 4, y1: 32 };
 
 // World positions:
 /**
- * Where she stands when the cut scene ends: on the open floor just short of Newton's walkway, by its queue, in front of
- * 5026's own stands, turned to the teammate, who has come up from 5026's robot in the queue and stands on her left in
- * front of the dark curtain, beside Newton's sign, a little further back, turned to her: a head's width between them.
- * The teammate stands clear of the walkway and of the way down to the aisle, so she never has to walk through anyone:
- * the walkway opens on her right, and the way back to the aisle is down past the teammate's feet, between them and
- * the queue. Both stand high on the floor, so her feet are well clear of the top of 5026's elevator in the queue below
- * her (a foot on the tip of a mast would read as standing on it).
+ * Where she stands in the cut scene at Newton: on the open floor just short of Newton's walkway, by its queue, in front
+ * of 5026's own stands, turned to the teammate, who has come up from 5026's robot in the queue and stands on her left
+ * in front of the dark curtain, beside Newton's sign, a little further back, turned to her: a head's width between
+ * them. The teammate waits there for the rest of the scene, to be talked to: clear of the walkway and of the way down
+ * to the aisle, so she never has to walk through anyone to get past (the walkway opens on the right, and the way to the
+ * aisle is down past the teammate's feet, between them and the queue). Both stand high on the floor, so her feet are
+ * well clear of the top of 5026's elevator in the queue below her (a foot on the tip of a mast would read as standing
+ * on it).
  */
-export const START = { x: ox(HOME) + 124, y: 59, dir: 6 };
-export const MATE = { x: START.x - 22, y: 56, dir: 2 };
+export const QUEUED = { x: ox(HOME) + 124, y: 59, dir: 6 };
+export const MATE = { x: QUEUED.x - 22, y: 56, dir: 2 };
+/**
+ * The doorways through the two end walls, the way into the hall on the left and out of it on the right, toward
+ * Einstein (hall.js draws them). Each wall is cut away H rows up, as a box is drawn (field.js box()): the wall behind
+ * the opening stands on floor line Y0, its cut top and then its end face toward you, and the wall in front stands on
+ * Y1, its top starting H rows above that, so the passage's floor shows from Y0 to Y1 - H.
+ */
+export const DOOR = { y0: 82, y1: 112, h: 8 };
+/**
+ * Her way through a doorway: the rows her feet keep to, so she and her shadow stay on the passage's floor, between the
+ * two pieces of wall.
+ */
+export const PASSAGE = { y0: DOOR.y0 + 3, y1: DOOR.y1 - DOOR.h - 4 };
+/**
+ * Where the walking starts: just inside the left wall's doorway, turned to the hall, all eight divisions ahead of her and
+ * Newton at the far end, where the teammate waits by the queue. She walks in through the doorway from off the left edge
+ * (scene.js ENTER) as the hall fades in. Holding right from here takes her round the top of Archimedes' queue and up onto
+ * its walkway.
+ */
+export const START = { x: WALL + 32, y: DOOR.y0 + 11, dir: 2 };
+export const ENTER = [[-20, START.y]];
+/**
+ * The way out: on through the right wall's doorway toward Einstein (stage.js exit). Once her feet are in the passage
+ * she walks on off the right edge of the picture. fields.js move() lets her past the wall's face only in the passage's
+ * rows, and only this far: nothing stands between there and the edge.
+ */
+export const EXIT = { x: WORLD.w - WALL + 4, y0: PASSAGE.y0, y1: PASSAGE.y1, label: 'TO EINSTEIN', sign: { y: DOOR.y0 - 6 } };
 /**
  * Belt barriers along the curtains' hems, their posts standing on floor line BARRIER_Y (hall.js draws them, and they
  * stop her): the floor at the foot of a curtain is kept clear, so nobody walks along under the signs and screens with

@@ -49,6 +49,12 @@ const PAN = [9, 7];
 /** A gentler ease than easeInOut for long pans, so the middle of the field doesn't rush past. */
 const glide = (u) => u * u * (3 - 2 * u);
 const pan = (from, to, t, dur) => Math.round(lerp(from, to, glide(seg(t, 0, dur))));
+/**
+ * Seconds into each half of the pan before A can hurry it on (a beat's hold, stage.js). In play.html a tap anywhere is
+ * A, so without these one stray tap, or one tap too many after the announcer's words, would cut straight past the pan
+ * the scene is for; this way the camera has visibly set off down the field first. SKIP and Esc still end it at once.
+ */
+const HURRY = [4, 3];
 
 // ---- The field's clock ----
 /**
@@ -94,9 +100,10 @@ export function makeCutscene(drawWorld, { PEOPLE }) {
         opening(c.E);
       },
     },
-    // B1 down the field, to the cargo ship.
+    // B1 down the field, to the cargo ship. A can't cut the pan short until it's well under way (HURRY).
     {
       dur: PAN[0],
+      hold: HURRY[0],
       draw(g, t, c) {
         drawWorld(g, pan(RED_END, HOLD, t, PAN[0]), c.T);
         bars(1);
@@ -115,6 +122,7 @@ export function makeCutscene(drawWorld, { PEOPLE }) {
     // B3 to the queue: the crowd sits back down as the pan carries on to the blue end.
     {
       dur: PAN[1],
+      hold: HURRY[1],
       draw(g, t, c) {
         drawWorld(g, pan(HOLD, BLUE_END, t, PAN[1]), c.T, { cheer: CHEER * (1 - seg(t, 0.6, 2.4)) });
         bars(1);
@@ -129,9 +137,11 @@ export function makeCutscene(drawWorld, { PEOPLE }) {
         bars(1);
       },
     },
-    // B5 hand over: she turns back to you as the bars go, and the strategist walks in from the left (scene.enter).
+    // B5 hand over: she turns back to you as the bars go, and the strategist walks in from the left (scene.enter). A
+    // waits for the bars to go, so they always slide off rather than vanish.
     {
       dur: 0.9,
+      hold: 0.9,
       draw(g, t, c) {
         drawWorld(g, BLUE_END, c.T, { turned: { priya: t < 0.2 ? TO_QUEUE : 0 } });
         bars(1 - seg(t, 0.2, 0.8));

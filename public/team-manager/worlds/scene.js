@@ -8,6 +8,14 @@
 //   people.js    the crowd, the crews, the people in the aisles, and the ten she can talk to
 //   cutscene.js  the lights, the tilt, the scan, and the two of them at Newton
 //
+// The way in and out, as every scene in the game has them (entered on the left, left on the right): the cut scene ends
+// at Newton with her setting off to scout and a fade to black, and the hall fades back in at its other end, where she
+// comes in from the concourse through the doorway in the left wall (stage.js enter) with all eight divisions ahead of
+// her. The exploring is the walk back along the hall, past every division's field and the people in its aisles, to
+// Newton's queue, where the teammate waits; the way out is on past Newton's red end and the info desk, through the
+// doorway in the right wall toward Einstein (stage.js exit, TO EINSTEIN), and fields.js move() lets her through the
+// wall's face only there.
+//
 // drawWorld() is the whole hall from a view, back to front: the dark up under the roof, the floors, the stands, the
 // curtains between them, then each field in view with everyone standing on it and past its ends sorted in by their feet,
 // her included, and last, when the cut scene wants them, the dark over the hall while its lamps come on and the lamps'
@@ -23,15 +31,15 @@
 // field draws the part on its side, sorted in behind the people standing in front of it.
 //
 // The matches carry on from the cut scene into walking: stage.js gives walking the page's own clock, so the scene keeps
-// the difference between that and the cut scene's last frame and adds it, and no robot jumps when the bars go (the cut
-// scene's own clock runs on the page's time too, waits for reading and A's hurrying included). Skipped (SKIP, or ?play,
-// which never runs it), walking starts no earlier in the day than the cut scene would have ended: the matches are timed
-// so that Newton's is playing when she gets there (layout.js).
+// the difference between that and the cut scene's last frame and adds it (the cut scene's own clock runs on the page's
+// time too, waits for reading and A's hurrying included). Skipped (SKIP, or ?play, which never runs it), walking starts
+// no earlier in the day than the cut scene would have ended. stage.js doesn't fade a scene in after its cut scene, so
+// the scene does that itself over FADE seconds, while she walks in.
 
-import { W, H, C, useContext, screen, fill } from '../pixel.js';
-import { drawWithShadow } from '../stage.js';
+import { W, H, C, useContext, screen, fill, seg } from '../pixel.js';
+import { drawWithShadow, cover } from '../stage.js';
 import { HERO_LOOK } from '../walker.js';
-import { WORLD, START, DIVISIONS, ox, divisionAt } from './layout.js';
+import { WORLD, START, ENTER, EXIT, DIVISIONS, ox, divisionAt } from './layout.js';
 import { setupFields, visibleDivisions, drawFloors, drawStandsAll, drawField, move } from './fields.js';
 import { drawHall, drawGateways, drawUnlit, drawBeams, PROPS, PROP_BLOCKS } from './hall.js';
 import { PEOPLE, BLOCKS, lookOf, standingIn, reach, prompt, faceTo, talkingSeat, warm } from './people.js';
@@ -113,6 +121,9 @@ const cutscene = makeCutscene(drawWorld);
 const END = cutscene.reduce((t, b) => t + b.dur, 0); // the hall's time on the cut scene's last frame, read straight through
 let shift = END - performance.now() / 1000; // walking's world time is the page's clock plus this
 let where = { x: START.x, y: START.y }; // where she is: for the bubble over whoever's in reach and turning to them
+/** Seconds the hall takes to fade in from the cut scene's black, and when it started (page clock), if it's fading. */
+const FADE = 0.6;
+let fadeFrom = null;
 
 export const scene = {
   // The card under the big screen and the phone's title: short enough for one line at phone width (the page's title
@@ -122,6 +133,8 @@ export const scene = {
   note: 'Push the stick a little to walk, all the way to run; the view follows her along the hall. The walkways run in front of the stands and the aisles between the divisions are open floor. Stand by someone (a student, a scout, a volunteer, someone in the front row) and press A. In the cut scene, A reads on and SKIP jumps to the end. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter for A, Esc to skip.',
   world: WORLD,
   start: START,
+  enter: ENTER,
+  exit: EXIT,
   move: (x, y, dx, dy) => move(x, y, dx, dy, STOPS),
   people: PEOPLE,
   reach,
@@ -131,14 +144,18 @@ export const scene = {
     setupFields();
     warm(0);
   },
-  onFree() {
+  onFree(s) {
     // Played through to its last beat, the hall carries straight on; skipped, it starts no earlier than the cut scene
     // would have ended.
-    shift = (cutscene.played() ? cutscene.clock() : Math.max(cutscene.clock(), END)) - performance.now() / 1000;
+    const now = performance.now() / 1000;
+    shift = (cutscene.played() ? cutscene.clock() : Math.max(cutscene.clock(), END)) - now;
+    // Fade in, unless stage.js is fading the page in already (it opened, or she has just come back in on this page).
+    fadeFrom = s.fadeIn != null && now - s.fadeIn < 0.5 ? null : now;
   },
   draw(g, view, t, s) {
     where = s.me;
     drawWorld(g, view, t + shift, { player: s.player, playerX: s.me.x, talkingSeat: talkingSeat(s), talking: s.talk?.person });
+    if (fadeFrom != null) cover(1 - seg(t, fadeFrom, fadeFrom + FADE));
   },
   cutscene,
 };

@@ -21,8 +21,8 @@ import { C, useContext, camera, screen, fill, rect, disk, text, measure, dither,
 import { tones } from '../cast.js';
 import { beam } from '../lights.js';
 import {
-  ox, DIVISIONS, WORLD, WALL, TOP, STANDS, GATEWAY, SIGN, SCREEN, BUTTON_TABLE, INFO_DESK, BARRIERS, BARRIER_Y, matchState,
-  clockText,
+  ox, DIVISIONS, WORLD, WALL, TOP, STANDS, GATEWAY, SIGN, SCREEN, BUTTON_TABLE, INFO_DESK, BARRIERS, BARRIER_Y, DOOR,
+  matchState, clockText,
 } from './layout.js';
 
 // Dim ramps beside the palette (lit, mid, shade): the curtains, the darker drape behind the stands, and the concrete
@@ -31,6 +31,9 @@ const DRAPE = ['#20264a', '#161a33', '#0e1124'];
 const BACKDRAPE = ['#181d38', '#11152a', '#0b0e1e'];
 const SHADOW = '#0b0e1e'; // a curtain pleat in the shadow of a sign is one step darker than this ramp's shade
 const WALLS = ['#3b4154', '#30354a', '#262a3b'];
+// The concourse outside, through the doorways: its lights are warmer and brighter than the hall's, which are dimmed for
+// the matches, so the ways in and out are the brightest things at either end of the hall.
+const CONCOURSE = ['#8a8270', '#ada48c', '#d2c9ad'];
 const LAST = ox(DIVISIONS.length - 1) + STANDS.x1; // where Newton's stands end and the right pad's curtain starts
 
 // The rows things hang from. The truss's two chords are steel tubes, each an ink row, a lit row, a mid row and an ink
@@ -400,17 +403,24 @@ function einsteinArt(x, y, w, h) {
 
 /**
  * An end wall of the hall, from the roof to the floor: tilt-up concrete panels, their face toward the hall lit at the
- * right end (it faces the light) and in shade at the left, with seams, form-tie holes and an EXIT sign.
+ * right end (it faces the light) and in shade at the left, with seams, form-tie holes and an EXIT sign, and a doorway
+ * through it out to the concourse (layout.js DOOR): the way in, on the left, and the way on to Einstein, on the right.
  */
 function endWall(view, x0, side) {
   if (!inView(view, x0 - 2, x0 + WALL + 2)) return;
   blit(once(`wall-${side}`, WALL, 144 - TOP, () => {
     camera(x0, TOP, 1);
     wallArt(x0, side);
+    doorwayArt(x0, side);
   }), x0, TOP);
-  // The floor running up to the wall, in the wall's shadow: two columns, as dark as the shadows under people.
+  // The floor running up to the wall, in the wall's shadow: two columns, as dark as the shadows under people, broken
+  // where the doorway opens onto the floor.
+  const sx = (side === 'left' ? x0 + WALL : x0 - 2) - view.x;
   G.fillStyle = 'rgba(5, 6, 13, 0.45)';
-  G.fillRect((side === 'left' ? x0 + WALL : x0 - 2) - view.x, HEM + 1 - view.y, 2, 144 - HEM - 1);
+  G.fillRect(sx, HEM + 1 - view.y, 2, DOOR.y0 - HEM);
+  G.fillRect(sx, DOOR.y1 - DOOR.h - view.y, 2, 144 - DOOR.y1 + DOOR.h);
+  spill(view, side);
+  exitSign(view, side);
 }
 function wallArt(x0, side) {
   const x1 = x0 + WALL, left = side === 'left';
@@ -445,15 +455,95 @@ function wallArt(x0, side) {
   rect(cx, cap, cw, 1, '#4a5166');
   // The hall side's edge in ink.
   rect(left ? x1 - 1 : x0, top, 1, bottom - top, C.ink);
-  // EXIT.
-  const sx = left ? x0 + 5 : x0 + 6;
-  rect(sx - 1, 15, 21, 11, C.ink);
-  // The green of cast.js's green shirts, lit along the top and shaded along the bottom.
-  const green = tones.shirtGreen;
-  rect(sx, 16, 19, 9, green[1]);
-  rect(sx, 16, 19, 1, green[2]);
-  rect(sx, 24, 19, 1, green[0]);
-  text('EXIT', sx + 10, 18, { font: 3, color: C.white, align: 'center' });
+}
+
+/**
+ * The doorway through an end wall, over wallArt(): the wall is cut away DOOR.h rows up, as field.js draws its boxes.
+ * The wall behind the opening ends in its cut face toward you, a steel door frame up its corner on the hall's side; across
+ * the opening, a steel threshold along the hall's side and then the concourse floor outside, brighter than the hall's,
+ * the wall behind shading its far edge; then the wall in front, its cut top lit along its back edge, with the frame's
+ * foot on it. The doors themselves stand open, folded back out of sight.
+ */
+function doorwayArt(x0, side) {
+  const x1 = x0 + WALL, left = side === 'left';
+  const { y0, y1, h } = DOOR, back = y0 - h, front = y1 - h;
+  const face = left ? WALLS[2] : WALLS[1];
+  // The hall's side of the wall: its ink edge (wallArt), and the frame and threshold beside it, three columns wide.
+  const edge = left ? x1 - 1 : x0, fx = left ? x1 - 4 : x0 + 1;
+  // The cut face of the wall behind, a few speckles on it, and the ink where it stands on the floor.
+  rect(x0, back, WALL, h, face);
+  rect(edge, back, 1, h, C.ink);
+  for (let i = 0; i < 5; i++) rect(x0 + 2 + Math.floor(rnd(i * 5 + x0 + 70) * (WALL - 6)), back + 1 + Math.floor(rnd(i * 3 + x0 + 71) * (h - 2)), 1, 1, WALLS[1 + (left ? 0 : 1)]);
+  rect(x0, y0, WALL, 1, C.ink);
+  // The passage's floor: the concourse, its far edge in the shade of the wall behind, flecked.
+  const gy = y0 + 1, gh = front - 1 - gy;
+  rect(x0, gy, WALL, gh, CONCOURSE[1]);
+  rect(x0, gy, WALL, 2, CONCOURSE[0]);
+  for (let i = 0; i < 16; i++) {
+    rect(x0 + Math.floor(rnd(i + x0 + 840) * WALL), gy + 3 + Math.floor(rnd(i + x0 + 860) * (gh - 3)), 1, 1, CONCOURSE[i % 3 ? 2 : 0]);
+  }
+  // The threshold across the opening on the hall's side, in place of the wall's edge: steel, lit on its left.
+  const tx = left ? fx : edge;
+  rect(tx, gy, 4, gh, C.steel2);
+  rect(tx, gy, 1, gh, C.steel3);
+  rect(tx + 3, gy, 1, gh, C.steel1);
+  // The door frame up the corner of the wall behind, lit along its top and its left.
+  rect(fx, back - 1, 3, h + 1, C.steel1);
+  rect(fx, back - 1, 3, 1, C.steel3);
+  rect(fx, back, 1, h, C.steel2);
+  // The wall in front: the ink along the back of its cut top, the top lit along that edge, and the frame's foot.
+  rect(x0, front - 1, WALL, 1, C.ink);
+  rect(x0, front, WALL, 1, '#4a5166');
+  rect(edge, front - 1, 1, 144 - front + 1, C.ink);
+  rect(fx, front, 3, 2, C.steel2);
+  rect(fx, front, 3, 1, C.steel3);
+}
+
+/**
+ * The EXIT sign over a doorway, sticking out into the hall from the wall's face on a bracket, as high over the doorway's
+ * floor as a door's top: the green of cast.js's green shirts, lit along the top and shaded along the bottom, white
+ * letters. EXIT_Y is its top row: under Archimedes' second big screen on the left, and above the hems' barrier posts.
+ */
+const EXIT_Y = 37, EXIT_W = 19;
+function exitSign(view, side) {
+  const left = side === 'left', x = left ? WALL + 4 : WORLD.w - WALL - 4 - EXIT_W, lx = left ? WALL - 1 : x - 1;
+  if (!inView(view, lx, lx + EXIT_W + 7)) return;
+  blit(once(`exit-${side}`, EXIT_W + 7, 11, () => {
+    camera(lx, EXIT_Y - 1, 1);
+    // The bracket from the wall's ink edge: a steel arm outlined in ink, level with the sign's middle.
+    const bx = left ? WALL - 1 : x + EXIT_W;
+    rect(bx, EXIT_Y + 2, 6, 3, C.ink);
+    rect(bx + 1, EXIT_Y + 3, 4, 1, C.steel2);
+    rect(x - 1, EXIT_Y - 1, EXIT_W + 2, 11, C.ink);
+    const green = tones.shirtGreen;
+    rect(x, EXIT_Y, EXIT_W, 9, green[1]);
+    rect(x, EXIT_Y, EXIT_W, 1, green[2]);
+    rect(x, EXIT_Y + 8, EXIT_W, 1, green[0]);
+    text('EXIT', x + 10, EXIT_Y + 2, { font: 3, color: C.white, align: 'center' });
+  }), lx, EXIT_Y - 1);
+}
+
+/**
+ * The concourse's light in through a doorway, lying on the hall's floor in front of it: the passage's rows carried on
+ * into the hall in two flat steps, the brighter by the threshold, a checkerboard between them and again where it gives
+ * out, like the light through the practice field's side doors. Flat light over the floor's own colours, under everyone
+ * (drawn before the fields), so whoever stands in it keeps their own.
+ */
+const SPILL = { reach: 44, step: 22, a: [0.22, 0.11] };
+function spill(view, side) {
+  const { reach, step, a } = SPILL, left = side === 'left';
+  const gy = DOOR.y0 + 1, gh = DOOR.y1 - DOOR.h - 1 - gy;
+  // World x of the column u pixels out from the wall's face.
+  const col = (u) => (left ? WALL + u : WORLD.w - WALL - 1 - u);
+  if (!inView(view, Math.min(col(0), col(reach)), Math.max(col(0), col(reach)) + 1)) return;
+  const run = (u0, u1, alpha) => withAlpha(alpha, () => rect(Math.min(col(u0), col(u1 - 1)), gy, u1 - u0, gh, CONCOURSE[2]));
+  const checker = (u0, alpha) => withAlpha(alpha, () => {
+    for (let u = u0; u < u0 + 2; u++) for (let y = gy + ((u + gy) % 2); y < gy + gh; y += 2) rect(col(u), y, 1, 1, CONCOURSE[2]);
+  });
+  run(0, step, a[0]);
+  run(step, reach - 2, a[1]);
+  checker(step, a[0] - a[1]);
+  checker(reach - 2, a[1]);
 }
 
 /**

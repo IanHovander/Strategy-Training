@@ -6,7 +6,8 @@
 //
 // She's come over from the pits, so she comes in on the left, at the blue end by the queue: the cut scene pans along
 // the field from the red end and ends on the queue with her not yet in the picture, and she walks in from off the left
-// edge to START (scene.enter). She leaves on the right, through the gap in the belt barrier past the scoring table.
+// edge to START (scene.enter). She leaves on the right, through the gap in the belt barrier past the scoring table,
+// along the chute's taped lane (gate.js). Everyone standing on the floor stops her the way the queue's carts do (move).
 //
 // The matches carry on from the cut scene into walking: the cut scene keeps its own clock for the field and the crowd
 // (cutscene.js), and walking adds the difference between that and the page's clock on the cut scene's last frame, so no
@@ -16,9 +17,10 @@
 // their places as the blue arm and the red defender, and the two elevators are teams from another row of pits. 5026's
 // robot is on its way to the queue for match 44 (the pits sent it), so it isn't on the field, and the two people in the
 // front row who'd point at it out there say something else here (LINES).
+import { W, useContext, screen } from '../pixel.js';
 import { WORLD_W, makeFloor, drawFieldLive } from '../field.js';
 import { PEOPLE, STANDING, drawWalkway, drawStands, drawStanding, inReach, seatOf, drawPrompt } from '../bleachers.js';
-import { gateParts, moveOut, EXIT } from './gate.js';
+import { gateParts, gateFloor, pitsParts, moveOut, EXIT } from './gate.js';
 import { makeCutscene } from './cutscene.js';
 
 // The people in the front row are sitting down: the phone shows them that way.
@@ -57,6 +59,35 @@ const seated = (p) => (p ? PEOPLE.find((q) => q.id === p.id) : null);
 const START = { x: 50, y: 64, dir: 0 };
 
 /**
+ * Everyone standing on the floor (Priya, Sam, Gus, the queue's two drive team members; the drivers too, though she can't
+ * get to their stations) is in her way like a cart in the queue: a box the width of their shoulders on their feet line,
+ * and field.js's margins round it (her half-width across, two pixels of depth). So she stops beside someone rather than
+ * walking through them, and is never level with them, where she'd be drawn over them. Sam's box leaves the walkway open
+ * behind him and in front of him, on her line along it.
+ */
+const feetAt = (x, y) => STANDING.find((p) => x > p.x - 10 && x < p.x + 10 && y > p.y - 2 && y < p.y + 2);
+/** gate.js's moveOut (the walkway, the floor past the ends and the barrier), with the people in the way: along, then across. */
+function move(x, y, dx, dy) {
+  // Someone she's already level with (?x= put her there) doesn't stop her stepping away.
+  const stop = (nx, ny) => {
+    const p = feetAt(nx, ny);
+    return p && p !== feetAt(x, y);
+  };
+  let [nx, ny] = moveOut(x, y, dx, 0);
+  if (stop(nx, ny)) [nx, ny] = [x, y];
+  let [mx, my] = moveOut(nx, ny, 0, dy);
+  if (stop(mx, my)) [mx, my] = [nx, ny];
+  return [mx, my];
+}
+
+/**
+ * stage.js draws the exit's label as long as its arrow is within 60 pixels of the right edge of the picture, so the
+ * arena's long one would poke in at the edge, cut off, before the arrow does. The label is left off until the arrow is
+ * on the screen: scene.draw notes it each frame, just before stage.js draws the arrow.
+ */
+let exitInView = false;
+
+/**
  * The arena seen through a camera at camX, t seconds into its day: the floor, the stands and the crowd, the walkway,
  * then everything standing sorted back to front with the field (the barrier at the red end too). o: talkingTo (who in
  * the stands is talking, and sits still), cheer (0 to 1, how much of the crowd is up together, bleachers.js), who (her,
@@ -71,7 +102,7 @@ function drawWorld(g, camX, t, o = {}) {
     const q = o.turned?.[p.id] != null ? { ...p, dir: o.turned[p.id] } : p;
     return { y: p.y, draw: () => drawStanding(g, camX, q) };
   });
-  drawFieldLive(g, camX, t, { teams: TEAMS, who: o.who ?? [], more: [...standing, ...gateParts(camX), ...(o.more ?? [])] });
+  drawFieldLive(g, camX, t, { teams: TEAMS, who: o.who ?? [], more: [...standing, ...gateParts(camX), ...pitsParts(camX), ...(o.more ?? [])] });
 }
 
 const cutscene = makeCutscene(drawWorld, { PEOPLE });
@@ -86,22 +117,30 @@ export const scene = {
   start: START,
   // In from off the left edge, past the queuer, as the cut scene ends.
   enter: [[-16, START.y]],
-  exit: EXIT,
+  exit: { ...EXIT, get label() { return exitInView ? EXIT.label : ''; } },
   cutscene,
   // The walkway and the floor past the ends are as far as she goes: the field is for drive teams, and past the scoring
-  // table the barrier stops her except at its gap.
-  move: moveOut,
+  // table the barrier stops her except at its gap. People stop her too.
+  move,
   people: TALKERS,
   reach: (s) => byId[inReach(s.me.x, s.me.y)?.id] ?? null,
-  faceTo: seatOf,
+  // She looks up at someone in the stands, and straight at someone standing on the floor beside her.
+  faceTo: (p) => (p.standing ? p : seatOf(p)),
   prompt: (g, view, p, t) => drawPrompt(g, view.x, p, t),
   setup() {
-    FLOOR ??= makeFloor();
+    if (FLOOR) return;
+    // The floor, with the chute's lane taped out on it at the way out.
+    FLOOR = makeFloor();
+    const prev = useContext(FLOOR.getContext('2d'));
+    screen();
+    gateFloor();
+    useContext(prev);
   },
   onFree() {
     ahead = cutscene.ahead();
   },
   draw(g, view, t, s) {
+    exitInView = EXIT.x - view.x <= W - 4;
     const camX = view.x, x = Math.round(s.me.x) - camX, y = Math.round(s.me.y);
     drawWorld(g, camX, t + ahead, { talkingTo: seated(s.talk?.person), who: [{ x0: x - 8, x1: x + 8, y1: y }], more: [s.player] });
   },

@@ -1,4 +1,5 @@
-// The way out of the arena, past the red end. The floor past the scoring table is roped off from the rest of the hall
+// The ways out of the arena and back, at its two ends. The way out is past the red end. The floor past the scoring
+// table is roped off from the rest of the hall
 // by a belt barrier, the same posts and belts as across the backs of the driver stations (field.js), running front to
 // back a little in from the right edge. In front of the scoring table there's a gap in it, and through the gap two more
 // belts make a short chute out to the right, the way the crowd is let on and off an event's floor; an EXIT sign hangs
@@ -12,10 +13,23 @@
 // edge reads against the concrete the way the queue lane's tape does at the other end. Everything stands on the floor
 // and is sorted in with the field and the people (drawFieldLive's more), in world pixels.
 //
-//   FENCE_X, GAP     the barrier's line and the floor band of the gap in it
-//   EXIT             scene.exit: walking out through the gap
-//   gateParts(camX)  the barrier, the chute and the sign, as { y, draw } for drawFieldLive's more
-//   moveOut          field.js's move, with the barrier in the way except at the gap
+// Seen from here the barrier is one upright line, so its posts and the sign's pole close up the gap on the screen to a
+// few pixels; the floor shows the way instead. The chute's lane is taped out on the concrete like the queue lane at the
+// blue end, yellow dashes just inside its two belts from the barrier off the right edge, so the whole band she walks out
+// along reads as open floor, with the arrow inside it.
+//
+// The way back is at the other end, the left edge past the queue, where she comes in from the pits: nothing to walk
+// through there, just the hall carrying on, so a sign says where it goes. It's the EXIT sign's twin, built the same way
+// on the same tall pole, in blue with PITS and an arrow pointing off the left edge. Its pole stands at the back of the
+// walkway, behind anywhere she can stand, so she walks in past it, in front; the panel is high enough to be clear of
+// Priya's head and the bubble over it.
+//
+//   FENCE_X, GAP       the barrier's line and the floor band of the gap in it
+//   EXIT               scene.exit: walking out through the gap
+//   gateParts(camX)    the barrier, the chute and the sign, as { y, draw } for drawFieldLive's more
+//   gateFloor()        the chute's lane tape, drawn once into the floor (scene.js setup)
+//   pitsParts(camX)    the sign back to the pits at the left edge, the same way
+//   moveOut            field.js's move, with the barrier in the way except at the gap
 
 import { C, rect, text } from '../pixel.js';
 import { WORLD_W, move } from '../field.js';
@@ -54,25 +68,34 @@ function beltAcross(x0, x1, y) {
   rect(x0, y - 19, x1 - x0, 1, BELT[1]);
 }
 
+/** A sign's panel, SIGN's size, its top left at (x0, y0): outlined in ink, lit from the upper left, [shade, mid, lit]. */
+function panel(x0, y0, [shade, mid, lit]) {
+  const { w, h } = SIGN;
+  rect(x0 - 1, y0 - 1, w + 2, h + 2, C.ink);
+  rect(x0, y0, w, h, mid);
+  rect(x0, y0, w, 1, lit);
+  rect(x0, y0, 1, h, lit);
+  rect(x0 + w - 1, y0 + 1, 1, h - 1, shade);
+  rect(x0 + 1, y0 + h - 1, w - 1, 1, shade);
+}
+/** A white arrow, a three-pixel point on a two-pixel tail, five pixels tall from y; dir 1 points right, -1 left. */
+function arrow(x, y, dir) {
+  const at = (dx, dy, w, h) => rect(dir > 0 ? x + dx : x + 4 - dx - (w - 1), y + dy, w, h, C.white);
+  at(0, 2, 2, 1);
+  at(2, 0, 1, 5);
+  at(3, 1, 1, 3);
+  at(4, 2, 1, 1);
+}
+
 /**
  * The EXIT sign on the pole on the gap's far post: a red panel lit from the upper left, the word and an arrow in white,
  * hung off the pole's right side, out over the chute. Its outline's bottom row is at SIGN.under.
  */
 function exitSign(x) {
-  const { w, h } = SIGN, x0 = x + 2, y0 = SIGN.under - h;
-  rect(x0 - 1, y0 - 1, w + 2, h + 2, C.ink);
-  rect(x0, y0, w, h, C.red1);
-  rect(x0, y0, w, 1, C.red2);
-  rect(x0, y0, 1, h, C.red2);
-  rect(x0 + w - 1, y0 + 1, 1, h - 1, C.red0);
-  rect(x0 + 1, y0 + h - 1, w - 1, 1, C.red0);
+  const x0 = x + 2, y0 = SIGN.under - SIGN.h;
+  panel(x0, y0, [C.red0, C.red1, C.red2]);
   text('EXIT', x0 + 3, y0 + 3, { font: 3, color: C.white });
-  // The arrow, a three-pixel point on a two-pixel tail.
-  const ax = x0 + 20, ay = y0 + 3;
-  rect(ax, ay + 2, 2, 1, C.white);
-  rect(ax + 2, ay, 1, 5, C.white);
-  rect(ax + 3, ay + 1, 1, 3, C.white);
-  rect(ax + 4, ay + 2, 1, 1, C.white);
+  arrow(x0 + 20, y0 + 3, 1);
 }
 
 /**
@@ -103,6 +126,35 @@ export function gateParts(camX) {
   }
   return parts;
 }
+
+/**
+ * The chute's lane taped out on the floor, the way field.js tapes the queue lane: three-pixel dashes every four pixels,
+ * just inside each belt's posts (clear of their ink bases, the row of the floor line and the one behind it), from just
+ * past the barrier's line off the right edge. Flat on the floor, so it goes into the floor's canvas once, under
+ * everything that stands up; the context is set and the camera is at the screen.
+ */
+export function gateFloor() {
+  for (const y of [FAR + 1, NEAR - 2]) {
+    for (let x = FENCE_X + 2; x < WORLD_W; x += 4) rect(x, y, 3, 1, C.yel1);
+  }
+}
+
+/**
+ * The sign back to the pits: its pole's foot at the back of the walkway near the left edge, one row behind the nearest
+ * she gets to the stands (field.js's OPEN_Y and WALK_Y start at 56), and the top of its panel, clear above Priya's head
+ * (her feet are at 84, so it's at 36) and the bubble over her (from 34, to the right of the panel).
+ */
+const PITS = { x: 4, y: 55, top: 22 };
+/** The blue sign, the EXIT sign's twin: the arrow first, pointing off the left edge, then PITS. */
+function pitsSign() {
+  const x0 = PITS.x + 2, y0 = PITS.top;
+  post(PITS.x, PITS.y, PITS.y - y0 + 2);
+  panel(x0, y0, [C.blue0, C.blue1, C.blue2]);
+  arrow(x0 + 3, y0 + 3, -1);
+  text('PITS', x0 + 10, y0 + 3, { font: 3, color: C.white });
+}
+/** The sign back to the pits as { y, draw } for drawFieldLive's more, while the left end is in view. */
+export const pitsParts = (camX) => (camX > PITS.x + SIGN.w + 4 ? [] : [{ y: PITS.y, draw: pitsSign }]);
 
 const inGap = (y) => y >= GAP.y0 && y <= GAP.y1;
 /**

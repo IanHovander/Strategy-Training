@@ -14,16 +14,16 @@
 // watching, and slows to a stop on Newton's field, its match playing like the other seven; then it pans back to her.
 // The teammate comes up from 5026's robot in the queue, and the two of them say what the day is about: win Newton and
 // play on Einstein, and scout the other seven divisions in the two matches before their own, because whoever wins
-// those will be waiting there.
+// those will be waiting there. Then she sets off to do it, along the walkway, and the screen fades to black. The walking fades in at the other end of the hall: she comes in through the left wall's doorway (scene.js),
+// to scout her way back along all eight divisions to Newton's queue, where the teammate waits.
 //
 // makeCutscene(drawWorld) gives the beats, in stage.js's form. drawWorld(g, view, t, o) is the scene's: the whole
 // hall seen from view { x, y } at time t, with o = { lights, beams, hero, mate } (how far the lamps have come on, 0 to
 // 1; how strong the cones are, 0 to 1; her, { x, y, dir, gait, dist } or null; the teammate the same, or left out to
 // stand at MATE). Every beat works out its view as a pure function of its own time, draws the hall at c.T (the hall's
 // clock, so an ?at= frame is exactly the frame that plays), then puts the cards, the film bars and the fades on top in
-// screen space. The last frame is the first frame of walking: level, half a screen left of START, her at START turned
-// to the teammate, the teammate at MATE turned to her. Until the bars go, the view stays at the scan's height, so the
-// two of them talk with their heads well clear of the top bar; it comes down to walking's as the bars go.
+// screen space. The view stays at the scan's height to the end, so the two of them talk with their heads well clear of
+// the top bar, and the last frame is black: walking starts somewhere else, and fades in.
 // Every beat's opening (the lamps, the fade up, the place card, the cones) runs on the cut scene's clock, so A moving a
 // beat on early never makes any of them vanish: each carries on into the next beat and finishes on its own time. So do
 // a division's card and the teammate's walk up from the queue.
@@ -33,7 +33,7 @@ import { placeCard, bars, cover, along, dirToward, SPEED } from '../stage.js';
 import { HERO_NAME, TEAMMATE_NAME } from '../cast.js';
 import { HERO_LOOK } from '../walker.js';
 import { TEAMMATE_LOOK } from '../teammate.js';
-import { ox, DIVISIONS, HOME, START, MATE } from './layout.js';
+import { ox, DIVISIONS, HOME, QUEUED, MATE } from './layout.js';
 
 // ---- The camera ----
 // The scan's framing, 8 rows above walking's: under the top film bar the signs and big screens are whole, and under the
@@ -42,9 +42,9 @@ import { ox, DIVISIONS, HOME, START, MATE } from './layout.js';
 // chins), and ends level (y 0), the way walking sees it.
 const OPEN = -56, LEVEL = -8;
 // The tilt comes down onto Archimedes' field, its blue driver station on the left and the blue rocket on the right, and
-// the scan runs from there past her at Newton's walkway (X1: her at START, half a screen in, the framing walking starts
-// from) to a stop on Newton's field at X_END, its cargo ship and both rockets in view, before it pans back to X1.
-const X0 = ox(0) + 120, X1 = START.x - W / 2, X_END = ox(HOME) + 280;
+// the scan runs from there past her at Newton's walkway (X1: her at QUEUED, half a screen in, the two of them in the
+// middle) to a stop on Newton's field at X_END, its cargo ship and both rockets in view, before it pans back to X1.
+const X0 = ox(0) + 120, X1 = QUEUED.x - W / 2, X_END = ox(HOME) + 280;
 
 // The glide's speed, pixels a second, at each view x along the hall: CRUISE between the fields, easing down (a cosine
 // dip, so it never jolts) over each stretch in SLOW to v at its middle x, w pixels either side: on every field, its
@@ -132,7 +132,7 @@ function divisionCard(k, age) {
 // on its cart, where every other division has one of the robot's team, and once the camera has come back to her walks
 // straight up from it, beside the robots and in front of the curtain, with nothing in the way, to stand on her left.
 // She turns to the teammate as the teammate comes up, and they talk face to face, a head's width apart.
-const her = (dir) => ({ x: START.x, y: START.y, dir, gait: 'stand', dist: 0 });
+const her = (dir) => ({ x: QUEUED.x, y: QUEUED.y, dir, gait: 'stand', dist: 0 });
 const FROM = [MATE.x, 102]; // behind the second cart, where the other divisions' queues have someone too (people.js)
 const WALK_UP = [FROM, [MATE.x, MATE.y]];
 const WATCHING = { x: FROM[0], y: FROM[1], dir: 0, gait: 'stand', dist: 0 };
@@ -156,12 +156,18 @@ function teammate(u, jog = false) {
 }
 /** Her meanwhile: facing the camera until she hears them coming, or, if they're jogging, turned to watch them come. */
 function heroAt(u, jog = false) {
-  if (!jog) return her(u < TURNS ? 0 : START.dir);
+  if (!jog) return her(u < TURNS ? 0 : QUEUED.dir);
   const m = teammate(u, true);
-  return her(u >= ARRIVES ? START.dir : dirToward(m.x - START.x, (m.y - START.y) / 0.8));
+  return her(u >= ARRIVES ? QUEUED.dir : dirToward(m.x - QUEUED.x, (m.y - QUEUED.y) / 0.8));
 }
 /** The view's x t seconds into the settle: where the scan stopped on Newton's field, then panning back to her. */
 const settleX = (t) => Math.round(lerp(X_END, X1, easeInOut(seg(t, PAN_AT, PAN_AT + PAN))));
+// Off to scout: she turns away from the teammate and sets off along Newton's walkway, which opens on her right, the
+// teammate turning to watch her go, as the screen fades to black (four hard steps, FADE seconds from FADE_AT). Out of
+// the picture on the right here, in on the left at the far end of the hall (scene.js): the way she's going holds across
+// the cut, as it does from scene to scene.
+const OFF = [[QUEUED.x, QUEUED.y], [QUEUED.x + 100, QUEUED.y + 1]];
+const OFF_AT = 0.15, FADE_AT = 0.45, FADE = 0.8;
 
 // ---- The opening ----
 // The lamps coming on, the fade up out of the dark and the cones all run on the cut scene's clock (c.T) or, for the
@@ -343,12 +349,16 @@ export function makeCutscene(drawWorld) {
       },
     },
     {
-      // The bars go and the view comes down to walking's, and the next frame is hers to walk.
-      dur: 1.0,
+      // She sets off to scout and the screen fades to black, the film bars up to the end; the walking fades in at the
+      // other end of the hall (scene.js).
+      dur: FADE_AT + FADE + 0.15,
       draw(g, t, c) {
-        const view = { x: X1, y: Math.round(lerp(LEVEL, 0, easeInOut(c.k))) };
-        drawWorld(g, c.look(view), c.T, { lights: 1, beams: 0, ...walkedUp(c.begun, t) });
-        bars(1 - c.k);
+        const two = walkedUp(c.begun, t), hero = t < OFF_AT ? two.hero : along(OFF, t - OFF_AT);
+        // Once the teammate is beside her (long since, unless A hurried them), they turn to watch her go.
+        const mate = up >= ARRIVES ? { ...two.mate, dir: dirToward(hero.x - MATE.x, (hero.y - MATE.y) / 0.8) } : two.mate;
+        drawWorld(g, c.look(HELD), c.T, { lights: 1, beams: 0, hero, mate });
+        bars(1);
+        cover(seg(t, FADE_AT, FADE_AT + FADE));
       },
     },
   ];

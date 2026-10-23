@@ -55,9 +55,10 @@ export const ASIDE = { tessa: { x: 234, y: 171 }, owen: { x: 278, y: 171 } };
 export const WALKWAY = { x0: 452, post: 458, y: 159 };
 /** The way out (stage.js exit): the path under the walkway, and the lawn beside it, off the right edge. The whole of
  *  the right edge, from the wall's foot down to the lowest she can stand (place.js blocked()), so wherever she walks
- *  into it she goes on round to the cafeteria rather than walking in place; nobody stands there. Its arrow sits on the
- *  wall's base course just over the path, low enough that its label still shows with the view at the bottom of the
- *  world. */
+ *  into it she goes on round to the cafeteria rather than walking in place; nobody stands or sits anywhere in front of
+ *  it (people.js). Its arrow sits on the wall's base course just over the path, low enough that its label still shows
+ *  with the view at the bottom of the world; for her last steps out along the path or the top of the lawn, where it
+ *  would sit on her, scene.js takes it off the screen. */
 export const EXIT = { x: 494, y0: WALL_Y + 4, y1: WORLD.h - 6, label: 'TO THE CAFETERIA', sign: { y: 136 } };
 /**
  * The way in: once the meeting's over she's been into the shop, and comes back out of its door. She walks in from the

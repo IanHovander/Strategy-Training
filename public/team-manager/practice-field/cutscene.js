@@ -22,12 +22,13 @@
 //                no dialog box over her, Kai stepping over to his place in front of the carpet's tape to meet her. The
 //                camera follows her the way it does when you walk, the film bars' height lower.
 //  11 answer     no cut: the camera goes down a little, so her face clears the dialog box, and she answers in profile,
-//                turned to the field and the mentor up it; then it comes back up as the robot puts a hatch on level
-//                three, the film bars slide away, and the last frame is a few pixels above the walkable view, which
-//                walking eases on from.
+//                turned to the field and the mentor up it; then, as soon as her answer has been read, it comes back up
+//                (as the robot puts a hatch on level three, at the auto pace), the film bars slide away, and the last
+//                frame is a few pixels above the walkable view, which walking eases on from. A can't cut that last
+//                slide short (the beat holds for its whole length), so the hand-over never jumps; only SKIP can.
 // Every frame is a pure function of time: t, seconds into the beat, places the camera and the people (held still once a
-// beat runs past its length waiting for its words to be read; in beats 10 and 11 also of when A read the call or ended
-// beat 10), and the robot runs on its own clock, robotU. Words show
+// beat runs past its length waiting for its words to be read; in beats 10 and 11 also of when A read the call, ended
+// beat 10 or read her answer), and the robot runs on its own clock, robotU. Words show
 // in the dialog box, which covers the screen from row 90 down, so every shot keeps the faces that matter above it.
 //
 //   makeCutscene(world)                 the beats, for stage.js
@@ -193,8 +194,10 @@ export const CUT_LINES = SAY;
 // the level 3 hatch goes on whole below the top of the screen; walking eases the rest of the way (HANDOFF.viewY).
 // An A that ends beat 10 before she's at her mark makes beat 11 carry on her run (and Kai's step over) from wherever
 // beat 10 had got to, setting off at once if she hadn't yet (in the doorway if she hadn't come in): she never jumps.
-// Beat 11's words and its camera wait for her to get to her mark (answerAt), so the box is never over her run. If A
-// ends beat 11 early too, walking starts from wherever she was (HANDOFF.hero).
+// Beat 11's words and its camera wait for her to get to her mark (answerAt), so the box is never over her run, and the
+// camera comes back up as soon as her answer has been read (backAt), so there's no still moment after it for a tap to
+// fall into. A can't end beat 11 (its hold is its whole length), so the film bars always slide all the way off; if SKIP
+// ends it, walking starts from wherever she was (HANDOFF.hero).
 // The robot's clock is set so that, at the auto pace, the level 3 hatch goes on as the camera comes back up to it.
 const IN = [[DOORWAY.x, DOORWAY.y], [42, 118], [80, 144]];
 const ON = [[80, 144], [84, 182], [START.x, START.y]];
@@ -207,7 +210,8 @@ const ON_AT = SAY.her.at + pageTime(SAY.her.lines[0]) + 0.1;
 const arrival = (onAt) => (onAt <= IN_END ? IN_AT + WAY_T : onAt + ON_T);
 const kaiFrom = (onAt) => arrival(onAt) - 0.8;
 const HER_DUR = arrival(ON_AT) + 0.2;
-/** Beat 11, at the auto pace: the camera goes down at once and comes back up at BACK, when her answer has been read. */
+/** Beat 11, at the auto pace: the camera goes down at once and comes back up at BACK, when her answer has been read
+ *  (sooner if A reads it sooner: backAt). */
 const READ_ANSWER = SAY.answer.lines.reduce((n, page) => n + pageTime(page), 0);
 const BACK = SAY.answer.at + READ_ANSWER + 0.1, ANSWER_DUR = BACK + 0.75;
 /** The camera while she answers: low enough that her face clears the dialog box. */
@@ -223,8 +227,9 @@ const ANSWER_U = PLACED - (BACK + 0.5), HER_U = ANSWER_U - HER_DUR;
  *  stage.js counted it as; viewY, where the camera was, for walking to ease on from; hero, where she was ({ x, y, dir }),
  *  in case A ended the last beat while she was still running (null if it was never drawn). */
 let lastT = null, lastView = null, lastHero = null, lastKai = null;
-/** How far into beat 10 its last frame was (short of its length if A ended it early), and when its page was read. */
-let herEnd = null, readAt = null;
+/** How far into beat 10 its last frame was (short of its length if A ended it early), and when its page was read; and
+ *  when beat 11's page, her answer, was read (on beat 11's clock). */
+let herEnd = null, readAt = null, answerReadAt = null;
 export const HANDOFF = {
   get late() { return (lastT ?? ANSWER_DUR) - ANSWER_DUR; },
   get robotU() { return HER_U + (herEnd ?? HER_DUR) + (lastT ?? ANSWER_DUR); },
@@ -248,9 +253,13 @@ function answerRun() {
   const h0 = herEnd ?? herDur(), hStart = Math.max(h0, IN_AT), onAt = Math.min(runAt(), hStart), kai = kaiFrom(runAt());
   return { hStart, onAt, arrive: arrival(onAt) - hStart, kai: h0 >= kai ? kai : Math.max(hStart, kaiFrom(onAt)) };
 }
-/** Beat 11: her answer starts once she's at her mark, and BACK comes with it. */
+/** Beat 11: her answer starts once she's at her mark, and BACK comes with it: the camera comes back up and the film
+ *  bars slide away a moment after her answer has been read, at the auto pace or as soon as A has read it. */
 const answerAt = () => Math.max(SAY.answer.at, answerRun().arrive + 0.3);
-const backAt = () => answerAt() + READ_ANSWER + 0.1;
+const backAt = () => {
+  const at0 = answerAt();
+  return Math.max(at0 + 0.1, Math.min(at0 + READ_ANSWER, answerReadAt ?? Infinity) + 0.1);
+};
 
 // Kai's head would show over the bottom bar at the right edge of the shot of the doors, so he waits just beyond it and
 // steps over to his place in front of the carpet's tape as she comes round the front.
@@ -273,8 +282,9 @@ function heroPath(h, onAt) {
   if (h < onAt) return then(IN, h - IN_AT, IN_END - IN_AT, 2);
   return then(ON, h - onAt, ON_T, START.dir);
 }
-/** The hallway doors, open as she comes through them. */
-const doorAt = (h) => seg(h, 0.2, 0.5) - seg(h, 2.4, 2.7);
+/** The hallway doors, flying open as she bursts through them: half way round in her first frame on the threshold, so
+ *  the leaves frame her as she comes, and all the way a moment later; shut again once she's well clear. */
+const doorAt = (h) => seg(h, IN_AT - 0.1, IN_AT + 0.2) - seg(h, 2.4, 2.7);
 /** The follow camera, its film bars' height lower while k (0-1) of them is up, so her feet stay on the floor above the
  *  bottom bar. */
 const followBarred = (x, y, k) => {
@@ -377,6 +387,7 @@ export function makeCutscene(world) {
       lastKai = null;
       herEnd = null;
       readAt = null;
+      answerReadAt = null;
       shoot(g, driftX(tc), SUN_Y, 2, c.T, sunny);
       bars(easeOut(seg(t, 0, 0.8)));
       placeCard(t - 0.6, CARD.name, CARD.sub); // in at 0.8 (its first 0.2 s are off the screen), gone by 4.6
@@ -452,11 +463,13 @@ export function makeCutscene(world) {
       bars(1);
     }, { ...SAY.her, auto: true, look: look('okafor') }),
     // 11 answer: her answer from her mark, the camera down for it and back up after, to a little above the walkable view.
-    // The bars slide away at the end. If beat 10 was cut short she runs the rest of the way first, and the words and the
-    // camera wait for her.
+    // The bars slide away at the end, as soon as her answer has been read. If beat 10 was cut short she runs the rest of
+    // the way first, and the words and the camera wait for her.
     beat(() => backAt() + 0.75, (g, t, tc, c) => {
+      if (lastT != null && t < lastT) answerReadAt = null; // beat 11 starts again
       lastT = t;
-      const run = answerRun(), h = run.hStart + tc, at0 = answerAt(), back = at0 + READ_ANSWER + 0.1;
+      if (answerReadAt == null && live(beats[11]) && window.stage.cut.read) answerReadAt = tc;
+      const run = answerRun(), h = run.hStart + tc, at0 = answerAt(), back = backAt();
       const hero = heroPath(h, run.onAt), barK = 1 - seg(tc, back, back + 0.6);
       const view = followBarred(hero.x, hero.y, barK);
       const up = Math.round(6 * seg(tc, back, back + 0.5));
@@ -475,5 +488,9 @@ export function makeCutscene(world) {
   ];
   // Her answer waits for her to be at her mark (stage.js reads say.at as the beat starts, when beat 10 has ended).
   Object.defineProperty(beats[11].say, 'at', { get: answerAt, enumerable: true });
+  // And A doesn't end beat 11 (stage.js ignores it until a beat's hold has passed): once her answer is read the camera
+  // rises and the film bars slide away by themselves, all the way, so the last frame is always the walking view. SKIP
+  // still ends it, a deliberate cut.
+  Object.defineProperty(beats[11], 'hold', { get: () => backAt() + 0.75, enumerable: true });
   return beats;
 }
