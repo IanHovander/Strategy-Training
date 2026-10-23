@@ -175,32 +175,43 @@ Black screen, crowd noise. Card: **ALLIANCE SELECTION, SATURDAY 12:38 PM.** A te
 averages and a few notes, nothing more. The captain sets the target without meaning to: "We've never made a final.
 It's my last year."
 
-You're seed 4, an alliance captain. Seeds 1 to 3 pick quickly over the MC. Then it's your turn: **45 seconds**, four
-cards. (Teams and numbers are placeholders to tune.)
+You're seed 4, an alliance captain. Seeds 1 to 3 pick quickly over the MC. Then it's your turn: **45 seconds** on the
+scouting tablet, with your robot pinned at the top for reference and two cards to choose from. Each card shows the team
+number, its average (big), one short note and its ten qualification matches as a strip of boxes: seven on Friday, three
+on Saturday morning. The team numbers are made up.
 
-| Card | Notebook says | The truth |
+| Card | The tablet says | The truth |
 |---|---|---|
-| **Your robot** | avg 30: rocket hatches, Level 3 climb | — |
-| **7461, the showpiece** | **avg 41**: rocket hatches, Level 3 climb, sandstorm | Great robot, wrong partner: it does what you do |
-| **6834, the workhorse** | avg 31: cargo into the cargo ship, Level 2 climb, never broken | The best pick on what you know |
-| **6417** | avg 22: "?" | Broke a chain in each of its first five matches; since the fix, avg 36. The best pick, if you knew |
-| **8724, the wall** | avg 18: defense | Not yet (see pass 2) |
+| **Your robot, 5026** | avg 30, all ten boxes filled | — |
+| **7461** | **avg 41**, the biggest number on the screen; "BIG. FAST. LOUD FANS." Seven boxes filled, then **three empty** | It sat dead for all three Saturday matches. The scouts left the boxes blank, and the app's average skips blanks. |
+| **6834** | avg 31, all ten boxes filled; "NEVER BROKEN DOWN." | Steady, and still running. The right pick. |
 
-**The trap is that averages don't add up.** The HAB has one Level 3 platform per alliance, so two Level 3 climbers
-only ever get 12 points between them, not 24. Both robots also feed hatches from the same loading station and queue
-behind each other. On paper you and 7461 make 71 points; together you average about 51. You and 6834 average 61.
+**The trap is that the average skips the matches the robot didn't play.** The senior strategist's page is from Friday
+night, when 7461 really was the best robot at the event. On Saturday morning it died three times, and an average that
+leaves out the blank boxes still says 41.
 
-**It's fair** because the notebook says "Level 3 climb" on both cards, and because the top three seeds passed on a
-41-point robot. The MC even says so: "Nobody's taken 7461 yet. Their loss!" A sharp player asks why.
+**It's fair** because the empty boxes are on screen, the other card says it has never broken down, and the three seeds
+above you passed on a 41. A sharp player asks why.
 
-**A wrong pick:** the quarterfinals play out quickly and you lose (dice nudged, as at Event 1). The replay shows it
-in one picture: both robots drive up to the one Level 3 platform and one has nowhere to go.
+**After the pick:** "6834 ACCEPTS!" (or 7461), then the bet log's stamp, GOOD CALL or BAD CALL, with one picture and
+one line. The picture is 7461's strip, its blank boxes turning over to show what they were:
 
-> On paper: 41 + 30 = 71. Together: 51.
-> 6834 would have made 61, because it scores where you don't.
+> FRIDAY 41 · SATURDAY 0, 0, 0
+>
+> **Look at the matches, not the average.**
 
-Then it rewinds: "WELCOME TO ALLIANCE SELECTION! HOW ARE WE FEELING, EVERYBODY?!" The character: *"...didn't this
-just happen?"* Norbert's ear glows. The second rewind, the character starts finishing the MC's lines.
+A wrong pick rewinds to the start of the pick clock, Norbert's 26 ear glowing in the corner, and she thinks:
+*"...didn't this just happen?"* A right pick goes on to the quarterfinals (beat 2); for now that's a "to be continued"
+card. Not built yet: a wrong pick's quarterfinals played out and lost before the rewind, and the rewind's time-travel
+look ("Building the opening", part 3).
+
+**Why not "averages don't add up"?** The first version of this puzzle had 7461 and your robot both climbing to Level 3
+and feeding from the same loading station, so the pair would score far less than the sum of their averages. The 2019
+rules don't support that: the second climber still gets Level 2 (6 points), and each alliance has two loading stations,
+so the overlap costs about 6 points, not 20. Students who know Deep Space would call the trap unfair. A blank box that
+the average quietly skips is just as real a scouting mistake, and the evidence is right there on the card.
+
+The tablet is built in `public/team-manager/opening/` (`pick.js`, `tablet.js`, `teams.js`).
 
 ### Beat 2: the quarterfinal endgame call
 

@@ -19,7 +19,7 @@
 <body>
 <div class="page">
   <h1>Blue Banner: the opening</h1>
-  <p class="intro">The first minute of the game. Saturday, 12:38 PM, alliance selection. Her team is seed 4, an alliance captain, and the senior strategist who was meant to make the pick has just texted in sick. Down on the floor with the team reps, the co-captain hands her the pick list, and Norbert for luck. Then MC Robin calls her up to the field, and the 45-second pick clock starts. The scouting dashboard that goes under the clock is still to be built, so for now the clock counts down over a placeholder.</p>
+  <p class="intro">The first minute of the game. Saturday, 12:38 PM, alliance selection. Her team is seed 4, an alliance captain, and the senior strategist who was meant to make the pick has just texted in sick. Down on the floor with the team reps, the co-captain hands her the pick list, and Norbert for luck. Then MC Robin calls her up to the field, and the 45-second pick clock starts. The clock counts down over the scouting tablet: two teams to choose from, and one thing to notice.</p>
 
   <section class="card" aria-labelledby="play-h">
     <h2 id="play-h">Watch it</h2>
@@ -37,7 +37,7 @@
       <li><b>The handoff:</b> "THE LIST IS YOURS." Riley holds Norbert out: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2014." Then a cut to their hands at twice the size as Norbert passes from Riley's red sleeves to her, and his 26 ear glints once. This shot holds too.</li>
       <li><b>Her:</b> close on her with Norbert in her arms: "...OKAY." From here on, Norbert sits in the top left corner with his battery voltage.</li>
       <li><b>Her call, about 2 s:</b> the first three alliances have picked meanwhile. Robin calls "5026, COME ON UP!" over the audience display, which shows alliances 1 to 3 filled, row 4 lit and the clock at 0:45. Then a cut to her walking up through the gate to the field, with Riley watching her go.</li>
-      <li><b>The pick:</b> a hard cut to the pick. The clock slams in at 0:45 and starts counting as soon as the pick is hers.</li>
+      <li><b>The pick:</b> a hard cut to the scouting tablet. The clock slams in at 0:45 and starts counting as soon as the pick is hers. The stick (or the arrow keys) moves between the two cards, A picks, and the invite asks INVITE or BACK. Then the bet log: a right pick goes on to TO BE CONTINUED; a wrong one shows why and rewinds the clock, Norbert's ear glowing.</li>
     </ol>
   </section>
 
@@ -56,10 +56,10 @@
       <li><b>Riley</b> is a new character on the walker rig. A senior in the team's red hoodie with the panther badge, black jeans, and a hand-drawn head: a tall curly top over short sides, held back by a white sweatband, so Riley stands out from her, the teammate and every rep. Riley hugs Norbert in the walker's clap pose and holds him out in the drive pose.</li>
       <li><b>Norbert</b> is drawn three ways. In someone's arms he's a new 12x14 sprite, drawn by hand from the 16x19 corner one. In the handoff he's the full 36x44 sprite at twice the size. After the handoff he's in the corner, with 12.4V beside him: enough charge to rewind a few minutes, not yet enough to reach Thursday (12.9V comes after the semifinal).</li>
       <li><b>Her phone</b> is a dark-mode texting screen, with her fingers round its edge and her thumb on the side. The words use the game's 5x7 letters.</li>
-      <li><b>The pick</b> is a placeholder for the scouting dashboard, which is separate work. It has the header with THE PICK and the clock, a bar that drains under the clock, a card pinned for her robot and four empty cards. The last ten seconds of the clock flash, and at zero it says TIME!</li>
+      <li><b>The pick</b> is the scouting tablet (pick.js, tablet.js, teams.js): the clock and its draining bar, her robot pinned for reference, and two cards, each with the team number, a big average, one note and its ten matches as boxes. 7461 shows 41, the biggest number on the screen, but its three Saturday boxes are blank: it sat dead, and the app's average skips blanks. 6834 shows 31 and never broke. The lesson, in one line: look at the matches, not the average.</li>
     </ul>
   </section>
-  <p class="foot">The scene is in this folder: cutscene.js (the shots), cocaptain.js, phone.js, handoff.js, norbert-held.js, pick.js and scene.js. It borrows alliance selection's set.js, people.js, mc.js and layout.js, and runs on the shared stage.js.</p>
+  <p class="foot">The scene is in this folder: cutscene.js (the shots), cocaptain.js, phone.js, handoff.js, norbert-held.js, pick.js, tablet.js, teams.js and scene.js. It borrows alliance selection's set.js, people.js, mc.js and layout.js, and runs on the shared stage.js.</p>
 </div>
 <script type="module">
   import { runScene } from '../stage.js';

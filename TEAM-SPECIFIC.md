@@ -71,6 +71,9 @@ colour, so it can follow the new team colour or stay as a UI accent.
 | `norbert-held.js` | `ROWS`, `PAL` ~23-43; `drawHud()` ~68 | Norbert drawn 12x14 for someone to hold, with his 26 ear; the corner with Norbert and his voltage | Redraw as the new mascot (with `norbert.js`). |
 | `handoff.js` | header; the glint ~109 | The 26 ear glinting as he's handed over | Follows `norbert.js`; reword. |
 | `index.html` | intro and "The shots"; "How it's made" | Norbert, "SINCE 2014", "5026, COME ON UP!", "the team's red hoodie with the panther badge", the 26 ear | Update. |
+| `teams.js` | `OURS` ~20 | '5026' on the scouting tablet: her robot's pinned row and "5026 RESPECTFULLY INVITES TEAM ..." | The new number. The other teams (7461, 6834) are made up; keep them made up. |
+| `tablet.js` | `pinned()` ~145-150 | Her robot's row: a team-red stripe (`C.red1`) and YOUR ROBOT in pale red (`C.red3`) | The team colour, or keep as a UI accent. |
+| `pick.js` | `drawPickScreen()` ~130-151 | Norbert's 26 ear glowing in the corner as the pick rewinds (`drawHud({ glow })`), and pulsing on a wrong pick's bet log | Follows `norbert.js` and `norbert-held.js`. |
 
 ### Team meeting (`public/team-manager/team-meeting/`)
 
@@ -207,3 +210,4 @@ These build the portraits and sprites in `public/team-manager/`; change them and
 | --- | --- | --- | --- |
 | `docs/blue-banner-design.md` | section 3, "The device and the clues" | Norbert's label "Property of 26, Class of 2015": the team started in 2014, so its first class graduated in 2015 | The new team's first graduating class, and its mascot. |
 | `docs/blue-banner-design.md` | section 5, "Building the opening" (the handoff) | "He's been to every event since 2014" | The year the new team started. |
+| `docs/blue-banner-design.md` | section 5, beat 1 (the selection puzzle) | "Your robot, 5026" in the tablet's table; Norbert's 26 ear glowing on the rewind | The new number and mascot. |
