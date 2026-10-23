@@ -6,13 +6,15 @@
 // the division on its left, over that field's scoring table, with the match on its field: the score, the clock and the
 // qualification match number, live from layout.js matchState(). So every aisle shows where one division ends and the
 // next begins. Past Newton the curtain carries on to the end of the hall with Newton's screen and a yellow sign for
-// Einstein (the finals are in another hall: this is the way out), and a concrete wall with an EXIT sign closes off each
-// end; the curtain by the left wall has a second Archimedes screen. On the floor stand two tables: the button traders'
-// and the info desk.
+// Einstein (the finals are in another hall: this is the way out), and a concrete wall closes off each end, a doorway
+// through it to the concourse with the concourse's light on the floor in front: the way in on the left, and on the
+// right the way on to Einstein, with a red EXIT sign over it like the practice field's. The curtain by the left wall
+// has a second Archimedes screen. On the floor stand two tables: the button traders' and the info desk.
 // Everything is in world pixels through pixel.js's camera, culled to the view: the hall is 6600 pixels long. What never
 // changes is drawn once into pixel.js layers and blitted after; a big screen is drawn again only when its numbers change.
 //   drawHall(g, view, t, { lights })  rows above 0: ceiling, truss, lamps, the drape behind the stands (before the stands)
-//   drawGateways(g, view, t)          the curtains, signs, screens and end walls (after the stands, before the fields)
+//   drawGateways(g, view, t)          the curtains, signs, screens, end walls and doorways (after the stands, before
+//                                     the fields)
 //   PROPS, PROP_BLOCKS                the two tables and the hems' barriers, to sort in with the fields, and the boxes
 //                                     that stop her
 //   drawBeams(g, view, t, a)          the lamps' spot cones, in screen space, drawn last
@@ -22,7 +24,7 @@ import { tones } from '../cast.js';
 import { beam } from '../lights.js';
 import {
   ox, DIVISIONS, WORLD, WALL, TOP, STANDS, GATEWAY, SIGN, SCREEN, BUTTON_TABLE, INFO_DESK, BARRIERS, BARRIER_Y, DOOR,
-  matchState, clockText,
+  EXIT_SIGN, matchState, clockText,
 } from './layout.js';
 
 // Dim ramps beside the palette (lit, mid, shade): the curtains, the darker drape behind the stands, and the concrete
@@ -32,8 +34,9 @@ const BACKDRAPE = ['#181d38', '#11152a', '#0b0e1e'];
 const SHADOW = '#0b0e1e'; // a curtain pleat in the shadow of a sign is one step darker than this ramp's shade
 const WALLS = ['#3b4154', '#30354a', '#262a3b'];
 // The concourse outside, through the doorways: its lights are warmer and brighter than the hall's, which are dimmed for
-// the matches, so the ways in and out are the brightest things at either end of the hall.
-const CONCOURSE = ['#8a8270', '#ada48c', '#d2c9ad'];
+// the matches, so the ways in and out are the brightest things at either end of the hall. Its floor is cast.js's khaki
+// ramp (shade, mid, lit), a house ramp.
+const CONCOURSE = tones.khaki;
 const LAST = ox(DIVISIONS.length - 1) + STANDS.x1; // where Newton's stands end and the right pad's curtain starts
 
 // The rows things hang from. The truss's two chords are steel tubes, each an ink row, a lit row, a mid row and an ink
@@ -403,24 +406,27 @@ function einsteinArt(x, y, w, h) {
 
 /**
  * An end wall of the hall, from the roof to the floor: tilt-up concrete panels, their face toward the hall lit at the
- * right end (it faces the light) and in shade at the left, with seams, form-tie holes and an EXIT sign, and a doorway
- * through it out to the concourse (layout.js DOOR): the way in, on the left, and the way on to Einstein, on the right.
+ * right end (it faces the light) and in shade at the left, with seams and form-tie holes, and a doorway through it out
+ * to the concourse (layout.js DOOR): the way in, on the left, and the way on to Einstein, on the right, under its EXIT
+ * sign.
  */
 function endWall(view, x0, side) {
-  if (!inView(view, x0 - 2, x0 + WALL + 2)) return;
-  blit(once(`wall-${side}`, WALL, 144 - TOP, () => {
-    camera(x0, TOP, 1);
-    wallArt(x0, side);
-    doorwayArt(x0, side);
-  }), x0, TOP);
-  // The floor running up to the wall, in the wall's shadow: two columns, as dark as the shadows under people, broken
-  // where the doorway opens onto the floor.
-  const sx = (side === 'left' ? x0 + WALL : x0 - 2) - view.x;
-  G.fillStyle = 'rgba(5, 6, 13, 0.45)';
-  G.fillRect(sx, HEM + 1 - view.y, 2, DOOR.y0 - HEM);
-  G.fillRect(sx, DOOR.y1 - DOOR.h - view.y, 2, 144 - DOOR.y1 + DOOR.h);
+  if (inView(view, x0 - 2, x0 + WALL + 2)) {
+    blit(once(`wall-${side}`, WALL, 144 - TOP, () => {
+      camera(x0, TOP, 1);
+      wallArt(x0, side);
+      doorwayArt(x0, side);
+    }), x0, TOP);
+    // The floor running up to the wall, in the wall's shadow: two columns, as dark as the shadows under people, broken
+    // where the doorway opens onto the floor.
+    const sx = (side === 'left' ? x0 + WALL : x0 - 2) - view.x;
+    G.fillStyle = 'rgba(5, 6, 13, 0.45)';
+    G.fillRect(sx, HEM + 1 - view.y, 2, DOOR.y0 - HEM);
+    G.fillRect(sx, DOOR.y1 - DOOR.h - view.y, 2, 144 - DOOR.y1 + DOOR.h);
+  }
+  // The light and the sign reach out into the hall, so they come into view before the wall does.
   spill(view, side);
-  exitSign(view, side);
+  if (side === 'right') exitSign(view);
 }
 function wallArt(x0, side) {
   const x1 = x0 + WALL, left = side === 'left';
@@ -500,50 +506,57 @@ function doorwayArt(x0, side) {
 }
 
 /**
- * The EXIT sign over a doorway, sticking out into the hall from the wall's face on a bracket, as high over the doorway's
- * floor as a door's top: the green of cast.js's green shirts, lit along the top and shaded along the bottom, white
- * letters. EXIT_Y is its top row: under Archimedes' second big screen on the left, and above the hems' barrier posts.
+ * The EXIT sign over the right doorway (layout.js EXIT_SIGN), the same as the practice field's over its side doors:
+ * white letters on red in an ink border, lit along the top and shaded along the bottom, here on a steel arm out of the
+ * wall's face at its middle. It hangs well over the doorway, so whoever walks out through the passage under it has their
+ * head below it. The way in, on the left, has none: it isn't a way out.
  */
-const EXIT_Y = 37, EXIT_W = 19;
-function exitSign(view, side) {
-  const left = side === 'left', x = left ? WALL + 4 : WORLD.w - WALL - 4 - EXIT_W, lx = left ? WALL - 1 : x - 1;
-  if (!inView(view, lx, lx + EXIT_W + 7)) return;
-  blit(once(`exit-${side}`, EXIT_W + 7, 11, () => {
-    camera(lx, EXIT_Y - 1, 1);
-    // The bracket from the wall's ink edge: a steel arm outlined in ink, level with the sign's middle.
-    const bx = left ? WALL - 1 : x + EXIT_W;
-    rect(bx, EXIT_Y + 2, 6, 3, C.ink);
-    rect(bx + 1, EXIT_Y + 3, 4, 1, C.steel2);
-    rect(x - 1, EXIT_Y - 1, EXIT_W + 2, 11, C.ink);
-    const green = tones.shirtGreen;
-    rect(x, EXIT_Y, EXIT_W, 9, green[1]);
-    rect(x, EXIT_Y, EXIT_W, 1, green[2]);
-    rect(x, EXIT_Y + 8, EXIT_W, 1, green[0]);
-    text('EXIT', x + 10, EXIT_Y + 2, { font: 3, color: C.white, align: 'center' });
-  }), lx, EXIT_Y - 1);
+function exitSign(view) {
+  const { x0: x, y0: y, w, h } = EXIT_SIGN, face = WORLD.w - WALL; // face: the wall's ink edge
+  if (!inView(view, x, face + 2)) return;
+  blit(once('exit', face + 2 - x, h, () => {
+    camera(x, y, 1);
+    // The arm, outlined in ink, from the sign's right edge into the wall's edge.
+    rect(x + w, y + 3, face + 2 - x - w, 3, C.ink);
+    rect(x + w, y + 4, face - x - w, 1, C.steel2);
+    rect(x, y, w, h, C.ink);
+    rect(x + 1, y + 1, w - 2, h - 2, C.red1);
+    rect(x + 1, y + 1, w - 2, 1, C.red2);
+    rect(x + 1, y + h - 2, w - 2, 1, C.red0);
+    text('EXIT', x + 10, y + 2, { font: 3, color: C.white, align: 'center' });
+  }), x, y);
 }
 
 /**
  * The concourse's light in through a doorway, lying on the hall's floor in front of it: the passage's rows carried on
- * into the hall in two flat steps, the brighter by the threshold, a checkerboard between them and again where it gives
- * out, like the light through the practice field's side doors. Flat light over the floor's own colours, under everyone
- * (drawn before the fields), so whoever stands in it keeps their own.
+ * into the hall in two flat steps, the brighter by the threshold, two columns of checkerboard between them and again
+ * where it gives out, their far edges slanting, like the light through the practice field's side doors. Like that
+ * light it relights the floor to fixed colours rather than laying a tint over it: the hall's concrete and its two
+ * speckles (field.js), warmer and a step up in the dim step and two in the bright one, with the practice field's own
+ * lit-floor colours, so the bright step is still dimmer than the concourse floor beyond the threshold. Drawn once a
+ * side, over the floor and under everyone.
  */
-const SPILL = { reach: 44, step: 22, a: [0.22, 0.11] };
+const SPILL = { reach: 44, step: 22, slope: 0.35 };
+// The concrete, its lighter speckle and its darker one, in each step.
+const SPILL_HI = ['#857c60', '#948a6c', '#7c7458'], SPILL_LO = ['#6c6552', '#76705c', '#625d4c'];
 function spill(view, side) {
-  const { reach, step, a } = SPILL, left = side === 'left';
-  const gy = DOOR.y0 + 1, gh = DOOR.y1 - DOOR.h - 1 - gy;
-  // World x of the column u pixels out from the wall's face.
-  const col = (u) => (left ? WALL + u : WORLD.w - WALL - 1 - u);
-  if (!inView(view, Math.min(col(0), col(reach)), Math.max(col(0), col(reach)) + 1)) return;
-  const run = (u0, u1, alpha) => withAlpha(alpha, () => rect(Math.min(col(u0), col(u1 - 1)), gy, u1 - u0, gh, CONCOURSE[2]));
-  const checker = (u0, alpha) => withAlpha(alpha, () => {
-    for (let u = u0; u < u0 + 2; u++) for (let y = gy + ((u + gy) % 2); y < gy + gh; y += 2) rect(col(u), y, 1, 1, CONCOURSE[2]);
-  });
-  run(0, step, a[0]);
-  run(step, reach - 2, a[1]);
-  checker(step, a[0] - a[1]);
-  checker(reach - 2, a[1]);
+  const { reach, step, slope } = SPILL, left = side === 'left';
+  const gy = DOOR.y0 + 1, gh = DOOR.y1 - DOOR.h - 1 - gy, x0 = left ? WALL : WORLD.w - WALL - reach;
+  if (!inView(view, x0, x0 + reach)) return;
+  blit(once(`spill-${side}`, reach, gh, () => {
+    camera(x0, gy, 1);
+    for (let y = gy; y < gy + gh; y++) {
+      // u: columns out from the wall's face; the steps reach a little less far on each row nearer the front.
+      for (let u = 0, d = Math.round(slope * (y - gy)); u < reach; u++, d++) {
+        const x = left ? WALL + u : WORLD.w - WALL - 1 - u, even = (x + y) % 2 === 0;
+        const lit = d < step ? SPILL_HI : d < step + 2 ? (even ? SPILL_LO : SPILL_HI)
+          : d < reach - 2 ? SPILL_LO : d < reach && !even ? SPILL_LO : null;
+        if (!lit) continue;
+        const r = rnd(x * 0.71 + y * 3.1 + 17);
+        rect(x, y, 1, 1, lit[r < 0.015 ? 1 : r < 0.03 ? 2 : 0]);
+      }
+    }
+  }), x0, gy);
 }
 
 /**

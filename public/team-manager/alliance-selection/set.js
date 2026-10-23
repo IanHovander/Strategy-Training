@@ -14,7 +14,7 @@
 // screen on two truss legs showing the alliances as they're picked, the pick clock and all eight backups; and below it
 // the way out, built like the arena's past its scoring table (arena/gate.js): the same belt barrier turns up at the
 // right and runs front to back to the display, with a gap in it, a short chute through the gap out past the right edge,
-// and a red EXIT sign on the gap's far post.
+// its lane taped on the concrete, and a red EXIT sign hung from a tall pole on the gap's far post, out over the chute.
 // Everything is filled rectangles on whole pixels (pixel.js), outlined in ink, three tones lit from the upper left, in
 // the arena's own colours. The flat things (the concrete, the tape) are drawn once into a canvas; everything that stands
 // up is sorted in with the field and the people by its floor line, so it all draws back to front.
@@ -57,6 +57,10 @@ function makeNear() {
   rect(FIELD.x0 - STATION, NEAR_TOP + 2, FIELD.x1 - FIELD.x0 + 2 * STATION, 1, C.yel1);
   // The reps' waiting line, taped in dashes like the queue lane past the blue end.
   for (let x = WAIT.x0; x < WAIT.x1; x += 4) rect(x, WAIT.tapeY, 3, 1, C.yel1);
+  // The chute's lane, taped the same way as the arena's (arena/gate.js gateFloor): dashes just inside its two belts,
+  // clear of their posts' feet, from the barrier's line off the right edge. Seen from the front the barrier closes the
+  // gap up to a few pixels on the screen, so the floor shows the way: the band she walks out along reads as open floor.
+  for (const y of [FAR + 1, NEAR - 2]) for (let x = FENCE_X + 2; x < WORLD.w; x += 4) rect(x, y, 3, 1, C.yel1);
   screen();
   useContext(prev);
   return c;
@@ -200,11 +204,12 @@ function barrier() {
 // The barrier on the right runs front to back on FENCE_X, from a post just right of the display's screen and in front
 // of its legs, down to the corner of the barrier along the bottom, with the gap (layout.js GAP) between its far post
 // and its near one. Through the gap two belts run out past the right edge of the world, a chute like the arena's, each
-// on a post of its own at the edge. The EXIT sign hangs off the gap's far post, which stands
-// a little taller to carry it, on the post's left, the way into the gap: low enough to keep clear of the display's
-// legs above it, and behind her as she walks out (she's always nearer than the far post in the gap), so she passes in
-// front of it. Hung that way it's also wholly behind the dialog box in the cut scene's shots of the display, which
-// only reach this corner's left side.
+// on a post of its own at the edge, its lane taped on the floor (makeNear). The EXIT sign hangs as the arena's does:
+// from a tall pole on the gap's far post, off its right side, out over the chute, high enough that she walks out under
+// it anywhere in the gap, never across it. The pole rises just right of the display's frame and the sign is right of
+// it, so neither comes near the display; the posts behind the gap on the same line stand behind the pole, their feet
+// either side of it, as in the arena. The cut scene leaves the sign out (drawSet's exitSign: false), so its shots of
+// the display are about the alliances, not the way out; its far post then stands as tall as the rest.
 /**
  * The gap's far post and near post, and the posts on FENCE_X behind the gap, back to front from the display; in front
  * of it there's just the near post and the corner.
@@ -214,29 +219,29 @@ const FENCE_BACK = [124, 140, FAR];
 /** The chute's outer posts, at the right edge of the world. */
 const CHUTE_OUT = WORLD.w - 8;
 
-/** The EXIT sign's panel, inside its ink outline, and how tall the post carrying it stands: up to the outline's top. */
-const EXIT_SIGN = { w: 27, h: 11 };
-const EXIT_POLE = 22 + EXIT_SIGN.h + 2;
 /**
- * The EXIT sign on the post with its foot at (x, y), as at the arena's way out: a red panel lit from the upper left,
- * the word and an arrow in white, in ink, its outline's right edge on the post's left side, its top level with the
- * post's and its bottom edge just above the belts.
+ * The EXIT sign's panel, inside its ink outline, and where it hangs: its outline's bottom row (under) clears the top of
+ * her head with her feet at the gap's back edge, GAP.y0, even running (the rig's hair reaches 48 pixels up), as at the
+ * arena's way out. Between the pole and the world's right edge there are only the chute's 19 columns, so the panel says
+ * EXIT with no arrow (the white arrow over the gap points the way), and its shaded right-hand end runs just past the
+ * edge, like the chute's belts.
  */
-function exitSign(x, y) {
-  const { w, h } = EXIT_SIGN, x0 = x - 1 - w, y0 = y - EXIT_POLE + 1;
+const EXIT_SIGN = { w: 19, h: 11, under: GAP.y0 - 48 - 2 };
+/** How tall the gap's far post stands to carry it: up to the top of the panel's outline. */
+const EXIT_POLE = FAR - (EXIT_SIGN.under - EXIT_SIGN.h - 1);
+/**
+ * The EXIT sign on the pole at x: a red panel lit from the upper left, the word in white, in ink, hung off the pole's
+ * right side with its outline's left edge on the pole's, its top level with the pole's top.
+ */
+function exitSign(x) {
+  const { w, h, under } = EXIT_SIGN, x0 = x + 2, y0 = under - h;
   rect(x0 - 1, y0 - 1, w + 2, h + 2, C.ink);
   rect(x0, y0, w, h, C.red1);
   rect(x0, y0, w, 1, C.red2);
   rect(x0, y0, 1, h, C.red2);
   rect(x0 + w - 1, y0 + 1, 1, h - 1, C.red0);
   rect(x0 + 1, y0 + h - 1, w - 1, 1, C.red0);
-  text('EXIT', x0 + 3, y0 + 3, { font: 3, color: C.white });
-  // The arrow, a three-pixel point on a two-pixel tail.
-  const ax = x0 + 20, ay = y0 + 3;
-  rect(ax, ay + 2, 2, 1, C.white);
-  rect(ax + 2, ay, 1, 5, C.white);
-  rect(ax + 3, ay + 1, 1, 3, C.white);
-  rect(ax + 4, ay + 2, 1, 1, C.white);
+  text('EXIT', x0 + 2, y0 + 3, { font: 3, color: C.white });
 }
 
 /**
@@ -244,14 +249,14 @@ function exitSign(x, y) {
  * the post behind it, the chute's belts (just behind the gap's posts on the same line) and the last belt down to the
  * corner (just behind the bottom barrier's corner post, which is drawn with it). Nothing when it's off the screen.
  */
-function wayOut(viewX) {
+function wayOut(viewX, sign = true) {
   if (viewX + W < FENCE_X - 30) return [];
   const parts = [];
   FENCE_BACK.forEach((y, i) => parts.push({ y, draw: () => {
     if (i) beltDown(FENCE_X, FENCE_BACK[i - 1], y);
-    if (y === FAR) {
+    if (y === FAR && sign) {
       post(FENCE_X, y, EXIT_POLE);
-      exitSign(FENCE_X, y);
+      exitSign(FENCE_X);
     } else post(FENCE_X, y);
   } }));
   parts.push({ y: NEAR, draw: () => post(FENCE_X, NEAR) });
@@ -347,7 +352,8 @@ function board(b) {
  * { y: floor line, draw() }, sorted in with the set; o.cheer: 0 to 1, the share of the crowd cheering together
  * (bleachers.js); o.board: what the audience display shows, { rows: eight [captain, pick, pick] ('' for nobody yet),
  * hot: the row being picked for or null, clock: seconds left or null, backups: [numbers] or null }, or nothing for an
- * empty chart; o.talkingTo: the one in the stands being talked to.
+ * empty chart; o.talkingTo: the one in the stands being talked to; o.exitSign: false leaves the EXIT sign off the
+ * way out (the cut scene).
  */
 export function drawSet(g, view, t, o = {}) {
   if (!layers) makeSetLayers();
@@ -365,7 +371,7 @@ export function drawSet(g, view, t, o = {}) {
     { y: REPS_SIGN.y, draw: repsSign },
     { y: BOARD.y, draw: () => board(o.board) },
     { y: BARRIER_Y, draw: barrier },
-    ...wayOut(view.x),
+    ...wayOut(view.x, o.exitSign !== false),
     ...(o.people ?? []),
   ];
   drawFieldLive(g, view.x, t, { camY: view.y, robots: false, ends: false, nearGate: NEAR_GATE, more });
@@ -376,10 +382,11 @@ export function drawSet(g, view, t, o = {}) {
 // the belt barrier's end post, and at FENCE_LIMIT on the right, short of the barrier there); on the field, the band in
 // front of the line and the line itself; the gate joining the band to the floor in front; and the gap in the barrier
 // on the right, out past the edge of the world (beyond FENCE_LIMIT only along it). Everything standing in them stops
-// her: the field's corner depots and loading stations by the band, the HABs and the cargo ship behind it, the sign posts, the mic, the
-// TEAM REPS sign, the display (its legs, and the floor behind its screen, so she's never lost behind it), and anyone
-// standing: a box about as wide as a person's shoulders and deeper in front of them than behind, so nobody walks into
-// or through anybody and she stops far enough in front of someone that their face clears the top of her head.
+// her: the field's corner depots and loading stations by the band, the HABs and the cargo ship behind it, the sign
+// posts, the mic, the TEAM REPS sign, the display (its legs, and the floor behind its screen, so she's never lost
+// behind it), and anyone standing: a box about as wide as a person's shoulders and deeper in front of them than
+// behind, so nobody walks into or through anybody and she stops far enough in front of someone that their face clears
+// the top of her head. (The EXIT sign hangs over the chute, out of her way: nothing stands on the floor below it.)
 const SIDE = 18;
 const REGIONS = [
   { x0: SIDE, x1: FENCE_LIMIT, y0: FRONT_FLOOR, y1: WALK_MAX_Y },
@@ -434,14 +441,15 @@ const stops = (b, x, y, nx, ny) => depth(b, nx, ny) < 1 && depth(b, nx, ny) <= d
  */
 const standing = (p) => stop(p.x, p.y + 5, 12, 11);
 /**
- * Someone on the move (Robin, skating the 19-pixel strip in front of the line): a shallower box, 5 pixels behind and
+ * Someone on the move (Robin, skating the 21-pixel strip in front of the line): a shallower box, 5 pixels behind and
  * 7 in front, so there's always a way past her in front. Stopped for her (p.waiting), Robin's reaches up to 10 in
  * front, so walking up to her she halts with Robin's face, mic and bow tie in view over her head; but never past the
- * strip's last two rows (BAND.y1), so there's still a way past her in front wherever she's stopped.
+ * strip's last two rows (BAND.y1), so there's still a way past her in front wherever she's stopped, even passing in
+ * front of the mic stand (6 rows from the strip's front edge), where the box is only as deep as that leaves room for.
  */
 const moving = (p) => {
   if (!p.waiting) return stop(p.x, p.y + 1, 12, 6);
-  const front = Math.min(10, Math.max(7, BAND.y1 - 1 - p.y));
+  const front = Math.min(10, BAND.y1 - 1 - p.y);
   return stop(p.x, p.y + (front - 6) / 2, 12, (front + 6) / 2);
 };
 

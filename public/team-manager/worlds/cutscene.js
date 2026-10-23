@@ -143,7 +143,7 @@ const SETS_OFF = PAN_AT + PAN; // seconds into the settle
 const ARRIVES = SETS_OFF + along(WALK_UP, 1e9).dist / SPEED.walk;
 const TURNS = ARRIVES - 0.8; // she hears the teammate coming
 // The walk up has one clock, u, seconds into the settle as if it had played through, carried on from beat to beat to
-// the bars going. If A cuts the settle short before the teammate gets to her, they jog the rest of the way (their clock
+// the fade. If A cuts the settle short before the teammate gets to her, they jog the rest of the way (their clock
 // runs JOG times as fast, and they run), setting off at once if they hadn't yet: 46 rows in under a second, so they're
 // beside her before the two of them have finished talking, however fast the words are read.
 const JOG = SPEED.run / SPEED.walk;
@@ -163,11 +163,12 @@ function heroAt(u, jog = false) {
 /** The view's x t seconds into the settle: where the scan stopped on Newton's field, then panning back to her. */
 const settleX = (t) => Math.round(lerp(X_END, X1, easeInOut(seg(t, PAN_AT, PAN_AT + PAN))));
 // Off to scout: she turns away from the teammate and sets off along Newton's walkway, which opens on her right, the
-// teammate turning to watch her go, as the screen fades to black (four hard steps, FADE seconds from FADE_AT). Out of
-// the picture on the right here, in on the left at the far end of the hall (scene.js): the way she's going holds across
-// the cut, as it does from scene to scene.
+// teammate turning to watch her go, as the screen fades to black (four hard steps, FADE seconds from FADE_AT, the first
+// as she sets off). It's black before she gets to Newton's blue driver station, 20 pixels on, where her legs would pass
+// behind the top driver's head. Out of the picture on the right here, in on the left at the far end of the hall
+// (scene.js): the way she's going holds across the cut, as it does from scene to scene.
 const OFF = [[QUEUED.x, QUEUED.y], [QUEUED.x + 100, QUEUED.y + 1]];
-const OFF_AT = 0.15, FADE_AT = 0.45, FADE = 0.8;
+const OFF_AT = 0.15, FADE_AT = 0.05, FADE = 0.8;
 
 // ---- The opening ----
 // The lamps coming on, the fade up out of the dark and the cones all run on the cut scene's clock (c.T) or, for the
@@ -206,7 +207,7 @@ const PACE = 800, CATCH_UP = [0.6, 2.4];
 
 /**
  * The beats (stage.js): the lights, the tilt, the scan (a beat for each division), the settle, the two of them talking,
- * and the bars going. Each beat's draw(g, t, c) gets c.look(view, vel, least), the view to draw from (see the clock,
+ * and her setting off as the screen fades. Each beat's draw(g, t, c) gets c.look(view, vel, least), the view to draw from (see the clock,
  * below; vel: how fast the beat's own view is moving as it starts, if it is; least: the shortest a sweep onto it may
  * take), and c.begun, how the beat began: { early: whether A moved the beat before it on early, follows: whether it
  * follows straight on from the beat before (not a fresh start: ?beat=, ?at=), i and t: that beat and how far into it it

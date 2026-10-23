@@ -1,6 +1,6 @@
 // The people at the World Championship: the crowd in every division's stands, the drive teams at their stations, the
-// queue and the scoring table at each field's ends, people standing about in the aisles between the fields, and the ten
-// she can stop and talk to. Everyone is the walker's rig (walker.js) in a cast.js look, like the arena's people, so a
+// queue and the scoring table at each field's ends, people standing about in the aisles between the fields, and the
+// twelve she can stop and talk to. Everyone is the walker's rig (walker.js) in a cast.js look, like the arena's people, so a
 // better head or a better rig shows up here too.
 //
 // Teams sit together at Championship, so each division's stands are cut into blocks between the aisle stairs: some
@@ -25,7 +25,7 @@ import { TEAMMATE_LOOK } from '../teammate.js';
 import { drawPerson, drawWithShadow, dirToward } from '../stage.js';
 import { drawBubble } from '../talk.js';
 import { PEOPLE as SEATS, TIERS, STANDING as ARENA_STANDING } from '../bleachers.js';
-import { DIVISIONS, HOME, ox, divisionAt, QUEUED, MATE, BUTTON_TABLE, INFO_DESK } from './layout.js';
+import { DIVISIONS, HOME, ox, divisionAt, QUEUED, MATE, START, BUTTON_TABLE, INFO_DESK } from './layout.js';
 
 // ---- Looks ----
 // Team shirts that cast.js doesn't have, in its order: shade, mid, lit.
@@ -214,9 +214,10 @@ function seated(k, id) {
 }
 
 // The teammate waits by Newton's queue where the cut scene leaves them, at the far end of the hall from where the walking
-// starts, in reach from where she stood beside them, a head's width away (QUEUED, layout.js).
+// starts, in reach from where she stood beside them, a head's width away (QUEUED, layout.js), and from the aisle in front
+// of them too (below: rows), where the way along the hall passes under them to step up onto Newton's walkway.
 export const MATE_PERSON = {
-  name: TEAMMATE_NAME, x: MATE.x, y: MATE.y, dir: MATE.dir, look: TEAMMATE_LOOK,
+  name: TEAMMATE_NAME, x: MATE.x, y: MATE.y, dir: MATE.dir, look: TEAMMATE_LOOK, below: 20,
   lines: [
     ["WE'RE QUEUED. ROBOT'S ON ITS CART,", 'BATTERY IN, BUMPERS ON. ALL SET.'],
     ['WATCH WHO CLIMBS TO LEVEL 3, AND HOW', 'FAST THEY CYCLE. THAT IS WHAT WINS.'],
@@ -228,8 +229,8 @@ const TALKERS = [
   MATE_PERSON,
   {
     // Newton's queuer, behind the queue sign like every division's (it hides her legs, as the button table hides
-    // Noor's), so the floor above the queue stays open from the walkway's mouth, where the walking starts, straight
-    // along into the aisle, between the hem's barrier and her.
+    // Noor's), so the floor above the queue stays open from the walkway's mouth, beside the teammate, straight along
+    // into the aisle, between the hem's barrier and her.
     name: 'BEA, NEWTON QUEUER', x: ox(HOME) + 26, y: 100,
     look: look('w-bea', { ...skinBody('fair'), shirt: tones.shirtOrange, jeans: tones.black, cuff: tones.black, print: null }, 'bob',
       { ...SKIN.fair, ...HAIR.auburn, r: HAIR.auburn.h, R: HAIR.auburn.H }),
@@ -309,6 +310,32 @@ const TALKERS = [
     ],
   },
   {
+    // Just inside the left doorway, the first person in the hall: up and to the right of where she stops after walking
+    // in (layout.js START), turned to her, a head's width along and far enough up that the walk-in row passes below
+    // their feet. In reach from there and all along that row under them (below), so the bubble comes up as she arrives.
+    // Standing in front of the hem's barrier, their head covers no more than the bottom bezel of the big screen above.
+    name: 'GRACE, GREETER', x: START.x + 22, y: START.y - 16, dir: 7, below: 20,
+    look: look('w-grace', { ...skinBody('fair'), shirt: tones.shirtGreen, jeans: tones.khaki, cuff: tones.khaki, print: '#ffc61a' }, 'glasses',
+      { ...SKIN.fair, ...HAIR.grey, q: C.steel3 }),
+    badge: LANYARD,
+    lines: [
+      ['WELCOME TO HOUSTON! 5026? LET ME', 'SEE... NEWTON. THE VERY LAST FIELD.'],
+      ['EIGHT FIELDS IN A ROW, ARCHIMEDES', 'TO NEWTON. JUST KEEP WALKING.'],
+      ['TEAMS COME HERE FROM ALL OVER THE', 'WORLD. SAY HELLO ON YOUR WAY DOWN.'],
+    ],
+  },
+  {
+    // In Daly's front row, in the seat nearest its blue end, halfway between Mrs. Costa and Jack, her tablet up.
+    name: 'TAMAR, SCOUT FROM HAIFA', ...seated(2, 'rosa'),
+    look: look('w-tamar', { ...skinBody('light'), shirt: tones.shirtBlue, print: C.white }, 'bun', { ...SKIN.light, ...HAIR.brown }),
+    badge: TABLET,
+    lines: [
+      [`SEE ${DIVISIONS[2].teams[3]}, THE RED ONE BY THE BLUE`, 'ROCKET? IT HAS NOT SCORED ALL MATCH.'],
+      ['NOT BROKEN. DEFENSE: IT SITS RIGHT', 'WHERE BLUE NEEDS TO SCORE.'],
+      ['GOOD DEFENDERS GET PICKED. WRITE THEM', 'DOWN, NOT JUST THE ONES WHO SCORE.'],
+    ],
+  },
+  {
     // Like Aylin and Jack: his friend on his left, between him and Archimedes' scoring table, room on his right.
     name: 'WEI, ROOKIE FROM SHENZHEN', x: ox(1) - 20, y: 93, dir: 7,
     look: lookWith('w-wei', { ...skinBody('light'), shirt: SHIRT.yellow, print: C.red1 }, CROP, { ...SKIN.light, ...HAIR.black }),
@@ -359,8 +386,8 @@ export function lookOf(k) {
     else {
       // The seat's place in bleachers.js's list, so the same seat holds someone else in every division.
       const n = /^fan\d+$/.test(p.id) ? Number(p.id.slice(3)) : 300 + SEATS.indexOf(p) * 7;
-      // 5026's front row is families in their own clothes: she stands right in front of it when the walking starts,
-      // and a red shirt in front of a row of red shirts would be lost (the two seats right behind her: BEHIND_HER).
+      // 5026's front row is families in their own clothes: she stands right in front of it with the teammate, and a
+      // red shirt in front of a row of red shirts would be lost (the two seats right behind her there: BEHIND_HER).
       const block = SECTIONS[k][blockAt(p.x)], section = block === '5026' && p.tier === 0 ? 'mix' : block;
       if (behindHer(k, p)) out = BEHIND_HER[n % BEHIND_HER.length];
       else out = section === 'mix' ? MIXED[(n * 5 + p.tier + k * 3) % MIXED.length] : TEAM[section][(n * 3 + p.tier * 2 + k) % 7];
@@ -413,11 +440,9 @@ function crewOf(k) {
 // not on them; nobody stands straight behind or in front of anyone else, so heads never stack. [world x, floor line,
 // dir, look]
 const T = (name, face) => TEAM[name][face % 7], M = (i) => MIXED[i % MIXED.length];
+// Past Archimedes' blue end, by the left wall, only the greeter stands (TALKERS): anyone lower on the floor there
+// would be right under the row she walks in along, her feet on their head as she went by.
 const AISLES = [
-  // Past Archimedes' blue end, by the left wall: a pair low on the floor, below the way in from the doorway (layout.js
-  // START), so she walks in above them, the light from the doorway clear of their feet. The floor between the doorway
-  // and the top of the queue stays open, the way on to Archimedes' walkway.
-  [94, 124, 2, M(3)], [116, 125, 6, M(8)],
   // Archimedes and Curie: one of Wei's team with him. Nobody stands below them, where she stands to talk to him: one
   // above the other, her feet would be on their head.
   [ox(1) - 42, 92, 1, T('yellow', 5)],
@@ -461,7 +486,7 @@ const STANDING = DIVISIONS.map((_, k) => [
  * and behind them only ten rows: then the floor between the hem's barrier and them is as wide as the floor between the
  * barrier and every queue (scene.js QUEUES), the way along the aisle, and her head behind theirs is still above it.
  * Walking straight into someone she slides round them (fields.js move()) up to 14 rows, half their footprint's depth:
- * from where the walking starts, left into the teammate, that takes her down past the teammate's feet into the aisle.
+ * from beside the teammate, left into them, that takes her down past the teammate's feet into the aisle.
  */
 export const BLOCKS = [...STANDING.flat().filter((p) => !p.driver), MATE_PERSON]
   .map(({ x, y, table, across }) => ({ x0: x - 15, x1: x + 15, y0: y - (table || across ? 10 : 14), y1: y + 14, slide: 14 }));
@@ -490,15 +515,17 @@ export function standingIn(g, view, k, t, o = {}) {
  * where their footprint (BLOCKS) stops her, and never straight behind or in front of them, where one would hide the
  * other; seated, beside their seat while she's on the walkway, 12 to 23 across (best 17, a head's width), never right
  * in front of it, where her head would hide theirs. Someone working a table (across) is talked to across it: from in
- * front only, up to 18 rows, where the table stops her.
+ * front only, up to 18 rows, where the table stops her. Someone standing just above a way she walks along (below: the
+ * teammate over Newton's aisle, the greeter over the walk-in) is in reach from that far in front of them too, so their
+ * bubble comes up as she goes by under them: her head stays below theirs, over their legs at most.
  */
 export function reach(s) {
   let best = null, bestD = Infinity;
   for (const p of PEOPLE) {
-    const dx = Math.abs(p.x - s.me.x), dy = p.across ? s.me.y - p.y : Math.abs(p.y - s.me.y);
-    const deep = p.across ? 18 : 10;
+    const dx = Math.abs(p.x - s.me.x), dy = s.me.y - p.y; // dy: how far in front of them she is (behind: under 0)
+    const rows = p.across ? dy >= 0 && dy < 18 : dy > -10 && dy < (p.below ?? 10);
     const d = p.seat ? (dx >= 12 && dx < 24 && s.me.y <= 64 ? Math.abs(dx - 17) : Infinity)
-      : dx < 24 && dy >= 0 && dy < deep ? dx + dy : Infinity;
+      : dx < 24 && rows ? dx + Math.abs(dy) : Infinity;
     if (d < bestD) [best, bestD] = [p, d];
   }
   return best;

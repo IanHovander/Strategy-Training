@@ -15,7 +15,8 @@
 // front of her to the open floor on her right and holds out the mic; she steps out to it, accepts, Robin congratulates
 // her, and she runs onto the field to stand at her captain's left. A four-step fade skips to the
 // end of round two: eight alliances of three across the field, the display full with the backups, the whole arena on
-// its feet for every team, and a send-off that ends on the first frame of walking about.
+// its feet for every team, and a send-off; then she walks off the field through the gate (the captains stay for the
+// head ref's briefing), ending on the first frame of walking about.
 //
 // It's built like the intro and every other scene's cut scene (stage.js): eased pans and hard cuts between shots at 1x,
 // whole-number 2x close-ups for the people talking and the crowd on its feet, film bars throughout (in as it opens, out
@@ -297,7 +298,8 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   /**
    * One beat: from where the last left everyone, `moves(t)` says where whoever moves is t seconds in; shot(t) the
    * camera, board(t) the display, cheer(t) the stands, over(t, c) the cards and fades on top. The next beat starts
-   * from where this one ends (or from `end`, everyone's places, if given).
+   * from where this one ends (or from `end`, everyone's places, if given). hold: seconds A can't cut it short for
+   * (stage.js), for a beat without words that has to play out.
    */
   function beat(o) {
     const from = places, moves = o.moves ?? (() => ({}));
@@ -322,6 +324,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
       },
     };
     if (o.say) b.say = o.say;
+    if (o.hold) b.hold = o.hold;
     beats.push(b);
     return b;
   }
@@ -763,18 +766,27 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
     )),
   });
 
-  // 26. out: from the same shot, down to walking's view, the film bars going, as she steps out in front of the line,
-  // clear of her captain, ready to walk about. Its last frame is walking about's first.
-  const stepOut = [pt(pickSpot(1, 1)), [START.x + 2, LINE_Y - 4], pt(START)];
+  // 26. out: from the same shot, down to walking's view, the film bars going, as she steps out of the line, clear of
+  // her captain, walks along in front of it to the gate and out through it (the picks are free to go: the captains
+  // stay for the head ref's briefing), and turns right on the floor in front, toward the way out, ready to walk about.
+  // The camera keeps her in frame all the way down: it sets off first, along to the left and quickly (ALONG), since
+  // in the crowd shot she's at its left edge, so she's well inside the frame by the time she steps out, then down with
+  // her more slowly. Its last frame is walking about's first, so A can't cut it short (hold): stage.js would put her
+  // on her mark with a jump. SKIP still ends it at once.
+  const stepOut = [pt(pickSpot(1, 1)), [SPOTS[1] - 16, LINE_Y - 3], [SPOTS[1] - 6, GATE_IN.y], pt(GATE_IN), pt(GATE_OUT), pt(START)];
+  const OUT0 = 0.6, ALONG = 1.2, OFF = OUT0 + timeOf(stepOut, SPEEDS.walk), TURNED = OFF + 2 * TURN;
+  const OUT = TURNED + 0.3;
+  const outShot = (t) => view(lerp(CROWD_SHOT.x, WALK_VIEW.x, easeInOut(seg(t, 0, ALONG))),
+    lerp(CROWD_SHOT.y, WALK_VIEW.y, easeInOut(seg(t, 0.2, OFF - 0.2))));
   beat({
-    name: 'out', dur: 2.2,
-    moves: (t) => ({ mc: still(HOME[0], HOME[1], HOME_DIR, 'emcee'), '5026': trip(stepOut, t, 0.3, 'walk', START.dir, 0) }),
+    name: 'out', dur: OUT, hold: OUT,
+    moves: (t) => ({ mc: still(HOME[0], HOME[1], HOME_DIR, 'emcee'), '5026': trip(stepOut, t, OUT0, 'walk', START.dir, 0) }),
     end: { ...FINAL, '5026': still(START.x, START.y, START.dir), mc: still(HOME[0], HOME[1], HOME_DIR, 'emcee') },
-    shot: (t) => at1x(pan(CROWD_SHOT, WALK_VIEW, seg(t, 0, 2.0))),
+    shot: (t) => at1x(outShot(t)),
     // The stands settle back to cheering now and then on their own, as they do while she walks about.
     cheer: (t) => (t < 1.8 ? lerp(1, 0.1, seg(t, 0, 1.6)) : undefined),
     board: () => FULL,
-    over: (t) => bars(1 - seg(t, 0.8, 2.2)),
+    over: (t) => bars(1 - seg(t, 1.2, OFF - 0.6)),
   });
 
   // When each beat starts and how long it all takes at the automatic pace, for checking (from the console:

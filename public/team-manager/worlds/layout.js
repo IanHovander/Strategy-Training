@@ -95,6 +95,13 @@ export const ENTER = [[-20, START.y]];
  */
 export const EXIT = { x: WORLD.w - WALL + 4, y0: PASSAGE.y0, y1: PASSAGE.y1, label: 'TO EINSTEIN', sign: { y: DOOR.y0 - 6 } };
 /**
+ * The EXIT sign over the right doorway (hall.js draws it; the way in on the left has none), out from the wall's face on
+ * a bracket: x0 to x0 + w, rows y0 to y0 + h. It hangs high enough that whoever stands in the passage, even on its
+ * back row, has their head under it, and fields.js move() keeps her off the floor above the doorway from which her head
+ * would be across it.
+ */
+export const EXIT_SIGN = { x0: WORLD.w - WALL - 23, y0: 28, w: 19, h: 9 };
+/**
  * Belt barriers along the curtains' hems, their posts standing on floor line BARRIER_Y (hall.js draws them, and they
  * stop her): the floor at the foot of a curtain is kept clear, so nobody walks along under the signs and screens with
  * their head across a division's name or score. Each aisle has two runs, one under the screen and one under the sign,

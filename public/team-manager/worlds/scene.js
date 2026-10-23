@@ -4,17 +4,20 @@
 //   layout.js    the hall in numbers: where each division starts, its teams, its match clock
 //   fields.js    the eight fields, floors and stands, the arena's own (field.js, bleachers.js) laid down at each division
 //   hall.js      the truss and lamps, the curtains with the divisions' signs and big screens, the barriers along their
-//                hems, the end walls, two tables
-//   people.js    the crowd, the crews, the people in the aisles, and the ten she can talk to
+//                hems, the end walls and their doorways, two tables
+//   people.js    the crowd, the crews, the people in the aisles, and the twelve she can talk to
 //   cutscene.js  the lights, the tilt, the scan, and the two of them at Newton
 //
 // The way in and out, as every scene in the game has them (entered on the left, left on the right): the cut scene ends
-// at Newton with her setting off to scout and a fade to black, and the hall fades back in at its other end, where she
-// comes in from the concourse through the doorway in the left wall (stage.js enter) with all eight divisions ahead of
-// her. The exploring is the walk back along the hall, past every division's field and the people in its aisles, to
-// Newton's queue, where the teammate waits; the way out is on past Newton's red end and the info desk, through the
-// doorway in the right wall toward Einstein (stage.js exit, TO EINSTEIN), and fields.js move() lets her through the
-// wall's face only there.
+// at Newton with her setting off along the walkway to scout and a fade to black, and the hall fades back in at its
+// other end, where she comes in from the concourse through the doorway in the left wall (stage.js enter) with all eight
+// divisions ahead of her and a greeter to say hello. The exploring is the walk back along the hall, past every
+// division's field and the people in its aisles, to Newton's queue, where the teammate waits; the way out is on past
+// Newton's red end and the info desk, through the doorway in the right wall under its EXIT sign, toward Einstein
+// (stage.js exit, TO EINSTEIN), and fields.js move() lets her through the wall's face only there.
+// stage.js draws the exit's label right-aligned over its arrow, so with the camera short of the hall's end, the arrow
+// just in from the right edge, the label would be cut off there ('TO EINSTEI'). The scene's exit holds it back until
+// it fits on the screen (draw()), and the arrow comes in on its own first.
 //
 // drawWorld() is the whole hall from a view, back to front: the dark up under the roof, the floors, the stands, the
 // curtains between them, then each field in view with everyone standing on it and past its ends sorted in by their feet,
@@ -124,17 +127,19 @@ let where = { x: START.x, y: START.y }; // where she is: for the bubble over who
 /** Seconds the hall takes to fade in from the cut scene's black, and when it started (page clock), if it's fading. */
 const FADE = 0.6;
 let fadeFrom = null;
+/** The way out, its label left off while it wouldn't fit on the screen (see above). */
+const exit = { ...EXIT };
 
 export const scene = {
   // The card under the big screen and the phone's title: short enough for one line at phone width (the page's title
   // says the rest).
   name: 'WORLDS',
-  label: "The World Championship hall: eight division fields side by side, each with its stands, its curtain, sign and big screen, matches playing on all of them, and the strategist you're steering on the walkway in front of the stands; the view follows her",
-  note: 'Push the stick a little to walk, all the way to run; the view follows her along the hall. The walkways run in front of the stands and the aisles between the divisions are open floor. Stand by someone (a student, a scout, a volunteer, someone in the front row) and press A. In the cut scene, A reads on and SKIP jumps to the end. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter for A, Esc to skip.',
+  label: "The World Championship hall: eight division fields side by side, each with its stands, its curtain, sign and big screen, matches playing on all of them, a doorway through the wall at either end, and the strategist you're steering along the walkways in front of the stands; the view follows her",
+  note: 'Push the stick a little to walk, all the way to run; the view follows her along the hall. The walkways run in front of the stands and the aisles between the divisions are open floor. Stand by someone (a student, a scout, a volunteer, someone in the front row) and press A. The teammate waits by Newton\'s queue at the far end; the doorway past it leads on to Einstein. In the cut scene, A reads on and SKIP jumps to the end. On a keyboard: arrow keys or WASD, Shift to run, Space or Enter for A, Esc to skip.',
   world: WORLD,
   start: START,
   enter: ENTER,
-  exit: EXIT,
+  exit,
   move: (x, y, dx, dy) => move(x, y, dx, dy, STOPS),
   people: PEOPLE,
   reach,
@@ -154,6 +159,8 @@ export const scene = {
   },
   draw(g, view, t, s) {
     where = s.me;
+    // The label's right edge, its outline and the arrow's nudge included, is a pixel short of the exit's x (stage.js).
+    exit.label = EXIT.x - view.x <= W ? EXIT.label : null;
     drawWorld(g, view, t + shift, { player: s.player, playerX: s.me.x, talkingSeat: talkingSeat(s), talking: s.talk?.person });
     if (fadeFrom != null) cover(1 - seg(t, fadeFrom, fadeFrom + FADE));
   },

@@ -1,13 +1,14 @@
 // The arena: part of the 2019 field with the bleachers along its far side, and the strategist on the walkway between
 // them. The field, the stands, the queue and the scoring table are shared modules (field.js, bleachers.js); this file
-// puts them together for stage.js, with the scene's own parts from this folder: the cut scene (cutscene.js) and the way
-// out past the red end (gate.js). walk.html runs it with the strategist's eight-directions sheet under it, and play.html
-// runs it in turn with the other scenes.
+// puts them together for stage.js, with the scene's own parts from this folder: the cut scene (cutscene.js) and the ways
+// in and out at its two ends (gate.js). walk.html runs it with the strategist's eight-directions sheet under it, and
+// play.html runs it in turn with the other scenes.
 //
 // She's come over from the pits, so she comes in on the left, at the blue end by the queue: the cut scene pans along
 // the field from the red end and ends on the queue with her not yet in the picture, and she walks in from off the left
-// edge to START (scene.enter). She leaves on the right, through the gap in the belt barrier past the scoring table,
-// along the chute's taped lane (gate.js). Everyone standing on the floor stops her the way the queue's carts do (move).
+// edge to START (scene.enter), past a sign pointing back to the pits. She leaves on the right, through the gap in the
+// belt barrier past the scoring table, along the chute's taped lane (both ends are gate.js). Everyone standing on the
+// floor stops her the way the queue's carts do (move).
 //
 // The matches carry on from the cut scene into walking: the cut scene keeps its own clock for the field and the crowd
 // (cutscene.js), and walking adds the difference between that and the page's clock on the cut scene's last frame, so no

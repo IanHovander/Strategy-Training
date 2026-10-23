@@ -21,20 +21,22 @@
 // either way; the cut scene's close-ups draw it at 1:1 into a small canvas and blow that up (cutscene.js zoomShot).
 //
 // Walking: she has the floor round the field (the back strip behind it, the front strip before it, and both ends), but
-// not the carpet, which the robot is always running on; the furniture, the gear and everyone else stop her too. A step
-// along that only someone standing refuses, while she's a little in front of them, takes her on round in front of
-// them, so holding right from her mark walks her down and round in front of Kai by herself. Level with someone she
-// stops beside them, to talk.
+// not the carpet, which the robot is always running on; the furniture, the gear and everyone else stop her too. A push
+// along with someone standing just ahead, while she's a little in front of them, curves her on round in front of them,
+// so holding right from her mark walks her down round Kai and on along the lane in front of the field by herself; a
+// push up and right that the carpet holds up takes her round them too. Level with someone she stops beside them, to
+// talk.
 // The way in and out, as everywhere in the game, is left to right: the cut scene brings her in through the hallway
 // doors at the left-hand end of the back wall and round to her mark (if it's skipped before it shows her, she walks in
 // from the left along the same lane instead, stage.js enter), and she leaves through the side doors in the end wall on
 // the right, out to the parking lot (stage.js exit: once her feet are in the doorway she walks on out and the screen
-// fades; on this page she comes back in at her mark, the room carrying on as it was). Pushing right along the end wall
-// just short of the doorway steers her into it.
+// fades; on this page she comes back in at her mark, the room carrying on as it was). Pushing right anywhere along the
+// end wall, above the doors or below them, turns her into the doorway.
 // The camera follows her as stage.js's does, but no lower than ROOM.shown, so the windows stay in sight, unless she walks
 // out toward the front of the room, when it keeps a strip of floor under her feet so she never walks along the bottom
 // edge; while she talks to someone at the front of the room it eases down over the tiles below that, so both faces
-// clear the dialog box.
+// clear the dialog box. On a 16:9 screen, where the stick's ring is over the picture's bottom right corner, it goes down
+// a little as she comes to the end wall, where that lifts the side doors clear above the ring (ringLift).
 // The robot and the room's clock carry on from the cut scene into walking without a jump: stage.js gives walking the
 // page's own clock, so the scene keeps the difference between that and the cut scene's last frame and adds it.
 
@@ -116,6 +118,8 @@ const CUT_END = cutscene.reduce((n, b) => n + b.dur, 0);
 const THINGS = [...ROOM_BLOCKS, ...FIELD_BLOCKS], WHO = peopleBlocks(), STOPS = [...THINGS, ...WHO];
 const hits = (x, y) => (b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2;
 const blocked = (x, y) => STOPS.some(hits(x, y));
+/** Going down the screen covers more ground than going across, as in stage.js: the floor recedes. */
+const DEPTH = 0.8;
 /** The side doors' floor band, where the floor runs on out through the wall: the rows the walk outside shows in, from
  *  the one under the wall behind the doors to the one over the wall in front (room.js drawEndWall: that wall's cut top
  *  starts END_WALL.h above its floor line), less 2 pixels each side, move()'s margins. So her feet are always on the
@@ -126,45 +130,130 @@ const inDoorway = (y) => y >= DOOR_Y.y0 && y <= DOOR_Y.y1;
  *  (the walker's hair tops out 47 pixels above her feet, and her feet are never higher than DOOR_Y.y0 in the band), so
  *  it's never over her face as she comes to the doors, and it's up the screen, clear of the stick's ring in the bottom
  *  right on a screen with no room beside the picture; its label, over it, sits on the vending machines' fronts, clear
- *  of the custodian's cart and its mop. The doorway's own EXIT sign is lower down, over the opening (room.js). */
-const EXIT = { x: END_WALL.x0 - 4, ...DOOR_Y, label: EXIT_LABEL, sign: { y: DOOR_Y.y0 - 54 } };
-/** How far down the room a step along will go looking for a way round in front of someone standing in it (sidestep),
- *  and how far short of the doorway's band a push into the end wall steers her into it. */
-const ROUND = 12, FUNNEL = 8;
-/** Everyone on their feet (the drive team at their controls too), for sidestep. */
+ *  of the custodian's cart and its mop. The doorway's own EXIT sign is just under the arrow, over the opening on its
+ *  post (room.js). The label is only there while the arrow is: stage.js draws it right-aligned to the arrow, so with
+ *  the arrow still off the right of the picture it would show cut off at the edge ('TO TH'). */
+const EXIT = {
+  x: END_WALL.x0 - 4, ...DOOR_Y, sign: { y: DOOR_Y.y0 - 54 },
+  get label() {
+    const view = window.stage?.view;
+    return !view || EXIT.x - view.x <= W - 1 ? EXIT_LABEL : '';
+  },
+};
+/** Going round someone: how far ahead along she starts to (LOOK), how far down the room she'll go to get round
+ *  (ROUND), and, at the end wall, how far out from it she starts to turn for the doors (WALL_LOOK). */
+const LOOK = 12, ROUND = 20, WALL_LOOK = 24;
+/** Everyone on their feet (the drive team at their controls too), for roundFront. */
 const STANDING = Object.values(SPOTS).filter((p) => p.gait !== 'sit');
-/** A step along that only someone's footprint refuses, while she's a little in front of their feet (further down the
- *  room): if there's free floor within ROUND pixels further in front, with nothing in her way getting there, she steps
- *  that way instead, as far as the step would have gone. So holding right from her mark walks her down into the lane
- *  in front of Kai, and on along it past Noor, without the player having to find it. Level with someone, or behind
- *  them, she stops beside them as before, where she talks to them. Null if there's no way round. */
-function sidestep(x, y, dx) {
-  const ax = x + dx;
-  if (THINGS.some(hits(ax, y)) || !WHO.some(hits(ax, y))) return null;
-  if (!STANDING.some((p) => Math.abs(ax - p.x) < 20 && y > p.y + 3)) return null;
+/** How far she can go along row y from x, s the way (1 right, -1 left), before a footprint stops her (with move()'s
+ *  margins), and which footprint: { room, b }, room Infinity and b null if nothing does. */
+function ahead(x, y, s) {
+  let room = Infinity, b = null;
+  for (const o of STOPS) {
+    if (!(y > o.y0 - 2 && y < o.y1 + 2)) continue;
+    const edge = s > 0 ? o.x0 - 4 - x : x - o.x1 - 4;
+    if (edge >= 0 && edge < room) [room, b] = [edge, o];
+  }
+  return { room, b };
+}
+/** A push along (s the way, v the step) with someone standing in the way, right there or within LOOK pixels: the way
+ *  round in front of them (further down the room). She looks for the nearest row in front, at most ROUND down, that's
+ *  clear until she's past them, with nothing in her way going straight down to it, and heads for the corner of their
+ *  footprint on it: straight down while she's beside it, and then on a slant, so she curves round them rather than
+ *  stopping and sliding down sideways. front: only if she's a little in front of their feet already, as for a straight
+ *  push, so level with someone she still stops beside them, where she talks to them. { n: [x, y], face, far }: the step,
+ *  the way she faces taking it (toward the corner), and the x where she's past them; null if there's no way round. */
+function roundFront(x, y, s, v, front) {
+  const { room, b } = ahead(x, y, s);
+  if (room > LOOK || !WHO.includes(b)) return null;
+  const ax = x + s * room;
+  const p = STANDING.find((q) => Math.abs(ax - q.x) < 20 && Math.abs(y - q.y) < 20 && (!front || y > q.y + 3));
+  if (!p) return null;
+  const far = s > 0 ? Math.max(b.x1, p.x + 14) + 4 : Math.min(b.x0, p.x - 14) - 4;
   for (let d = 1; d <= ROUND; d++) {
-    if (y + d > FLOOR.y1 || blocked(x, y + d)) return null;
-    if (!blocked(ax, y + d)) return y + Math.min(Math.abs(dx), d);
+    const ly = y + d;
+    if (ly > FLOOR.y1 || blocked(x, ly)) return null;
+    if (ahead(x, ly, s).room < Math.abs(far - x)) continue;
+    // The corner: as far along as every row between lets her go.
+    let gap = Infinity;
+    for (let i = 0; i < d; i++) gap = Math.min(gap, ahead(x, y + i, s).room);
+    const cx = x + s * Math.min(gap, Math.abs(far - x));
+    const len = Math.hypot(cx - x, d / DEPTH), k = Math.min(1, v / len);
+    let n = [x + (cx - x) * k, y + d * k];
+    if (blocked(...n)) n = [x, y + Math.min(v * DEPTH, d)];
+    if (blocked(...n)) return null;
+    const faceX = s * Math.min(ahead(x, ly - 1, s).room, Math.abs(far - x));
+    return { n, face: dirToward(faceX, d / DEPTH), far };
   }
   return null;
 }
+/** A straight push right along the end wall, above or below the side doors: she turns for the doorway as she comes
+ *  within WALL_LOOK pixels of the wall (or as close to the wall as she is to the doorway's band, if that's nearer), on
+ *  a slant to where the band meets the wall, and from there walks on out; already at the wall, she walks along it to
+ *  the doors. So holding right anywhere at this end of the room always takes her out. Null if she's not near the wall,
+ *  or something's in the way. */
+function toDoors(x, y, v) {
+  if (inDoorway(y)) return null;
+  const to = y < DOOR_Y.y0 ? DOOR_Y.y0 : DOOR_Y.y1, d = to - y, gap = FLOOR.x1 - x;
+  if (gap < 0 || gap > Math.min(WALL_LOOK, Math.abs(d) / DEPTH)) return null;
+  for (let i = 1; i < Math.abs(d); i++) if (blocked(FLOOR.x1, y + Math.sign(d) * i)) return null;
+  const len = Math.hypot(gap, d / DEPTH), k = Math.min(1, v / len), n = [x + gap * k, y + d * k];
+  return blocked(...n) ? null : { n, face: dirToward(gap, d / DEPTH) };
+}
+/** She takes a step move() has steered, facing the way it goes (stage.js turns her back to the stick next step). */
+function steer(r) {
+  const me = window.stage?.me;
+  if (me) me.dir = r.face;
+  return r.n;
+}
+/** A diagonal push that someone standing turned into a walk round them ({ push, far, at }): until she's past them (far),
+ *  she carries on as a straight push along, the push's up or down left out, so it doesn't lift her back into the corner
+ *  she's going round. Only while that same push is held: it ends if the push turns or lets go (no step for a moment). */
+let rounding = null;
+const pushOf = (dx, dy) => `${Math.abs(dx) < 0.01 ? 0 : Math.sign(dx)},${Math.abs(dy) < 0.01 ? 0 : Math.sign(dy)}`;
+
 /** A step along, then across, as field.js does: each half refused if it would end in something. On the right she stops
  *  short of the end wall, except in the doorway, where she can walk on into it, and not out of the band once she's
- *  past where she'd stop. A straight push along (no step across) that someone standing refuses takes her round them
- *  (sidestep), and a straight push right into the end wall just short of the doorway's band slides her into the band,
- *  so lining up "in front of the doors" and pushing right always takes her out. A step that goes nowhere because the
- *  carpet is in the way may bring Kai over (keepOff). */
+ *  past where she'd stop. Going round people and to the doors:
+ *  - A straight push along (as the keyboard and the stick give) with someone standing just ahead, while she's in front
+ *    of them, takes her round in front of them (roundFront): holding right from her mark walks her down round Kai and
+ *    on along the lane in front of the field past Noor.
+ *  - A straight push right near the end wall, above or below the doors, turns her into the doorway (toDoors).
+ *  - A diagonal push held up across by the carpet or by someone, with someone standing just ahead along, takes her
+ *    round in front of them too, and on past them (rounding): pushing up and right toward the doors from her mark, she
+ *    goes round Kai and Noor rather than stopping against them.
+ *  A step that goes nowhere because the carpet is in the way may bring Kai over (keepOff). */
 function move(x, y, dx, dy) {
+  const s = Math.abs(dx) < 0.01 ? 0 : Math.sign(dx), v = Math.hypot(dx, dy / DEPTH), push = [dx, dy];
+  const now = performance.now() / 1000, key = pushOf(dx, dy);
+  if (rounding && (key !== rounding.push || now - rounding.at > 0.2 || s * (x - rounding.far) >= 0)) rounding = null;
+  if (rounding) {
+    rounding.at = now;
+    [dx, dy] = [s * v, 0];
+  }
+  const along = Math.abs(dy) < 0.01 && s !== 0;
+  if (along) {
+    const r = (s > 0 && toDoors(x, y, v)) || roundFront(x, y, s, v, !rounding);
+    if (r) return steer(r);
+  }
   let nx = clamp(x + dx, FLOOR.x0, inDoorway(y) ? ROOM.w + 40 : FLOOR.x1);
   if (blocked(nx, y)) nx = x;
   let ny = clamp(y + dy, FLOOR.y0, FLOOR.y1);
   if (blocked(nx, ny) || (nx > FLOOR.x1 && !inDoorway(ny))) ny = y;
-  const along = Math.abs(dy) < 0.01 && dx !== 0; // a straight push along, as the keyboard and the stick give
-  if (along && nx === x && ny === y) ny = sidestep(x, y, dx) ?? y;
-  if (along && dx > 0 && x + dx > FLOOR.x1 && !inDoorway(y)) {
-    const to = y < DOOR_Y.y0 ? DOOR_Y.y0 : DOOR_Y.y1, gap = Math.abs(to - y);
-    const fy = y + Math.sign(to - y) * Math.min(dx, gap);
-    if (gap <= FUNNEL && !blocked(nx, fy)) ny = fy;
+  if (rounding) {
+    // Nowhere to go along: let the push have its way again. Otherwise she faces the way she's going, along.
+    if (nx === x && ny === y) {
+      rounding = null;
+      return move(x, y, ...push);
+    }
+    return steer({ n: [nx, ny], face: dirToward(s, 0) });
+  }
+  if (!along && s !== 0 && ny === y && (onCarpet(nx, y + dy) || WHO.some(hits(nx, y + dy)))) {
+    const r = roundFront(x, y, s, v, false);
+    if (r) {
+      rounding = { push: key, far: r.far, at: now };
+      return steer(r);
+    }
   }
   keepOff(x, y, nx === x && ny === y && (onCarpet(x + dx, y) || onCarpet(x, y + dy)));
   return [nx, ny];
@@ -230,10 +319,32 @@ function reach(s) {
 // ---- The camera ----
 /** stage.js's follow, kept above ROOM.shown, or 12 pixels below her feet if she's further forward than that, so there's
  *  always floor under her shadow. The cut scene's last beat (cutscene.js follow) frames her the same way. */
-const followView = (me) => ({
-  x: Math.round(clamp(me.x - W / 2, 0, ROOM.w - W)),
-  y: Math.round(clamp(me.y - 28 - H / 2, 0, Math.min(ROOM.h, Math.max(ROOM.shown, me.y + 12)) - H)),
-});
+function followView(me) {
+  const y = Math.round(clamp(me.y - 28 - H / 2, 0, Math.min(ROOM.h, Math.max(ROOM.shown, me.y + 12)) - H));
+  const lift = ringLift(), k = lift > y ? easeInOut(seg(me.x, LIFT.x0, LIFT.x1)) : 0;
+  return { x: Math.round(clamp(me.x - W / 2, 0, ROOM.w - W)), y: Math.round(lerp(y, Math.max(y, lift), k)) };
+}
+/** On a screen with no room beside the picture (16:9), stage.js's stick ring sits over the picture's bottom right corner,
+ *  which, once she's at this end of the room, is the side doors and their mat. Where lowering the view (no further than
+ *  the room goes) lifts the doors clear above the ring, followView goes down that far as she comes to the end wall,
+ *  eased in with her x over the stretch where the doors come into view (LIFT), so the view is still a pure function of
+ *  where she is. ringLift() is the view's y that does it, 0 where it isn't needed (the ring beside the picture, as on a
+ *  long phone, or below the doors) or wouldn't help (a small 16:9 phone, where the ring is too big for the room there
+ *  is): measured from the page, twice a second at most. The doors' foot is the frame along the wall in front of them. */
+const LIFT = { x0: END_WALL.x0 - 128, x1: END_WALL.x0 - 68, foot: SIDE_DOOR.y1 - END_WALL.h + 2, left: END_WALL.x0 - 28 };
+const ring = { at: -Infinity, lift: 0 };
+function ringLift() {
+  const now = performance.now();
+  if (now - ring.at < 500) return ring.lift;
+  Object.assign(ring, { at: now, lift: 0 });
+  const c = document.querySelector('.full .screen')?.getBoundingClientRect();
+  const r = document.querySelector('.full .stick .ring')?.getBoundingClientRect();
+  if (!c?.width || !r?.width) return 0;
+  const k = W / c.width, left = (r.left - c.left) * k, right = (r.right - c.left) * k, top = (r.top - c.top) * k;
+  if (right <= LIFT.left - (ROOM.w - W) || left >= W) return 0;
+  const y = Math.ceil(LIFT.foot + 1 - top);
+  return (ring.lift = y <= ROOM.h - H ? y : 0);
+}
 /** Talking, low enough that her face and theirs (about 34 pixels above their feet) sit above the dialog box and its
  *  name tag; for someone sitting at a table, whose face is lower, as low as the room goes, so the name tag clears it. */
 function talkY(s, y) {

@@ -142,7 +142,7 @@ export function gateFloor() {
 /**
  * The sign back to the pits: its pole's foot at the back of the walkway near the left edge, one row behind the nearest
  * she gets to the stands (field.js's OPEN_Y and WALK_Y start at 56), and the top of its panel, clear above Priya's head
- * (her feet are at 84, so it's at 36) and the bubble over her (from 34, to the right of the panel).
+ * (her feet are at 84, the top of her head at 36) and left of the bubble over her (from x 34).
  */
 const PITS = { x: 4, y: 55, top: 22 };
 /** The blue sign, the EXIT sign's twin: the arrow first, pointing off the left edge, then PITS. */

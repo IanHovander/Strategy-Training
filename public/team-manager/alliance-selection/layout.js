@@ -56,22 +56,17 @@ export const AT_MIC = { x: FIELD.mid - 11, y: 125 };
 export const MC_HOME = { x: FIELD.mid + 19, y: 127, dir: 7 };
 /**
  * The open strip of field in front of the line, where the MC skates and, once it's over, she walks. It stops short of
- * the corner depots and loading stations at both ends, so she always stands in front of them.
+ * the corner depots and loading stations at both ends, so she always stands in front of them, and runs down to the
+ * near wall's line (FIELD.y1, 142.25): her feet behind it, she's on the field, and walking up through the gate she can
+ * turn along the strip as soon as she's through.
  */
-export const BAND = { x0: 194, x1: WORLD.w - 194, y0: 121, y1: 140 };
+export const BAND = { x0: 194, x1: WORLD.w - 194, y0: 121, y1: 142 };
 /**
  * The line itself: walkable for her once it's over, between the people standing in it, but no further back than a row
  * in front of the signs' floor line, so the panels never come down over her head (her hair comes over a panel's bottom
  * row, as the picks' does).
  */
 export const LINE_AREA = { x0: 236, x1: 548, y0: SIGN_Y + 1, y1: 121 };
-/**
- * Where she stands as walking starts: out in front of the line, between Alliance One and her own captain, a row in
- * front of the boxes that stop her at anyone standing on the line (set.js standing(): up to 16 rows in front of their
- * feet), so she can walk off either way at once.
- */
-export const START = { x: (SPOTS[0] + SPOTS[1]) / 2, y: LINE_Y + 17, dir: 0 };
-
 // ---- The gate ----
 /** The opening in the near wall, left of the mic. Open: its chain hangs off one post. */
 export const NEAR_GATE = { x0: 336, x1: 352, open: true };
@@ -95,6 +90,17 @@ export function waitSlot(n) {
 /** The queuer beside the waiting area, and the field volunteer at the gate. */
 export const PRIYA_AT = { x: 186, y: 162, dir: 2 };
 export const SAM_AT = { x: 364, y: 150, dir: 6 };
+/**
+ * Where she stands as walking starts: off the field, just out through the gate, on the floor in front, turned to the
+ * right. The cut scene's last beat walks her there from her place in the line: the picks are free to go once it's
+ * over, and the captains stay on for the head referee's briefing. It's below the box that stops her at Sam (set.js
+ * standing(): up to 16 rows in front of his feet) and inside the band of the gap in the barrier on the right (GAP), so
+ * holding right takes her straight along the floor in front, past the head referee's feet, and out; the field, her
+ * captain and her partners are a step back up through the gate. It's 4 pixels left of the gate's middle: straight
+ * below it, her head would sit exactly between the gate's two posts, a pixel off each like brackets, with the chain
+ * hanging by her mouth; from here the left post is behind her hair and the right one and the chain clear of her face.
+ */
+export const START = { x: GATE_OUT.x - 4, y: SAM_AT.y + 20, dir: 2 };
 /** Where Sam steps aside to while the MC, coming in and going out to her, goes through the gate. */
 export const SAM_ASIDE = { x: 322, y: 150, dir: 2 };
 /**
@@ -134,19 +140,26 @@ export const WALK_MAX_Y = 198;
  * She leaves on the right, the way the arena's walkabout does: past the red end the floor is roped off from the rest of
  * the hall by a belt barrier running front to back a little in from the right edge, from beside the audience display's
  * screen down to the belt barrier along the bottom, and there's a gap in it with a short chute out to the right. The
- * barrier's line, and the gap: the band of floor she walks out along. It's below the display's legs, so the EXIT sign
- * on the gap's far post stands clear of them, and as high up the floor as that allows, so on a big screen with no room
- * beside the picture the sign and the arrow stay above the stick's ring in the bottom right corner.
+ * barrier's line, and the gap: the band of floor she walks out along. It's below the display's legs, so the tall pole
+ * on the gap's far post that carries the EXIT sign out over the chute stands clear of them, high enough for her head
+ * to pass under the sign anywhere in the gap (set.js), and low enough to leave the floor beside the display clear.
  */
 export const FENCE_X = 764;
 export const GAP = { y0: 160, y1: 182 };
-/** Anywhere but the gap, her feet stop this far short of the barrier's line. */
-export const FENCE_LIMIT = FENCE_X - 5;
+/**
+ * Anywhere but the gap, her feet stop this far short of the barrier's line: standing, she reaches 8 pixels right of
+ * her feet (walker.js), so she stops with her outline just clear of the belt, never with it running over her.
+ */
+export const FENCE_LIMIT = FENCE_X - 9;
 /**
  * scene.exit: once she's at the barrier's line in the gap, out she walks through the chute (stage.js). The arrow sits
- * at the gap, a little lower than stage.js would put it, so its words run along the floor clear of the EXIT sign.
+ * over the gap, at the chest of anyone walking out along its back half, a little higher than stage.js would put it:
+ * with her anywhere in the gap the view is down at the bottom of the world (60 to 64 rows), which puts the arrow at
+ * screen row 80 or above, clear over the stick's dashed ring in the bottom right corner even on a phone with no room
+ * beside the picture (a 16:9 one held sideways, where the ring's top is at row 86). Its words run along the floor below
+ * the display's feet. The scene shows them only while the gap is in the picture (scene.js camera()).
  */
-export const EXIT = { x: FENCE_LIMIT - 3, y0: GAP.y0, y1: GAP.y1, label: 'ON TO WORLDS', sign: { y: 152 } };
+export const EXIT = { x: FENCE_LIMIT - 3, y0: GAP.y0, y1: GAP.y1, label: 'ON TO WORLDS', sign: { y: GAP.y0 - 20 } };
 /**
  * The floor past each end of the field, ENDS pixels wide, runs from the walkway (row 70) to the bottom; the floor in
  * front of the field joins it from FRONT_FLOOR down (above that, the corner depots stand between the two).
