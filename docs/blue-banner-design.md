@@ -181,30 +181,30 @@ cards. (Teams and numbers are placeholders to tune.)
 | Card | Notebook says | The truth |
 |---|---|---|
 | **Your robot** | avg 30: rocket hatches, Level 3 climb | — |
-| **1690, the showpiece** | **avg 41**: rocket hatches, Level 3 climb, sandstorm | Great robot, wrong partner: it does what you do |
-| **2056, the workhorse** | avg 31: cargo into the cargo ship, Level 2 climb, never broken | The best pick on what you know |
+| **7461, the showpiece** | **avg 41**: rocket hatches, Level 3 climb, sandstorm | Great robot, wrong partner: it does what you do |
+| **6834, the workhorse** | avg 31: cargo into the cargo ship, Level 2 climb, never broken | The best pick on what you know |
 | **6417** | avg 22: "?" | Broke a chain in each of its first five matches; since the fix, avg 36. The best pick, if you knew |
-| **1114, the wall** | avg 18: defense | Not yet (see pass 2) |
+| **8724, the wall** | avg 18: defense | Not yet (see pass 2) |
 
 **The trap is that averages don't add up.** The HAB has one Level 3 platform per alliance, so two Level 3 climbers
 only ever get 12 points between them, not 24. Both robots also feed hatches from the same loading station and queue
-behind each other. On paper you and 1690 make 71 points; together you average about 51. You and 2056 average 61.
+behind each other. On paper you and 7461 make 71 points; together you average about 51. You and 6834 average 61.
 
 **It's fair** because the notebook says "Level 3 climb" on both cards, and because the top three seeds passed on a
-41-point robot. The MC even says so: "Nobody's taken 1690 yet. Their loss!" A sharp player asks why.
+41-point robot. The MC even says so: "Nobody's taken 7461 yet. Their loss!" A sharp player asks why.
 
 **A wrong pick:** the quarterfinals play out quickly and you lose (dice nudged, as at Event 1). The replay shows it
 in one picture: both robots drive up to the one Level 3 platform and one has nowhere to go.
 
 > On paper: 41 + 30 = 71. Together: 51.
-> 2056 would have made 61, because it scores where you don't.
+> 6834 would have made 61, because it scores where you don't.
 
 Then it rewinds: "WELCOME TO ALLIANCE SELECTION! HOW ARE WE FEELING, EVERYBODY?!" The character: *"...didn't this
 just happen?"* Norbert's ear glows. The second rewind, the character starts finishing the MC's lines.
 
 ### Beat 2: the quarterfinal endgame call
 
-With 2056 picked, the quarterfinals play quickly up to one frozen moment: **20 seconds left, you lead by 7.** Your
+With 6834 picked, the quarterfinals play quickly up to one frozen moment: **20 seconds left, you lead by 7.** Your
 partner can climb to Level 2 (+6, certain) or try Level 3 (+12, works half the time; if it fails, they end on Level 1
 for +3). The opposing climber gets to Level 3 (+12) 60% of the time, otherwise Level 1 (+3).
 
@@ -251,7 +251,7 @@ You choose the seat and the direction of each conversation. Every lead knows dif
 | **Mentor** (driving, can't turn round) | perspective and calm | lore: "I had a strategist like you once..." | |
 | **Rookie** | asks the questions the player is afraid to ask, and is a good way to teach | | |
 
-**How you ask matters.** Ask the scout lead "Who's the best robot there?" and they say 1690, which you already know.
+**How you ask matters.** Ask the scout lead "Who's the best robot there?" and they say 7461, which you already know.
 Ask "Who got better as their last event went on?" and they say 6417. Good scouting questions ask about change,
 consistency and roles, not "best". That's a lesson students can take straight to real events.
 
@@ -277,7 +277,7 @@ information (later loops re-roll the schedule; see section 2).
 ### Beat 6: Saturday again
 
 - **Pick 1:** 6417, which is now visibly the best robot on the board for you.
-- **Pick 2 is yours this time:** 1114, the wall, matters now because the drive coach told you 4000 struggles when
+- **Pick 2 is yours this time:** 8724, the wall, matters now because the drive coach told you 4000 struggles when
   defended.
 - **The semifinal plan:** defend 4000's captain (the Showdown already models defense assignments).
 - **The climb call in the semifinal** depends on what the programmer told you about the real Level 3 rate.
@@ -367,6 +367,10 @@ Proposed use, one look per kind of jump so the player learns to read them:
 | A gift jump (to the van, to kickoff) | WIND in full | The big moments get Norbert's whole performance |
 | Skipping ahead (Friday's montage) | NOTEBOOK forward: pages filling with tallies as they flip | Quals are scouting; the notebook fills up |
 | The very first rewind | WIND in full | So the player sees once, clearly, who is doing this |
+
+**Feedback on WIND (from the owner):** the wind-up motion is liked, but it was slow to ramp up and get where it's
+going. The lab now winds faster: the first click comes at once, the clicks speed up quicker, and the whole look is
+about 4.2 seconds instead of 6.5. Keep the full performance short; the clicks should feel urgent.
 
 **4. The scouting dashboard.** It's the screen the player spends the opening on, so it has to be the nicest thing in
 the game. A sketch to mock up next:

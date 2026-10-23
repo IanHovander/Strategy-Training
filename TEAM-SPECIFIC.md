@@ -50,6 +50,7 @@ listed below; they all need redrawing as the new logo.
 | `assets/norbert.png` | whole file | Norbert, the team mascot (a penguin with "26" on one ear); used small in the time travel lab (`norbert.js`) | Replace or delete. |
 | `norbert.js` | `ROWS`, `PAL` | Norbert drawn small (16x19) for the corner of the screen, with his red 26 ear that glows | Redraw as the new team's mascot, or another lucky charm. |
 | `time/lab.js`, `time/index.html` | `looks()` (`'5026'`), the page's intro | The strategist is found in the cut scene as 5026's rep; "the rep in the red tee" | The new number and shirt colour. |
+| `dashboard/data.js` | `YOU` | 5026 as seed 4, "YOUR ROBOT" | The new number. |
 | `songs/compete-to-win-3.mp3` | whole file | The intro song (generated); its words haven't been checked for the team's name | Listen, and replace it if it names the team. |
 
 ## The scenes

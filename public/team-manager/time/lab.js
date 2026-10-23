@@ -215,7 +215,7 @@ const PLANS = {
   2: { open: 0.8, travel: 1.8, flash: 0.2, arrive: 0.9 },
   3: { stop: 0.25, travel: 2.6, land: 0.45 },
   4: { freeze: 1.4, open: 0.7, travel: 1.8, collapse: 0.35, card: 1.3, arrive: 0.8 },
-  5: { freeze: 0.6, hop: 0.6, turn: 0.5, wind: 2.6, spin: 0.9, home: 0.9 },
+  5: { freeze: 0.5, hop: 0.45, turn: 0.4, wind: 1.5, spin: 0.55, home: 0.8 },
   6: { freeze: 0.5, close: 0.8, flip: 2.8, open: 1.0 },
 };
 function jump() {
@@ -413,11 +413,11 @@ const CLICK_TURN = Math.PI / 4, CLICK_TIME = 0.08;
 /** When the key clicks, seconds into winding: slow at first, quicker and quicker. */
 function ratchet(dur) {
   const clicks = [];
-  let t = 0.05, gap = 0.36;
-  while (t < dur - 0.05) {
+  let t = 0.03, gap = 0.22;
+  while (t < dur - 0.04) {
     clicks.push(t);
     t += gap;
-    gap = Math.max(0.06, gap * 0.84);
+    gap = Math.max(0.05, gap * 0.74);
   }
   return clicks;
 }

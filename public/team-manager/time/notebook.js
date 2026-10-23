@@ -68,7 +68,7 @@ function tally(x, y, n) {
     else for (let d = 0; d < 7; d++) fill(x + g * 8 - 1 + d, y + 4 - Math.floor(d * 5 / 7), 1, 1, PENCIL);
   }
 }
-const TEAMS = ['1690', '2056', '6417', '1114', '4000', '2468', '3000', '7777', '8086', '9152'];
+const TEAMS = ['7461', '6834', '6417', '8724', '4000', '2468', '3000', '7777', '8086', '9152'];
 const NOTES = ['L3 CLIMB', 'HATCH', 'CARGO', 'DEFENSE', 'BROKE', 'SANDSTORM', 'L2 CLIMB', 'FAST'];
 
 export function picturePage(sketch, time) {
