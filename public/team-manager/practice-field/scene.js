@@ -28,8 +28,9 @@
 // the carpet. Level with someone she stops beside them, to talk. Everywhere else stage.js's own slip round corners
 // does the rest, as in every scene; where move() has steered her, it doesn't cut across.
 // The way in and out, as everywhere in the game, is left to right: the cut scene brings her in through the hallway
-// doors at the left-hand end of the back wall and round to her mark (if it's skipped before it shows her, she walks in
-// from the left along the same lane instead, stage.js enter), and she leaves through the side doors in the end wall on
+// doors at the left-hand end of the back wall and round to her mark (if it's skipped while she's on her way, walking
+// carries on from where it showed her; if before it shows her, she walks in from the left along the same lane instead,
+// stage.js enter), and she leaves through the side doors in the end wall on
 // the right, out to the parking lot (stage.js exit: once her feet are in the doorway she walks on out and the screen
 // fades; on this page she comes back in at her mark, the room carrying on as it was). Pushing right anywhere along the
 // end wall, above the doors or below them, turns her into the doorway.
@@ -424,9 +425,14 @@ let robotFrom = null; // and the robot's clock is world time plus this, once the
 let freeAt = null; // when it did, on the page's clock
 let outAt = null; // when her last walk out through the side doors ends, on the page's clock (stage.js leave)
 
+/** Where walking carries on from the cut scene's last frame: the floor nearest where it last showed her (null if it
+ *  never did, or there's nowhere to stand within reach of it, and then she walks in along ENTER instead). */
+const handedOver = () => HANDOFF.hero && standable(HANDOFF.hero.x, HANDOFF.hero.y);
+
 /** Her walk in after a SKIP that came before the cut scene showed her at her mark (or with ?play): along the lane her
  *  run in the cut scene ends on, from just off the left of the view from her mark, which the camera holds while she
- *  walks in (viewFor). stage.js adds START as the last point. */
+ *  walks in (viewFor). stage.js adds START as the last point. A SKIP in beat 10 once she's through the hallway doors
+ *  doesn't use it: she carries on from where it showed her (handedOver). */
 const ENTER = [[START.x - 138, START.y]];
 
 export const scene = {
@@ -436,10 +442,10 @@ export const scene = {
   cutscene,
   move,
   exit: EXIT,
-  // Only when the cut scene's last beat never drew her (SKIP before it, or ?play): otherwise the cut scene has already
-  // brought her in to her mark.
+  // Only when the cut scene never drew her where she can stand (SKIP before she came through the hallway doors, or
+  // ?play): otherwise walking carries on from where the cut scene last showed her (handedOver).
   get enter() {
-    return HANDOFF.hero ? null : ENTER;
+    return handedOver() ? null : ENTER;
   },
   people,
   reach,
@@ -451,10 +457,13 @@ export const scene = {
   camera: viewFor,
   // The bubble beside their head, on the side away from her, so it's never over her own. Ms. Okafor's left is the
   // student who resets the field, behind her and off to that side, so hers sits over her head instead, a little to the
-  // right: clear of his head, and of the strategist's when she talks to her from the right.
+  // right: clear of his head, and of the strategist's when she talks to her from the right. Mr. Flores's right is the
+  // way out, whose label sits just above his head, so his goes over his head the same way, a little to the left: clear
+  // of the label, the arrow and the cart, and above her head when she talks to him from the left.
   prompt(g, view, p, t) {
     const spot = SPOTS[p.id], side = window.stage.me.x > spot.x ? -1 : 1, y = spot.y - view.y - (spot.gait === 'sit' ? 41 : 50);
     if (p.id === 'okafor') drawBubble(g, spot.x - view.x + 6, y - 11, t);
+    else if (p.id === 'flores') drawBubble(g, spot.x - view.x - 6, y - 11, t);
     else drawBubble(g, spot.x - view.x + side * 11, y, t);
   },
   onFree(s) {
@@ -471,18 +480,19 @@ export const scene = {
     shift = end - now;
     robotFrom = HANDOFF.robotU - end;
     freeAt = now;
-    // The cut scene never drew her at her mark (SKIP before its last beat, ?play, or ?x= in the address): there's no
-    // camera to carry on from, so it starts from the walking view where she is (her mark, if she's walking in to it).
-    if (!HANDOFF.hero) {
+    // The cut scene never drew her where she can stand (SKIP before she came through the hallway doors, ?play, or ?x= in
+    // the address): there's no camera to carry on from, so it starts from the walking view where she is (her mark, if
+    // she's walking in to it).
+    const at = handedOver();
+    if (!at) {
       const y = followView(s.me).y;
       Object.assign(pan, { talking: false, from: y, t0: now, y, settle: false });
       return;
     }
-    // If A ended the last beat while she was still running to her mark, walking starts from where she was, not from her
-    // mark (stage.js has just put her there), or from the nearest floor she can stand on, if that was in the doorway or
-    // by someone she runs past.
-    const at = HANDOFF.hero && standable(HANDOFF.hero.x, HANDOFF.hero.y);
-    if (at) Object.assign(s.me, at, { dir: HANDOFF.hero.dir, gait: 'stand', dist: 0 });
+    // If A ended the last beat while she was still running to her mark, or SKIP came in beat 10, walking starts from
+    // where she was, not from her mark (stage.js has just put her there), or from the nearest floor she can stand on, if
+    // that was in the doorway or by someone she runs past.
+    Object.assign(s.me, at, { dir: HANDOFF.hero.dir, gait: 'stand', dist: 0 });
     // The camera ends the cut scene a little above the walkable view, and stays there until she moves (viewFor); or
     // below it, if A ended the last beat before it was back up from her answer, and then walking eases it straight on
     // up, the way it was going.

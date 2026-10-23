@@ -294,7 +294,7 @@ function doors() {
   // EXIT, white on red.
   panel(mid - 9, top - 11, 19, 9, RED[1]);
   rect(mid - 8, top - 10, 17, 1, RED[2]);
-  text('EXIT', mid + 1, top - 9, { font: 3, color: C.white, align: 'center' });
+  text('EXIT', mid, top - 9, { font: 3, color: C.white, align: 'center' });
 }
 
 /** The team's banner over the folded tables: 5026, the name, grommets and the panther's hexagon. */
@@ -1034,7 +1034,7 @@ function exitSign() {
   panel(x, y, 19, 9, RED[1]);
   rect(x + 1, y + 1, 17, 1, RED[2]);
   rect(x + 1, y + 7, 17, 1, RED[0]);
-  text('EXIT', x + 10, y + 2, { font: 3, color: C.white, align: 'center' });
+  text('EXIT', x + 9, y + 2, { font: 3, color: C.white, align: 'center' });
 }
 
 /**

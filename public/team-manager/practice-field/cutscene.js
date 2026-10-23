@@ -225,14 +225,16 @@ const ANSWER_U = PLACED - (BACK + 0.5), HER_U = ANSWER_U - HER_DUR;
  *  length while its words are read), or where that beat ends if it was never drawn (SKIP from an earlier beat); late,
  *  by how much the last beat ran over its length at the auto pace (less than 0 if A cut it short), which is what
  *  stage.js counted it as; viewY, where the camera was, for walking to ease on from; hero, where she was ({ x, y, dir }),
- *  in case A ended the last beat while she was still running (null if it was never drawn). */
+ *  in case A ended the last beat while she was still running, or SKIP came in beat 10 once she was through the doors
+ *  (null if neither beat ever drew her). Beat 10 records all of these too, so a SKIP there carries on from its last
+ *  frame, the robot from where it was in it. */
 let lastT = null, lastView = null, lastHero = null, lastKai = null;
 /** How far into beat 10 its last frame was (short of its length if A ended it early), and when its page was read; and
  *  when beat 11's page, her answer, was read (on beat 11's clock). */
 let herEnd = null, readAt = null, answerReadAt = null;
 export const HANDOFF = {
   get late() { return (lastT ?? ANSWER_DUR) - ANSWER_DUR; },
-  get robotU() { return HER_U + (herEnd ?? HER_DUR) + (lastT ?? ANSWER_DUR); },
+  get robotU() { return HER_U + (herEnd ?? HER_DUR) + (lastT ?? (lastHero ? 0 : ANSWER_DUR)); },
   get viewY() { return lastView ?? follow(START.x, START.y).y; },
   get hero() { return lastHero; },
   /** Kai, `since` seconds after the cut scene ended, if he was still stepping over to his place (null once he's there). */
@@ -460,6 +462,13 @@ export function makeCutscene(world) {
       if (readAt == null && live(beats[10]) && window.stage.cut.read) readAt = tc;
       const onAt = runAt(), hero = heroPath(tc, onAt), view = followBarred(hero?.x ?? DOORWAY.x, hero?.y ?? DOORWAY.y, 1);
       const cast = { kai: kaiAt(tc, kaiFrom(onAt)) };
+      // In case SKIP ends the cut scene here: walking carries on from this frame once she's through the doors (beat
+      // 11 overwrites it if it's drawn).
+      if (hero) {
+        lastView = view.y;
+        lastHero = { x: hero.x, y: hero.y, dir: hero.dir };
+        lastKai = { h: tc, from: kaiFrom(onAt) };
+      }
       shoot(g, view.x, view.y, 1, c.T, { robotU: HER_U + tc, enabled: true, door: doorAt(tc), cast, ...(hero && { hero }) });
       bars(1);
     }, { ...SAY.her, auto: true, look: look('okafor') }),
