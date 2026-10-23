@@ -80,7 +80,7 @@ const WAIT = { x: 16, y: 10 }, WAIT_PASSER = { x: 22, y: 10 };
  * anyone standing in the pits behind them (a passer-by, of the safety advisor either, if she's waiting), but up to
  * TALK_GAP_MORE further off, where nobody is, or if nowhere's clear, where they're furthest from anyone.
  */
-const TALK_GAP = [20, 40, 24, 46], TALK_GAP_PATROL = [36, 56, 24, 46], CREW_CLEAR = 13, TALK_GAP_MORE = 40;
+const TALK_GAP = [20, 40, 24, 46], TALK_GAP_PATROL = [36, 56, 24, 46], CREW_CLEAR = 13, TALK_GAP_MORE = 60;
 /**
  * How the aisle's walkers get round someone: they start stepping aside this far ahead of them (pixels across), pass
  * this far in front or behind (pixels deep), and step aside this fast (pixels deep a second), keeping to the aisle.
@@ -479,7 +479,9 @@ export const scene = {
       const to = wordSpot([hx, hy], side, [...crew, ...passers]);
       const from = off ? [side < 0 ? view.x - 10 : view.x + 266, to[1]] : [pn.x, pn.y];
       const round = Math.sign(to[0] - hx) !== side ? [[Math.round(hx), Math.min(LANE[1], Math.round(hy) + 14)]] : [];
-      const path = [from, ...round, to], mine = [[me.x, me.y], [ux, uy], [hx, hy]];
+      // She goes along first if the way's clear, so she's soon out from in front of anyone, then back up to meet her.
+      const first = hx !== ux && slide(me.x, me.y, hx, me.y)[0] === hx && slide(hx, me.y, hx, hy)[1] === hy;
+      const path = [from, ...round, to], mine = first ? [[me.x, me.y], [hx, me.y], [hx, hy]] : [[me.x, me.y], [ux, uy], [hx, hy]];
       const tN = along(path, 1e6, 'walk', BRISK).dist / BRISK, tS = along(mine, 1e6).dist / SPEED.walk;
       errand = { phase: 'come', t0: t, wait: 0, path, to };
       herWalk = { path: mine, t0: t + Math.max(0, tN - tS), end: t + Math.max(tN, tS), dist0: me.dist, face: () => nadia, keep: () => errand?.phase === 'come' };
@@ -559,8 +561,8 @@ export const scene = {
       passed.push(now[id]);
     }
 
-    // Everyone: the crews on the cut scene's clock, the aisle on its own.
-    const people = everyone;
+    // Everyone: the crews on the cut scene's clock, the aisle on its own (and on window.stage, for poking at).
+    const people = (s.folk = everyone);
 
     // Whoever she's talking to stops and looks at her: anyone kneeling stays down with the drill still, anyone bent
     // over a laptop or a robot straightens up.
