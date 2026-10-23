@@ -105,7 +105,7 @@ addEventListener('keydown', (e) => {
 
 // ---- The scene ----
 const st = {
-  scene: null, place: DEFAULT, beat: null, beatAt: 0, fired: new Set(), mode: null,
+  scene: null, place: DEFAULT, beat: null, beatI: 0, fired: new Set(), mode: null, leaving: false,
   events: [], conv: null, page: -1, typed: 0, near: null, nearAt: 0, lastNear: null,
   stepAt: 0, foot: false, autoFrame: null, status: null, label: null, clockFrom: null, clockTick: -1, freeAt: 0,
 };
@@ -164,7 +164,7 @@ onStage((type, detail, s) => {
       kit.bedLevel(st.place.free ?? 1, 1.2);
       // The music comes in once she's had a moment.
       setTimeout(() => {
-        if (st.mode !== 'cut' && st.scene === s.scene) kit.setMusic(st.place.music ?? null);
+        if (st.mode !== 'cut' && !st.leaving && st.scene === s.scene) kit.setMusic(st.place.music ?? null);
       }, 1500);
     }
     return;

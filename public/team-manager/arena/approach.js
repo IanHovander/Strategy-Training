@@ -62,6 +62,17 @@ function reaches(scene, x0, y0, x1, y1) {
   }
   return null;
 }
+/**
+ * Whether she gets from stop a to b heading straight for it, from anywhere she might be when she counts as at a: stage.js
+ * takes her as there within a couple of pixels, so a stop on the corner of something mustn't leave her stuck behind it.
+ */
+function clearFrom(scene, a, b) {
+  const near = [[0, 0], [1.6, 0], [-1.6, 0], [0, 1.4], [0, -1.4], [1.2, 1], [-1.2, 1], [1.2, -1], [-1.2, -1]].filter(([ex, ey]) => {
+    const [mx, my] = scene.move(a.x, a.y, ex, ey);
+    return Math.abs(mx - a.x - ex) < 0.01 && Math.abs(my - a.y - ey) < 0.01;
+  });
+  return near.every(([ex, ey]) => reaches(scene, a.x + ex, a.y + ey, b.x, b.y));
+}
 /** Where a step from (x, y) by (dx, dy) along a straight line, a pixel and a half at a time, ends up: as the stick walks. */
 function stepFrom(scene, x, y, dx, dy) {
   const n = Math.ceil(Math.hypot(dx, dy) / 1.5);
@@ -127,7 +138,7 @@ export function wayTo(scene, s, p) {
   const stops = [];
   for (let a = 0; a < spots.length - 1;) {
     let b = spots.length - 1;
-    while (b > a + 1 && !reaches(scene, spots[a].x, spots[a].y, spots[b].x, spots[b].y)) b--;
+    while (b > a + 1 && !clearFrom(scene, spots[a], spots[b])) b--;
     stops.push([spots[b].x, spots[b].y]);
     a = b;
   }
