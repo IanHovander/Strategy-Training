@@ -203,6 +203,8 @@ const fullMarkup = (scene, nextLabel) => `
 
 /** Seconds a scene takes to fade in, and to fade out as she leaves. */
 const FADE_IN = 0.5, FADE_OUT = 0.4;
+/** In the game: whether she's being steered from a keyboard, which hides the stick (for the next scene too) until a touch. */
+let byKeys = false;
 
 /** Put a scene on the page and run it. Returns its state (also window.stage). */
 export function runScene(scene, opts = {}) {
@@ -233,6 +235,7 @@ export function runScene(scene, opts = {}) {
     tv.style.width = `${cw}px`;
     tv.style.height = `${Math.floor(H * z)}px`;
     tv.style.marginLeft = `${Math.round(spare - Math.max(spare / 2, Math.min(spare, reach)))}px`;
+    box.classList.toggle('crowded', reach > spare + 12); // no room beside it: the ring sits on the picture, so it's fainter
   } : () => {
     const room = tv.parentElement.clientWidth - 4;
     tv.style.width = `${W * Math.max(1, Math.min(4, Math.floor(room / W)))}px`;
@@ -570,6 +573,10 @@ export function runScene(scene, opts = {}) {
   $('.skip').addEventListener('click', skip, on);
   if (full) {
     $('.next').addEventListener('click', moveOn, on);
+    box.dataset.keys = byKeys;
+    box.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' && byKeys) steer(false);
+    }, { ...on, capture: true });
     // A is a tap anywhere on the screen that isn't the stick or a button (a mouse click, on a computer).
     box.addEventListener('pointerdown', (e) => {
       if (e.button > 0 || e.target.closest('.stick, button')) return;
@@ -630,6 +637,11 @@ export function runScene(scene, opts = {}) {
   pad.addEventListener('pointerup', release, on);
   pad.addEventListener('pointercancel', release, on);
 
+  /** Keys or touch: the stick goes or comes back, and the picture moves to make room for it or not. */
+  function steer(keys) {
+    box.dataset.keys = byKeys = keys;
+    fit();
+  }
   const KEYS = {
     ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
     ShiftLeft: 'shift', ShiftRight: 'shift',
@@ -653,6 +665,7 @@ export function runScene(scene, opts = {}) {
     if (!k) return;
     input.keys.add(k);
     if (k !== 'shift') e.preventDefault();
+    if (full && k !== 'shift' && !byKeys) steer(true);
   }, on);
   addEventListener('keyup', (e) => {
     const k = KEYS[e.code];
