@@ -1,6 +1,6 @@
 // The people at the World Championship: the crowd in every division's stands, the drive teams at their stations, the
 // queue and the scoring table at each field's ends, people standing about in the aisles between the fields, and the
-// fifteen she can stop and talk to. Everyone is the walker's rig (walker.js) in a cast.js look, like the arena's people, so a
+// sixteen she can stop and talk to. Everyone is the walker's rig (walker.js) in a cast.js look, like the arena's people, so a
 // better head or a better rig shows up here too.
 //
 // Teams sit together at Championship, so each division's stands are cut into blocks between the aisle stairs: some
@@ -262,8 +262,10 @@ const TALKERS = [
   {
     // Close behind the desk, low on the right pad like it, so her head is a few rows under the feet of anyone going by
     // along the top of the aisle on the way out. Her footprint stops at the desk (depth), so there's room in front of it
-    // to stand and talk across it.
+    // to stand and talk across it, but the desk stands on the floor's last row: she's talked to from beside its right
+    // end (beside: where her feet can be), the way she comes to it down from the top of the aisle.
     name: 'MS. OKAFOR, INFO DESK', x: Math.round((INFO_DESK.x0 + INFO_DESK.x1) / 2), y: INFO_DESK.back - 2, across: true, depth: 4,
+    beside: { x0: INFO_DESK.x1, x1: INFO_DESK.x1 + 22, y0: INFO_DESK.back - 8, y1: INFO_DESK.front + 3 },
     look: look('w-okafor', { ...skinBody('deep'), shirt: tones.shirtGreen, jeans: tones.khaki, cuff: tones.khaki, print: '#ffc61a' }, 'curls',
       { ...SKIN.deep, ...HAIR.black }),
     badge: LANYARD,
@@ -306,6 +308,19 @@ const TALKERS = [
       ["G'DAY! IT'S THREE IN THE MORNING IN", 'SYDNEY, AND THE WHOLE SCHOOL IS UP.'],
       ['EVERY DIVISION IS STREAMED LIVE.', 'THEY ARE WATCHING IN THE GYM. WAVE!'],
       ['MY NAN IS WATCHING TOO. SHE KEEPS', 'SCORE BETTER THAN OUR SCOUTS.'],
+    ],
+  },
+  {
+    // In Archimedes' front row, halfway along the long first stretch between the greeter and Mrs. Costa, so holding
+    // right from the doorway someone comes up about seven seconds in. His seat is just along from the field's red rocket,
+    // so coming from the left he's in reach only once she's clear of it (left: 20 across, not 39), not while she shows
+    // only through the see-through rocket.
+    name: 'MR. IBRAHIM, GRANDPA FROM LAGOS', ...seated(0, 'milo'), left: 20,
+    look: lookWith('w-ibrahim', { ...skinBody('brown'), shirt: MAROON, print: null }, CROP, { ...SKIN.brown, ...HAIR.grey }),
+    lines: [
+      ['MY GRANDDAUGHTER DRIVES FOR A TEAM IN', 'THIS DIVISION. SHE IS THE CALM ONE.'],
+      ['TEAMS GET HERE BY WINNING AN EVENT,', 'AN AWARD, OR ON POINTS IN A DISTRICT.'],
+      ['I BROUGHT A CUSHION. YOU SHOULD TOO.', 'THESE SEATS ARE HARD, YOU KNOW.'],
     ],
   },
   {
@@ -513,7 +528,7 @@ const AISLES = [
   // front left (in a dark hoodie, not the orange of the volunteers). All three, like the desk, stand low on the floor,
   // their heads under the feet of anyone walking along the top of the aisle under the barrier, so on the last stretch
   // to the doorway she never runs behind a head.
-  [ox(7) + 742, 122, 1, M(10)], [ox(7) + 764, 123, 7, T('lime', 3)], [INFO_DESK.x0 - 10, INFO_DESK.back + 4, 2, M(13)],
+  [ox(7) + 742, 127, 1, M(10)], [ox(7) + 764, 128, 7, T('lime', 3)], [INFO_DESK.x0 - 10, INFO_DESK.back + 4, 2, M(13)],
 ].map(([x, y, dir, lk, table]) => ({ x, y, dir, look: lk, table }));
 
 /** Everyone standing, by division (divisionAt their x): crews, people about, and the people to talk to. */
@@ -562,8 +577,8 @@ export function standingIn(g, view, k, t, o = {}) {
 /**
  * The closest person in reach: standing, 24 across and 10 deep from her feet, so shoulder to shoulder beside them,
  * where their footprint (BLOCKS) stops her, and never straight behind or in front of them, where one would hide the
- * other; seated, beside their seat while she's on the walkway, 12 to 39 across (best 17, a head's width), never right
- * in front of it, where her head would hide theirs: wide enough that running by, the bubble stays up on each side long
+ * other; seated, beside their seat while she's on the walkway, 12 to 39 across (best 17, a head's width), right in front
+ * of it only if nobody else is in reach (her head would hide theirs), and on their left no further than left if given: wide enough that running by, the bubble stays up on each side long
  * enough to notice. Someone working a table (across) is talked to across it: from in
  * front only, up to 18 rows, where the table stops her. Someone standing just above a way she walks along (below: the
  * teammate over Newton's aisle, the greeter over the walk-in) is in reach from that far in front of them too, so their
@@ -574,8 +589,11 @@ export function reach(s) {
   for (const p of PEOPLE) {
     const dx = Math.abs(p.x - s.me.x), dy = s.me.y - p.y; // dy: how far in front of them she is (behind: under 0)
     const rows = p.across ? dy >= 0 && dy < 18 : dy > -10 && dy < (p.below ?? 10);
-    const d = p.seat ? (dx >= 12 && dx < 40 && s.me.y <= 64 ? Math.abs(dx - 17) : Infinity)
-      : dx < 24 && rows ? dx + Math.abs(dy) : Infinity;
+    const b = p.beside, beside = b && s.me.x >= b.x0 && s.me.x <= b.x1 && s.me.y >= b.y0 && s.me.y <= b.y1;
+    // Seated: right in front of them (under 12 across) they stay in reach, last choice of all, so going by along the
+    // walkway the bubble stays up from one side to the other instead of blinking off as she passes.
+    const d = p.seat ? (dx < (s.me.x < p.x ? (p.left ?? 40) : 40) && s.me.y <= 64 ? (dx >= 12 ? Math.abs(dx - 17) : 35 - dx) : Infinity)
+      : beside ? Math.abs(dy) : dx < 24 && rows ? dx + Math.abs(dy) : Infinity;
     if (d < bestD) [best, bestD] = [p, d];
   }
   return best;

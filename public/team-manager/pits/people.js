@@ -38,6 +38,7 @@ import { look, stranger, student, tones, SKIN, HAIR, skinBody, CAPS, MERCH, TEAM
 import { TEAMMATE_LOOK } from '../teammate.js';
 import { along, frameOf, SPEED, STRIDE } from '../stage.js';
 import { TEAMS, TEAL } from './teams.js';
+import { WORLD, RUN_TAPE } from './set.js';
 
 // ---- Safety glasses ----
 /** The frames: cast.js's glasses grey, the arena's glasses-wearer's own. */
@@ -218,11 +219,12 @@ const RUN_OUT = [RUN_CART, [249, 97], [234, 97], RUN_BOT], RUN_BACK = [RUN_BOT, 
  * The runner's corner of the pit, between the battery cart and the robot, as a rectangle round the feet: scene.js keeps
  * the strategist out of it, so the runner never has to squeeze past her, and she can't stand close enough in front of
  * the runner's way for the two of them to run into one figure. It stops at the pit's front edge (move()'s margin
- * included), so the aisle is open from its back row, as it is everywhere else along the row. Nothing in the picture
- * shows it, so walking along into it in front of the robot she's taken round it (set.js move()'s round), down into the
- * aisle and on, rather than stopped dead.
+ * included), so the aisle is open from its back row, as it is everywhere else along the row. The pit's hazard tape
+ * (set.js RUN_TAPE) marks it: her feet stop just outside its left and front strips (move()'s margin is 4 across and 2
+ * deep). Walking along into it in front of the robot she's taken round it (set.js move()'s round), down into the aisle
+ * and on, rather than stopped dead.
  */
-export const RUN_LANE = { x0: 222, x1: 252, y0: 80, y1: 98, round: 9 };
+export const RUN_LANE = { x0: RUN_TAPE.x0 + 2, x1: RUN_TAPE.x1 - 1, y0: RUN_TAPE.y0 + 1, y1: RUN_TAPE.y1, round: 9 };
 const CARRY = 22; // pixels a second with a battery in both hands
 function runner(t) {
   const out = along(RUN_OUT, 1e6, 'carry', CARRY).dist / CARRY, back = along(RUN_BACK, 1e6).dist / SPEED.walk;
@@ -269,10 +271,11 @@ function patrol(t) {
   return walking(PATROL_BACK);
 }
 
-/** Someone walking the length of the hall at y, to the right (dir 2) or the left (dir 6), coming round again. */
+/** Someone walking the length of the hall at y, to the right (dir 2) or the left (dir 6), coming round again, from 20
+ * pixels off one end of the world to 20 off the other. */
 const passing = (y, dir, offset) => (t) => {
-  const d = t * 30 + offset, k = mod(d, 872);
-  return { x: dir === 2 ? k - 20 : 852 - k, y, dir, gait: 'walk', frame: walkFrame(d) };
+  const d = t * 30 + offset, k = mod(d, WORLD.w + 40);
+  return { x: dir === 2 ? k - 20 : WORLD.w + 20 - k, y, dir, gait: 'walk', frame: walkFrame(d) };
 };
 
 // ---- Who's where ----
@@ -324,7 +327,7 @@ export const CREW = [
 // round (scene.js).
 const PASSING = [
   { id: 'pass1', look: LOOKS.pass1, solid: false, at: passing(118, 2, 190) },
-  { id: 'pass2', look: LOOKS.pass2, solid: false, at: passing(114, 6, 122) },
+  { id: 'pass2', look: LOOKS.pass2, solid: false, at: passing(114, 6, 146) },
 ];
 
 /**

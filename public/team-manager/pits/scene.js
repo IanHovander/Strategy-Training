@@ -128,6 +128,13 @@ const REJOIN = { x: 28, y: 14 };
  * the field waits outside while their feet are still at x or further, where none of them shows.
  */
 const AT_DOOR = { near: 64, x: WORLD.w + 10 };
+/**
+ * Walking in from off the left edge, she faces right with the whiteboard held out in front of her, so its corner would
+ * come into the picture a couple of pixels before the rest of her, a white speck on its own at the edge for a few frames.
+ * So she's left out until her feet are drawn this far from the edge (where her face comes in) and the board and she come in
+ * together.
+ */
+const IN_FROM = -6;
 
 const cutscene = makeCutscene({ drawWorld, drawCartBot, drawFolk, folk, LOOKS });
 /** Seconds into the cut scene when it hands over: the crews carry on from there. */
@@ -581,7 +588,7 @@ export const scene = {
 
     drawWorld(g, view, crewT, {
       pit5026: 'sign',
-      more: [...people.map((p) => ({ y: p.y, draw: () => drawFolk(g, view, p) })), s.player],
+      more: [...people.map((p) => ({ y: p.y, draw: () => drawFolk(g, view, p) })), ...(s.mode === 'auto' && !s.auto?.out && Math.round(me.x - view.x) < IN_FROM ? [] : [s.player])],
     });
   },
 };
