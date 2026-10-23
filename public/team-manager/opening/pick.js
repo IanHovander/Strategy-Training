@@ -1,16 +1,17 @@
 // The pick: where the opening hands the player the decision (docs/blue-banner-design.md, section 5, beat 1). Seed 4 is
 // on the clock: 45 seconds, big and red at the top. Under it is the scouting tablet (tablet.js): her robot pinned for
 // reference, and two teams to pick from (teams.js). 7461 shows the biggest average on the screen, 38, but it's
-// fading: 44 a match on Friday, 29 on Saturday morning. 6834 shows 35, but it's rising: 27 on Friday, a new intake
-// Friday night, 48 on Saturday, about a tenth better than 7461 at its best. 6834 is the right pick.
+// fading: 44 a match for its first six, 29 for its last four (Friday's last and Saturday's three). 6834 shows 35, but
+// it's rising: 27 for its first six, a rebuilt intake, 48 for its last four, about a tenth better than 7461 at its
+// best. 6834 is the right pick.
 //
 // What happens, phase by phase:
 //   browse    the clock runs. The stick (or the arrow keys) moves between the cards; A picks the one the cursor's on.
 //             At 0:00 the clock says TIME! and Robin waits: the pick is still hers.
 //   confirm   "5026 RESPECTFULLY INVITES TEAM 6834", INVITE or BACK (the stick chooses, A presses). The clock runs on.
 //   accept    "6834 ACCEPTS!". On by itself after a moment, or on A.
-//   result    the bet log's stamp, GOOD CALL or BAD CALL, and the reveal: Saturday's four boxes light up, red for
-//             7461 (FRIDAY 44 · SATURDAY 29), green for 6834, and the one line to remember. A wrong pick: A rewinds.
+//   result    the bet log's stamp, GOOD CALL or BAD CALL, and the reveal: the last four boxes light up, red for
+//             7461 (FIRST 6 44 · LAST 4 29), green for 6834, and the one line to remember. A wrong pick: A rewinds.
 //             The right one: A carries on.
 //   rewind    the tape runs back to 0:45, Norbert's 26 ear glowing in the corner. Then browse again, and her thought:
 //             "...DIDN'T THIS JUST HAPPEN?"

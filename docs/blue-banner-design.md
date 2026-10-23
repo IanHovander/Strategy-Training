@@ -177,27 +177,28 @@ It's my last year."
 
 You're seed 4, an alliance captain. Seeds 1 to 3 pick quickly over the MC. Then it's your turn: **45 seconds** on the
 scouting tablet, with your robot pinned at the top for reference and two cards to choose from. Each card shows the team
-number, its average (big), one short note and its ten qualification matches as a strip of boxes: six on Friday, four
-on Saturday morning, set a little apart so the last four read together. The team numbers are made up.
+number, its average (big), one short note and its ten qualification matches as a strip of boxes: seven on Friday, three
+on Saturday morning. The trend is in the last four: Friday's last match and Saturday's three. The team numbers are made
+up.
 
 | Card | The tablet says | The truth |
 |---|---|---|
 | **Your robot, 5026** | avg 30 | — |
-| **7461** | **avg 38**, the biggest number on the screen; "BIG. FAST. LOUD FANS." Friday 45, 42, 47, 43, 41, 46; Saturday **31, 27, 30, 28** | Fading: 44 a match on Friday, 29 on Saturday, about two thirds of it. Something's wrong with it, and it hasn't been fixed. |
-| **6834** | avg 35; "NEW INTAKE FRIDAY NIGHT." Friday 26, 28, 27, 29, 26, 26; Saturday **47, 49, 48, 48** | Rising: 27 on Friday, then a new intake, and 48 a match since, about 10% better than 7461 at its best. The right pick. |
+| **7461** | **avg 38**, the biggest number on the screen; "BIG. FAST. LOUD FANS." 45, 42, 47, 43, 41, 46, then **31 · 27, 30, 28** | Fading: 44 a match for its first six, 29 for its last four, about two thirds of it. Something broke on Friday afternoon, and it hasn't been fixed. |
+| **6834** | avg 35; "REBUILT INTAKE FRIDAY." 26, 28, 27, 29, 26, 26, then **47 · 49, 48, 48** | Rising: 27 for its first six, then a rebuilt intake, and 48 a match since, about 10% better than 7461 at its best. The right pick. |
 
 **The trap is that the average hides the trend.** The senior strategist's page is from Friday night, when 7461 really
-was the best robot at the event. On Saturday morning it started limping, and an average over all ten matches still
-puts it on top, 38 to 35.
+was the best robot at the event. In its last match on Friday it started limping, and an average over all ten matches
+still puts it on top, 38 to 35.
 
-**It's fair** because the Saturday boxes are on screen, set apart, the other card says what changed, and the three
-seeds above you passed on the bigger average. A sharp player asks why.
+**It's fair** because the last four boxes are on screen, the other card says what changed, and the three seeds above
+you passed on the bigger average. A sharp player asks why.
 
 **After the pick:** "6834 ACCEPTS!" (or 7461), then the bet log's stamp, GOOD CALL or BAD CALL, with one picture and
-one line. The picture is 7461's strip (and, for the right pick, 6834's over it), Saturday's four boxes lighting up, red
+one line. The picture is 7461's strip (and, for the right pick, 6834's over it), the last four boxes lighting up, red
 for 7461 and green for 6834:
 
-> FRIDAY 44 · SATURDAY 29
+> FIRST 6 44 · LAST 4 29
 >
 > **Look at the trend, not the average.**
 
