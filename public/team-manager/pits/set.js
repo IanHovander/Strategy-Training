@@ -63,9 +63,9 @@ const LIGHT = {
 /**
  * The way out, for the walking part (stage.js scene.exit): once her feet are past x, anywhere across the aisle, from its
  * back edge (just in front of the right end drape's post, the way she passes every side drape's along the row) to its
- * near edge, she walks on out along it to the field. Behind the aisle the floor stops short of x (open()), so past x
- * she's always in it. The arrow sits low in the aisle's back half, clear of the desk, the glasses stand and the QUEUE
- * sign.
+ * near edge, she walks on out along it to the field. Behind the aisle, in front of the glasses stand, the floor runs on
+ * to the end drape; walking on to the right there takes her down into the aisle and out (move()). The arrow sits low in
+ * the aisle's back half, clear of the desk, the glasses stand and the QUEUE sign.
  */
 export const EXIT = { x: 818, y0: 100, y1: 138, label: 'TO THE FIELD', sign: { y: 106 } };
 /** The aisle's dashed lines (the lane, the near edge), and its floor boxes: [x, y, the x their cable runs up to a pit at]. */
@@ -717,8 +717,9 @@ function adminDesk() {
 /** Safety glasses for anyone who needs a pair, under their sign, in the corner against the right end drape. */
 function glassesStand() {
   // The sign, yellow all round its words like the QUEUE sign (two pixels each side of the longest), clear of the end
-  // drape's top rail, and hung high enough that its words show over the head of anyone standing at the desk's end below it.
-  const sx = 789, sy = 26, w = 37;
+  // drape's top rail, and hung high enough beside the match monitor that its words show over the head of anyone standing
+  // below it, at the desk's end or in front of the stand.
+  const sx = 789, sy = 21, w = 37;
   rect(sx, sy, w, 21, C.ink);
   rect(sx + 1, sy + 1, w - 2, 19, C.yel1);
   rect(sx + 1, sy + 1, w - 2, 1, C.yel2);
@@ -822,36 +823,46 @@ export function drawWorld(g, view, t, o = {}) {
 
 // ---- Where people can walk ----
 // The aisle, and into each pit's open front as far as its robot or its board (as wide as the cart or the board's panel,
-// so nobody slips behind one); in front of the counter and the desk at the ends. The side drapes stop anyone crossing
-// from pit to pit. 5026's spot is as it is while you walk: the board. The aisle stops short of each end of the picture:
-// the way out at the right is EXIT's, which stage.js walks her out of by herself. In front of the desk and the glasses
-// stand the floor stops a step short of EXIT's line (and of the end drape's post), so she never stands past it out of
-// the aisle, where she wouldn't leave, with the post across her face. Out in the aisle the QUEUE sign's post stands in
+// so nobody slips behind one, not even along the pit's back edge); in front of the counter and the desk at the ends. The
+// side drapes stop anyone crossing from pit to pit. 5026's spot is as it is while you walk: the board. The aisle stops
+// short of each end of the picture: the way out at the right is EXIT's, which stage.js walks her out of by herself. In
+// front of the desk and the glasses stand the floor runs on to the end drape; from there, as from the desk's end, walking
+// on to the right takes her down round into the aisle and out (move()). Out in the aisle the QUEUE sign's post stands in
 // the way of the rows near its foot, her starting row among them; move() takes her round its front.
 const AISLE = { x0: 10, x1: 822, y0: 100, y1: 138 };
 function open(x, y) {
   if (x < AISLE.x0 || x > AISLE.x1 || y > AISLE.y1) return false;
   if (y >= AISLE.y0) return true;
   if (x < 96) return y >= 84 && x <= 90;
-  if (x >= 736) return y >= 88 && x >= 742 && x <= EXIT.x - 4;
+  if (x >= 736) return y >= 88 && x >= 742;
   const p = PITS[Math.floor((x - 96) / 80)];
   return y >= 82 && x >= p.x0 + 6 && x <= p.x1 - 6;
 }
 /** The QUEUE sign's post, standing in the aisle's near half, and how far short of it she starts going round it. */
 const POST = { x0: QUEUE_X - 4, x1: QUEUE_X + 4, y0: 131, y1: 134 }, VEER = 28;
+/** The safety glasses stand: where the corner at the way out begins (move()). */
+const GLASSES = { x0: 814, x1: 828, y0: 83, y1: 88 };
 const BLOCKS = [
-  ...PITS.filter((p) => p.state === 'busy' && p.num !== '5026').map((p) => ({ x0: p.mid - 19, x1: p.mid + 19, y0: 84, y1: 90 })),
-  ...PITS.filter((p) => p.state !== 'busy' || p.num === '5026').map((p) => ({ x0: p.mid - 17, x1: p.mid + 17, y0: 84, y1: 90 })),
-  { x0: 792, x1: 828, y0: 83, y1: 90 }, // the safety glasses stand, and under its sign at the desk's end
+  // The robots' carts and the boards on their spots, from the pit's back edge (y0 less hits()'s margin) to the tape.
+  ...PITS.filter((p) => p.state === 'busy' && p.num !== '5026').map((p) => ({ x0: p.mid - 19, x1: p.mid + 19, y0: 83, y1: 90 })),
+  ...PITS.filter((p) => p.state !== 'busy' || p.num === '5026').map((p) => ({ x0: p.mid - 17, x1: p.mid + 17, y0: 83, y1: 90 })),
+  GLASSES,
   POST,
 ];
 const hits = (bs, x, y) => bs.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
 
 /**
- * Where a step from (x, y) by (dx, dy) ends up, as [x, y]: along, then across, each as far as the floor allows (like
- * field.js move). extra: more rectangles { x0, x1, y0, y1 } that block, such as people standing still.
+ * How far round the end of something she's taken rather than stopped dead (rows of depth going along, pixels going up
+ * or down; see move()), and how much further a step goes across than down the screen (stage.js: the floor recedes).
  */
-export function move(x, y, dx, dy, extra = []) {
+const ROUND = { y: 5, x: 5 }, DEPTH = 0.8;
+
+/**
+ * Where a step from (x, y) by (dx, dy) ends up, as [x, y]: along, then across, each as far as the floor allows (like
+ * field.js move). extra: more rectangles { x0, x1, y0, y1 } that block, such as people standing still. o.round: false
+ * for a plain step that never goes round anything (scene.js tries straight paths with it).
+ */
+export function move(x, y, dx, dy, extra = [], { round = true } = {}) {
   // Somewhere she shouldn't be (someone stepped into her): let her walk out.
   const free = !open(x, y) || hits(BLOCKS, x, y) || hits(extra, x, y);
   const ok = (px, py) => open(px, py) && (free || (!hits(BLOCKS, px, py) && !hits(extra, px, py)));
@@ -860,17 +871,41 @@ export function move(x, y, dx, dy, extra = []) {
     return [fx, fy];
   };
   const [nx] = reach(x, y, dx, 0);
-  // Walking on to the right in front of the glasses stand, where the floor stops short of the end drape (open()), she
-  // goes on down round its post into the aisle, toward the way out, rather than treading on the spot in the corner.
-  const corner = dx > 0 && dy > -0.01 && nx < x + dx && y < AISLE.y0 && x + dx > EXIT.x - 4;
+  // Walking on to the right at the desk's end, into the glasses stand, or in front of it into the end drape, she goes on
+  // down round them into the aisle, toward the way out, rather than treading on the spot. Not while she's stepping up:
+  // then she's walking into the corner, and stops in it.
+  const corner = round && dx > 0.01 && dy > -0.01 && nx < x + dx && y < AISLE.y0 && x + dx > GLASSES.x0 - 4;
   // Walking straight along the aisle toward the QUEUE sign's post on a row it stands across (her starting row is one),
   // she bears down round its front, from VEER pixels short of it, and walks on: she passes in front of the sign, never
   // behind its panel with her face hidden, or treading on the spot against the post. If she's against it already, she
   // steps straight down. Not while she's stepping up: then she goes round behind it, as she's steering, so it never pulls
   // her the wrong way.
   const ahead = dx > 0 ? POST.x0 - 4 - x : x - (POST.x1 + 4);
-  const veer = dx !== 0 && Math.abs(dy) < 0.01 && ahead > -1 && ahead < VEER && hits([POST], POST.x0, y);
-  const post = dx !== 0 && dy > -0.01 && Math.abs(nx - x) < Math.abs(dx) && hits([POST], x + dx, y);
+  const veer = round && dx !== 0 && Math.abs(dy) < 0.01 && ahead > -1 && ahead < VEER && hits([POST], POST.x0, y);
+  const post = round && dx !== 0 && dy > -0.01 && Math.abs(nx - x) < Math.abs(dx) && hits([POST], x + dx, y);
   const [, ny] = reach(nx, y, 0, corner ? Math.max(dy, dx * 0.8) : post ? Math.max(dy, Math.abs(dx) * 0.8) : veer ? Math.abs(dx) * 0.5 : dy);
+  if (round && nx === x && ny === y) return roundEnd(ok, x, y, dx, dy) ?? [x, y];
   return [nx, ny];
+}
+
+/**
+ * Stopped dead walking straight along (or straight up or down) at the end of something, a side drape's front, a cart's
+ * corner, someone's shoulder, the post, with floor a few steps to one side that would let her carry on: she steps round
+ * that way instead of treading on the spot, as far as a step goes (so it reads as stepping round, not being pulled).
+ * Within ROUND.y rows going along, ROUND.x pixels going up or down, the nearer side first (on a tie, toward the aisle or
+ * toward the way out); the floor between has to be clear. Square against anything wider, she stops.
+ */
+function roundEnd(ok, x, y, dx, dy) {
+  const along = Math.abs(dx) >= 0.01 && Math.abs(dy) < 0.01, upDown = Math.abs(dy) >= 0.01 && Math.abs(dx) < 0.01;
+  if (!along && !upDown) return null;
+  const max = along ? ROUND.y : ROUND.x, shut = {};
+  const at = (o) => (along ? [x, y + o] : [x + o, y]);
+  const on = (o) => (along ? ok(x + dx * 0.25, y + o) : ok(x + o, y + dy * 0.25));
+  for (let o = 0.5; o <= max; o += 0.5) {
+    for (const side of [1, -1]) {
+      if (shut[side] || (shut[side] = !ok(...at(side * o)))) continue;
+      if (on(side * o)) return at(side * Math.min(o, along ? Math.abs(dx) * DEPTH : Math.abs(dy) / DEPTH));
+    }
+  }
+  return null;
 }

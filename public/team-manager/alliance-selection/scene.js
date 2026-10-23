@@ -29,7 +29,8 @@
 // the loop waits; then she carries on from where she stopped. Looking a tenth of a second ahead, she pulls up a skate's
 // length short, never on top of her or right in front of her with her back turned, and while she waits like that she can
 // be talked to from where she stopped. Pushing straight along the strip into her while she waits, the strategist slips
-// past in front of her (move()). She turns to the strategist, but never her back to you (with the strategist
+// past in front of her, as she does round anyone standing in her way, and on through the gate if its posts stop her
+// (move()). She turns to the strategist, but never her back to you (with the strategist
 // behind her she turns side-on, to her side), and never her free arm out across a captain standing just to her right
 // (she turns three-quarters left instead, free hand on her hip, as in the cut scene).
 
@@ -41,7 +42,8 @@ import { lookOf, CROWD, TALKERS, MC_LINES, mcPatrol } from './people.js';
 import { MC_LOOK, drawSkater } from './mc.js';
 import { makeCutscene } from './cutscene.js';
 import {
-  WORLD, START, EXIT, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, SKATE_SPEED, SIGN_TOP, capSpot, walkView,
+  WORLD, START, EXIT, ALLIANCES, BACKUPS, MC_NAME, NEAR_TOP, NEAR_GATE, BAND, FRONT_FLOOR, SKATE_SPEED, SIGN_TOP, capSpot,
+  walkView,
 } from './layout.js';
 
 /** The display once it's over: every alliance, the backups, no clock. */
@@ -137,17 +139,44 @@ function moveMc(t, s) {
 }
 
 /**
- * Where a step takes her: set.js moveIn, everyone standing and Robin in the way. Robin stops for her when she comes
- * close, and waits for as long as she stays close, so pushing straight along the strip into a waiting Robin, each would
- * wait for the other: a step along that only Robin stops slips her sideways instead, round the near side of Robin's box
- * (in front of her, on the strip, which keeps its last rows clear of it: set.js moving()), and she walks on past.
+ * Where a step takes her: set.js moveIn, everyone standing and Robin in the way. Pushing straight along, there are two
+ * places she'd otherwise walk on the spot, and stage.js's own slip (an eighth of a turn) doesn't get her out of either,
+ * since a step there gets nowhere along at any of those angles:
+ * - Into someone: she slips round them instead, and walks on past. Robin stops for her when she comes close and waits
+ *   for as long as she stays close, so pushing along the strip into her, each would otherwise wait for the other (the
+ *   strip keeps its last rows clear of Robin's box: set.js moving()); and coming up through the gate past the lane in
+ *   front of the line, she'd be stuck between the two captains either side of it.
+ * - In the gate, between the strip and the floor in front, where its posts stop her: she goes on through, and along.
+ * Either way she steps toward the nearer depth (in front or behind) from which the step gets on (roundSide), and only
+ * when nothing but people or the gate's posts stop her: square against a wall she stays put.
  */
 function move(x, y, dx, dy) {
   const to = moveIn(x, y, dx, dy, CROWD, [mc]);
-  if (!mc.waiting || !dx || to[0] !== x || to[1] !== y) return to;
-  const free = moveIn(x, y, dx, dy, CROWD);
-  if (free[0] === x && free[1] === y) return to;
-  return moveIn(x, y, 0, (y >= mc.y ? 1 : -1) * Math.abs(dx) * DEPTH, CROWD, [mc]);
+  if (!dx || to[0] !== x || to[1] !== y) return to;
+  const inGate = x >= NEAR_GATE.x0 && x <= NEAR_GATE.x1 && y > BAND.y1 && y < FRONT_FLOOR;
+  if (!inGate && moveIn(x, y, dx, dy)[0] === x) return to;
+  const side = roundSide(x, y, dx);
+  return side ? moveIn(x, y, 0, side * Math.abs(dx) * DEPTH, CROWD, [mc]) : to;
+}
+/** Slipping round: no further than this, in front or behind. */
+const ROUND = 28;
+/**
+ * Which way to slip round what stops a step along by dx: down the screen (1, in front, if it's as near) or up (-1),
+ * whichever is the shorter walk, a pixel at a time over floor she can stand on, to where the step gets on; 0 if neither
+ * is within ROUND. It depends only on where things stand, so it's the same from one frame to the next and she never
+ * dithers between the two.
+ */
+function roundSide(x, y, dx) {
+  const open = new Map([[1, true], [-1, true]]);
+  for (let k = 1; k <= ROUND; k++) {
+    for (const side of [1, -1]) {
+      if (!open.get(side)) continue;
+      const ny = y + side * k;
+      if (Math.abs(moveIn(x, ny - side, 0, side, CROWD, [mc])[1] - ny) > 1e-6) open.set(side, false);
+      else if (Math.abs(moveIn(x, ny, dx, 0, CROWD, [mc])[0] - x) > 1e-6) return side;
+    }
+  }
+  return 0;
 }
 
 /**

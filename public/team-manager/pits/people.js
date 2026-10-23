@@ -217,9 +217,10 @@ const RUN_OUT = [RUN_CART, [249, 97], [234, 97], RUN_BOT], RUN_BACK = [RUN_BOT, 
 /**
  * The runner's corner of the pit, between the battery cart and the robot, as a rectangle round the feet: scene.js keeps
  * the strategist out of it, so the runner never has to squeeze past her, and she can't stand close enough in front of
- * the runner's way for the two of them to run into one figure.
+ * the runner's way for the two of them to run into one figure. It stops at the pit's front edge (move()'s margin
+ * included), so the aisle is open from its back row, as it is everywhere else along the row.
  */
-export const RUN_LANE = { x0: 222, x1: 252, y0: 80, y1: 99 };
+export const RUN_LANE = { x0: 222, x1: 252, y0: 80, y1: 98 };
 const CARRY = 22; // pixels a second with a battery in both hands
 function runner(t) {
   const out = along(RUN_OUT, 1e6, 'carry', CARRY).dist / CARRY, back = along(RUN_BACK, 1e6).dist / SPEED.walk;

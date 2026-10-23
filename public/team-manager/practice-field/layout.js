@@ -27,9 +27,10 @@ export const SIDE_DOOR = { y0: 148, y1: 181 };
 /** Where her feet can go at all: the floor, short of the walls and the edges of the world. At the front she can go 8
  *  pixels past `shown`, so there's an easy lane to walk round in front of Kai, standing in front of the carpet; there
  *  the camera still keeps 12 pixels of floor under her feet, down to the room's bottom edge. On the right she stops
- *  short of the end wall, its width of her shadow away, except in the side doors' floor band, where she can walk on out
+ *  short of the end wall, far enough that neither her shadow nor her arm (8 pixels out from her feet) touches it, or the
+ *  EXIT sign standing on it over the doors (room.js), except in the side doors' floor band, where she can walk on out
  *  (scene.js move). */
-export const FLOOR = { x0: 8, x1: END_WALL.x0 - 7, y0: ROOM.wallY + 4, y1: ROOM.shown + 8 };
+export const FLOOR = { x0: 8, x1: END_WALL.x0 - 9, y0: ROOM.wallY + 4, y1: ROOM.shown + 8 };
 
 // The back wall, left to right. x0-x1 along the wall; top is the y of the top edge on the wall.
 /** Double doors out to the hallway, 7 feet tall, with the EXIT sign over them. */

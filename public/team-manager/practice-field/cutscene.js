@@ -444,11 +444,12 @@ export function makeCutscene(world) {
       bars(1);
     }),
     // 9 tables: the other end of the room, the folded tables, the shutter and the vending machines, in a slow pan
-    // that lasts about as long as his words. The next cycle (level 3) starts off screen. It sets off from just inside
-    // the end wall, the EXIT sign over the side doors whole in the frame and above the dialog box, so it shows the way
-    // out while he talks (and the scout at the left edge whole too), and leaves the sign behind before it stops.
+    // that lasts about as long as his words. The next cycle (level 3) starts off screen. It sets off from the end wall,
+    // the EXIT sign over the side doors whole in the frame's right edge and above the dialog box, so it shows the way
+    // out as he starts to talk, and leaves the sign behind before it stops; the scout at the left edge comes in whole
+    // in its first second.
     beat(4.8, (g, t, tc, c) => {
-      shoot(g, lerp(436, 404, ease(tc, 0, 4.8)), 28, 1, c.T, { robotU: 12 + t, enabled: true });
+      shoot(g, lerp(ROOM.w - W, 404, ease(tc, 0, 4.8)), 28, 1, c.T, { robotU: 12 + t, enabled: true });
       bars(1);
     }, { ...SAY.tables, auto: true, look: look('flores') }),
     // 10 her: the doors, her run in, the call, her run on once it's been read; the camera follows her as stage.js will,

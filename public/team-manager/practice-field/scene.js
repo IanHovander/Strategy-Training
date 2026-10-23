@@ -24,8 +24,9 @@
 // not the carpet, which the robot is always running on; the furniture, the gear and everyone else stop her too. A push
 // along with someone standing just ahead, while she's a little in front of them, curves her on round in front of them,
 // so holding right from her mark walks her down round Kai and on along the lane in front of the field by herself; a
-// push up and right that the carpet holds up takes her round them too. Level with someone she stops beside them, to
-// talk.
+// push up and right that the carpet or someone holds up takes her round them too, at once if going up only leads into
+// the carpet. Level with someone she stops beside them, to talk. Everywhere else stage.js's own slip round corners
+// does the rest, as in every scene; where move() has steered her, it doesn't cut across.
 // The way in and out, as everywhere in the game, is left to right: the cut scene brings her in through the hallway
 // doors at the left-hand end of the back wall and round to her mark (if it's skipped before it shows her, she walks in
 // from the left along the same lane instead, stage.js enter), and she leaves through the side doors in the end wall on
@@ -130,8 +131,8 @@ const inDoorway = (y) => y >= DOOR_Y.y0 && y <= DOOR_Y.y1;
  *  (the walker's hair tops out 47 pixels above her feet, and her feet are never higher than DOOR_Y.y0 in the band), so
  *  it's never over her face as she comes to the doors, and it's up the screen, clear of the stick's ring in the bottom
  *  right on a screen with no room beside the picture; its label, over it, sits on the vending machines' fronts, clear
- *  of the custodian's cart and its mop. The doorway's own EXIT sign is just under the arrow, over the opening on its
- *  post (room.js). The label is only there while the arrow is: stage.js draws it right-aligned to the arrow, so with
+ *  of the custodian's cart and its mop. The doorway's own EXIT sign is just down and to the right of the arrow, over
+ *  the opening on its post (room.js), so the arrow points at it. The label is only there while the arrow is: stage.js draws it right-aligned to the arrow, so with
  *  the arrow still off the right of the picture it would show cut off at the edge ('TO TH'). */
 const EXIT = {
   x: END_WALL.x0 - 4, ...DOOR_Y, sign: { y: DOOR_Y.y0 - 54 },
@@ -156,16 +157,18 @@ function ahead(x, y, s) {
   }
   return { room, b };
 }
-/** A push along (s the way, v the step) with someone standing in the way, right there or within LOOK pixels: the way
+/** A push along (s the way, v the step) with someone standing in the way, right there or within look pixels: the way
  *  round in front of them (further down the room). She looks for the nearest row in front, at most ROUND down, that's
  *  clear until she's past them, with nothing in her way going straight down to it, and heads for the corner of their
  *  footprint on it: straight down while she's beside it, and then on a slant, so she curves round them rather than
  *  stopping and sliding down sideways. front: only if she's a little in front of their feet already, as for a straight
  *  push, so level with someone she still stops beside them, where she talks to them. { n: [x, y], face, far }: the step,
- *  the way she faces taking it (toward the corner), and the x where she's past them; null if there's no way round. */
-function roundFront(x, y, s, v, front) {
+ *  the way she faces taking it (toward the corner, but never more than an eighth of a turn off the push: at the last
+ *  row the corner is straight below her, and turning to face you for that one step reads as a flicker), and the x
+ *  where she's past them; null if there's no way round. */
+function roundFront(x, y, s, v, front, look = LOOK) {
   const { room, b } = ahead(x, y, s);
-  if (room > LOOK || !WHO.includes(b)) return null;
+  if (room > look || !WHO.includes(b)) return null;
   const ax = x + s * room;
   const p = STANDING.find((q) => Math.abs(ax - q.x) < 20 && Math.abs(y - q.y) < 20 && (!front || y > q.y + 3));
   if (!p) return null;
@@ -182,10 +185,22 @@ function roundFront(x, y, s, v, front) {
     let n = [x + (cx - x) * k, y + d * k];
     if (blocked(...n)) n = [x, y + Math.min(v * DEPTH, d)];
     if (blocked(...n)) return null;
-    const faceX = s * Math.min(ahead(x, ly - 1, s).room, Math.abs(far - x));
-    return { n, face: dirToward(faceX, d / DEPTH), far };
+    const face = dirToward(s * Math.min(ahead(x, ly - 1, s).room, Math.abs(far - x)), d / DEPTH);
+    return { n, face: face === 0 ? (s > 0 ? 1 : 7) : face, far };
   }
   return null;
+}
+/** Going up from (x, y), with someone standing in the way along (s the way): whether it only leads into the carpet (or
+ *  anything else) within ROUND pixels, before she'd be clear of them to go on along. A diagonal push up and along that
+ *  someone holds up then goes round in front of them straight away (move(), rounding), rather than walking her up into
+ *  the dead end first and back down out of it. */
+function deadEnd(x, y, s) {
+  for (let i = 1; i <= ROUND; i++) {
+    const ly = y - i;
+    if (ly < FLOOR.y0 || blocked(x, ly)) return true;
+    if (ahead(x, ly, s).room > LOOK) return false;
+  }
+  return false;
 }
 /** A straight push right along the end wall, above or below the side doors: she turns for the doorway as she comes
  *  within WALL_LOOK pixels of the wall (or as close to the wall as she is to the doorway's band, if that's nearer), on
@@ -204,26 +219,51 @@ function toDoors(x, y, v) {
 function steer(r) {
   const me = window.stage?.me;
   if (me) me.dir = r.face;
+  real.steered = true;
   return r.n;
 }
-/** A diagonal push that someone standing turned into a walk round them ({ push, far, at }): until she's past them (far),
- *  she carries on as a straight push along, the push's up or down left out, so it doesn't lift her back into the corner
- *  she's going round. Only while that same push is held: it ends if the push turns or lets go (no step for a moment). */
+/** stage.js's walk() also tries a step an eighth of a turn either way when hers gets her nowhere the way she's pushing,
+ *  and takes one that does better, so she slips round corners and people. Those tries come through move() too, from
+ *  the same spot, after the real step, which is the one the way the stick points. A try changes nothing here (rounding,
+ *  her facing, Kai's patience), and it's just the plain step (stepOf), unless move() steered the real step round
+ *  someone or to the doors: then it goes nowhere, so the slip never cuts across the way move() chose. */
+const real = { x: NaN, y: NaN, steered: false };
+function isTry(dx, dy) {
+  const st = window.stage?.stick?.();
+  return !!st && (st.x !== 0 || st.y !== 0) && dirToward(dx, dy / DEPTH) !== dirToward(st.x, st.y);
+}
+/** The plain step: along, then across, as field.js does, each half refused if it would end in something; on the right
+ *  she stops short of the end wall, except in the doorway, where she can walk on into it, and not out of the band once
+ *  she's past where she'd stop. */
+function stepOf(x, y, dx, dy) {
+  let nx = clamp(x + dx, FLOOR.x0, inDoorway(y) ? ROOM.w + 40 : FLOOR.x1);
+  if (blocked(nx, y)) nx = x;
+  let ny = clamp(y + dy, FLOOR.y0, FLOOR.y1);
+  if (blocked(nx, ny) || (nx > FLOOR.x1 && !inDoorway(ny))) ny = y;
+  return [nx, ny];
+}
+/** A push that someone standing turned into a walk round them ({ push, far, at }): until she's past them (far), she
+ *  carries on as a straight push along, a diagonal push's up or down left out, so it doesn't lift her back into the
+ *  corner she's going round, and she keeps on round them even where their footprint narrows to further ahead than
+ *  LOOK (round the front of their legs), so she doesn't take one straight step there and turn back to the curve. Only
+ *  while that same push is held: it ends if the push turns or lets go (no step for a moment). */
 let rounding = null;
 const pushOf = (dx, dy) => `${Math.abs(dx) < 0.01 ? 0 : Math.sign(dx)},${Math.abs(dy) < 0.01 ? 0 : Math.sign(dy)}`;
 
-/** A step along, then across, as field.js does: each half refused if it would end in something. On the right she stops
- *  short of the end wall, except in the doorway, where she can walk on into it, and not out of the band once she's
- *  past where she'd stop. Going round people and to the doors:
+/** Her step (stepOf), going round people and to the doors:
  *  - A straight push along (as the keyboard and the stick give) with someone standing just ahead, while she's in front
  *    of them, takes her round in front of them (roundFront): holding right from her mark walks her down round Kai and
  *    on along the lane in front of the field past Noor.
  *  - A straight push right near the end wall, above or below the doors, turns her into the doorway (toDoors).
  *  - A diagonal push held up across by the carpet or by someone, with someone standing just ahead along, takes her
  *    round in front of them too, and on past them (rounding): pushing up and right toward the doors from her mark, she
- *    goes round Kai and Noor rather than stopping against them.
- *  A step that goes nowhere because the carpet is in the way may bring Kai over (keepOff). */
+ *    goes round Kai and Noor rather than stopping against them. So does one whose along part someone holds up when
+ *    going up only leads into the carpet (deadEnd), straight away.
+ *  A step that goes nowhere because the carpet is in the way may bring Kai over (keepOff). stage.js's tries of the
+ *  step an eighth of a turn either way (isTry) don't count. */
 function move(x, y, dx, dy) {
+  if (isTry(dx, dy)) return real.steered && x === real.x && y === real.y ? [x, y] : stepOf(x, y, dx, dy);
+  Object.assign(real, { x, y, steered: false });
   const s = Math.abs(dx) < 0.01 ? 0 : Math.sign(dx), v = Math.hypot(dx, dy / DEPTH), push = [dx, dy];
   const now = performance.now() / 1000, key = pushOf(dx, dy);
   if (rounding && (key !== rounding.push || now - rounding.at > 0.2 || s * (x - rounding.far) >= 0)) rounding = null;
@@ -233,13 +273,11 @@ function move(x, y, dx, dy) {
   }
   const along = Math.abs(dy) < 0.01 && s !== 0;
   if (along) {
-    const r = (s > 0 && toDoors(x, y, v)) || roundFront(x, y, s, v, !rounding);
+    const r = (s > 0 && toDoors(x, y, v)) || roundFront(x, y, s, v, !rounding, rounding ? Math.abs(rounding.far - x) : LOOK);
+    if (r?.far != null) rounding = { push: key, far: r.far, at: now };
     if (r) return steer(r);
   }
-  let nx = clamp(x + dx, FLOOR.x0, inDoorway(y) ? ROOM.w + 40 : FLOOR.x1);
-  if (blocked(nx, y)) nx = x;
-  let ny = clamp(y + dy, FLOOR.y0, FLOOR.y1);
-  if (blocked(nx, ny) || (nx > FLOOR.x1 && !inDoorway(ny))) ny = y;
+  const [nx, ny] = stepOf(x, y, dx, dy);
   if (rounding) {
     // Nowhere to go along: let the push have its way again. Otherwise she faces the way she's going, along.
     if (nx === x && ny === y) {
@@ -248,7 +286,9 @@ function move(x, y, dx, dy) {
     }
     return steer({ n: [nx, ny], face: dirToward(s, 0) });
   }
-  if (!along && s !== 0 && ny === y && (onCarpet(nx, y + dy) || WHO.some(hits(nx, y + dy)))) {
+  const held = ny === y && (onCarpet(nx, y + dy) || WHO.some(hits(nx, y + dy)));
+  const cornered = nx === x && dy < 0 && WHO.some(hits(x + dx, y)) && deadEnd(x, y, s);
+  if (!along && s !== 0 && (held || cornered)) {
     const r = roundFront(x, y, s, v, false);
     if (r) {
       rounding = { push: key, far: r.far, at: now };

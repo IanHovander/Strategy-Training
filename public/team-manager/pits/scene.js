@@ -221,14 +221,15 @@ const AISLE_Y = 100;
 
 /**
  * Where she gets to from (x, y) heading for (tx, ty), a pixel at a time, down or up first and then across, so nothing
- * gets in the way (move() stops her at furniture, robots and people).
+ * gets in the way (move() stops her at furniture, robots and people, and here never takes her round anything: this is
+ * whether the straight way is clear).
  */
 function slide(x, y, tx, ty) {
   for (const [ax, ay] of [[0, 1], [1, 0]]) {
     for (;;) {
       const d = ax ? tx - x : ty - y;
       if (Math.abs(d) <= 0.01) break;
-      const [nx, ny] = move(x, y, ax * clamp(d, -1, 1), ay * clamp(d, -1, 1), solids);
+      const [nx, ny] = move(x, y, ax * clamp(d, -1, 1), ay * clamp(d, -1, 1), solids, { round: false });
       if (nx === x && ny === y) break;
       [x, y] = [nx, ny];
     }
