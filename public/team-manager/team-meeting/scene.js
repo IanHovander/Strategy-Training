@@ -18,11 +18,13 @@
 // The cut scene and the walkable part share that one composition: the cut scene places the meeting with its cue, the
 // walkable part has the after-meeting groups and her.
 //
-// Three things stage.js doesn't do, done here: the walkable part fades in from black over 0.6 seconds when the cut scene
-// ends (not with ?play, which skips straight to walking), the A bubble waiting until it has; while she talks to someone
-// sitting on the grass, the view eases up a little so they show over the dialog box; and while the cut scene runs the
-// walker frames the meeting is about to need are made a few at a time, so the first round of applause doesn't stutter
-// (each frame takes a few milliseconds to ray-cast the first time, and the meeting needs a couple of hundred).
+// Four things stage.js doesn't do, done here: the walkable part fades in from black over 0.6 seconds when the cut scene
+// ends (not when stage.js is fading the picture in itself: with ?play, or as she comes back in on the scene's own page),
+// the A bubble waiting until it has; while she talks to someone sitting on the grass, the view eases up a little so they
+// show over the dialog box; the way out's arrow goes for her last steps out along the top of the lawn and the path,
+// where it would sit on her; and while the cut scene runs the walker frames the meeting is about to need are made a
+// few at a time, so the first round of applause doesn't stutter (each frame takes a few milliseconds to ray-cast the
+// first time, and the meeting needs a couple of hundred).
 
 import { W, H, useContext, camera, screen, seg, clamp, lerp, easeInOut } from '../pixel.js';
 import { walkerFrame } from '../walker.js';
@@ -126,6 +128,9 @@ function unstuck(x, y) {
 }
 /** Seconds the walkable part takes to fade in from black once the cut scene ends (onFree notes when, as s.freeAt). */
 const FADE = 0.6;
+/** Seconds stage.js's own fade in takes (its FADE_IN, from s.fadeIn): while that's still going, the lawn doesn't start
+ *  one of its own, which would stack with it into six or seven greys instead of the house style's four hard steps. */
+const STAGE_FADE = 0.5;
 
 /**
  * The view follows her as stage.js's does, but while she talks to someone sitting on the grass it eases 18 pixels
@@ -238,7 +243,10 @@ export const scene = {
     [s.me.x, s.me.y] = unstuck(s.me.x, s.me.y);
   },
   onFree(s) {
-    s.freeAt = performance.now() / 1000;
+    // The lawn's own fade from black, unless stage.js's is still going (null: no fade of ours, and the A bubble needn't
+    // wait: stage.js covers it with the rest).
+    const now = performance.now() / 1000;
+    s.freeAt = s.fadeIn != null && now < s.fadeIn + STAGE_FADE ? null : now;
     [s.me.x, s.me.y] = unstuck(s.me.x, s.me.y);
   },
 

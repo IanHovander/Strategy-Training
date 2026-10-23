@@ -588,7 +588,8 @@ const AFTER = [
   // The rest: three standing by the path left of the shop (two facing each other, the third a step in front with her
   // back to you, her head below their chins), a pair sitting where the circle was (in front of the co-captains, far
   // enough down that their heads are below the co-captains' feet), one beside the sign-up table, one on the grass, and
-  // one on the grass at the lawn's right end, a step in from the edge so the way off it, the way out, stays clear.
+  // one on the grass at the bottom left, in front of the tree's shade. Nobody sits or stands at the lawn's right end:
+  // from the walkway's post down to the bottom of the world, every row runs on to the way out with nobody in it.
   { id: 's1', x: 96, y: 160, dir: 2, gait: 'stand' },
   { id: 's4', x: 112, y: 158, dir: 6, gait: 'stand' },
   { id: 's3', x: 104, y: 178, dir: 4, gait: 'stand' },
@@ -596,7 +597,7 @@ const AFTER = [
   { id: 's7', x: 283, y: 238, dir: 6, gait: 'floor' },
   { id: 's8', x: 404, y: 206, dir: 7, gait: 'stand' },
   { id: 's2', x: 150, y: 220, dir: 2, gait: 'floor' },
-  { id: 's5', x: 478, y: 196, dir: 6, gait: 'floor' },
+  { id: 's5', x: 40, y: 238, dir: 2, gait: 'floor' },
 ];
 /** How far above the feet the A bubble's top goes: just over their head (its box and tail are 12 pixels; heads' tops
  *  are 45 pixels up standing, 38 on the bench and 31 on the grass), so in a group it's plain whose it is. */

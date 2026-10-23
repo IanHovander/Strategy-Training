@@ -426,11 +426,16 @@ export function runScene(scene, opts = {}) {
     }
     if (s.talk) drawDialog(g, s.talk, now);
   }
-  /** The way out: an arrow nudging right, white on an ink outline like the bubbles, with where it goes over it. */
+  /** The way out: an arrow nudging right, white on an ink outline like the bubbles, with where it goes over it. Neither
+   * is drawn over her: it's an overlay, drawn after the scene, so it would sit on her face (she's found it by then). */
   function drawExit(e, view, now) {
     const x = Math.round(e.x - view.x) - 3 + (Math.floor(now * 2.5) % 2);
     const y = Math.round((e.sign?.y ?? (e.y0 + e.y1) / 2 - 24) - view.y);
     if (x < -4 || x > W + 60) return;
+    // Her, 12 pixels either side of her feet and from 48 over them to 2 under; the arrow, ink outline and nudge included.
+    const hx = Math.round(s.me.x - view.x), hy = Math.round(s.me.y - view.y);
+    const onHer = (x0, x1, y0, y1) => hx + 12 > x0 && hx - 12 < x1 && hy - 48 < y1 && hy + 2 > y0;
+    if (onHer(x - 10, x + 3, y - 6, y + 6)) return;
     screen();
     const arrow = (c, o) => {
       fill(x - 9 - o, y - 1 - o, 6 + 2 * o, 3 + 2 * o, c);
@@ -438,11 +443,10 @@ export function runScene(scene, opts = {}) {
     };
     arrow(C.ink, 1);
     arrow(C.white, 0);
-    // Where it goes, unless she's standing under the words (she's found it by then).
-    const label = exitLabel ?? e.label, lw = label ? measure(label, { font: 3 }) : 0;
-    const hx = Math.round(s.me.x - view.x), hy = Math.round(s.me.y - view.y);
-    const under = hx + 9 > x - lw && hx - 9 < x + 2 && hy > y - 14 && hy - 50 < y - 6;
-    if (label && !under) text(label, x + 1, y - 13, { font: 3, color: C.white, outline: C.ink, align: 'right' });
+    const label = exitLabel ?? e.label;
+    if (label && !onHer(x - measure(label, { font: 3 }) - 1, x + 2, y - 14, y - 6)) {
+      text(label, x + 1, y - 13, { font: 3, color: C.white, outline: C.ink, align: 'right' });
+    }
   }
 
   // ---- A, and skipping ----
