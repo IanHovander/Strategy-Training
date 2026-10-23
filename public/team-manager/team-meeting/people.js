@@ -32,11 +32,13 @@
 // permission slips most of them, the freshman always, turn to the person next to them, frowning (and slump, once
 // walker.js has the pose).
 //
-// After the meeting it breaks up into small groups (after()): the co-captains still talking at the head of the old
-// circle, the teammate waiting for her, the build lead on the path looking in at the robot, the programmer under the
-// tree with a laptop (he doesn't look up from it, even to talk), the teacher and the scouting lead on the bench,
-// the outreach lead behind the sign-up table, the drive team in a huddle near it, the mentor reading the thank-you card
-// from beside it, the freshman by himself on the grass, and the rest in twos and threes.
+// After the meeting it breaks up into small groups (after()): the co-captains still talking where the circle was, the
+// teammate waiting for her, the build lead on the path looking in at the robot, the programmer under the tree with a
+// laptop (he doesn't look up from it, even to talk), the teacher and the scouting lead on the bench, the outreach lead
+// behind the sign-up table, the drive team in a huddle near it, the mentor reading the thank-you card from beside it,
+// the freshman by himself on the grass, and the rest in twos and threes. Along the top of the lawn, between the people
+// on the path and the bench and the people on the grass, a lane is left clear all the way from the shop door to the
+// way out on the right, at least 14 pixels deep (occupied() below keeps her that far from everyone either side).
 //
 //   CAST                     { [id]: { name, look } } for everyone (the silent ones have name null)
 //   SEATS                    the eighteen places on the circle: { id, k, a (degrees round from the front), x, y }
@@ -553,12 +555,13 @@ export function circle(t, cue = {}) {
 // ---- After the meeting ----
 // Where everyone goes when it breaks up, by their feet. gait: 'stand', 'sit' (on the bench) or 'floor' (on the grass).
 const AFTER = [
-  // The co-captains, still at the head of the old circle, talking it over (a step right of it, so Tessa's head is clear
-  // of Ms. Okafor behind her).
-  { id: 'tessa', x: 254, y: 176, dir: 2, gait: 'stand' },
-  { id: 'owen', x: 274, y: 176, dir: 6, gait: 'stand' },
-  // The teammate, up from her place, waiting for the strategist.
-  { id: 'teammate', x: 322, y: 188, dir: 7, gait: 'stand' },
+  // The co-captains, still where the circle was, talking it over: down the lawn from where they stood at its head, so
+  // the top of the lawn is a clear way across, from the shop door to the walkway, past everyone on the path and the
+  // bench and above everyone on the grass. (From START, holding right walks her straight out.)
+  { id: 'tessa', x: 254, y: 204, dir: 2, gait: 'stand' },
+  { id: 'owen', x: 274, y: 204, dir: 6, gait: 'stand' },
+  // The teammate, up from her place, waiting for the strategist, down the lawn from that way across too.
+  { id: 'teammate', x: 322, y: 206, dir: 7, gait: 'stand' },
   // The build lead on the path at the left edge of the shop door, turned in to the robot, so it shows whole between
   // her and the easel while she talks about it.
   { id: 'bea', x: 134, y: 150, dir: 3, gait: 'stand' },
@@ -583,16 +586,17 @@ const AFTER = [
   // box doesn't cover him even at the lowest view).
   { id: 'eli', x: 214, y: 210, dir: 0, gait: 'floor' },
   // The rest: three standing by the path left of the shop (two facing each other, the third a step in front with her
-  // back to you, her head below their chins), a pair sitting where the circle was, one by the bench, one on the grass,
-  // one on the grass at the lawn's right end, clear of the way up to the walkway.
+  // back to you, her head below their chins), a pair sitting where the circle was (in front of the co-captains, far
+  // enough down that their heads are below the co-captains' feet), one beside the sign-up table, one on the grass, and
+  // one on the grass at the lawn's right end, a step in from the edge so the way off it, the way out, stays clear.
   { id: 's1', x: 96, y: 160, dir: 2, gait: 'stand' },
   { id: 's4', x: 112, y: 158, dir: 6, gait: 'stand' },
   { id: 's3', x: 104, y: 178, dir: 4, gait: 'stand' },
-  { id: 's6', x: 270, y: 220, dir: 2, gait: 'floor' },
-  { id: 's7', x: 287, y: 222, dir: 6, gait: 'floor' },
-  { id: 's8', x: 404, y: 182, dir: 7, gait: 'stand' },
+  { id: 's6', x: 266, y: 236, dir: 2, gait: 'floor' },
+  { id: 's7', x: 283, y: 238, dir: 6, gait: 'floor' },
+  { id: 's8', x: 404, y: 206, dir: 7, gait: 'stand' },
   { id: 's2', x: 150, y: 220, dir: 2, gait: 'floor' },
-  { id: 's5', x: 486, y: 196, dir: 6, gait: 'floor' },
+  { id: 's5', x: 478, y: 196, dir: 6, gait: 'floor' },
 ];
 /** How far above the feet the A bubble's top goes: just over their head (its box and tail are 12 pixels; heads' tops
  *  are 45 pixels up standing, 38 on the bench and 31 on the grass), so in a group it's plain whose it is. */

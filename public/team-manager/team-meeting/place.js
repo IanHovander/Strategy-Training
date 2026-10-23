@@ -43,7 +43,8 @@ const BARK = ['#3d2519', '#5e3a26', '#7a4a24'];
 /** Sand-coloured block (cast.js tones.khaki) and its mortar. */
 const SAND = { shade: '#7a6a48', mid: '#a8946a', lit: '#c9b88e', mortar: '#93805a', deep: '#6b5d3f' };
 const TAR = ['#141519', '#23252c', '#3a3d48'];
-const CONCRETE = { joint: '#7d8292', dark: '#959bab', mid: '#a3a9b8', light: '#b0b6c4', lit: '#bcc2cf' };
+/** Concrete, deep (the joints in the walkway's shade) to lit (the curb's top edge). */
+const CONCRETE = { deep: '#6a6f80', joint: '#7d8292', dark: '#959bab', mid: '#a3a9b8', light: '#b0b6c4', lit: '#bcc2cf' };
 /** Bench slats and the easel (cast.js chestnut), with a highlight for lit edges. */
 const WOOD = ['#5a3418', '#7a4a24', '#9a6234', '#bf8048'];
 /** The shop's floor inside is the arena's own concrete. */
@@ -299,12 +300,13 @@ function paintShop(lg) {
   rect(x1 + 1, y0 - 2, 1, y1 - y0 + 1, C.steel2);
   rect(x0 - 3, y0 - 2, w + 6, 1, C.steel3);
   rect(x0 - 3, y0 - 1, w + 6, 1, C.steel2);
-  // Inside: the back wall, the floor, a shadow under the rolled-up door.
-  const top = y0 + 1, floor = y1 - 4;
-  rect(x0, top, w, floor - top, C.stand1);
-  rect(x0, floor, w, 4, SHOP_FLOOR[1]);
-  for (let i = 0; i < 40; i++) rect(x0 + Math.floor(rnd(i + 500) * w), floor + Math.floor(rnd(i + 540) * 4), 1, 1, rnd(i + 580) < 0.5 ? SHOP_FLOOR[0] : SHOP_FLOOR[2]);
-  rect(x0, floor, w, 1, C.night0);
+  // Inside: the back wall, the floor (six rows from the back wall's foot to the threshold, room for the robot to park
+  // a few pixels back from anyone walking along its front), a shadow under the rolled-up door.
+  const top = y0 + 1, floor = y1 - 4, back = y1 - 6;
+  rect(x0, top, w, back - top, C.stand1);
+  rect(x0, back, w, y1 - back, SHOP_FLOOR[1]);
+  for (let i = 0; i < 48; i++) rect(x0 + Math.floor(rnd(i + 500) * w), back + 1 + Math.floor(rnd(i + 540) * (y1 - back - 1)), 1, 1, rnd(i + 580) < 0.5 ? SHOP_FLOOR[0] : SHOP_FLOOR[2]);
+  rect(x0, back, w, 1, C.night0);
   // A fluorescent strip hanging from the ceiling.
   const lx = x0 + 8, ly = top + 16;
   rect(lx + 3, top + 12, 1, 4, C.ink);
@@ -347,14 +349,16 @@ function paintShop(lg) {
   rect(bx + 22, bTop - 5, 6, 1, C.yel2);
   rect(bx + 23, bTop - 3, 3, 4, C.ink);
   rect(bx + 24, bTop - 3, 1, 3, C.steel0);
-  // 5026's robot, parked facing in, its shadow on the floor. The shared sprite draws it, so it stays up to date.
+  // 5026's robot, parked facing in near the back of the floor, its shadow under it: she walks along the front of the
+  // floor on her way out (layout.js ENTER), and the four rows between her feet and its wheels say she passes in front
+  // of it. The shared sprite draws it, so it stays up to date.
   const rx = x0 + 46;
-  rect(rx - 17, y1 - 4, 34, 2, C.night0);
+  rect(rx - 17, back, 34, 2, C.night0);
   lg.save();
   lg.beginPath();
   lg.rect(x0, top, w, y1 - top);
   lg.clip();
-  eleBot(rx, y1 - 3, { team: 'blue', num: '5026', dir: -1, rsl: false });
+  eleBot(rx, back + 1, { team: 'blue', num: '5026', dir: -1, rsl: false });
   lg.restore();
   // The door, rolled up: its bottom slats across the top of the opening, and the shadow under them.
   for (let k = 0; k < 3; k++) {
@@ -532,18 +536,20 @@ function paintShadows() {
 // line WALKWAY.y), then the fascia facing you. It's always over everyone's head (the tallest head on the path comes up
 // to 98), so it's part of the backdrop; only its post stands on the floor and sorts in with the people (walkwayPost()).
 // Steel, like the windows' frames: the deck lit from above with standing seams running back to the wall, the fascia lit
-// along its top edge. The shade under it is hard-edged like the trees': the path under it a step darker, and the wall
-// under the fascia, where the roof keeps the sun off it. Hung from the fascia, the school's sign for the way round.
+// along its top edge. The shade under it is hard-edged like the trees': the path under it two steps darker down the
+// concrete's ramp, the same drop as the block of the wall under the fascia, where the roof keeps the sun off it. Hung
+// from the fascia, the school's sign for the way round.
 const ROOF_UP = 80;
 const deckFront = () => WALKWAY.y - ROOF_UP;
 function paintWalkway() {
   const { x0 } = WALKWAY, w = W - x0, top = WALL_TOP, front = deckFront(), bottom = front + 7;
-  // The shade: the path under the roof, joints and specks a step darker too, and the curb's lit edge dimmed.
+  // The shade: the path under the roof two steps down the ramp, its specks and joints and the curb with it.
   const { y0, y1 } = PATH;
-  rect(x0, y0, w, y1 - y0 - 2, CONCRETE.dark);
-  for (let i = 0; i < 40; i++) rect(x0 + Math.floor(rnd(i + 8100) * w), y0 + 1 + Math.floor(rnd(i + 8200) * (y1 - y0 - 4)), 1, 1, rnd(i + 8300) < 0.6 ? CONCRETE.joint : CONCRETE.mid);
-  for (let x = 20; x < W; x += 40) if (x >= x0) rect(x, y0, 1, y1 - y0 - 2, '#6a6f80');
-  rect(x0, y1 - 2, w, 1, CONCRETE.light);
+  rect(x0, y0, w, y1 - y0 - 2, CONCRETE.joint);
+  for (let i = 0; i < 40; i++) rect(x0 + Math.floor(rnd(i + 8100) * w), y0 + 1 + Math.floor(rnd(i + 8200) * (y1 - y0 - 4)), 1, 1, rnd(i + 8300) < 0.6 ? CONCRETE.deep : CONCRETE.dark);
+  for (let x = 20; x < W; x += 40) if (x >= x0) rect(x, y0, 1, y1 - y0 - 2, CONCRETE.deep);
+  rect(x0, y1 - 2, w, 1, CONCRETE.mid);
+  rect(x0, y1 - 1, w, 1, CONCRETE.deep);
   // The wall under the fascia, in the roof's shade down to where the sun gets under it: the block a tone darker, its
   // courses in the base course's deep mortar.
   const shadeTo = 104;
@@ -701,17 +707,22 @@ function drawTree(tr, i, who) {
 }
 
 /** The walkway's post at the lawn's edge: square steel, lit on its left, a base plate bolted down and a knee brace up
- *  under the fascia. */
+ *  under the fascia. Its top is the canopy's outline, the fascia's bottom ink row: the steel starts a row under it, so
+ *  that ink line runs on unbroken between the fascia and the post. */
 function walkwayPost() {
   const x = WALKWAY.post, y = WALKWAY.y, top = deckFront() + 7;
   rect(x - 3, top, 6, y - top, C.ink);
-  rect(x - 2, top, 1, y - top - 1, C.steel3);
-  rect(x - 1, top, 2, y - top - 1, C.steel2);
-  rect(x + 1, top, 1, y - top - 1, C.steel1);
-  // The knee brace, a stepped diagonal from the post up to the fascia on its right.
-  for (let k = 0; k < 6; k++) {
-    rect(x + 2 + k, top + 6 - k, 2, 2, C.ink);
-    rect(x + 3 + k, top + 6 - k, 1, 1, C.steel2);
+  rect(x - 2, top + 1, 1, y - top - 2, C.steel3);
+  rect(x - 1, top + 1, 2, y - top - 2, C.steel2);
+  rect(x + 1, top + 1, 1, y - top - 2, C.steel1);
+  // The knee brace, from the post's right face up to the fascia, steep (two rows to a step) so it meets bare fascia
+  // short of the sign's corner and rod: an ink outline either side, all of it first, then the steel down its middle,
+  // the top of each step catching the light.
+  for (let k = 0; k < 3; k++) rect(x + 2 + k, top + 5 - 2 * k, 3, 2, C.ink);
+  rect(x + 2, top + 7, 3, 1, C.ink);
+  for (let k = 0; k < 3; k++) {
+    rect(x + 3 + k, top + 5 - 2 * k, 1, 1, C.steel3);
+    rect(x + 3 + k, top + 6 - 2 * k, 1, 1, C.steel2);
   }
   // The base plate.
   rect(x - 5, y - 3, 10, 4, C.ink);
