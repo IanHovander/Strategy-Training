@@ -21,6 +21,7 @@ import {
 } from './sprites.js';
 import { Chip, Player, BEAT, INTRO_BEATS } from './chip.js';
 import { SONGS } from './songs.js';
+import { beam } from './lights.js';
 import { drawHero, heroIdle } from './hero.js';
 
 // The working title. Change it here; the logo is sized from the text.
@@ -135,17 +136,6 @@ function confetti(b, b0, n = 80) {
     const flip = Math.floor(age * 6 + i) % 2;
     fill(x, y, flip ? 2 : 1, flip ? 1 : 2, cols[i % cols.length]);
   }
-}
-/** A spotlight cone from (x, y), in screen space. */
-function beam(x, y, angle, spread, a, c = '#cfe0ff') {
-  withAlpha(a, () => {
-    g.fillStyle = c;
-    g.beginPath();
-    g.moveTo(x, y);
-    g.lineTo(x + Math.sin(angle - spread) * 320, y + Math.cos(angle - spread) * 320);
-    g.lineTo(x + Math.sin(angle + spread) * 320, y + Math.cos(angle + spread) * 320);
-    g.fill();
-  });
 }
 function rays(cx, cy, turn, a, c) {
   withAlpha(a, () => {
@@ -449,8 +439,8 @@ function shotWin(b, B) {
     const k = Math.floor(B * 3 + i * 0.37);
     if (rnd(k * 7 + i) > 0.6) sparkle(Math.round(rnd(k + i) * 140), Math.round(-80 + rnd(k * 3 + i) * 50), 1, C.white);
   }
-  beam(30, 0, 0.5 + Math.sin(B * 0.8) * 0.35, 0.09, 0.12);
-  beam(226, 0, -0.5 - Math.sin(B * 0.8 + 1) * 0.35, 0.09, 0.12);
+  beam(g, 30, 0, 0.5 + Math.sin(B * 0.8) * 0.35, 0.09, 0.12);
+  beam(g, 226, 0, -0.5 - Math.sin(B * 0.8 + 1) * 0.35, 0.09, 0.12);
   if (b > 6.4) rays(Math.round((68 - 4) * 2), Math.round((-68 - camY) * 2), B * 0.15, 0.16 * seg(b, 6.4, 7.2), C.blue2);
   if (holding) banner(46, -96 + rise, { wave: B * 2, sheen: b > 8 && b < 9.2 ? seg(b, 8, 9.2) : null });
   const team = [
@@ -564,8 +554,8 @@ function drawTitle(t, B) {
     for (let i = 0; i < 10; i++) fill(Math.round(x + i * 3), Math.round(y - i * 0.75), 1, 1, i < 3 ? C.white : C.blue3);
   }
   // Spotlights behind the logo.
-  beam(40, -10, 0.25 + Math.sin(B * 0.5) * 0.3, 0.08, 0.07);
-  beam(216, -10, -0.25 - Math.sin(B * 0.5 + 2) * 0.3, 0.08, 0.07);
+  beam(g, 40, -10, 0.25 + Math.sin(B * 0.5) * 0.3, 0.08, 0.07);
+  beam(g, 216, -10, -0.25 - Math.sin(B * 0.5 + 2) * 0.3, 0.08, 0.07);
   // Stage.
   fill(0, 132, W, 12, C.carpet0);
   fill(0, 132, W, 1, C.carpet2);

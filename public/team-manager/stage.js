@@ -139,12 +139,13 @@ export function bars(k) {
 }
 /**
  * The place's name on a card in the top left as a scene opens, t seconds in: slides in, holds three seconds, slides out.
- * It sits clear of the film bars. sub: a second, smaller line (the day and time, say).
+ * It sits clear of the film bars. sub: a second, smaller line (the day and time, say). y moves it down the screen and
+ * hold changes how long it stays (it slides out from hold + 0.6 seconds), for a card that isn't the scene's first.
  */
-export function placeCard(t, name, sub) {
-  if (t < 0 || t > 4.2) return;
-  const w = Math.max(measure(name), sub ? measure(sub, { font: 3 }) : 0) + 16, h = sub ? 23 : 15, y = 16;
-  const x = Math.round(t < 2 ? lerp(-w, 6, easeOut(seg(t, 0.2, 0.6))) : lerp(6, -w, easeIn(seg(t, 3.6, 4))));
+export function placeCard(t, name, sub, { y = 16, hold = 3 } = {}) {
+  if (t < 0 || t > hold + 1.2) return;
+  const w = Math.max(measure(name), sub ? measure(sub, { font: 3 }) : 0) + 16, h = sub ? 23 : 15, out = hold + 0.6;
+  const x = Math.round(t < out ? lerp(-w, 6, easeOut(seg(t, 0.2, 0.6))) : lerp(6, -w, easeIn(seg(t, out, out + 0.4))));
   screen();
   fill(x, y, w, h, C.ink);
   fill(x + 1, y + 1, w - 2, h - 2, C.blue1);

@@ -102,10 +102,8 @@ function scanTimeAt(x) {
 }
 
 // ---- The division cards ----
-// stage.js's place card itself, in its own place in the top left, held HOLD seconds instead of three: placeCard() is
-// called with its time stretched over the hold (it slides in over its 0.2 to 0.6 seconds and out over its 3.6 to 4),
-// so whatever the house card becomes, these become too. If placeCard() ever takes a hold, this is
-// placeCard(age + 0.2, name, sub, { hold: HOLD - 0.2 }).
+// stage.js's place card itself, in its own place in the top left, held HOLD seconds instead of three (its hold option),
+// so whatever the house card becomes, these become too.
 // Each card comes in when the view reaches its CARD_AT x, somewhere different in each division (so no two divisions'
 // beats start on the same picture), and slides out HOLD seconds later, before the next one comes in. Up there it only
 // ever covers the stands: never a field's robots, and never a sign or a big screen, since in the aisles it waits until
@@ -125,8 +123,7 @@ const CARD_AT = [
 const CARD_IN = CARD_AT.map(scanTimeAt);
 function divisionCard(k, age) {
   if (age < 0 || age > HOLD + SLIDE) return;
-  const t = age < HOLD ? 0.2 + Math.min(age, 1.7) : 3.6 + (age - HOLD);
-  placeCard(t, DIVISIONS[k].name, `DIVISION ${k + 1} OF ${DIVISIONS.length}`);
+  placeCard(age + 0.2, DIVISIONS[k].name, `DIVISION ${k + 1} OF ${DIVISIONS.length}`, { hold: HOLD - 0.4 });
 }
 
 // ---- The people ----

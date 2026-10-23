@@ -19,6 +19,7 @@
 
 import { C, useContext, camera, screen, fill, rect, disk, text, measure, dither, withAlpha, stepped, layer, blit, rnd } from '../pixel.js';
 import { tones } from '../cast.js';
+import { beam } from '../lights.js';
 import {
   ox, DIVISIONS, WORLD, WALL, TOP, STANDS, GATEWAY, SIGN, SCREEN, BUTTON_TABLE, INFO_DESK, BARRIERS, BARRIER_Y, matchState,
   clockText,
@@ -625,21 +626,6 @@ export const PROP_BLOCKS = [
 ];
 
 // ---- The light ----
-/**
- * A spotlight cone from (x, y), in screen space: the intro's beam() (intro.js), written out again here because intro.js
- * can't be imported or changed. One flat triangle, 320 pixels long.
- */
-function beam(g, x, y, angle, spread, a, c = '#cfe0ff') {
-  withAlpha(a, () => {
-    g.fillStyle = c;
-    g.beginPath();
-    g.moveTo(x, y);
-    g.lineTo(x + Math.sin(angle - spread) * 320, y + Math.cos(angle - spread) * 320);
-    g.lineTo(x + Math.sin(angle + spread) * 320, y + Math.cos(angle + spread) * 320);
-    g.fill();
-  });
-}
-
 /**
  * Spot cones from every other lit lamp in view, down across the stands and the fields: bold wedges like the intro's,
  * about four lamps wide where they reach the floor, leaning one way and the next the other (about 17 degrees) so they
