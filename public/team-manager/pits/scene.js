@@ -279,7 +279,7 @@ function stepAside(s, p) {
     for (const ty of [near, Math.max(near, AISLE_Y)]) {
       const to = p.x + side * aside, [x, y] = slide(me.x, me.y, to, ty);
       // and on up or down to p.asideY, on that side, if the way's clear
-      const up = side === (p.side ?? side) && p.asideY != null && slide(to, ty, to, p.asideY)[1] === p.asideY ? [[to, p.asideY]] : [];
+      const up = side === (p.side ?? side) && p.asideY != null && Math.abs(slide(to, ty, to, p.asideY)[1] - p.asideY) <= 0.01 ? [[to, p.asideY]] : [];
       if (Math.abs(to - x) <= 0.01 && Math.abs(ty - y) <= 0.01) {
         const path = [[me.x, me.y], [me.x, ty], [to, ty], ...up], t0 = s.talk.start;
         herWalk = { path, t0, end: t0 + along(path, 1e6).dist / SPEED.walk, dist0: me.dist, face: () => p, talk: s.talk };
@@ -480,7 +480,7 @@ export const scene = {
       const from = off ? [side < 0 ? view.x - 10 : view.x + 266, to[1]] : [pn.x, pn.y];
       const round = Math.sign(to[0] - hx) !== side ? [[Math.round(hx), Math.min(LANE[1], Math.round(hy) + 14)]] : [];
       // She goes along first if the way's clear, so she's soon out from in front of anyone, then back up to meet her.
-      const first = hx !== ux && slide(me.x, me.y, hx, me.y)[0] === hx && slide(hx, me.y, hx, hy)[1] === hy;
+      const first = Math.abs(hx - ux) > 0.01 && Math.abs(slide(me.x, me.y, hx, me.y)[0] - hx) <= 0.01 && Math.abs(slide(hx, me.y, hx, hy)[1] - hy) <= 0.01;
       const path = [from, ...round, to], mine = first ? [[me.x, me.y], [hx, me.y], [hx, hy]] : [[me.x, me.y], [ux, uy], [hx, hy]];
       const tN = along(path, 1e6, 'walk', BRISK).dist / BRISK, tS = along(mine, 1e6).dist / SPEED.walk;
       errand = { phase: 'come', t0: t, wait: 0, path, to };
