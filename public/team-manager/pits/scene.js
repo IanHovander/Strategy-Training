@@ -268,10 +268,11 @@ function wordSpot([hx, hy], side, crowd) {
  * Someone walking the aisle (p: where their own way has them now), stepped round whoever's near ahead of them (`obs`,
  * as { x, y }): they ease off their way toward the nearest place in the aisle that clears everyone near by ROUND.gap,
  * and back once they're past. `waiting`: their clock is stopped (they'd walk into her), so they only step aside. Their
- * feet step with the ground they cover.
+ * feet step with the ground they cover, from the stride their own way has them at as walking starts (the cut scene's
+ * last frame drew them there), so nobody's legs jump as it hands over.
  */
 function goRound(p, obs, dt, waiting) {
-  const st = (aside[p.id] ??= { off: 0, dist: 0, x: p.x, y: p.y, gait: p.gait });
+  const st = (aside[p.id] ??= { off: 0, dist: ((p.frame ?? 0) + 0.5) * 3.2, x: p.x, y: p.y, gait: p.gait });
   const go = p.gait === 'walk' ? Math.sign(Math.round(Math.sin((p.dir * Math.PI) / 4) * 4)) : 0;
   let want = 0;
   if (go) {

@@ -25,7 +25,7 @@ import { TEAMMATE_LOOK } from '../teammate.js';
 import { drawPerson, drawWithShadow, dirToward } from '../stage.js';
 import { drawBubble } from '../talk.js';
 import { PEOPLE as SEATS, TIERS, STANDING as ARENA_STANDING } from '../bleachers.js';
-import { DIVISIONS, HOME, ox, divisionAt, START, MATE, BUTTON_TABLE, INFO_DESK } from './layout.js';
+import { DIVISIONS, HOME, ox, divisionAt, QUEUED, MATE, BUTTON_TABLE, INFO_DESK } from './layout.js';
 
 // ---- Looks ----
 // Team shirts that cast.js doesn't have, in its order: shade, mid, lit.
@@ -174,11 +174,11 @@ const MIXED = Array.from({ length: 14 }, (_, i) => stranger(i));
 const TEAM = Object.fromEntries(Object.entries(SHIRT).map(([name, shirt]) => [name, Array.from({ length: 7 }, (_, i) => stranger(i, shirt))]));
 TEAM['5026'] = Array.from({ length: 7 }, (_, i) => student(i, 'tee'));
 const QUEUERS = [1, 4, 6, 2].map((face, i) => volunteer(`w-queuer${i}`, face, tones.shirtOrange, C.ink));
-// In Newton's front row right behind her when the walking starts, people in mid-toned tops, neither red, white nor
-// near-black, so her red tee and her dark hair both read against them (a white shirt there would read as part of her,
-// a black one would swallow her hair).
+// In Newton's front row right behind her as she talks to the teammate in the cut scene, people in mid-toned tops,
+// neither red, white nor near-black, so her red tee and her dark hair both read against them (a white shirt there would
+// read as part of her, a black one would swallow her hair).
 const BEHIND_HER = [stranger(2, tones.khaki), stranger(9, tones.shirtBlue)];
-const behindHer = (k, p) => k === HOME && p.tier === 0 && Math.abs(ox(HOME) + p.x - START.x) < 20;
+const behindHer = (k, p) => k === HOME && p.tier === 0 && Math.abs(ox(HOME) + p.x - QUEUED.x) < 20;
 // The scorekeepers in grey hoodies: she stands in front of one to talk to Lena or Noor, and her hair would be lost
 // against a dark one.
 const SCOREKEEPERS = [5, 0, 3, 4].map((face, i) => dressed(`w-score${i}`, face,
@@ -213,7 +213,8 @@ function seated(k, id) {
   return { x: ox(k) + seat.x, y: TIERS[0], seat, faceGait: 'sit' };
 }
 
-// The teammate is in reach from where she stands when the walking starts, a head's width away (START, layout.js).
+// The teammate waits by Newton's queue where the cut scene leaves them, at the far end of the hall from where the walking
+// starts, in reach from where she stood beside them, a head's width away (QUEUED, layout.js).
 export const MATE_PERSON = {
   name: TEAMMATE_NAME, x: MATE.x, y: MATE.y, dir: MATE.dir, look: TEAMMATE_LOOK,
   lines: [
@@ -413,9 +414,10 @@ function crewOf(k) {
 // dir, look]
 const T = (name, face) => TEAM[name][face % 7], M = (i) => MIXED[i % MIXED.length];
 const AISLES = [
-  // Past Archimedes' blue end, by the left wall: a pair below the big screen, and one by the queue, far enough up that
-  // the floor behind the pair and down to the bottom edge stays open.
-  [58, 100, 2, M(3)], [80, 101, 6, M(8)], [106, 110, 0, T('pink', 2)],
+  // Past Archimedes' blue end, by the left wall: a pair low on the floor, below the way in from the doorway (layout.js
+  // START), so she walks in above them, the light from the doorway clear of their feet. The floor between the doorway
+  // and the top of the queue stays open, the way on to Archimedes' walkway.
+  [94, 124, 2, M(3)], [116, 125, 6, M(8)],
   // Archimedes and Curie: one of Wei's team with him. Nobody stands below them, where she stands to talk to him: one
   // above the other, her feet would be on their head.
   [ox(1) - 42, 92, 1, T('yellow', 5)],

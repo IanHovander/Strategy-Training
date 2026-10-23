@@ -21,11 +21,16 @@
 // either way; the cut scene's close-ups draw it at 1:1 into a small canvas and blow that up (cutscene.js zoomShot).
 //
 // Walking: she has the floor round the field (the back strip behind it, the front strip before it, and both ends), but
-// not the carpet, which the robot is always running on; the furniture, the gear and everyone else stop her too.
+// not the carpet, which the robot is always running on; the furniture, the gear and everyone else stop her too. A step
+// along that only someone standing refuses, while she's a little in front of them, takes her on round in front of
+// them, so holding right from her mark walks her down and round in front of Kai by herself. Level with someone she
+// stops beside them, to talk.
 // The way in and out, as everywhere in the game, is left to right: the cut scene brings her in through the hallway
-// doors at the left-hand end of the back wall and round to her mark, and she leaves through the side doors in the end
-// wall on the right, out to the parking lot (stage.js exit: once her feet are in the doorway she walks on out and the
-// screen fades; on this page she comes back in at her mark, the room carrying on as it was).
+// doors at the left-hand end of the back wall and round to her mark (if it's skipped before it shows her, she walks in
+// from the left along the same lane instead, stage.js enter), and she leaves through the side doors in the end wall on
+// the right, out to the parking lot (stage.js exit: once her feet are in the doorway she walks on out and the screen
+// fades; on this page she comes back in at her mark, the room carrying on as it was). Pushing right along the end wall
+// just short of the doorway steers her into it.
 // The camera follows her as stage.js's does, but no lower than ROOM.shown, so the windows stay in sight, unless she walks
 // out toward the front of the room, when it keeps a strip of floor under her feet so she never walks along the bottom
 // edge; while she talks to someone at the front of the room it eases down over the tiles below that, so both faces
@@ -108,25 +113,59 @@ const CUT_END = cutscene.reduce((n, b) => n + b.dur, 0);
 // ---- Walking ----
 // The floor, short of the walls; then the furniture, the gear, the carpet and everyone standing, each footprint widened
 // by 4 pixels along and 2 of depth so her shadow never touches them.
-const STOPS = [...ROOM_BLOCKS, ...FIELD_BLOCKS, ...peopleBlocks()];
-const blocked = (x, y) => STOPS.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
+const THINGS = [...ROOM_BLOCKS, ...FIELD_BLOCKS], WHO = peopleBlocks(), STOPS = [...THINGS, ...WHO];
+const hits = (x, y) => (b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2;
+const blocked = (x, y) => STOPS.some(hits(x, y));
 /** The side doors' floor band, where the floor runs on out through the wall: the rows the walk outside shows in, from
  *  the one under the wall behind the doors to the one over the wall in front (room.js drawEndWall: that wall's cut top
  *  starts END_WALL.h above its floor line), less 2 pixels each side, move()'s margins. So her feet are always on the
  *  walk as she goes out, and the wall in front never hides her shoes. */
 const DOOR_Y = { y0: SIDE_DOOR.y0 + 2, y1: SIDE_DOOR.y1 - END_WALL.h - 2 };
 const inDoorway = (y) => y >= DOOR_Y.y0 && y <= DOOR_Y.y1;
-/** The way out (stage.js): her feet in the doorway's mouth, just short of the threshold. The arrow points in at the
- *  opening, low over the mat, so its label is on the floor clear of the custodian's cart. */
-const EXIT = { x: END_WALL.x0 - 4, ...DOOR_Y, label: EXIT_LABEL, sign: { y: SIDE_DOOR.y0 + 8 } };
+/** The way out (stage.js): her feet in the doorway's mouth, just short of the threshold. The arrow goes over her head
+ *  (the walker's hair tops out 47 pixels above her feet, and her feet are never higher than DOOR_Y.y0 in the band), so
+ *  it's never over her face as she comes to the doors, and it's up the screen, clear of the stick's ring in the bottom
+ *  right on a screen with no room beside the picture; its label, over it, sits on the vending machines' fronts, clear
+ *  of the custodian's cart and its mop. The doorway's own EXIT sign is lower down, over the opening (room.js). */
+const EXIT = { x: END_WALL.x0 - 4, ...DOOR_Y, label: EXIT_LABEL, sign: { y: DOOR_Y.y0 - 54 } };
+/** How far down the room a step along will go looking for a way round in front of someone standing in it (sidestep),
+ *  and how far short of the doorway's band a push into the end wall steers her into it. */
+const ROUND = 12, FUNNEL = 8;
+/** Everyone on their feet (the drive team at their controls too), for sidestep. */
+const STANDING = Object.values(SPOTS).filter((p) => p.gait !== 'sit');
+/** A step along that only someone's footprint refuses, while she's a little in front of their feet (further down the
+ *  room): if there's free floor within ROUND pixels further in front, with nothing in her way getting there, she steps
+ *  that way instead, as far as the step would have gone. So holding right from her mark walks her down into the lane
+ *  in front of Kai, and on along it past Noor, without the player having to find it. Level with someone, or behind
+ *  them, she stops beside them as before, where she talks to them. Null if there's no way round. */
+function sidestep(x, y, dx) {
+  const ax = x + dx;
+  if (THINGS.some(hits(ax, y)) || !WHO.some(hits(ax, y))) return null;
+  if (!STANDING.some((p) => Math.abs(ax - p.x) < 20 && y > p.y + 3)) return null;
+  for (let d = 1; d <= ROUND; d++) {
+    if (y + d > FLOOR.y1 || blocked(x, y + d)) return null;
+    if (!blocked(ax, y + d)) return y + Math.min(Math.abs(dx), d);
+  }
+  return null;
+}
 /** A step along, then across, as field.js does: each half refused if it would end in something. On the right she stops
  *  short of the end wall, except in the doorway, where she can walk on into it, and not out of the band once she's
- *  past where she'd stop. A step that goes nowhere because the carpet is in the way may bring Kai over (keepOff). */
+ *  past where she'd stop. A straight push along (no step across) that someone standing refuses takes her round them
+ *  (sidestep), and a straight push right into the end wall just short of the doorway's band slides her into the band,
+ *  so lining up "in front of the doors" and pushing right always takes her out. A step that goes nowhere because the
+ *  carpet is in the way may bring Kai over (keepOff). */
 function move(x, y, dx, dy) {
   let nx = clamp(x + dx, FLOOR.x0, inDoorway(y) ? ROOM.w + 40 : FLOOR.x1);
   if (blocked(nx, y)) nx = x;
   let ny = clamp(y + dy, FLOOR.y0, FLOOR.y1);
   if (blocked(nx, ny) || (nx > FLOOR.x1 && !inDoorway(ny))) ny = y;
+  const along = Math.abs(dy) < 0.01 && dx !== 0; // a straight push along, as the keyboard and the stick give
+  if (along && nx === x && ny === y) ny = sidestep(x, y, dx) ?? y;
+  if (along && dx > 0 && x + dx > FLOOR.x1 && !inDoorway(y)) {
+    const to = y < DOOR_Y.y0 ? DOOR_Y.y0 : DOOR_Y.y1, gap = Math.abs(to - y);
+    const fy = y + Math.sign(to - y) * Math.min(dx, gap);
+    if (gap <= FUNNEL && !blocked(nx, fy)) ny = fy;
+  }
   keepOff(x, y, nx === x && ny === y && (onCarpet(x + dx, y) || onCarpet(x, y + dy)));
   return [nx, ny];
 }
@@ -203,9 +242,14 @@ function talkY(s, y) {
 }
 /** An eased pan of half a second whenever a conversation starts or ends; otherwise straight from followView. When the
  *  cut scene hands over a few pixels above the walking view (settle), the camera stays where it ended until she first
- *  moves or talks, and only then eases on, so it never goes down by itself. */
+ *  moves or talks, and only then eases on, so it never goes down by itself. While she walks in by herself (ENTER, after
+ *  a SKIP), it waits at the view from her mark, so she walks into the picture from its left edge. */
 const pan = { talking: false, from: 0, t0: -1, y: null, settle: false };
 function viewFor(s) {
+  if (s.mode === 'auto' && !s.auto.out) {
+    const [x, y] = s.auto.path.at(-1);
+    return followView({ x, y });
+  }
   const now = performance.now() / 1000, view = followView(s.me);
   if (pan.settle) {
     if (s.me.gait === 'stand' && !s.talk) return { x: view.x, y: pan.y };
@@ -227,6 +271,12 @@ function turned(s) {
 let shift = 0; // walking's world time is the page's clock plus this
 let robotFrom = null; // and the robot's clock is world time plus this, once the cut scene has handed over
 let freeAt = null; // when it did, on the page's clock
+let outAt = null; // when her last walk out through the side doors ends, on the page's clock (stage.js leave)
+
+/** Her walk in after a SKIP that came before the cut scene showed her at her mark (or with ?play): along the lane her
+ *  run in the cut scene ends on, from just off the left of the view from her mark, which the camera holds while she
+ *  walks in (viewFor). stage.js adds START as the last point. */
+const ENTER = [[START.x - 138, START.y]];
 
 export const scene = {
   ...SCENE_TEXT,
@@ -235,6 +285,11 @@ export const scene = {
   cutscene,
   move,
   exit: EXIT,
+  // Only when the cut scene's last beat never drew her (SKIP before it, or ?play): otherwise the cut scene has already
+  // brought her in to her mark.
+  get enter() {
+    return HANDOFF.hero ? null : ENTER;
+  },
   people,
   reach,
   faceTo,
@@ -252,11 +307,11 @@ export const scene = {
     else drawBubble(g, spot.x - view.x + side * 11, y, t);
   },
   onFree(s) {
-    const now = performance.now() / 1000, a = s.auto;
+    const now = performance.now() / 1000;
     // Back in at her mark after walking out through the side doors (on this page; in the game the next scene starts
-    // instead): stage.js has put her there. The room, the robot and Kai carry on as they were, and the camera starts
-    // from the walking view.
-    if (freeAt != null && a?.out && now - (a.t0 + a.dur + a.hold) < 0.25) {
+    // instead): stage.js has put her there (or at the start of ENTER, to walk in). The room, the robot and Kai carry on
+    // as they were, and the camera starts from the walking view.
+    if (freeAt != null && outAt != null && Math.abs(now - outAt) < 0.25) {
       const y = followView(s.me).y;
       Object.assign(pan, { talking: false, from: y, t0: now, y, settle: false });
       return;
@@ -265,6 +320,13 @@ export const scene = {
     shift = end - now;
     robotFrom = HANDOFF.robotU - end;
     freeAt = now;
+    // The cut scene never drew her at her mark (SKIP before its last beat, ?play, or ?x= in the address): there's no
+    // camera to carry on from, so it starts from the walking view where she is (her mark, if she's walking in to it).
+    if (!HANDOFF.hero) {
+      const y = followView(s.me).y;
+      Object.assign(pan, { talking: false, from: y, t0: now, y, settle: false });
+      return;
+    }
     // If A ended the last beat while she was still running to her mark, walking starts from where she was, not from her
     // mark (stage.js has just put her there), or from the nearest floor she can stand on, if that was in the doorway or
     // by someone she runs past.
@@ -277,7 +339,8 @@ export const scene = {
     Object.assign(pan, { talking: false, from: y, t0: now, y, settle: y < followView(s.me).y });
   },
   draw(g, view, t, s) {
-    const T = t + shift;
+    const T = t + shift, a = s.auto;
+    if (s.mode === 'auto' && a.out) outAt = a.t0 + a.dur + a.hold;
     draw(g, view, T, {
       player: s.player,
       who: [{ x0: s.me.x - 5, x1: s.me.x + 5, y1: s.me.y }], // her body's width, so the rocket is solid once she's clear

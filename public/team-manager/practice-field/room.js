@@ -918,8 +918,8 @@ function doorway(half) {
 // end of the wall behind the opening shows its face, with the doors' aluminium frame at its inner edge; across the
 // opening the threshold, and beyond it the walk outside in the late sun, the same straw as the sun's patches on the
 // tiles, so the way out is the brightest thing at this end of the room, and its daylight lies on the floor inside
-// (drawDoorLight). A rubber mat lies on the tiles inside, and a red EXIT sign sticks out from the wall over the opening
-// on a bracket, the same as the one over the hallway doors she came in by at the other end.
+// (drawDoorLight). A rubber mat lies on the tiles inside, and a red EXIT sign, the same as the one over the hallway
+// doors she came in by at the other end, hangs over the opening on a bracket out of the door frame (exitSign).
 // The face and the wall behind the opening go into the floor canvas (drawEndWall); the wall in front of the opening
 // stands on the floor (roomThings), so it hides her feet as she walks out between the two.
 const CAP = [WALL[2], '#4a5372', '#5c6688']; // the block's cut top, lit from above: shade, mid, lit, past the wall's own
@@ -1017,13 +1017,23 @@ function drawDoorLight(ctx) {
   ctx.putImageData(img, x0, y0);
 }
 
-/** The EXIT sign over the side doors, sticking out from the wall on a bracket: white on red, as over the hallway doors. */
+/** The EXIT sign over the side doors: white on red, as over the hallway doors, on a steel bracket that comes up out of
+ *  the door frame's jamb where the wall behind the opening is cut away, so the sign and the bright gap under it read as
+ *  one thing. It hangs just over the cut end of that wall, its bottom 3 pixels above it, out over the floor inside the
+ *  doors. It's drawn with the wall (roomThings sorts it at the wall's floor line), so whoever walks down to the doors
+ *  past it passes in front of it, never behind. */
+const EXIT_SIGN = { x: END_WALL.x0 - 21, y: SIDE_DOOR.y0 - END_WALL.h - 13 };
 function exitSign() {
-  const x = END_WALL.x0 - 22, y = Math.round((SIDE_DOOR.y0 + SIDE_DOOR.y1) / 2) - 64;
-  rect(x + 18, y + 3, 6, 3, C.ink);
-  rect(x + 19, y + 4, 5, 1, STEEL[2]);
+  const { x, y } = EXIT_SIGN, jx = END_WALL.x0, jy = SIDE_DOOR.y0 - END_WALL.h - 1;
+  // The bracket: an arm out of the sign's right edge at its middle, and the post it hangs from, down into the jamb.
+  rect(x + 18, y + 3, jx - x - 15, 3, C.ink);
+  rect(jx, y + 3, 3, jy - y - 2, C.ink);
+  rect(x + 19, y + 4, jx - x - 18, 1, STEEL[2]);
+  rect(jx + 1, y + 4, 1, jy - y - 4, STEEL[2]);
+  rect(jx + 1, y + 4, 1, 1, STEEL[3]);
   panel(x, y, 19, 9, RED[1]);
   rect(x + 1, y + 1, 17, 1, RED[2]);
+  rect(x + 1, y + 7, 17, 1, RED[0]);
   text('EXIT', x + 10, y + 2, { font: 3, color: C.white, align: 'center' });
 }
 
@@ -1051,10 +1061,10 @@ export function roomThings(g, view, t, o = {}) {
   ];
   const door = o.door ?? 0;
   if (door > 0.25) things.push({ x0: DOORS.x0, x1: DOORS.x1, y: ROOM.wallY, draw: () => doorway(door < 0.75) });
-  // The end wall in front of the side doors, sorted at the opening's near edge, and the sign over its middle.
+  // The end wall in front of the side doors, sorted at the opening's near edge; the sign over the opening with the wall.
   const near = SIDE_DOOR.y1;
   things.push({ x0: END_WALL.x0, x1: END_WALL.x1, y: near, draw: () => endWallRun(near, ROOM.h + END_WALL.h + 1) });
-  things.push({ x0: END_WALL.x0 - 22, x1: END_WALL.x0, y: (SIDE_DOOR.y0 + near) / 2, draw: exitSign });
+  things.push({ x0: EXIT_SIGN.x, x1: END_WALL.x0 + 3, y: wall, draw: exitSign });
   return things.filter((p) => p.x1 > vx0 && p.x0 < vx1).map((p) => ({ y: p.y, draw: p.draw }));
 }
 
