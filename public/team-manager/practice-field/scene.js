@@ -4,7 +4,8 @@
 // them into one picture and one runScene():
 //   layout.js     the room in numbers: the wall, the windows and the sun, the field, the robot's run, where everyone is
 //   room.js       the back wall and its windows, the tiles, the sun's patches on the floor and its shafts in the air,
-//                 and the cafeteria's furniture: folded tables, the serving line, vending machines, the two tables in use
+//                 the cafeteria's furniture: folded tables, the serving line, vending machines, the two tables in use,
+//                 and the end wall on the right with the side doors out to the parking lot
 //   halffield.js  the carpet and its tape, the plywood rocket, cargo ship, HAB and loading station, the homemade driver
 //                 station, and the team's gear: the battery cart, the hatch rack, the cargo basket, the tool chest, the
 //                 rolling whiteboard
@@ -21,6 +22,10 @@
 //
 // Walking: she has the floor round the field (the back strip behind it, the front strip before it, and both ends), but
 // not the carpet, which the robot is always running on; the furniture, the gear and everyone else stop her too.
+// The way in and out, as everywhere in the game, is left to right: the cut scene brings her in through the hallway
+// doors at the left-hand end of the back wall and round to her mark, and she leaves through the side doors in the end
+// wall on the right, out to the parking lot (stage.js exit: once her feet are in the doorway she walks on out and the
+// screen fades; on this page she comes back in at her mark, the room carrying on as it was).
 // The camera follows her as stage.js's does, but no lower than ROOM.shown, so the windows stay in sight, unless she walks
 // out toward the front of the room, when it keeps a strip of floor under her feet so she never walks along the bottom
 // edge; while she talks to someone at the front of the room it eases down over the tiles below that, so both faces
@@ -32,16 +37,17 @@ import { W, H, useContext, camera, screen, clamp, lerp, seg, easeInOut } from '.
 import { drawWithShadow, dirToward } from '../stage.js';
 import { drawBubble, conversation } from '../talk.js';
 import { HERO_LOOK } from '../walker.js';
-import { ROOM, FLOOR, SPOTS, START, STATION_WALL, CARPET } from './layout.js';
-import { drawWall, drawTiles, drawSunPatches, roomThings, drawSunAir, ROOM_BLOCKS } from './room.js';
+import { ROOM, FLOOR, SPOTS, START, STATION_WALL, CARPET, END_WALL, SIDE_DOOR } from './layout.js';
+import { drawWall, drawTiles, drawSunPatches, drawEndWall, roomThings, drawSunAir, ROOM_BLOCKS } from './room.js';
 import { drawFieldFloor, fieldThings, FIELD_BLOCKS } from './halffield.js';
 import { robotAt, robotThing } from './robot.js';
 import { LOOKS, PEOPLE, peopleThings, peopleBlocks } from './people.js';
-import { SCENE_TEXT, LINES } from './words.js';
+import { SCENE_TEXT, LINES, EXIT_LABEL } from './words.js';
 import { makeCutscene, zoomShot, HANDOFF } from './cutscene.js';
 
 // ---- The floor canvas, drawn once ----
-// The sun's patches read the pixels back to relight them, so the canvas is made for reading.
+// The sun's patches read the pixels back to relight them, so the canvas is made for reading. The end wall goes in
+// last, out of the sun's way.
 const BACKDROP = document.createElement('canvas');
 BACKDROP.width = ROOM.w;
 BACKDROP.height = ROOM.h;
@@ -51,6 +57,7 @@ BACKDROP.height = ROOM.h;
   drawTiles(ctx);
   drawFieldFloor(ctx);
   drawSunPatches(ctx);
+  drawEndWall(ctx);
 }
 
 // ---- The room, from any view ----
@@ -103,13 +110,19 @@ const CUT_END = cutscene.reduce((n, b) => n + b.dur, 0);
 // by 4 pixels along and 2 of depth so her shadow never touches them.
 const STOPS = [...ROOM_BLOCKS, ...FIELD_BLOCKS, ...peopleBlocks()];
 const blocked = (x, y) => STOPS.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
-/** A step along, then across, as field.js does: each half refused if it would end in something. A step that goes
- *  nowhere because the carpet is in the way may bring Kai over (keepOff). */
+/** In the side doors' floor band, as far in as the end wall either side of them lets her (move()'s margins): there the
+ *  floor runs on out through the wall. */
+const inDoorway = (y) => y >= SIDE_DOOR.y0 + 2 && y <= SIDE_DOOR.y1 - 2;
+/** The way out (stage.js): her feet in the doorway's mouth, just short of the threshold. */
+const EXIT = { x: END_WALL.x0 - 4, y0: SIDE_DOOR.y0 + 2, y1: SIDE_DOOR.y1 - 2, label: EXIT_LABEL };
+/** A step along, then across, as field.js does: each half refused if it would end in something. On the right she stops
+ *  short of the end wall, except in the doorway, where she can walk on into it, and not out of the band once she's
+ *  past where she'd stop. A step that goes nowhere because the carpet is in the way may bring Kai over (keepOff). */
 function move(x, y, dx, dy) {
-  let nx = clamp(x + dx, FLOOR.x0, FLOOR.x1);
+  let nx = clamp(x + dx, FLOOR.x0, inDoorway(y) ? ROOM.w + 40 : FLOOR.x1);
   if (blocked(nx, y)) nx = x;
   let ny = clamp(y + dy, FLOOR.y0, FLOOR.y1);
-  if (blocked(nx, ny)) ny = y;
+  if (blocked(nx, ny) || (nx > FLOOR.x1 && !inDoorway(ny))) ny = y;
   keepOff(x, y, nx === x && ny === y && (onCarpet(x + dx, y) || onCarpet(x, y + dy)));
   return [nx, ny];
 }
@@ -217,6 +230,7 @@ export const scene = {
   start: START,
   cutscene,
   move,
+  exit: EXIT,
   people,
   reach,
   faceTo,
@@ -234,7 +248,16 @@ export const scene = {
     else drawBubble(g, spot.x - view.x + side * 11, y, t);
   },
   onFree(s) {
-    const now = performance.now() / 1000, end = CUT_END + HANDOFF.late; // the cut scene's clock in its last frame
+    const now = performance.now() / 1000, a = s.auto;
+    // Back in at her mark after walking out through the side doors (on this page; in the game the next scene starts
+    // instead): stage.js has put her there. The room, the robot and Kai carry on as they were, and the camera starts
+    // from the walking view.
+    if (freeAt != null && a?.out && now - (a.t0 + a.dur + a.hold) < 0.25) {
+      const y = followView(s.me).y;
+      Object.assign(pan, { talking: false, from: y, t0: now, y, settle: false });
+      return;
+    }
+    const end = CUT_END + HANDOFF.late; // the cut scene's clock in its last frame
     shift = end - now;
     robotFrom = HANDOFF.robotU - end;
     freeAt = now;

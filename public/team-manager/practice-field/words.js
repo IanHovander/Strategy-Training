@@ -14,6 +14,9 @@
 /** The place card as the cut scene opens (stage.js placeCard). */
 export const CARD = { name: 'PRACTICE FIELD', sub: 'SCHOOL CAFETERIA - 4:40 PM' };
 
+/** Over the arrow at the side doors, the way out (stage.js exit): the next scene is the van ride, from the parking lot. */
+export const EXIT_LABEL = 'TO THE PARKING LOT';
+
 /** The scene's name for the phone, what the big screen shows for screen readers, and the note under the controls. */
 export const SCENE_TEXT = {
   name: 'PRACTICE FIELD',

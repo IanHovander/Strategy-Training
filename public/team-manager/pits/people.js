@@ -283,8 +283,9 @@ export const NADIA_ID = 'nadia';
  * the desk, and Ms. Kowalski, so that anywhere she can stand in front of her offers the talk). reach: how far across
  * (scene.js: 17 for anyone standing still, whom she stops 14 short of, or 14). The teammate reaches a little further
  * both ways, to where the cut scene leaves the strategist, so the walking part starts with TALK TO TEAMMATE; and the
- * safety advisor 16 deep, more than the 13 she steps round the strategist by (scene.js ROUND.gap), so she can be
- * talked to as she goes by, not only while she stands at the ends of her patrol.
+ * safety advisor 21 deep, more than she steps round the strategist by (scene.js ROUND: 13 coming toward her, 20 when
+ * one overtakes the other), so she can be talked to as she goes by, not only while she stands at the ends of her
+ * patrol; out in the open aisle there's nobody else that deep for it to reach past.
  */
 export const PEOPLE = [
   { id: 'bea', name: 'BEA, SPARE PARTS', x: 48, y: 74, dir: 0, gait: 'stand', look: LOOKS.bea, reachY: 14, solid: true },
@@ -297,7 +298,7 @@ export const PEOPLE = [
   { id: 'kowalski', name: 'MS. KOWALSKI, 5026 MENTOR', x: 648, y: 88, dir: 7, gait: 'stand', look: LOOKS.kowalski, reachY: 13, side: -1, solid: true },
   { id: 'oscar', name: 'OSCAR, 1357', x: 722, y: 92, dir: 7, gait: 'stand', look: LOOKS.oscar, reachY: 12, side: 1, solid: true },
   { id: 'tomas', name: 'TOMAS, PIT ADMIN', x: 776, y: 77, dir: 0, gait: 'sit', faceGait: 'sit', look: LOOKS.tomas, reachY: 14, aside: 16, side: -1, solid: true },
-  { id: NADIA_ID, name: 'NADIA, SAFETY ADVISOR', x: 104, y: 108, dir: 0, gait: 'stand', look: LOOKS.nadia, reachY: 16, aside: 20, solid: false, at: patrol },
+  { id: NADIA_ID, name: 'NADIA, SAFETY ADVISOR', x: 104, y: 108, dir: 0, gait: 'stand', look: LOOKS.nadia, reachY: 21, aside: 20, solid: false, at: patrol },
 ];
 /** The rest of the crews, busy in the background. Nobody here talks. */
 export const CREW = [

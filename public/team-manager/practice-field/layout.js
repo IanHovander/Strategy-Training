@@ -8,19 +8,28 @@
 export const FT = 8, DEEP = 2.75;
 
 // ---- The room ----
-/** 85 feet long; the back wall's floor line at y = 84, so 10.5 feet of wall show above it; 46 feet of floor below. The
+/** 88 feet long; the back wall's floor line at y = 84, so 10.5 feet of wall show above it; 46 feet of floor below. The
  *  walking camera keeps above y = `shown` while she's further back than 12 pixels short of it, so the windows stay in
  *  sight; only when she walks out across the front strip, round in front of Kai, does it go down with her, keeping 12
  *  pixels of floor under her feet.
  *  The last rows of tiles under that come into view while she talks to someone at the front of the room, so the dialog
  *  box doesn't hide their faces (scene.js camera). */
-export const ROOM = { w: 680, h: 212, wallY: 84, shown: 192 };
+export const ROOM = { w: 704, h: 212, wallY: 84, shown: 192 };
 /** The floor line this many feet out from the back wall. */
 export const roomY = (ft) => ROOM.wallY + ft * DEEP;
+/** The way out: the end wall on the right, the cafeteria's outside wall, two and a half feet of it showing at the edge
+ *  of the world, cut away 5 pixels up (h) the way the worlds hall's end walls are, and the side doors in it out to the
+ *  parking lot, propped open. y0-y1 is the opening's floor band, 12 feet wide, out in the front half of the room where
+ *  the floor is clear, below the custodian's cart. She came in through the hallway doors at the other end of the room
+ *  (DOORWAY). */
+export const END_WALL = { x0: ROOM.w - 20, x1: ROOM.w, h: 5 };
+export const SIDE_DOOR = { y0: 148, y1: 181 };
 /** Where her feet can go at all: the floor, short of the walls and the edges of the world. At the front she can go 8
  *  pixels past `shown`, so there's an easy lane to walk round in front of Kai, standing in front of the carpet; there
- *  the camera still keeps 12 pixels of floor under her feet, down to the room's bottom edge. */
-export const FLOOR = { x0: 8, x1: ROOM.w - 8, y0: ROOM.wallY + 4, y1: ROOM.shown + 8 };
+ *  the camera still keeps 12 pixels of floor under her feet, down to the room's bottom edge. On the right she stops
+ *  short of the end wall, its width of her shadow away, except in the side doors' floor band, where she can walk on out
+ *  (scene.js move). */
+export const FLOOR = { x0: 8, x1: END_WALL.x0 - 7, y0: ROOM.wallY + 4, y1: ROOM.shown + 8 };
 
 // The back wall, left to right. x0-x1 along the wall; top is the y of the top edge on the wall.
 /** Double doors out to the hallway, 7 feet tall, with the EXIT sign over them. */

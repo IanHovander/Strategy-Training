@@ -4,7 +4,8 @@
 // comes from layout.js.
 // The back wall, left to right: the double doors to the hallway under their EXIT sign; six tall windows, with a clock and
 // school posters on the piers between them; the team's banner over the lunch tables folded against the wall; the serving
-// line with its shutter down; two vending machines under the lunch menu. The wall is painted block over a glazed tile
+// line with its shutter down; two vending machines under the lunch menu. At the right-hand end, the outside wall, with
+// the side doors out to the parking lot propped open in it (the way out). The wall is painted block over a glazed tile
 // wainscot, dim and low in contrast because the sun is behind it (like the arena's stands), so the people in front of it
 // read, and the sky in the glass is the brightest thing on it. Outside: a late-afternoon sky in flat dithered bands, the
 // sun low in the first window, and the trees and the school's other wing as silhouettes against it.
@@ -26,14 +27,16 @@
 //   drawWall(ctx), drawTiles(ctx), drawSunPatches(ctx)   once each, in that order (the carpet goes in before the patches),
 //                                                        into a ROOM.w x ROOM.h canvas at world coordinates: the patches
 //                                                        and the shafts
+//   drawEndWall(ctx)                                     once, last, into the same canvas: the end wall on the right as
+//                                                        far as the side doors, the doors' opening and the mat inside
 //   roomThings(g, view, t, o)                            the furniture, [{ y, draw }] to sort in by floor line; o.door 0-1
 //   drawSunAir(g, view, t)                               the dust in the shafts, last of all, every frame
-//   ROOM_BLOCKS                                          the furniture's footprints, for move()
+//   ROOM_BLOCKS                                          the furniture's footprints and the end wall's, for move()
 // A view is { x, y } (and w, h if it isn't the 256 x 144 screen).
 
 import { W, C, useContext, camera, screen, rect, disk, text, rnd } from '../pixel.js';
 import { tones } from '../cast.js';
-import { ROOM, roomY, DOORS, WINDOWS, WIN, FOLDED, SERVING, VENDING, SUN, sunShift, FURNITURE, SPOTS } from './layout.js';
+import { ROOM, roomY, DOORS, WINDOWS, WIN, FOLDED, SERVING, VENDING, SUN, sunShift, FURNITURE, SPOTS, END_WALL, SIDE_DOOR } from './layout.js';
 import { CARPET_IN_SUN, CARPET_IN_SHAFT } from './halffield.js';
 
 // ---- Colours ----
@@ -350,11 +353,13 @@ function menuBoard() {
   text('TACOS 2.50', cx, y0 + 16, { font: 3, color: C.white, align: 'center' });
 }
 
-/** Small things on the wall: a fire alarm by the doors, an extinguisher cabinet, a hand sanitiser by the bins. */
+/** Small things on the wall: a fire alarm by each way out, an extinguisher cabinet, a hand sanitiser by the bins. */
 function wallBits() {
-  panel(60, 38, 6, 8, RED[1]);
-  rect(61, 39, 4, 1, RED[2]);
-  rect(61, 42, 4, 1, C.white);
+  for (const x of [60, VENDING[1].x1 + 4]) { // by the hallway doors, and by the side doors past the snack machine
+    panel(x, 38, 6, 8, RED[1]);
+    rect(x + 1, 39, 4, 1, RED[2]);
+    rect(x + 1, 42, 4, 1, C.white);
+  }
   const ex = FOLDED[1].x1 + 2;
   panel(ex, 30, 10, 18, STEEL[2]);
   rect(ex + 1, 31, 8, 1, STEEL[3]);
@@ -903,11 +908,93 @@ function doorway(half) {
   }
 }
 
+// ---- The way out ----
+// The right-hand end of the room is the cafeteria's outside wall, drawn the way the worlds hall's end walls are: above
+// the floor line at the back, its face, the back wall's painted block and glazed tile a step lighter, as it faces the
+// light; from there down, its thickness cut away 5 pixels up, a box like field.js's running down the right edge of the
+// room, the top of the block lit along its edge toward the room. Out in the front half of the room it breaks for the
+// side doors to the parking lot, propped open: the cut end of the wall behind the opening shows its face, with the
+// doors' aluminium frame at its inner edge; across the opening the threshold, and beyond it the walk outside in the
+// late sun, the same straw as the sun's patches on the tiles, so the way out is the brightest thing at this end of the
+// room. A rubber mat lies on the tiles inside, and a red EXIT sign sticks out from the wall over the opening on a
+// bracket, the same as the one over the hallway doors she came in by at the other end.
+// The face and the wall behind the opening go into the floor canvas (drawEndWall); the wall in front of the opening
+// stands on the floor (roomThings), so it hides her feet as she walks out between the two.
+const CAP = [WALL[1], WALL[2], '#4a5372']; // the block's cut top: shade, mid, and its lit edge a step past the wall's
+const DAY = ['#cdb87e', '#e6d39a', '#f2e3b0']; // the walk outside in the sun: the tiles' straw in the sun's patches
+
+/** The wall's thickness from floor line y0 to y1, cut away END_WALL.h up: its top speckled, the face toward you below. */
+function endWallRun(y0, y1) {
+  const { x0, x1, h } = END_WALL, w = x1 - x0;
+  const { yTop, yFront } = box(x0, w, y0, y1, h, CAP[1], WALL[0], CAP[2]);
+  rect(x0, yTop, 1, yFront - yTop, CAP[2]);
+  for (let y = yTop + 3; y < yFront - 1; y += 2) {
+    if (rnd(y * 1.7 + 3) < 0.45) rect(x0 + 2 + Math.floor(rnd(y * 2.3 + 1) * (w - 3)), y, 1, 1, CAP[0]);
+  }
+}
+
+/** The end wall into the floor canvas, last: its face, the wall as far as the side doors, the opening and the mat. */
+export function drawEndWall(ctx) {
+  const prev = useContext(ctx);
+  screen();
+  const { x0, x1, h } = END_WALL, w = x1 - x0, { y0, y1 } = SIDE_DOOR, capY = ROOM.wallY - 4 * 8;
+  // The face: block coursed every 5 pixels with staggered joints, then the wainscot, lit, down to where the cut top
+  // starts; ink down the corner it makes with the back wall.
+  rect(x0, 0, w, capY, WALL[2]);
+  for (let y = capY - 5, k = 0; y > 1; y -= 5, k++) {
+    rect(x0, y, w, 1, WALL[1]);
+    rect(x0 + (k % 2 ? 3 : 9), y + 1, 1, 4, WALL[1]);
+  }
+  rect(x0, 0, w, 1, C.ink);
+  rect(x0, capY, w, ROOM.wallY - capY, GLAZE[2]);
+  rect(x0, capY + 2, w, 1, GLAZE[1]);
+  for (let y = capY + 6; y < ROOM.wallY - 6; y += 4) rect(x0 + 2 + ((y / 4) % 2) * 5, y, 1, 1, GLAZE[1]);
+  rect(x0 - 1, 0, 1, ROOM.wallY, C.ink);
+  // The wall from the back corner to the opening, and the door frame along its cut end, lit on top and on the left.
+  endWallRun(ROOM.wallY, y0);
+  rect(x0, y0 - h - 1, 3, h + 1, STEEL[1]);
+  rect(x0, y0 - h - 1, 3, 1, STEEL[3]);
+  rect(x0, y0 - h, 1, h, STEEL[2]);
+  // The opening, between the wall behind it and the wall in front (whose top starts h above its floor line): the
+  // threshold, lit along the room side, then the walk outside in the sun, the wall behind the opening shading its far
+  // edge, a few flecks in it.
+  const gy = y0 + 1, gh = y1 - h - 1 - gy;
+  rect(x0, gy, 4, gh, STEEL[2]);
+  rect(x0, gy, 1, gh, STEEL[3]);
+  rect(x0 + 3, gy, 1, gh, STEEL[1]);
+  rect(x0 + 4, gy, w - 4, gh, DAY[1]);
+  rect(x0 + 4, gy, w - 4, 2, DAY[0]);
+  for (let i = 0; i < 14; i++) {
+    rect(x0 + 5 + Math.floor(rnd(i + 800) * (w - 6)), gy + 3 + Math.floor(rnd(i + 820) * (gh - 4)), 1, 1, DAY[i % 3 ? 2 : 0]);
+  }
+  // The frame on the wall in front of the opening, seen from above at its cut top.
+  rect(x0, y1 - h, 3, 2, STEEL[2]);
+  rect(x0, y1 - h, 3, 1, STEEL[3]);
+  // The mat inside the doors: flat black rubber in the carpet's darkest grey, a border round it a step up, flecked.
+  const mx = x0 - 27, mw = 23, my = y0 + 4, mh = y1 - y0 - 9;
+  rect(mx - 1, my - 1, mw + 2, mh + 2, C.ink);
+  rect(mx, my, mw, mh, C.carpet0);
+  rect(mx + 1, my + 1, mw - 2, mh - 2, C.carpet1);
+  rect(mx + 2, my + 2, mw - 4, mh - 4, C.carpet0);
+  for (let i = 0; i < 12; i++) rect(mx + 3 + Math.floor(rnd(i + 860) * (mw - 6)), my + 3 + Math.floor(rnd(i + 880) * (mh - 6)), 1, 1, C.carpet1);
+  useContext(prev);
+}
+
+/** The EXIT sign over the side doors, sticking out from the wall on a bracket: white on red, as over the hallway doors. */
+function exitSign() {
+  const x = END_WALL.x0 - 22, y = Math.round((SIDE_DOOR.y0 + SIDE_DOOR.y1) / 2) - 64;
+  rect(x + 18, y + 3, 6, 3, C.ink);
+  rect(x + 19, y + 4, 5, 1, STEEL[2]);
+  panel(x, y, 19, 9, RED[1]);
+  rect(x + 1, y + 1, 17, 1, RED[2]);
+  text('EXIT', x + 10, y + 2, { font: 3, color: C.white, align: 'center' });
+}
+
 /**
  * Everything of the room's that stands on the floor, as [{ y, draw }] to sort in with the field and the people: the
  * furniture against the wall, the tables (each one thing at its front floor line, so whoever sits behind it is drawn
- * first and its front hides their legs), the backpacks, the cart, and the doorway as o.door opens it: half open past a
- * quarter, open past three quarters.
+ * first and its front hides their legs), the backpacks, the cart, the doorway as o.door opens it (half open past a
+ * quarter, open past three quarters), and the end wall in front of the side doors with the EXIT sign over them.
  * The caller sets the camera to view before each draw().
  */
 export function roomThings(g, view, t, o = {}) {
@@ -927,11 +1014,16 @@ export function roomThings(g, view, t, o = {}) {
   ];
   const door = o.door ?? 0;
   if (door > 0.25) things.push({ x0: DOORS.x0, x1: DOORS.x1, y: ROOM.wallY, draw: () => doorway(door < 0.75) });
+  // The end wall in front of the side doors, and the sign over them, sorted at the opening's near edge.
+  const near = SIDE_DOOR.y1;
+  things.push({ x0: END_WALL.x0, x1: END_WALL.x1, y: near, draw: () => endWallRun(near, ROOM.h + END_WALL.h + 1) });
+  things.push({ x0: END_WALL.x0 - 22, x1: END_WALL.x0, y: near, draw: exitSign });
   return things.filter((p) => p.x1 > vx0 && p.x0 < vx1).map((p) => ({ y: p.y, draw: p.draw }));
 }
 
 /** Where the furniture stands, { x0, x1, y0, y1 } with y0-y1 its back and front floor lines: nobody walks through it. The
- *  gap between the second folded table and the counter is too narrow to stand in, so it's blocked too. */
+ *  gap between the second folded table and the counter is too narrow to stand in, so it's blocked too, and so is the
+ *  end wall either side of the side doors, out past the edge of the world, so the doors are the only way out. */
 export const ROOM_BLOCKS = [
   ...FOLDED.map((f) => ({ x0: f.x0, x1: f.x1, y0: ROOM.wallY, y1: roomY(2) })),
   { x0: FOLDED[1].x1, x1: SERVE.x0, y0: ROOM.wallY, y1: roomY(2.5) },
@@ -939,4 +1031,6 @@ export const ROOM_BLOCKS = [
   ...VENDING.map((v) => ({ x0: v.x0, x1: v.x1, y0: ROOM.wallY, y1: roomY(2.5) })),
   ...['bins', 'programmerTable', 'scoutTable', 'janitorCart'].map((k) => ({ ...FURNITURE[k] })),
   ...BACKPACKS.map((b) => ({ x0: b.x - 4, x1: b.x + 5, y0: b.y - 3, y1: b.y })),
+  { x0: END_WALL.x0, x1: ROOM.w + 64, y0: ROOM.wallY, y1: SIDE_DOOR.y0 },
+  { x0: END_WALL.x0, x1: ROOM.w + 64, y0: SIDE_DOOR.y1, y1: ROOM.h + 64 },
 ];

@@ -644,11 +644,15 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
 
   // 19. mcToHer: Robin skates out through the gate, swings round in front of her (18 pixels in front of her feet, so
   // she passes rather than brushes by), on to the open floor on her right, and holds out the mic; she turns as Robin
-  // passes and steps out of the crowd to it. They meet where the mic stand (on the field behind them) is well clear of
-  // both heads and of the mic between them, the near wall's posts stand clear of her and behind Robin, and a step
-  // forward of her waiting place, so in the close-up the film bar covers the captains' feet on the line above their
-  // heads: she stands at MEET, Robin a skate's length to her right. Sam waits on the gate's left (SAM_ASIDE).
-  const MEET = [HER.x + 34, HER.y + 16], MC_BY_HER = [MEET[0] + 22, MEET[1] + 1];
+  // passes and steps out of the crowd to it. They meet a few steps along to her right, far enough that the close-up of
+  // them leaves out the mic stand and Alliance Two's captain at it (their shoes would sit along its top), with each
+  // head between two of the near wall's posts (one every 32 pixels, from 400), and a couple of steps forward of her
+  // waiting place, so the film bar covers the captains' feet on the line above their heads and the belt barrier in
+  // front of their own: she stands at MEET, Robin a skate's length to her right. Sam waits on the gate's left
+  // (SAM_ASIDE).
+  const MEET = [HER.x + 60, HER.y + 16], MC_BY_HER = [MEET[0] + 22, MEET[1] + 1];
+  /** The reps' shot, a little further right than REPS_SHOT so Robin stands well inside it, 32 pixels from its edge. */
+  const MEET_SHOT = view(MC_BY_HER[0] + 32 - W, REPS_SHOT.y);
   /** The lane up the gap between the waiting crowd and her place, to and from the gate. */
   const LANE = [HER.x - 20, HER.y - 4];
   const toHer = [HOME, [HOME[0] - 2, FRONT], [376, FRONT], pt(GATE_IN), pt(GATE_OUT), LANE,
@@ -664,7 +668,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
       mc: glide(toHer, t, TO_HER, 'offer', 6, 'stand', 7),
       '5026': t < HER_STEPS ? still(HER.x, HER.y, turn(4, 2, t - HER_TURNS)) : trip(herStep, t, HER_STEPS, 'walk', 2),
     }),
-    shot: (t) => at1x(pan(view(262, LINE_VIEW), REPS_SHOT, seg(t, 0.6, 3.6))),
+    shot: (t) => at1x(pan(view(262, LINE_VIEW), MEET_SHOT, seg(t, 0.6, 3.6))),
     cheer: () => 0.3,
     board: () => chart(captains(CAPS2, PICKS2), 1, clockStopped2),
   });
@@ -673,7 +677,8 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
   // congratulates her, as the MC does after every accepted invitation.
   beat({
     name: 'accept2', dur: 2.5,
-    shot: () => closeUp(MEET[0] + 11, MEET[1] - 26),
+    // The window's top row is the one under the captains' shadows on the line, so the film bar covers them.
+    shot: () => closeUp(MEET[0] + 11, MEET[1] - 25),
     cheer: (t) => lerp(0.3, 1, seg(t, 0.6, 1.0)),
     board: () => chart(captains(CAPS2, PICKS2), 1, clockStopped2),
     say: says('5026', pages(
@@ -699,7 +704,7 @@ export function makeCutscene({ drawWorld, lookOf, crowd = null }) {
       '3000': trip(lenaBack, t, LENA0, 'walk', 0, 0),
       sam: trip([pt(SAM_ASIDE), pt(SAM_FAR)], t, 0, 'walk', SAM_FAR.dir),
     }),
-    shot: (t) => at1x(pan(REPS_SHOT, view(176, LINE_VIEW), seg(t, 0.3, 3.6))),
+    shot: (t) => at1x(pan(MEET_SHOT, view(176, LINE_VIEW), seg(t, 0.3, 3.6))),
     cheer: (t) => lerp(1, 0.5, seg(t, 0.5, 3.5)),
     board: () => chart(captains(CAPS2, { ...PICKS2, 1: ['5026', ''] })),
   });

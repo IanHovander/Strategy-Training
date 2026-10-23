@@ -6,22 +6,22 @@
 // of the counter and the desk at the ends (set.js move()); anyone standing, kneeling at work or walking about is in the
 // way too, as wide as they're drawn and a step deep, so she stops a step short of them and goes round. Eleven people
 // talk: the volunteer at SPARE PARTS, a student on each of four other teams, the judge, the teammate on pit duty,
-// 5026's mentor, the pit admin at his desk, and the safety advisor, who walks the aisle up and down and stops while
-// you talk to her (in reach as she steps round you, too). Anyone standing still can be talked to from wherever she
-// stops beside them, as well as from in front. Whoever she talks to turns to face her (kneelers stay down and put the drill down for a moment;
-// someone bent over a laptop straightens up), and if she's walked up right in front of them she first takes a few
-// steps back and to their side, so the big screen shows them both, the way the arena does, instead of the back of her
-// head in front of their face. The words come once she's there.
+// 5026's mentor, the pit admin at his desk, and the safety advisor, who walks the aisle up and down (in reach as she
+// steps round you, too) and comes over to your side while you talk to her. Anyone standing still can be talked to
+// from wherever she stops beside them, as well as from in front. Whoever she talks to turns to face her (kneelers stay
+// down and put the drill down for a moment; someone bent over a laptop straightens up), and if she's walked up right
+// in front of them she first takes a few steps back and to their side, so the big screen shows them both, the way the
+// arena does, instead of the back of her head in front of their face. The words come once she's there.
 //
 // Nobody walks through anybody. The aisle's walkers (the safety advisor and two people from other rows) see her ahead
 // and step round her, in front or behind, wherever there's room in the aisle, then back to their way; the passers-by go
 // round the safety advisor too, a step deeper or shallower than her. Only if she's right in front of them before
 // they've stepped aside do they stop for a moment. And nobody walks across a conversation: while she talks to someone,
 // a passer-by heading their way, or the safety advisor on her patrol, stops well short of the two of them (TALK_GAP)
-// and waits till they're done, so the faces over the dialog box stay clear; a passer-by waiting steps forward to the
-// front of the aisle while they wait, out from in front of the pits, where the box hides all but the top of their head,
-// and back into their lane as they walk on. 1024's battery runner has a corner of the pit she can't walk into
-// (people.js's RUN_LANE), and would wait for her if she ever got in the way.
+// and waits till they're done, so the faces over the dialog box stay clear; a passer-by waits where they're not in
+// front of anyone standing in the pits (a few steps further off if need be), so the pits don't look stacked, one head
+// over another's body. 1024's battery runner has a corner of the pit she can't walk into (people.js's RUN_LANE), and
+// would wait for her if she ever got in the way.
 //
 // No running in the pits. It's a real rule at every event (batteries, tools and robots on carts in a crowded aisle), so
 // it's this scene's: run for half a second and the safety advisor calls out straight away, from wherever she is (off
@@ -70,9 +70,10 @@ const WAIT = { x: 16, y: 10 }, WAIT_PASSER = { x: 22, y: 10 };
  * TALK_GAP[2] pixels behind either of the two, or up to TALK_GAP[3] in front: enough to take in both of the passers'
  * lanes (y 114 and 118) from a talk set back in a pit (Bea at y 74 is the deepest; the strategist stands a step in front).
  * The safety advisor on her patrol waits a head's width further off across (TALK_GAP_PATROL), so that she and a
- * passer-by waiting too stand side by side, not one head over the other.
+ * passer-by waiting too stand side by side, not one head over the other. A passer-by doesn't wait within CREW_CLEAR
+ * across of anyone standing in the pits behind them, but up to TALK_GAP_MORE further off, where nobody is.
  */
-const TALK_GAP = [20, 40, 24, 46], TALK_GAP_PATROL = [36, 56];
+const TALK_GAP = [20, 40, 24, 46], TALK_GAP_PATROL = [36, 56], CREW_CLEAR = 13, TALK_GAP_MORE = 40;
 /**
  * How the aisle's walkers get round someone: they start stepping aside this far ahead of them (pixels across), pass
  * this far in front or behind (pixels deep), and step aside this fast (pixels deep a second), keeping to the aisle.
@@ -133,6 +134,8 @@ let lastNadia = null;
 let solids = [];
 /** Her, as of the last frame drawn: the bubble goes on the side of whoever's in reach away from her. */
 let her = null;
+/** A talk she's just started with the safety advisor, who comes over for it (draw()). */
+let wordAsked = null;
 
 const toward = (from, to) => dirToward(to.x - from.x, (to.y - from.y) / DEPTH);
 /** One of along()'s results as a pose for folk's list, on whole pixels (feet stepping with the distance, as people.js's). */
@@ -153,12 +156,18 @@ const overtaking = (p, me) => {
 };
 /**
  * Whether someone at p, walking, is coming up on a conversation's speaker at o and should wait: [near, far] pixels
- * across short of them (TALK_GAP's, unless given), and within TALK_GAP's depth.
+ * across short of them (TALK_GAP's, unless given), and within TALK_GAP's depth. crew: people standing in the pits; if
+ * stopping `far` short would leave p in front of one of them (within CREW_CLEAR across, and behind p), p stops at the
+ * first spot further off that's clear, up to TALK_GAP_MORE further.
  */
-const nearTalk = (p, o, [near, far] = TALK_GAP) => {
+const nearTalk = (p, o, [near, far] = TALK_GAP, crew = []) => {
   const go = across(p.dir), d = (o.x - p.x) * go;
   const dy = p.y - o.y;
-  return go !== 0 && d >= near && d < far && dy > -TALK_GAP[2] && dy < TALK_GAP[3];
+  if (go === 0 || d < near || dy <= -TALK_GAP[2] || dy >= TALK_GAP[3]) return false;
+  const clear = (k) => crew.every((c) => c.y >= p.y || Math.abs(c.x - (o.x - go * k)) >= CREW_CLEAR);
+  let stop = far;
+  while (stop < far + TALK_GAP_MORE && !(clear(stop) && clear(stop - 1))) stop += 1;
+  return d < (stop < far + TALK_GAP_MORE ? stop : far);
 };
 
 /**
@@ -203,10 +212,17 @@ function slide(x, y, tx, ty) {
  * Starting to talk to p: if she's standing in front of them (within IN_FRONT across), she'd hide them, so she walks
  * back a little and to their side (p.side, or the side they face, first), down or up first and then across, and the words wait till she's there.
  * If a side drape's in the way she goes round its front, out in the aisle. p.aside: how far to the side, 16 pixels
- * unless given (a head's width, so the heads don't meet).
+ * unless given (a head's width, so the heads don't meet). The safety advisor, out in the aisle wherever her patrol
+ * has taken her (perhaps a step in front of the strategist, stepping round her), comes over to her side instead, the
+ * way she does when she has a word about running, so both faces clear the dialog box.
  */
 function stepAside(s, p) {
   const me = s.me;
+  // The safety advisor comes over to her instead (draw()), as she does to have a word.
+  if (p.id === NADIA_ID) {
+    wordAsked = s.talk;
+    return;
+  }
   if (Math.abs(me.x - p.x) >= IN_FRONT || me.y <= p.y) return;
   const aside = p.aside ?? 16;
   const faces = p.side ?? ([1, 2, 3].includes(p.dir) ? 1 : [5, 6, 7].includes(p.dir) ? -1 : Math.sign(me.x - p.x) || 1);
@@ -241,18 +257,14 @@ function wordSpot([hx, hy], side, crowd) {
 /**
  * Someone walking the aisle (p: where their own way has them now), stepped round whoever's near ahead of them (`obs`,
  * as { x, y }): they ease off their way toward the nearest place in the aisle that clears everyone near by ROUND.gap,
- * and back once they're past. `waiting`: their clock is stopped (they'd walk into her), so they only step aside.
- * `front`: they're waiting for a conversation to finish, so they step forward to the front of the aisle (LANE[1]),
- * unless someone's standing there, and back to their way once they walk on. Their feet step with the ground they cover.
+ * and back once they're past. `waiting`: their clock is stopped (they'd walk into her), so they only step aside. Their
+ * feet step with the ground they cover.
  */
-function goRound(p, obs, dt, waiting, front = false) {
+function goRound(p, obs, dt, waiting) {
   const st = (aside[p.id] ??= { off: 0, dist: 0, x: p.x, y: p.y, gait: p.gait });
   const go = p.gait === 'walk' ? Math.sign(Math.round(Math.sin((p.dir * Math.PI) / 4) * 4)) : 0;
   let want = 0;
-  if (go && front) {
-    want = st.off;
-    if (obs.every((o) => Math.abs(o.x - p.x) >= 16 || Math.abs(o.y - LANE[1]) >= ROUND.gap)) want = LANE[1] - p.y;
-  } else if (go) {
+  if (go) {
     want = st.off;
     const now = p.y + st.off;
     // Someone going their way is stepped round from as far behind as ahead: they're coming up to overtake.
@@ -287,6 +299,7 @@ export const scene = {
   onFree() {
     walkT0 = null;
     herWalk = null;
+    wordAsked = null;
   },
   // She stays put while the safety advisor comes over (she walks to meet her by herself, below).
   move: (x, y, dx, dy) => (errand?.phase === 'come' ? [x, y] : move(x, y, dx, dy, solids)),
@@ -344,18 +357,17 @@ export const scene = {
     const hard = (id) => (passer(id) && lastNadia?.still ? [me, lastNadia] : [me]);
     // The two in a conversation, if one's going on: her and whoever she's talking to (the safety advisor where she is).
     const talkers = s.talk ? [me, ...(s.talk.person ? [talkingTo(NADIA_ID) && lastNadia ? lastNadia : s.talk.person] : [])] : [];
-    // A passer-by waiting for a conversation (and not for her) steps forward out of its way (forTalk); whether they're
-    // near it is judged from their own lane, so stepping forward doesn't set them walking again.
-    const waiting = new Set(), forTalk = new Set();
+    // A passer-by waits for a conversation clear of the people standing in the pits behind them (nearTalk's crew).
+    const crewStill = Object.values(at0).filter((p) => p.solid);
+    const waiting = new Set();
     for (const id of MOVERS) {
       const p = at0[id], q = { ...p, y: p.y + offOf(id) };
-      const hit = () => hard(id).some((o) => blocks(q, o, passer(id) ? WAIT_PASSER : WAIT));
-      const talk = () => AISLE.includes(id) && talkers.some((o) => nearTalk(passer(id) ? p : q, o, id === NADIA_ID ? TALK_GAP_PATROL : TALK_GAP));
       if (id === NADIA_ID && (errand || talkingTo(NADIA_ID))) held[id] += dt;
-      else if (['walk', 'carry'].includes(p.gait) && (hit() || talk())) {
+      else if (['walk', 'carry'].includes(p.gait)
+        && (hard(id).some((o) => blocks(q, o, passer(id) ? WAIT_PASSER : WAIT))
+          || (AISLE.includes(id) && talkers.some((o) => nearTalk(q, o, id === NADIA_ID ? TALK_GAP_PATROL : TALK_GAP, passer(id) ? crewStill : []))))) {
         held[id] += dt;
         waiting.add(id);
-        if (passer(id) && !hit()) forTalk.add(id);
       } else if (passer(id) && p.gait === 'walk' && overtaking(q, me)) held[id] += dt * (1 - ROUND.slow);
     }
     const everyone = folk(crewT, { clocks: clocks() });
@@ -364,11 +376,34 @@ export const scene = {
     const runner = now[RUNNER];
     if (waiting.has(RUNNER)) Object.assign(runner, runner.gait === 'carry' ? { frame: 0 } : { gait: 'stand', frame: 0 });
 
-    // The safety advisor on her patrol, going round her if she's in the way.
-    // While she's talking to her, she stays where she'd stepped to (her patrol and her steps round are held).
+    // The safety advisor on her patrol, going round her if she's in the way. While she's talking to her (before she
+    // comes over for it), she stays where she'd stepped to: her patrol and her steps round are held.
     const pn = now[NADIA_ID], patrolAt = [pn.x, pn.y];
     if (!errand && !talkingTo(NADIA_ID)) Object.assign(pn, goRound(pn, [me], dt, waiting.has(NADIA_ID)));
     else if (!errand) pn.y = Math.round(pn.y + offOf(NADIA_ID));
+
+    /**
+     * The safety advisor comes over to have a word: from where she is, or from the edge of the screen on her side if
+     * she's off it, along the back of the aisle, and stops a step to the strategist's side; if that's the far side, she
+     * goes round in front of her. The strategist walks back to meet her if she's out in the aisle's front half, setting
+     * off so that the two of them get there together. Returns the seconds till they're both there.
+     */
+    const comeOver = () => {
+      const mid = view.x + 128, off = Math.abs(pn.x - mid) > 120;
+      const side = Math.sign(pn.x - (off ? mid : me.x)) || 1;
+      const [hx, hy] = me.y > WORD_Y[1] ? slide(me.x, me.y, me.x, WORD_Y[1]) : [me.x, me.y];
+      const passers = AISLE.filter((id) => id !== NADIA_ID && aside[id]).map((id) => aside[id]);
+      const to = wordSpot([hx, hy], side, [...crew, ...passers]);
+      const from = off ? [side < 0 ? view.x - 10 : view.x + 266, to[1]] : [pn.x, pn.y];
+      const round = Math.sign(to[0] - hx) !== side ? [[Math.round(hx), Math.min(LANE[1], Math.round(hy) + 14)]] : [];
+      const path = [from, ...round, to], mine = [[me.x, me.y], [hx, hy]];
+      const tN = along(path, 1e6, 'walk', BRISK).dist / BRISK, tS = along(mine, 1e6).dist / SPEED.walk;
+      errand = { phase: 'come', t0: t, wait: 0, path, to };
+      herWalk = { path: mine, t0: t + Math.max(0, tN - tS), end: t + Math.max(tN, tS), dist0: me.dist, face: () => nadia, keep: () => errand?.phase === 'come' };
+      // She walks her own way over from where she's drawn, so any step round the strategist is over.
+      if (aside[NADIA_ID]) aside[NADIA_ID].off = 0;
+      return Math.max(tN, tS);
+    };
 
     // No running in the pits.
     if (s.mode === 'free' && !s.talk && !errand && !herWalk && me.gait === 'run') {
@@ -376,26 +411,18 @@ export const scene = {
       if (running > 0.5 && t - warnedAt > 20) {
         warnedAt = t;
         running = 0;
-        // She comes over from where she is, or from the edge of the screen on her side if she's off it, along the back
-        // of the aisle, and stops a step to the strategist's side; if that's the far side, she goes round in front of
-        // her. The strategist walks back to meet her if she's out in the aisle's front half, setting off so that the
-        // two of them get there together.
-        const mid = view.x + 128, off = Math.abs(pn.x - mid) > 120;
-        const side = Math.sign(pn.x - (off ? mid : me.x)) || 1;
-        const [hx, hy] = me.y > WORD_Y[1] ? slide(me.x, me.y, me.x, WORD_Y[1]) : [me.x, me.y];
-        const passers = AISLE.filter((id) => id !== NADIA_ID && aside[id]).map((id) => aside[id]);
-        const to = wordSpot([hx, hy], side, [...crew, ...passers]);
-        const from = off ? [side < 0 ? view.x - 10 : view.x + 266, to[1]] : [pn.x, pn.y];
-        const round = Math.sign(to[0] - hx) !== side ? [[Math.round(hx), Math.min(LANE[1], Math.round(hy) + 14)]] : [];
-        const path = [from, ...round, to], mine = [[me.x, me.y], [hx, hy]];
-        const tN = along(path, 1e6, 'walk', BRISK).dist / BRISK, tS = along(mine, 1e6).dist / SPEED.walk;
-        errand = { phase: 'come', t0: t, wait: 0, path, to };
-        herWalk = { path: mine, t0: t + Math.max(0, tN - tS), end: t + Math.max(tN, tS), dist0: me.dist, face: () => nadia, keep: () => errand?.phase === 'come' };
         // She calls out as soon as she sees it, and the words type while she comes over.
+        comeOver();
         me.gait = 'stand';
         s.talk = conversation(nadia.name, RUN_WARNING, t, { person: nadia });
       }
     } else running = 0;
+    // The strategist spoke to her on her patrol: she comes over a step to her side for it, and the words wait till
+    // they're both there.
+    if (wordAsked) {
+      if (wordAsked === s.talk && !errand) s.talk.start = Math.max(s.talk.start, t + comeOver());
+      wordAsked = null;
+    }
 
     // Her errand, if she's on one: over to the strategist while the warning types, the rest of it once they're both
     // there, and back to where she left her patrol (which waits for her there: her clock is stopped).
@@ -437,7 +464,7 @@ export const scene = {
     // the first where they meet.
     const passed = [];
     for (const id of AISLE.filter((id) => id !== NADIA_ID)) {
-      Object.assign(now[id], goRound(now[id], [me, pn, ...passed], dt, waiting.has(id), forTalk.has(id)));
+      Object.assign(now[id], goRound(now[id], [me, pn, ...passed], dt, waiting.has(id)));
       passed.push(now[id]);
     }
 
