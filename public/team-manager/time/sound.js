@@ -96,6 +96,48 @@ export const sound = {
     o.start(t); o.stop(t + 0.2);
     sound.tick();
   },
+  /** One click of the wind-up key: a ratchet's tick and a little metal ping. */
+  ratchet(dir) {
+    const a = ready(); if (!a) return;
+    sound.tick();
+    const t = a.currentTime, o = a.createOscillator();
+    o.type = 'square';
+    o.frequency.setValueAtTime(dir > 0 ? 1500 : 1200, t);
+    o.frequency.exponentialRampToValueAtTime(dir > 0 ? 1800 : 900, t + 0.03);
+    o.connect(envelope(a, t, 0.04, 0.05, 0.002, 0.03));
+    o.start(t); o.stop(t + 0.05);
+  },
+  /** A plush toy hopping: a quick rising boing. */
+  hop() {
+    const a = ready(); if (!a) return;
+    const t = a.currentTime, o = a.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(260, t);
+    o.frequency.exponentialRampToValueAtTime(720, t + 0.18);
+    o.connect(envelope(a, t, 0.22, 0.18, 0.01, 0.1));
+    o.start(t); o.stop(t + 0.24);
+  },
+  /** Landing: the squeak a squeezed plush makes. */
+  squeak() {
+    const a = ready(); if (!a) return;
+    const t = a.currentTime, o = a.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.linearRampToValueAtTime(1500, t + 0.06);
+    o.frequency.linearRampToValueAtTime(1150, t + 0.16);
+    o.connect(envelope(a, t, 0.17, 0.12, 0.01, 0.08));
+    o.start(t); o.stop(t + 0.18);
+  },
+  /** A page turning: a short brush of paper. */
+  flip() {
+    const a = ready(); if (!a) return;
+    const t = a.currentTime, n = noise(a, 0.12), bp = a.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(2400, t);
+    bp.frequency.exponentialRampToValueAtTime(900, t + 0.1);
+    n.connect(bp).connect(envelope(a, t, 0.12, 0.35, 0.01, 0.09));
+    n.start(t);
+  },
   /** Arrival: four bell notes, up for forward, down for rewind. */
   chime(dir) {
     const a = ready(); if (!a) return;

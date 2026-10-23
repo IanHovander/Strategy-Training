@@ -335,25 +335,38 @@ interface. After that he lives in the corner of the screen as her one inventory 
   holds what they know.
 - **Art needed:** a walker pose with Norbert under her arm (she holds a whiteboard now), and the co-captain's handoff.
 
-**3. Time travel.** Four looks to try, on the real cut scene, in the lab: `public/team-manager/time/` (open
+**3. Time travel.** Six looks to try, on the real cut scene, in the lab: `public/team-manager/time/` (open
 `team-manager/time/` on the site). Every scene draws its frames from time, so a rewind plays the real scene
 backwards; the lab records each moment as it plays and draws them again in reverse.
+
+Four are effects any game could use:
 
 - **STOP:** everything stops but her. The world drains to cold blue, she alone keeps her colour and looks round,
   and then the world runs backwards around her.
 - **SWIRL:** a vortex around her, counterclockwise for a rewind and clockwise for forward.
 - **TAPE:** a tape rewinding, with REW and a clock in the corner.
-- **ALL:** STOP, then the vortex with her still and in colour at its centre, a white flash, a clock card spinning
-  back to 12:38, then the world unwinds back into colour.
+- **ALL:** STOP, then the vortex, a white flash and a clock card spinning back to 12:38.
 
-Proposed use:
+Two come from this game's own world:
 
-| Jump | Look | Length |
+- **WIND: Norbert is clockwork.** Everything stops, Norbert hops out of his corner (twice his size, in front of the
+  picture), turns his back, and a brass wind-up key pops out. It turns counterclockwise one click at a time, each
+  click ratcheting the world back a step, faster and faster, until it spins free. Forward winds it clockwise. Then he
+  hops home. This makes the lore visible: the alumni's time machine is a key inside the team mascot. The hints can
+  point to it: a zip tie holding a seam shut on his back; a clicking sound when someone squeezes him.
+- **NOTEBOOK:** the stopped moment shrinks onto a page of her scouting notebook as a pencil sketch, her still in
+  colour, and the pages flip back through earlier moments, each with its time. She writes BACK TO 12:38 in red, and
+  the last sketch fills the screen. The notebook is what survives every loop.
+
+Proposed use, one look per kind of jump so the player learns to read them:
+
+| Jump | Look | Why |
 |---|---|---|
-| A gift or long jump (to the van, to kickoff) | ALL | about 6 s |
-| A rewind (a few minutes back) | A short STOP: the tick, she looks round, a quick counterclockwise swirl, no clock card | under 2.5 s; it repeats, so it has to stay quick |
-| Skipping ahead (Friday's montage) | SWIRL, clockwise | about 3 s |
-| The very first rewind | ALL in full, so the player sees what's happening once | about 6 s |
+| A rewind (a bad call, minutes back) | Norbert turns a small key in his corner: three clicks, no hop, under 2 s | It repeats, so it has to be quick; the clicks still say "Norbert did this" |
+| A long jump (a hole in the notebook) | NOTEBOOK, flipping back to the page with the hole | You go back to fill a gap in your notes, so you travel through your notes |
+| A gift jump (to the van, to kickoff) | WIND in full | The big moments get Norbert's whole performance |
+| Skipping ahead (Friday's montage) | NOTEBOOK forward: pages filling with tallies as they flip | Quals are scouting; the notebook fills up |
+| The very first rewind | WIND in full | So the player sees once, clearly, who is doing this |
 
 **4. The scouting dashboard.** It's the screen the player spends the opening on, so it has to be the nicest thing in
 the game. A sketch to mock up next:
