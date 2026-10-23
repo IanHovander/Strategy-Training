@@ -163,8 +163,8 @@ wishes out loud they'd known it, and then Norbert answers. Wanting comes first, 
   player then sees its ceiling.
 - **Every failure passes three tests.** The information to get it right was on screen. The cause shows up in one
   picture. The retry is less than a minute away.
-- **The first lesson should surprise experienced students too.** "Averages don't add up" does: it's true, it's
-  visual, and it's how real alliances are lost.
+- **The first lesson should surprise experienced students too.** "The average skips the matches a robot didn't
+  play" does: it's true, it's visible in three empty boxes, and it's how real alliances are lost.
 - **The first long jump is a reward.** You get sent to Thursday because you did everything right and there was
   more to know. A reward makes the player want to go back; a punishment makes them want to quit.
 
@@ -235,7 +235,8 @@ series. Then the bet log:
 > With what you knew: a 34% chance of reaching the final. The best calls possible gave 34%. **100%.**
 
 The player gets real credit: they played it perfectly. Then the notebook pages flip, and the gaps show up as "?"
-entries, each with a face beside it:
+entries, each with a face beside it. (6417, the sleeper, isn't on the opening's tablet yet; it joins the board once
+there's a van to learn about it in.)
 
 - *6417: avg 22, why?* (the scout lead's portrait)
 - *4000: what happens when someone defends them?* (the drive coach's portrait)
