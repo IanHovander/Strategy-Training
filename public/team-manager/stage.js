@@ -33,6 +33,8 @@
 //                         For a scene with no room to walk (the van): the stick picks who to talk to.
 //   hint, note            the phone's hint line and the note under the controls, if the usual ones don't fit
 //   status(s)             the phone's status line under her name, if not STANDING, WALKING N and so on
+//   act(s), actLabel(s)   A when nobody's in reach, for a scene where A does something else (the opening's pick: A
+//                         picks a card), and what the phone's A button says for it then
 //   stick: false          in play.html, no stick on the screen: for a card with nobody to steer
 //   exit: { x, y0, y1, label, sign }
 //                         the way out, on the right (every scene is entered on the left and left on the right): once
@@ -491,7 +493,7 @@ export function runScene(scene, opts = {}) {
       s.talk = conversation(p.name, p.lines, now, { person: p });
       s.near = null;
       scene.onTalk?.(s, p);
-    }
+    } else scene.act?.(s);
   }
   const skip = () => {
     if (s.mode === 'cut') endCut();
@@ -522,7 +524,8 @@ export function runScene(scene, opts = {}) {
         : me.gait === 'sit' ? 'SITTING' : 'STANDING');
     set('mode', mode, (v) => ($('.mode').textContent = v));
     set('who', s.mode === 'cut' ? scene.name : talking ? 'TALKING TO' : HERO_NAME, (v) => ($('.whoname').textContent = v));
-    const label = s.mode === 'cut' || s.talk ? 'NEXT' : s.near ? `TALK TO ${s.near.name.split(',')[0]}` : 'NOBODY NEARBY';
+    const label = s.mode === 'cut' || s.talk ? 'NEXT' : s.near ? `TALK TO ${s.near.name.split(',')[0]}`
+      : scene.actLabel?.(s) ?? 'NOBODY NEARBY';
     set('label', label, (v) => {
       $('.alabel').textContent = v;
       $('.abtn').disabled = v === 'NOBODY NEARBY';

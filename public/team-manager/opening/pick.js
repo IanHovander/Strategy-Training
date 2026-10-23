@@ -1,74 +1,165 @@
-// The pick: where the opening hands the player the decision. Seed 4 is on the clock, and the 45-second pick clock sits
-// big and red at the top, draining a bar under it as it counts down, the last ten seconds flashing.
+// The pick: where the opening hands the player the decision (docs/blue-banner-design.md, section 5, beat 1). Seed 4 is
+// on the clock: 45 seconds, big and red at the top. Under it is the scouting tablet (tablet.js): her robot pinned for
+// reference, and two teams to pick from (teams.js). 7461 shows the biggest average on the screen, 41, but its last
+// three boxes are blank: it sat dead all Saturday morning, and the app's average skips blank boxes. 6834 shows 31,
+// all ten boxes filled, never broken down. 6834 is the right pick.
 //
-// The rest of the screen is a placeholder for the scouting dashboard (the design, section 5, "Building the opening",
-// part 4), which is separate work: a card for her own robot pinned at the top and four empty cards for the teams she
-// can pick, outlined in dashes, with a line saying so. It's built where the dashboard will go, a full-screen overlay on
-// the big screen, so the dashboard can drop into the same frame: the header with THE PICK and the clock, Norbert in his
-// corner, and the cards below.
+// What happens, phase by phase:
+//   browse    the clock runs. The stick (or the arrow keys) moves between the cards; A picks the one the cursor's on.
+//             At 0:00 the clock says TIME! and Robin waits: the pick is still hers.
+//   confirm   "5026 RESPECTFULLY INVITES TEAM 6834", INVITE or BACK (the stick chooses, A presses). The clock runs on.
+//   accept    "6834 ACCEPTS!". On by itself after a moment, or on A.
+//   result    the bet log's stamp, GOOD CALL or BAD CALL, and the reveal: 7461's blank boxes turn over to 0, 0, 0
+//             (FRIDAY 41 · SATURDAY 0, 0, 0), and the one line to remember. A wrong pick: A rewinds. The right one: A
+//             carries on.
+//   rewind    the tape runs back to 0:45, Norbert's 26 ear glowing in the corner. Then browse again, and her thought:
+//             "...DIDN'T THIS JUST HAPPEN?"
+//   end       TO BE CONTINUED: the quarterfinals aren't built yet.
 //
-//   drawPick(t, left)    the whole screen: t seconds since it came up (for the clock's slam and blinks), left the
-//                        seconds left on the clock
-//   PICK_CLOCK           45
+// scene.js wires it to the stage: startPick() when the cut scene ends, updatePick() every frame (the stick), pressPick()
+// on A, drawPickScreen() to draw, pickLabel() and pickStatus() for the phone.
+//
+//   drawPick(t, left)   the tablet as the pick begins, for the cut scene's last beat: t seconds since it came up (for the
+//                       clock's slam), left the seconds on the clock
+//   PICK_CLOCK          45
 
-import { W, H, C, screen, fill, text, measure } from '../pixel.js';
-import { drawHud } from './norbert-held.js';
+import { clamp } from '../pixel.js';
+import { TEAMS, RIGHT } from './teams.js';
+import { PICK_CLOCK, drawTablet, drawConfirm, drawAccept, drawResult, drawRewind, drawContinued } from './tablet.js';
 
-export const PICK_CLOCK = 45;
-/** The clock's face: 0:45. */
-const clockText = (s) => {
-  const n = Math.max(0, Math.ceil(s - 1e-6));
-  return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+export { PICK_CLOCK };
+
+/** Seconds: A ignored this long after the invite comes up (a double tap isn't a choice); accept's moment; the rewind. */
+const GUARD = 0.25, ACCEPT = 1.8, REWIND = 1.6, THOUGHT = 3.5;
+/** The stick: how far it has to go to count, and how soon holding it moves again. */
+const DEAD = 0.35, REPEAT = 0.45;
+
+const P = {
+  phase: 'browse', t0: 0, clock0: null, left: PICK_CLOCK, on: 0, choice: 0, picked: null,
+  rewinds: 0, rewoundAt: null, held: 0, heldAt: 0, slam: 1,
 };
+const nowS = () => performance.now() / 1000;
+const leftAt = (now) => PICK_CLOCK - (now - P.clock0);
+const good = () => P.picked?.num === RIGHT;
+function go(phase, now) {
+  P.phase = phase;
+  P.t0 = now;
+}
 
-/** A dashed outline, the way a placeholder is drawn: dashes of 3, gaps of 2. */
-function dashed(x, y, w, h, c) {
-  for (let i = 0; i < w; i += 5) {
-    fill(x + i, y, Math.min(3, w - i), 1, c);
-    fill(x + i, y + h - 1, Math.min(3, w - i), 1, c);
+/**
+ * From the top: the clock at 0:45 from now, the cursor on the first card. slam: the clock slams in (after a rewind); the
+ * first time, the cut scene's last beat has already slammed it in.
+ */
+export function startPick(now = nowS(), { slam = false } = {}) {
+  Object.assign(P, { clock0: now, on: 0, choice: 0, picked: null, held: 0, slam: slam ? 0 : 1 });
+  go('browse', now);
+}
+
+/** Every frame: the stick moves the cursor (one card a push; held, again every REPEAT seconds); phases end. */
+export function updatePick(dt, stick, now = nowS()) {
+  if (P.clock0 == null) startPick(now);
+  const st = stick();
+  const ax = Math.abs(st.x) >= Math.abs(st.y) ? st.x : st.y;
+  const d = st.mag < DEAD ? 0 : Math.sign(ax);
+  if (d && (d !== P.held || now - P.heldAt > REPEAT)) {
+    P.heldAt = now;
+    if (P.phase === 'browse') P.on = clamp(P.on + d, 0, TEAMS.length - 1);
+    else if (P.phase === 'confirm') P.choice = clamp(P.choice + d, 0, 1);
   }
-  for (let j = 0; j < h; j += 5) {
-    fill(x, y + j, 1, Math.min(3, h - j), c);
-    fill(x + w - 1, y + j, 1, Math.min(3, h - j), c);
+  P.held = d;
+  if (P.phase === 'accept' && now - P.t0 > ACCEPT) go('result', now);
+  if (P.phase === 'rewind' && now - P.t0 > REWIND) {
+    P.rewinds++;
+    P.rewoundAt = now;
+    startPick(now, { slam: true });
   }
 }
 
+/** A. */
+export function pressPick(now = nowS()) {
+  if (P.clock0 == null) startPick(now);
+  const t = now - P.t0;
+  switch (P.phase) {
+    case 'browse':
+      P.choice = 0;
+      go('confirm', now);
+      break;
+    case 'confirm':
+      if (t < GUARD) break;
+      if (P.choice === 1) go('browse', now);
+      else {
+        P.picked = TEAMS[P.on];
+        P.left = leftAt(now);
+        go('accept', now);
+      }
+      break;
+    case 'accept':
+      if (t > 0.4) go('result', now);
+      break;
+    case 'result':
+      if (t < 0.6) break;
+      if (good()) go('end', now);
+      else {
+        go('rewind', now);
+      }
+      break;
+    default:
+  }
+}
+
+/** What A does now, for the phone's A button; nothing at the end. */
+export function pickLabel() {
+  switch (P.phase) {
+    case 'browse': return `PICK ${TEAMS[P.on].num}`;
+    case 'confirm': return P.choice ? 'BACK' : 'INVITE';
+    case 'result': return good() ? 'CONTINUE' : 'REWIND';
+    case 'end': return undefined;
+    default: return 'NEXT';
+  }
+}
+/** The phone's status line. */
+export function pickStatus() {
+  return { browse: 'ON THE CLOCK', confirm: 'INVITING', accept: 'PICKED', result: 'BET LOG', rewind: 'REWINDING', end: 'TO BE CONTINUED' }[P.phase];
+}
+
+/** The whole screen, for this moment. */
+export function drawPickScreen(now = nowS()) {
+  if (P.clock0 == null) startPick(now);
+  const t = now - P.t0, sinceClock = now - P.clock0 + P.slam;
+  // After a rewind, her thought takes the hint line for a moment, and Norbert's ear dims back down.
+  const since = P.rewoundAt == null ? Infinity : now - P.rewoundAt;
+  const thought = since < THOUGHT ? '...DIDN\'T THIS JUST HAPPEN?' : null;
+  const afterglow = clamp(1 - since / 0.8, 0, 1);
+  switch (P.phase) {
+    case 'browse':
+      drawTablet({ t: sinceClock, left: leftAt(now), on: P.on, thought, glow: afterglow });
+      break;
+    case 'confirm':
+      drawTablet({ t: sinceClock, left: leftAt(now), on: P.on, hint: ['CHOOSE', P.choice ? 'BACK' : 'INVITE'] });
+      drawConfirm(TEAMS[P.on], P.choice, t);
+      break;
+    case 'accept':
+      drawTablet({ t: 1, left: P.left, on: P.on, hint: ['CHOOSE', 'NEXT'] });
+      drawAccept(P.picked, t);
+      break;
+    case 'result':
+      // A wrong pick: Norbert's ear starts to pulse while A: REWIND waits.
+      drawResult(P.picked, good(), t, { glow: !good() && t > 2.4 ? 0.35 + 0.35 * Math.sin(t * 5) : 0 });
+      break;
+    case 'rewind': {
+      const k = clamp(t / REWIND, 0, 1), left = P.left + (PICK_CLOCK - P.left) * k * k;
+      drawTablet({ t: 1, left, on: 0, hint: ['CHOOSE', 'PICK'], glow: Math.min(1, 0.4 + k) });
+      drawRewind(k, t);
+      break;
+    }
+    case 'end':
+      drawContinued(t);
+      break;
+    default:
+  }
+}
+
+/** The tablet as the pick begins, for the cut scene's last beat. */
 export function drawPick(t, left) {
-  screen();
-  fill(0, 0, W, H, C.night0);
-  // A faint grid, like a tablet's app in a dark arena.
-  for (let x = 4; x < W; x += 12) fill(x, 30, 1, H - 30, '#0d1133');
-
-  // The header: the clock in the middle, whose pick it is under it, Norbert's corner on the left. The top right stays
-  // clear: in the play-through, SKIP and NEXT SCENE sit there over the picture.
-  fill(0, 0, W, 28, C.night1);
-  fill(0, 28, W, 1, C.night3);
-  const face = clockText(left);
-  const hot = left <= 10 && left > 0 && (left % 1) > 0.7;
-  const slam = t < 0.12;
-  if (slam) fill(W / 2 - 30, 1, 60, 20, C.white);
-  text(face, W / 2, 4, { scale: 2, align: 'center', color: slam ? C.red1 : hot ? C.white : C.red2, outline: C.ink });
-  text('THE PICK - ALLIANCE 4 - ROUND 1', W / 2, 21, { font: 3, align: 'center', color: C.blue3 });
-  // The clock's bar draining along under the header.
-  const bar = Math.round((W - 8) * Math.max(0, left) / PICK_CLOCK);
-  fill(4, 31, W - 8, 3, C.night1);
-  fill(4, 31, bar, 3, left <= 10 ? C.red2 : C.red1);
-
-  // The placeholder: her robot pinned on top, then one card per team she can pick.
-  dashed(8, 38, W - 16, 16, C.steel1);
-  text('YOUR ROBOT', 14, 43, { font: 3, color: C.steel2 });
-  for (let i = 0; i < 4; i++) {
-    const x = 8 + i * 61;
-    dashed(x, 60, 57, 46, C.steel1);
-    text('?', x + 28, 76, { scale: 2, align: 'center', color: C.night3 });
-  }
-  const note = 'THE SCOUTING DASHBOARD GOES HERE';
-  text(note, (W - measure(note, { font: 3 })) / 2, 114, { font: 3, color: C.steel2 });
-
-  if (left <= 0 && t % 0.8 < 0.55) {
-    fill(78, 60, 100, 26, C.ink);
-    fill(80, 62, 96, 22, C.red1);
-    text('TIME!', 128, 66, { scale: 2, align: 'center', color: C.white });
-  }
-  drawHud();
+  drawTablet({ t, left, on: 0 });
 }
