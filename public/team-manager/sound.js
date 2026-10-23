@@ -218,6 +218,8 @@ function convOf(s, now) {
 }
 const linesOf = (page) => (Array.isArray(page) ? page : page?.lines ?? []);
 
+/** Whether letters blip as they type: off (the player found it too much; the words read better in quiet). */
+const TYPING = false;
 /** A blip for each letter that has typed out since the last frame (every other letter, at most a few a frame). */
 function typing(s, now) {
   if (s.frozen != null) return;
@@ -228,7 +230,7 @@ function typing(s, now) {
     st.typed = 0;
   }
   kit.duck(d ? 0.45 : 1);
-  if (!d || d.full) return;
+  if (!TYPING || !d || d.full) return;
   const page = d.pages[d.page];
   if (!page) return;
   const said = linesOf(page).join('');

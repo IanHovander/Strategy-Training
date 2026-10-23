@@ -273,6 +273,18 @@ export const SFX = {
   ratchet: { bus: 'amb', play: (c, t) => { for (let i = 0; i < 6; i++) c.noise(t + i * 0.07, 0.012, { vol: 0.02, type: 'highpass', hz: 3000 }); } },
   clatter: { bus: 'amb', play: (c, t) => [0, 0.09, 0.15].forEach((d) => c.tone(t + d, 0.05, r(700, 1100), { wave: 'p12', vol: 0.008, decay: true })) },
   /** A crowd's swell somewhere across the hall. */
+  /** Somebody in the crowd saying something: a few quick syllables, low, rising and falling like speech. */
+  voices: {
+    bus: 'amb',
+    play: (c, t, o) => {
+      const k = o.vol ?? 1, base = r(150, 320), n = 2 + Math.floor(r(0, 4));
+      for (let i = 0, at = t; i < n; i++) {
+        const d = r(0.06, 0.14), f = base * r(0.85, 1.2);
+        c.tone(at, d, f, { wave: 'tri', slide: f * r(0.8, 1.15), vol: 0.006 * k, decay: true });
+        at += d + r(0.02, 0.08);
+      }
+    },
+  },
   roar: {
     bus: 'amb',
     play: (c, t, o) => {
@@ -302,38 +314,38 @@ export const SFX = {
 // wobble of the level { rate, depth } (0-1 of vol), sweep: a slow drift of the filter { rate, depth } (Hz) }.
 // sprinkle: [{ sfx, every: [min, max] seconds, vol }]. Levels were set by measuring (see sound.js's notes), not by ear.
 export const BEDS = {
-  /** A big room full of people talking: two bands of murmur breathing out of step. */
+  /** A big room full of people talking: a steady murmur (no swell in it, or it rolls like surf) and voices in it. */
   crowd: {
     layers: [
-      { noise: true, type: 'bandpass', f: 480, q: 1.1, vol: 0.05, lfo: { rate: 0.13, depth: 0.35 }, sweep: { rate: 0.07, depth: 90 } },
-      { noise: true, type: 'bandpass', f: 1150, q: 1.4, vol: 0.022, lfo: { rate: 0.31, depth: 0.5 }, sweep: { rate: 0.11, depth: 200 } },
+      { noise: true, type: 'bandpass', f: 480, q: 1.1, vol: 0.05 },
+      { noise: true, type: 'bandpass', f: 1150, q: 1.4, vol: 0.022 },
       { noise: true, type: 'lowpass', f: 220, q: 0.5, vol: 0.03 },
     ],
-    sprinkle: [{ sfx: 'roar', every: [9, 18], vol: 0.6 }],
+    sprinkle: [{ sfx: 'voices', every: [0.25, 0.9] }],
   },
   /** The pits: a quieter crowd and work going on, drills and ratchets in the next rows. */
   pits: {
     layers: [
-      { noise: true, type: 'bandpass', f: 520, q: 1.1, vol: 0.05, lfo: { rate: 0.17, depth: 0.35 }, sweep: { rate: 0.09, depth: 90 } },
-      { noise: true, type: 'bandpass', f: 1300, q: 1.6, vol: 0.017, lfo: { rate: 0.27, depth: 0.5 } },
+      { noise: true, type: 'bandpass', f: 520, q: 1.1, vol: 0.05 },
+      { noise: true, type: 'bandpass', f: 1300, q: 1.6, vol: 0.017 },
       { noise: true, type: 'lowpass', f: 200, q: 0.5, vol: 0.04 },
     ],
     sprinkle: [
       { sfx: 'drill', every: [3, 8] },
       { sfx: 'ratchet', every: [6, 14] },
       { sfx: 'clatter', every: [7, 15] },
-      { sfx: 'roar', every: [20, 35], vol: 0.3 },
+      { sfx: 'voices', every: [0.5, 1.6], vol: 0.7 },
     ],
   },
   /** The arena in a match: the crowd, louder, and the robots and buzzers of the field. */
   arena: {
     layers: [
-      { noise: true, type: 'bandpass', f: 500, q: 1, vol: 0.055, lfo: { rate: 0.11, depth: 0.3 }, sweep: { rate: 0.06, depth: 100 } },
-      { noise: true, type: 'bandpass', f: 1250, q: 1.3, vol: 0.026, lfo: { rate: 0.23, depth: 0.5 }, sweep: { rate: 0.13, depth: 220 } },
+      { noise: true, type: 'bandpass', f: 500, q: 1, vol: 0.055 },
+      { noise: true, type: 'bandpass', f: 1250, q: 1.3, vol: 0.026 },
       { noise: true, type: 'lowpass', f: 180, q: 0.5, vol: 0.035 },
     ],
     sprinkle: [
-      { sfx: 'roar', every: [6, 12], vol: 0.9 },
+      { sfx: 'voices', every: [0.2, 0.7] },
       { sfx: 'farRobot', every: [3, 7] },
       { sfx: 'farBuzzer', every: [25, 45] },
     ],
@@ -341,12 +353,12 @@ export const BEDS = {
   /** Worlds: one enormous hall, eight fields at once. */
   worlds: {
     layers: [
-      { noise: true, type: 'bandpass', f: 460, q: 0.9, vol: 0.06, lfo: { rate: 0.09, depth: 0.25 }, sweep: { rate: 0.05, depth: 80 } },
-      { noise: true, type: 'bandpass', f: 1200, q: 1.2, vol: 0.026, lfo: { rate: 0.19, depth: 0.45 }, sweep: { rate: 0.12, depth: 250 } },
+      { noise: true, type: 'bandpass', f: 460, q: 0.9, vol: 0.06 },
+      { noise: true, type: 'bandpass', f: 1200, q: 1.2, vol: 0.026 },
       { noise: true, type: 'lowpass', f: 160, q: 0.5, vol: 0.04 },
     ],
     sprinkle: [
-      { sfx: 'roar', every: [4, 9], vol: 0.7 },
+      { sfx: 'voices', every: [0.15, 0.5] },
       { sfx: 'farRobot', every: [2.5, 6] },
       { sfx: 'farBuzzer', every: [14, 28] },
     ],
@@ -354,8 +366,8 @@ export const BEDS = {
   /** The back lawn: a breeze in the trees, birds. */
   outdoors: {
     layers: [
-      { noise: true, type: 'highpass', f: 2600, q: 0.5, vol: 0.008, lfo: { rate: 0.08, depth: 0.7 } },
-      { noise: true, type: 'bandpass', f: 600, q: 0.6, vol: 0.012, lfo: { rate: 0.05, depth: 0.6 }, sweep: { rate: 0.04, depth: 200 } },
+      { noise: true, type: 'highpass', f: 2600, q: 0.5, vol: 0.008 },
+      { noise: true, type: 'bandpass', f: 600, q: 0.6, vol: 0.012 },
     ],
     sprinkle: [{ sfx: 'bird', every: [2.5, 7] }],
   },
@@ -371,9 +383,9 @@ export const BEDS = {
   /** On the highway: the engine, the road under the tyres, the wind past the windows. */
   road: {
     layers: [
-      { noise: true, type: 'lowpass', f: 150, q: 0.7, vol: 0.036, lfo: { rate: 0.21, depth: 0.15 } },
+      { noise: true, type: 'lowpass', f: 150, q: 0.7, vol: 0.036 },
       { wave: 'triangle', hz: 47, vol: 0.014, lfo: { rate: 0.6, depth: 0.12 } },
-      { noise: true, type: 'bandpass', f: 1000, q: 0.5, vol: 0.005, lfo: { rate: 0.07, depth: 0.4 } },
+      { noise: true, type: 'bandpass', f: 1000, q: 0.5, vol: 0.005 },
     ],
     sprinkle: [{ sfx: 'bump', every: [5, 12] }],
   },
@@ -394,6 +406,16 @@ export const MUSIC = {
       { ch: ['Dm'], lead: 'A5:1 G5:.5 F5:.5 D5:2', bass: 'hold' },
       { ch: ['A#', 'C'], lead: 'D5:1 F5:1 E5:1 G5:1' },
       { ch: ['F'], lead: 'F5:3 r:1', bass: 'hold' },
+    ],
+  },
+  /** The co-captain's moment: slow, soft triangle chords and a few long notes, under the four hushed shots. Once. */
+  moment: {
+    bpm: 66, key: 'C', vol: 0.1, wave: 'tri', passes: 1, rest: 600,
+    bars: [
+      { ch: ['Am'], lead: 'E5:2 C5:2', bass: 'hold', harm: false },
+      { ch: ['F'], lead: 'A4:4', bass: 'hold', harm: false },
+      { ch: ['C'], lead: 'G4:2 C5:2', bass: 'hold', harm: false },
+      { ch: ['G'], lead: 'D5:4', bass: 'hold', harm: false },
     ],
   },
   /** Event days: the title theme's opening, brighter and quicker, in D. */

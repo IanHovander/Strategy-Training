@@ -27,9 +27,9 @@ export const SCENES = {
       black: [bed(0, 0.08, 0.02), bed(0.05, 1.1, 0.65)], // in the dark, the crowd's noise rising from a murmur to a roar
       phone: [bed(0, 0.35, 0.15), [PHONE_TIMES.first, 'buzz'], [PHONE_TIMES.first, 'msg'], [PHONE_TIMES.second, 'buzz'], [PHONE_TIMES.second, 'msg']],
       card: [bed(0, 1, 0.2), [0, 'card'], [0.5, 'cheer', { size: 0.5 }]],
-      cocaptain: [bed(0, 0.45, 1)], // the arena goes down to a glimmer close on the two of them
+      cocaptain: [bed(0, 0.3, 1), [0, 'music', 'moment']], // the arena goes down to a glimmer close on them; a soft swell
       handoff: [[HANDOFF.glint[0] + 0.1, 'glint']],
-      call: [bed(0, 1, 0.4), [0.3, 'cheer', { size: 0.8 }]],
+      call: [[0, 'music', null], bed(0, 1, 0.4), [0.3, 'cheer', { size: 0.8 }]],
       pick: [[0, 'slam'], bed(0, 0.45, 0.3)],
     },
     status: {
