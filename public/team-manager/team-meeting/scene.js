@@ -165,10 +165,10 @@ function bubbleAt(p, me, t) {
     const b = boxAt(x, y), own = near(mine, x, b);
     // Beside their head (the lower spot), not over their face either. (Beside hers is fine: it's never her own A.)
     if (overlap(b, her) || (y !== top && overlap(b, mine))) return false;
-    // Nobody else's head within 4 pixels either side of it either: a bubble right beside a head, level with it, reads
-    // as that head's.
-    const wide = { ...b, x0: b.x0 - 4, x1: b.x1 + 4 };
-    return others.every((h) => !overlap(wide, h) && (h.y0 < y - 8 || h.y0 > b.y1 + 24 || near(h, x, b) > own));
+    // Nor anyone else's head within 4 pixels either side of the bubble itself (its tail can reach down past the top of
+    // a head nearby): a bubble right beside a head, level with it, reads as that head's.
+    const beside = { x0: b.x0 - 4, x1: b.x1 + 4, y0: b.y0, y1: b.y0 + 11 };
+    return others.every((h) => !overlap(b, h) && !overlap(beside, h) && (h.y0 < y - 8 || h.y0 > b.y1 + 24 || near(h, x, b) > own));
   };
   for (const y of [top, top + 8]) {
     for (let d = 3; d <= 18; d++) for (const side of [away, -away]) if (clear(p.x + side * d, y)) return [p.x + side * d, y];

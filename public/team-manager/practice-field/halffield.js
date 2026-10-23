@@ -166,13 +166,13 @@ export function drawFieldFloor(ctx) {
 // ---- The driver station ----
 // The wall is edge-on from here, as the arena's alliance wall is: its top is a long band and its near end is the face
 // toward you. Homemade, it's a frame of 2x4 posts, one at each end and three between, plywood across the bottom three
-// feet and clear polycarbonate above, so the drive team can see the field over it. The band along the top is the clear
-// part's edge, drawn like the arena's clear field walls (light blue at 22%, lit on the side toward the light), so the
-// drive team and the robot show through it, crossed by the tops of the posts in raw lumber; the near end is clear down
-// to the plywood, which has a strip of blue tape along its top and 5026 painted down it. On the drivers' side a plywood
-// shelf at three feet carries the driver station laptop and the e-stop. The shelf is drawn a foot at a time, each foot
-// sorted at its own floor line, so the drivers standing at it are in front of the part behind them and behind the part
-// in front.
+// feet and clear polycarbonate above, so the drive team can see the field over it. The band along the top is the 2x4
+// rail the posts hold up and the panels hang from, solid lumber outlined in ink like the arena's alliance wall, with a
+// joint across it at each post; the near end is clear under the rail, drawn like the arena's clear field walls (light
+// blue at 22%, lit on the side toward the light), down to the plywood, which has a strip of blue tape along its top and
+// 5026 painted down it. On the drivers' side a plywood shelf at three feet carries the driver station laptop and the
+// e-stop. The shelf is drawn a foot at a time, each foot sorted at its own floor line, so the drivers standing at it
+// are in front of the part behind them and behind the part in front.
 const SHELF = { x0: STATION_WALL.x0 - 7, w: 6, z0: 3.5, z1: 26.6, up: 3 * FT };
 // The drive team stands along the shelf and hides most of it, so the laptop sits at its near end, below the
 // operator's hands, and the e-stop by the coach at the far end, where they can be seen.
@@ -198,16 +198,17 @@ function stationWall() {
     withAlpha(0.22, () => rect(x0, y0, w, y1 - y0, C.blue3));
     rect(x0, y0, 1, y1 - y0, C.steel3);
   };
-  // The top, end to end: the clear panels' edge, and the posts' tops across it.
-  clear(yTop, yFront);
-  for (let z = 0; z <= 27; z += 6.75) {
-    const y = Math.min(Math.round(pfY(z) - h), yFront);
-    rect(x0, y, w, 2, LUMBER[1]);
-    rect(x0, y, w, 1, LUMBER[2]);
-    rect(x0 + w - 2, y + 1, 2, 1, LUMBER[0]);
-  }
-  rect(x0 - 1, yTop - 1, w + 2, 1, C.ink);
-  // The near end: clear down to the plywood, then the plywood with its tape and the number.
+  // The top, end to end: the 2x4 rail the clear panels hang from, lit along its top edge and its left side, shaded down
+  // its right, with a joint across it where each post meets it. Its end is a row of end grain, an ink line under it.
+  rect(x0 - 1, yTop - 1, w + 2, yFront - yTop + 3, C.ink);
+  rect(x0, yTop, w, yFront - yTop, LUMBER[1]);
+  rect(x0, yTop, w, 1, LUMBER[2]);
+  rect(x0, yTop + 1, 1, yFront - yTop - 1, LUMBER[2]);
+  rect(x0 + w - 1, yTop + 1, 1, yFront - yTop - 1, LUMBER[0]);
+  for (let z = 6.75; z < 27; z += 6.75) rect(x0 + 1, Math.round(pfY(z) - h), w - 1, 1, LUMBER[0]);
+  rect(x0, yFront, w, 1, LUMBER[0]);
+  rect(x0, yFront, 1, 1, LUMBER[1]);
+  // The near end: clear from under the rail down to the plywood, then the plywood with its tape and the number.
   clear(yFront + 2, ply);
   rect(x0 - 1, ply, w + 2, yFloor - ply + 1, C.ink);
   rect(x0, ply + 1, w, yFloor - ply - 1, WOOD[0]);

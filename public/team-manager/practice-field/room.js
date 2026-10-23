@@ -450,9 +450,10 @@ export function drawTiles(ctx) {
 // columns shifted right by sunShift(y), so it pours into the patch, the frame's bars still shadow lines through it.
 // It's stepped like the sky in the glass: from the sill halfway down a step brighter than below, two rows of
 // checkerboard between (skyAt). Each surface under it has a fixed lit colour for each step, clean colours a step or two
-// up its own ramp and warmer: the wainscot a lighter teal, its cove a step up, the tiles warm light greys, the carpet's
-// edge a dark straw. Down its lit left edge each band has a one-pixel rim a step brighter again, like the patches, so
-// each shaft reads as light joining its window to its patch.
+// up its own ramp and warmer: the wainscot a lighter teal, its cove a step up; on the floor, tiles and carpet's edge
+// alike, the patches' straw at a lower value, so a shaft and the patch it pours into read as one light. Down its lit
+// left edge each band has a one-pixel rim a step brighter again, like the patches, so each shaft reads as light joining
+// its window to its patch.
 const SUNLIT = [0xff, 0xd8, 0x90], LIT_K = 0.58, RIM = [0xff, 0xf1, 0xc4];
 const SHAFT_TOP = WIN.top + 65; // the first row under the sill
 /** The shaft's lower step starts here; the row before it and this one are the checkerboard between the two. */
@@ -482,17 +483,17 @@ const sunlit = fixedLight([
 /** The shafts: the lower step, the upper step, and the rim down each band's lit edge. */
 const SHAFT_LO = fixedLight([
   [GLAZE[0], '#245e55'], [GLAZE[1], '#2c7468'], [GLAZE[2], '#3a8a7c'], [DUSK[0], DUSK[1]], [DUSK[1], DUSK[2]],
-  [TILE.a, '#7a7270'], [TILE.b, '#837a77'], [TILE.fleck[0], '#8c8380'], [TILE.fleck[1], '#706866'], [TILE.grout, '#686060'],
+  [TILE.a, '#76705c'], [TILE.b, '#7e7862'], [TILE.fleck[0], '#88826a'], [TILE.fleck[1], '#6a6552'], [TILE.grout, '#625d4c'],
   ...CARPET_IN_SHAFT,
 ], toward(SUNLIT, 0.2));
 const SHAFT_HI = fixedLight([
   [GLAZE[0], '#2c7468'], [GLAZE[1], '#3a8a7c'], [GLAZE[2], '#4aa08e'], [DUSK[0], DUSK[2]], [DUSK[1], '#33475f'],
-  [TILE.a, '#988c86'], [TILE.b, '#a1948d'], [TILE.fleck[0], '#ab9e96'], [TILE.fleck[1], '#8a817b'], [TILE.grout, '#807772'],
+  [TILE.a, '#948a6c'], [TILE.b, '#9c9274'], [TILE.fleck[0], '#a69c7c'], [TILE.fleck[1], '#857c60'], [TILE.grout, '#7c7458'],
   ...CARPET_IN_SHAFT,
 ], toward(SUNLIT, 0.3));
 const SHAFT_RIM = fixedLight([
   [GLAZE[0], '#4aa08e'], [GLAZE[1], '#5cb49e'], [GLAZE[2], '#6cc4ac'], [DUSK[0], '#33475f'], [DUSK[1], '#3d5470'],
-  [TILE.a, '#c8b9a0'], [TILE.b, '#d0c0a6'], [TILE.fleck[0], '#d8c8ac'], [TILE.fleck[1], '#b9ab94'], [TILE.grout, '#aea28c'],
+  [TILE.a, '#c4b48a'], [TILE.b, '#ccbc90'], [TILE.fleck[0], '#d6c69a'], [TILE.fleck[1], '#b4a57c'], [TILE.grout, '#aa9b74'],
   ...CARPET_IN_SUN,
 ], toward(SUNLIT, 0.45));
 /** Which step of the shaft (x, y) is in: the upper above SHAFT_STEP, the lower from it down, checkered in between. */

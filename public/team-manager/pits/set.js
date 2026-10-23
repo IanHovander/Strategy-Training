@@ -157,27 +157,29 @@ const BADGE = [
 
 function banner(p) {
   // It hangs a little under the pipe, so its top edge shows under a cut scene's film bars (12 pixels), and its name is
-  // clear of the tallest robot on its cart (the elevator's mast top is at y 34). A white team's banner is in steel with
-  // its number in white, so it isn't the brightest thing on the dim drape.
-  const x = p.x0 + 8, y = 12, w = 64, h = 24;
-  const [dark, mid, lit] = p.num === '3000' ? [C.steel1, C.steel2, C.steel3] : p.tone, light = p.num === '3000' || p.num === '1357';
+  // clear of the tallest robot on its cart (the elevator's mast top is at y 34). The far wall is kept dim so the action
+  // on the floor reads, so the banner's cloth is the team's darkest tone, lit along its top edge in the middle one, and
+  // only its number and name carry. A white team's banner is in steel with its number in white and its name in ink, so
+  // it isn't the brightest thing on the drape either.
+  const x = p.x0 + 8, y = 12, w = 64, h = 24, steel = p.num === '3000';
+  const [cloth, lit] = steel ? [C.steel2, C.steel3] : [p.tone[0], p.tone[1]];
   // Zip-tied to the pipe at the grommets.
   for (const tx of [x + 3, x + w - 4]) rect(tx, 9, 1, y - 9, C.steel1);
   rect(x, y, w, h, C.ink);
-  rect(x + 1, y + 1, w - 2, h - 2, mid);
+  rect(x + 1, y + 1, w - 2, h - 2, cloth);
   rect(x + 1, y + 1, w - 2, 1, lit);
-  rect(x + 1, y + h - 2, w - 2, 1, dark);
+  if (steel) rect(x + 1, y + h - 2, w - 2, 1, C.steel1);
   for (const gx of [x + 3, x + w - 4]) rect(gx, y + 2, 1, 1, C.steel3);
-  // The number flat in the colour their shirts print it in (white on the steel one), like the bumpers' numbers and the
-  // QUEUE sign's; the name under it.
-  const num = p.num === '3000' ? C.white : TEAMS[p.num].print;
+  // The number flat in the colour their shirts print it in, like the bumpers' numbers and the QUEUE sign's (1357 prints
+  // in ink, which would be lost on dark orange, so theirs is in the orange's lit tone); the name under it.
+  const num = steel ? C.white : p.num === '1357' ? tones.shirtOrange[2] : TEAMS[p.num].print;
   if (p.num === '5026') {
     BADGE.forEach((row, r) => [...row].forEach((ch, c) => {
       if (ch !== '.') rect(x + 2 + c, y + 2 + r, 1, 1, { W: C.white, y: C.yel1 }[ch] ?? C.ink);
     }));
     text(p.num, x + 15, y + 2, { scale: 2, color: num });
   } else text(p.num, x + w / 2, y + 2, { scale: 2, color: num, align: 'center' });
-  text(p.name, x + w / 2, y + 17, { font: 3, color: light ? C.ink : C.white, align: 'center' });
+  text(p.name, x + w / 2, y + 17, { font: 3, color: steel ? C.ink : C.white, align: 'center' });
 }
 
 /** The pegboard behind the spare parts counter, with spares hanging on it. */
@@ -224,7 +226,13 @@ function pegboard() {
   rect(sx + 1, sy + 2, 2, 1, C.steel1);
   rect(sx + 2, sy + 1, 1, 1, C.steel1);
   rect(sx - 2, sy - 2, 3, 3, C.ink);
-  for (let y = 22; y < 48; y += 2) rect(59 + ((y >> 1) % 2), y, 2, 2, C.steel2);
+  // The chain: links zigzagging down from its hook, each outlined in ink (all the outlines first, so no link's outline
+  // cuts into the one above it), and every other link lit on its upper left, like everything on the board.
+  for (let y = 22; y < 48; y += 2) rect(58 + ((y >> 1) % 2), y - 1, 4, 4, C.ink);
+  for (let y = 22; y < 48; y += 2) {
+    rect(59 + ((y >> 1) % 2), y, 2, 2, C.steel2);
+    if ((y >> 1) % 2 === 0) rect(59, y, 1, 1, C.steel3);
+  }
   rect(54, 20, 4, 14, C.ink);
   rect(55, 21, 2, 12, C.white);
   rect(55, 21, 1, 12, C.steel3);
@@ -490,7 +498,7 @@ function awayBoard(x, y, where, match, open = true) {
 
 /**
  * 5026's board while its robot is home: folded flat and leaning on the front of the work table behind where the cart
- * stands, its back to you, its feet (x, y) on the floor (drawn once the robot rolls away; till then the robot hides it).
+ * stands, its back to you, its feet (x, y) on the floor (the robot on its cart, in front, hides all but its edges).
  * It's the same board as awayBoard's, the same size: the white of its face showing round the edge of the grey back, and
  * the easel's two legs folded flat against the back, down past the panel to the floor. Turned round and stood up on the
  * spot, it's the white IN QUEUE board on its legs.
@@ -710,7 +718,9 @@ function standing(t, pit5026) {
     // 5026's board on its way from the table to the spot: folded against the table, then lifted in the teammate's hands
     // (she bends over it from MATE_SET, cutscene.js, her hands ten pixels to her left and 18 up, so it's drawn just
     // behind her with her hands on it), turned round with its legs still folded, then standing (above).
-    if (p.num === '5026' && pit5026 === 'empty') list.push({ ...span, y: floorY(3.2), draw: () => stowedBoard(p.mid, Math.round(floorY(3.2))) });
+    // While the robot's home its middle hides the board, and the board's edges show either side of its mast, so nothing
+    // pops in as it rolls away.
+    if (p.num === '5026' && (pit5026 === 'empty' || pit5026 === 'robot')) list.push({ ...span, y: floorY(3.2), draw: () => stowedBoard(p.mid, Math.round(floorY(3.2))) });
     if (p.num === '5026' && pit5026 === 'lift') list.push({ ...span, y: 91, draw: () => stowedBoard(LIFT_X, 88) });
     if (p.num === '5026' && pit5026 === 'turn') list.push({ ...span, y: 89, draw: () => awayBoard(p.mid, 87, 'IN QUEUE', p.match, false) });
     if (p.num === '7777') list.push({ x0: p.x0, x1: p.x0 + 24, y: floorY(0.5), draw: () => flag(p.x0 + 4, 74) });
@@ -729,7 +739,7 @@ function standing(t, pit5026) {
  * the canvas's width if not given; things further off than that aren't drawn). The floor and back layers are made on first use.
  * o.more: people and anything else standing, as { y: floor line, draw() }, sorted in with the furniture; each draw()
  * runs with the camera set to the view, so it can draw in world pixels. o.pit5026: 'robot' (5026's robot on its cart;
- * its IN QUEUE / MATCH 44 board is folded against the table out of sight behind it), 'empty' (the robot's spot empty,
+ * its IN QUEUE / MATCH 44 board is folded against the table behind it, its edges showing), 'empty' (the robot's spot empty,
  * the folded board showing behind it, back out: the cut scene draws the cart), 'lift' and 'turn' (the board being
  * picked up, then turned round over the spot with its legs still folded: the moment the teammate sets it up) or 'sign'
  * (the board standing on the spot; the default).

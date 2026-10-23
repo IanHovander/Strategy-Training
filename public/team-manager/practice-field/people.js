@@ -67,7 +67,9 @@ export const LOOKS = {
   // A khaki work shirt with a name patch, a navy cap. (Blue-grey work shirts vanish into the cafeteria's tiles.)
   flores: look('pf-flores', { ...skinBody('tan'), shirt: tones.khaki, jeans: tones.black, cuff: tones.black, print: '#e8ecf5' },
     'cap', { ...SKIN.tan, ...HAIR.grey, c: '#232a44', C: '#3a4466', D: '#141a2e' }),
-  reset: student(5, 'tee'),
+  // The crowd's fifth student in the team tee, in safety glasses like Kai's: he's the one who goes out on the carpet
+  // beside the robot every rep.
+  reset: look('pf-reset', { ...skinBody('brown'), ...MERCH.tee }, 'glasses', { ...SKIN.brown, ...HAIR.chestnut, q: '#a8d2ff' }),
   scout: { ...capFront(student(2, 'tee')), id: 'pf-scout' },
   hero: HERO_LOOK,
 };
@@ -128,12 +130,13 @@ const HOLD = { dx: 3, up: 23, after: 11 };
 const INES_HOLDING = { ...LOOKS.ines, id: 'pf-ines-hatch', pal: { ...LOOKS.ines.pal, pad: LOOKS.ines.pal.skin } };
 const facing = (dir) => (dir >= 1 && dir <= 3 ? 1 : dir >= 5 && dir <= 7 ? -1 : 0);
 
-// Ms. Okafor's stopwatch, over her hands: a round silver face with its highlight at the upper left, the hand at twelve,
-// the crown on top, an ink outline. Where her hands are in each direction, from her feet (the drive gait's pad, which
-// her body hides when she's turned away: null).
-const WATCH = ['..k..', '.kck.', '.kkk.', 'kWkSk', 'kSkSk', 'kSSDk', '.kkk.'];
-const WATCH_PAL = { k: C.ink, c: C.steel2, S: C.steel3, W: C.white, D: C.steel2 };
-const WATCH_AT = [[0, 21], [7, 23], [8, 26], null, null, null, [-9, 26], [-8, 23]];
+// Ms. Okafor's stopwatch, over her hands and as wide as the pad between them, so only her hands show either side of it:
+// a round silver face, white at the upper left where the light catches it and a step darker at the lower right, the
+// ink hand at twelve, and on top the crown with its red start button, an ink outline round it all. Where her hands are
+// in each direction, from her feet (the drive gait's pad, which her body hides when she's turned away: null).
+const WATCH = ['..kkk..', '..kRk..', '.kkkkk.', 'kWWkSSk', 'kWWkSSk', 'kSSSSDk', 'kSSSDDk', '.kkkkk.'];
+const WATCH_PAL = { k: C.ink, R: C.red1, S: C.steel3, W: C.white, D: C.steel2 };
+const WATCH_AT = [[-1, 21], [6, 23], [7, 26], null, null, null, [-10, 26], [-9, 23]];
 function stopwatch(x, y, dir) {
   const at = WATCH_AT[dir];
   if (!at) return;

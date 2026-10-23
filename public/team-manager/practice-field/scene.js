@@ -30,9 +30,9 @@
 
 import { W, H, useContext, camera, screen, clamp, lerp, seg, easeInOut } from '../pixel.js';
 import { runScene, drawWithShadow, dirToward } from '../stage.js';
-import { drawBubble } from '../talk.js';
+import { drawBubble, conversation } from '../talk.js';
 import { HERO_LOOK } from '../walker.js';
-import { ROOM, FLOOR, SPOTS, START } from './layout.js';
+import { ROOM, FLOOR, SPOTS, START, STATION_WALL, CARPET } from './layout.js';
 import { drawWall, drawTiles, drawSunPatches, roomThings, drawSunAir, ROOM_BLOCKS } from './room.js';
 import { drawFieldFloor, fieldThings, FIELD_BLOCKS } from './halffield.js';
 import { robotAt, robotThing } from './robot.js';
@@ -103,13 +103,39 @@ const CUT_END = cutscene.reduce((n, b) => n + b.dur, 0);
 // by 4 pixels along and 2 of depth so her shadow never touches them.
 const STOPS = [...ROOM_BLOCKS, ...FIELD_BLOCKS, ...peopleBlocks()];
 const blocked = (x, y) => STOPS.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
-/** A step along, then across, as field.js does: each half refused if it would end in something. */
+/** A step along, then across, as field.js does: each half refused if it would end in something. A step that goes
+ *  nowhere because the carpet is in the way may bring Kai over (keepOff). */
 function move(x, y, dx, dy) {
   let nx = clamp(x + dx, FLOOR.x0, FLOOR.x1);
   if (blocked(nx, y)) nx = x;
   let ny = clamp(y + dy, FLOOR.y0, FLOOR.y1);
   if (blocked(nx, ny)) ny = y;
+  keepOff(x, y, nx === x && ny === y && (onCarpet(x + dx, y) || onCarpet(x, y + dy)));
   return [nx, ny];
+}
+
+// ---- Kai keeps her off the carpet ----
+// Walking about, the carpet stops her like a wall, as the robot is always running on it. So that a player pushing at it
+// knows why, if she keeps pushing into it, stuck, for KEEP_OFF.after seconds within KEEP_OFF.near pixels of Kai, he
+// tells her without being asked: his first page, in the usual box. Once a visit: not again until she's been further
+// off than that (or if she's already talked to him).
+const KEEP_OFF = { after: 0.4, near: 60 };
+/** The carpet's footprint, the station wall's with it, as halffield.js's FIELD_BLOCKS has it, with move()'s margins. */
+const onCarpet = (x, y) => x > STATION_WALL.x0 - 4 && x < CARPET.x1 + 4 && y > CARPET.y0 - 2 && y < CARPET.y1 + 2;
+const pushing = { since: null, last: -1, told: false };
+function keepOff(x, y, stuck) {
+  const s = window.stage, now = performance.now() / 1000, kai = SPOTS.kai;
+  const near = Math.hypot(x - kai.x, y - kai.y) <= KEEP_OFF.near;
+  if (!near) pushing.told = false;
+  if (!stuck) return void (pushing.since = null);
+  if (pushing.since == null || now - pushing.last > 0.15) pushing.since = now;
+  pushing.last = now;
+  if (pushing.told || !near || s.talk || now - pushing.since < KEEP_OFF.after) return;
+  pushing.told = true;
+  const person = people.find((p) => p.id === 'kai'), at = faceTo(person);
+  s.talk = conversation(person.name, person.lines.slice(0, 1), now, { person });
+  s.near = null;
+  s.me.dir = dirToward(at.x - x, (at.y - y) / 0.8);
 }
 
 /** The nearest point to (x, y) she can stand on, within 24 pixels (null if there's none). */
@@ -126,12 +152,19 @@ function standable(x, y) {
 }
 
 const people = PEOPLE.map((p) => ({ ...p, lines: LINES[p.id] }));
+// She turns to the person, not to where she stands to talk to them: along the table to Theo. Kai's face is a little
+// up the room from her when she's beside him in front of the carpet, which rounds to turning her back on him, so she
+// turns to a point level with her instead and faces him in profile.
+const faceTo = (p) => (p.id === 'kai' ? { x: SPOTS.kai.x, y: SPOTS.kai.y + 4 } : SPOTS[p.id]);
 /** Who's in reach: the closest she's near, from where she talks to them (Theo beside his table), the drive team from
  *  further off along the room, since she comes at them from the floor beside the station, Kai from a little further
- *  off across it, and the ones she can walk right past only from beside them (people.js PEOPLE: reach, reachY, apart). */
+ *  off across it, and the ones she can walk right past only from beside them (people.js PEOPLE: reach, reachY, apart).
+ *  Ines only from the drive team's side of the station wall: from the back strip beyond it, with the robot parked at
+ *  the loading station, the mast, the clear panels and the station itself would hide her. */
 function reach(s) {
   let best = null, bestD = Infinity;
   for (const p of people) {
+    if (p.id === 'ines' && s.me.x > STATION_WALL.x0) continue;
     const dx = Math.abs(p.x - s.me.x), dy = Math.abs(p.y - s.me.y);
     if (dx < (p.reach ?? 14) && dx >= (p.apart ?? 0) && dy < (p.reachY ?? 10) && dx + dy < bestD) [best, bestD] = [p, dx + dy];
   }
@@ -151,10 +184,16 @@ function talkY(s, y) {
   const p = s.talk.person, spot = SPOTS[p.id] ?? p, feet = Math.max(s.me.y, spot.y);
   return Math.round(clamp(feet - (spot.gait === 'sit' ? 108 : 112), y, ROOM.h - H));
 }
-/** An eased pan of half a second whenever a conversation starts or ends; otherwise straight from followView. */
-const pan = { talking: false, from: 0, t0: -1, y: null };
+/** An eased pan of half a second whenever a conversation starts or ends; otherwise straight from followView. When the
+ *  cut scene hands over a few pixels above the walking view (settle), the camera stays where it ended until she first
+ *  moves or talks, and only then eases on, so it never goes down by itself. */
+const pan = { talking: false, from: 0, t0: -1, y: null, settle: false };
 function viewFor(s) {
   const now = performance.now() / 1000, view = followView(s.me);
+  if (pan.settle) {
+    if (s.me.gait === 'stand' && !s.talk) return { x: view.x, y: pan.y };
+    Object.assign(pan, { settle: false, from: pan.y, t0: now });
+  }
   const to = s.talk ? talkY(s, view.y) : view.y;
   if (!!s.talk !== pan.talking) Object.assign(pan, { talking: !!s.talk, from: pan.y ?? view.y, t0: now });
   pan.y = Math.round(lerp(pan.from, to, easeInOut(seg(now, pan.t0, pan.t0 + 0.5))));
@@ -180,10 +219,11 @@ runScene({
   move,
   people,
   reach,
-  // She turns to the person, not to where she stands to talk to them: along the table to Theo. Kai's face is a little
-  // up the room from her when she's beside him in front of the carpet, which rounds to turning her back on him, so she
-  // turns to a point level with her instead and faces him in profile.
-  faceTo: (p) => (p.id === 'kai' ? { x: SPOTS.kai.x, y: SPOTS.kai.y + 4 } : SPOTS[p.id]),
+  faceTo,
+  // Once she's talked to Kai, he doesn't come over to tell her again (keepOff).
+  onTalk(s, p) {
+    if (p.id === 'kai') pushing.told = true;
+  },
   camera: viewFor,
   // The bubble beside their head, on the side away from her, so it's never over her own. Ms. Okafor's left is the
   // student who resets the field, behind her and off to that side, so hers sits over her head instead, a little to the
@@ -203,9 +243,11 @@ runScene({
     // by someone she runs past.
     const at = HANDOFF.hero && standable(HANDOFF.hero.x, HANDOFF.hero.y);
     if (at) Object.assign(s.me, at, { dir: HANDOFF.hero.dir, gait: 'stand', dist: 0 });
-    // The camera ends the cut scene a little above the walkable view (and further, if A ended the last beat before it
-    // was back up from her answer): walking eases it the rest of the way.
-    Object.assign(pan, { talking: false, from: HANDOFF.viewY, t0: now, y: HANDOFF.viewY });
+    // The camera ends the cut scene a little above the walkable view, and stays there until she moves (viewFor); or
+    // below it, if A ended the last beat before it was back up from her answer, and then walking eases it straight on
+    // up, the way it was going.
+    const y = HANDOFF.viewY;
+    Object.assign(pan, { talking: false, from: y, t0: now, y, settle: y < followView(s.me).y });
   },
   draw(g, view, t, s) {
     const T = t + shift;

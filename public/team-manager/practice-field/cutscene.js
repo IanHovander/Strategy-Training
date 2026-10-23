@@ -43,7 +43,7 @@
 // Anyone a shot would catch half of at its edges (a head over the bottom bar, legs under the top one) is stepped out of
 // it with a cast override for that beat.
 
-import { W, H, C, useContext, screen, clamp, lerp, seg, easeInOut, easeOut } from '../pixel.js';
+import { W, H, C, useContext, screen, clamp, lerp, seg, easeInOut, easeOut, easeIn } from '../pixel.js';
 import { along, bars, cover, placeCard, SPEED } from '../stage.js';
 import { HERO_NAME, TEAMMATE_NAME } from '../cast.js';
 import { ROOM, DOORWAY, START, SPOTS } from './layout.js';
@@ -52,6 +52,9 @@ import { CARD } from './words.js';
 
 // The mentor's time for the cycle in beats 4 and 5, from leaving the station to coming back to it.
 const TIMED = CYCLE.timed;
+/** Beat 5's clock (the robot's, less 0.4) when the robot gets to the rocket (robot.js: its run ends at 4.0) and when it
+ *  puts the hatch on level 2. */
+const CYCLE_AT = { rocket: 4.0 - 0.4, placed: PLACE[2] - 0.4 };
 /** When the operator enables the robot in beat 4: once she's called ENABLING!, so its light starts blinking after. */
 const ENABLE_AT = 0.6;
 
@@ -111,6 +114,20 @@ const follow = (x, y) => ({
 });
 const ease = (t, t0, t1) => easeInOut(seg(t, t0, t1));
 
+// ---- The slide down the light (beats 0 and 1) ----
+// One move with no stop at the join: beat 0 drifts right, easing in as it fades in, and beat 1 carries on at the speed
+// beat 0 ended at, sliding on and down and easing out at the rocket. Along the room, beat 1 is a cubic Hermite curve
+// from where beat 0 ends to where it stops, setting off at beat 0's last speed (in pixels per beat) and stopping dead.
+// The drift starts just right of the fire alarm by the doors, so it's never cut in half by the left edge.
+const SLIDE = { x0: 68, x1: 76, x2: 200, d0: 4.8, d1: 5.0 };
+/** Beat 0's drift, t seconds in. */
+const driftX = (t) => lerp(SLIDE.x0, SLIDE.x1, easeIn(seg(t, 0, SLIDE.d0)));
+/** Beat 1's slide along, t seconds in. */
+function slideX(t) {
+  const u = seg(t, 0, SLIDE.d1), m = ((3 * (SLIDE.x1 - SLIDE.x0)) / SLIDE.d0) * SLIDE.d1;
+  return (2 * u ** 3 - 3 * u ** 2 + 1) * SLIDE.x1 + (u ** 3 - 2 * u ** 2 + u) * m + (3 * u ** 2 - 2 * u ** 3) * SLIDE.x2;
+}
+
 // ---- What's said ----
 const MENTOR = 'MS. OKAFOR, MENTOR', DRIVER = 'JALEN, DRIVER', OPERATOR = 'MEI, OPERATOR', CUSTODIAN = 'MR. FLORES, CUSTODIAN';
 // A page said by someone other than the beat's speaker carries `who`, so the phone shows them (makeCutscene voiced).
@@ -131,7 +148,8 @@ const SAY = {
   },
   // In step with the robot: it drives at 0.8-3.6 s and lifts at 3.6-4.8, and the hatch goes on at 5.2, as 'place it'
   // finishes typing; it turns for home at 6.6-7.0. The run home is the next beat, a cut, so 'now home' can't come early
-  // however fast the pages are turned.
+  // however fast the pages are turned; and the second page waits for the robot to get to the rocket, and 'place it'
+  // for the hatch to go on, however fast they're turned (holdCycle).
   cycle: {
     name: TEAMMATE_NAME, at: 1.0,
     lines: [
@@ -142,9 +160,10 @@ const SAY = {
   home: { name: TEAMMATE_NAME, at: 0.2, lines: [['YES! NOW HOME!']] },
   time: { name: MENTOR, at: 0.2, lines: [[`TIME! ${TIMED} SECONDS.`, 'BEST CYCLE ALL WEEK!']] },
   tables: { name: CUSTODIAN, at: 0.2, lines: [['ROBOT PEOPLE! TABLES BACK IN ROWS', 'BY SIX. I MEAN IT THIS TIME.']] },
-  // As soon as she's through the doors.
+  // As soon as she's through the doors, before the camera following her in is low enough to catch the top of Theo's
+  // head, at his table at the front, over the bottom bar: the box covers that corner.
   her: {
-    name: MENTOR, at: 1.0,
+    name: MENTOR, at: 0.8,
     lines: [["THERE'S OUR STRATEGIST! PUT THIS ON", `YOUR BOARD: ${TIMED} ON A LEVEL TWO HATCH.`]],
   },
   // From her mark, as the camera settles.
@@ -157,9 +176,10 @@ const SAY = {
 export const CUT_LINES = SAY;
 
 // ---- The strategist's way in (beats 10 and 11) ----
-// Through the hallway doors and down the left of the room, wide of Bea at the battery cart and clear of the tool
-// chest's corner, to the open floor by the drive team, where she stops for the mentor's call (her face stays clear of
-// the dialog box there). Once it's been read (it turns by itself at the auto pace; A reads it sooner, and she sets off
+// Through the hallway doors and down the left of the room, passing Bea at the battery cart with a body's width of air
+// between them and clear of the tool chest's corner, to the open floor by the drive team, where she stops for the
+// mentor's call: far enough up the room that her face stays clear of the dialog box, and that the camera following her
+// puts Theo, at his table at the front, wholly under the box's name tag. Once it's been read (it turns by itself at the auto pace; A reads it sooner, and she sets off
 // as soon as it has been: runAt), she runs on, down past the cargo basket, wide of it, and round the front of the field
 // to where you take over, with nothing over her: so far down the room, the dialog box would hide all of her but her
 // head. If it's read before she's even got to her stop, she doesn't stop at all (WAY). There, in the next beat, she
@@ -174,8 +194,8 @@ export const CUT_LINES = SAY;
 // Beat 11's words and its camera wait for her to get to her mark (answerAt), so the box is never over her run. If A
 // ends beat 11 early too, walking starts from wherever she was (HANDOFF.hero).
 // The robot's clock is set so that, at the auto pace, the level 3 hatch goes on as the camera comes back up to it.
-const IN = [[DOORWAY.x, DOORWAY.y], [48, 118], [80, 150]];
-const ON = [[80, 150], [84, 182], [START.x, START.y]];
+const IN = [[DOORWAY.x, DOORWAY.y], [42, 118], [80, 144]];
+const ON = [[80, 144], [84, 182], [START.x, START.y]];
 const WAY = [...IN, ...ON.slice(1)];
 /** Beat 10: she comes in at IN_AT and is at her stop at IN_END. At the auto pace, she runs on at ON_AT, once the
  *  mentor's page has been typed and read; it takes her ON_T to get to her mark, or WAY_T from the doors without a stop. */
@@ -323,30 +343,47 @@ export function makeCutscene(world) {
   const WIDE_X = 113;
   const run = (robotU) => ({ robotU, enabled: true, cast: wide });
   // The close shot of the station: the coach and the driver at the controls in the left of the frame, the robot at the
-  // station to their right. Their faces sit clear of the dialog box; the human player and the operator, who'd be cut in
-  // half by the bars, step out of the shot.
-  const STATION = { x: 96, y: 70 }, drivers = { ines: { x: 84 }, mei: { x: 84 } };
+  // station to their right. Their faces sit clear of the dialog box; the human player, who'd be cut in half by the
+  // bars, steps out of the shot.
+  // The operator, who calls ENABLING! and enables the robot, is in the shot too, cheated a step over from her place
+  // to the driver's left shoulder, level with him: her head and shoulders are above the dialog box there, and her head
+  // covers the top of the hatch rack behind her, so none of it pokes out round her hair.
+  const STATION = { x: 96, y: 70 }, station = { ines: { x: 84 }, mei: { x: 116, y: 139, dir: 2, gait: 'drive' } };
+  /** Beat 5, live: the coach's second page waits for the robot to get to the rocket, and its last words, PLACE IT!,
+   *  can't be typed out before the hatch goes on, by A or otherwise, so however fast the pages are turned the beat
+   *  can't end before it's on. A press that would hurry them is undone, as in beat 11. t: seconds into the beat. */
+  const holdCycle = (t) => {
+    const st = window.stage, conv = st.cut.conv, t0 = st.cut.t0, now = t0 + t;
+    if (!conv || st.cut.read || conv.page !== 1) return;
+    if (conv.start < t0 + CYCLE_AT.rocket) {
+      Object.assign(conv, { start: t0 + CYCLE_AT.rocket, full: false });
+      return;
+    }
+    const [first, last] = linesOf(conv.pages[1]).map((line) => line.length);
+    const upto = first + clamp(Math.floor((now - (t0 + CYCLE_AT.placed - last / 40)) * 40), 0, last);
+    const shown = conv.full ? Infinity : Math.floor((now - conv.start) * 40);
+    if (shown > upto && upto < first + last) Object.assign(conv, { start: now - (upto + 0.5) / 40, full: false });
+  };
 
   const beats = [
     // 0 sun: the sun low in the first window, the light coming in under the sill, drifting right as it fades in. Low
     // enough that the robot at the station shows its carriage under the mast, and Ines her hatch, above the bottom bar.
-    beat(4.8, (g, t, tc, c) => {
+    beat(SLIDE.d0, (g, t, tc, c) => {
       lastT = null; // the cut scene (re)starts
       lastView = null;
       lastHero = null;
       lastKai = null;
       herEnd = null;
       readAt = null;
-      shoot(g, lerp(60, 76, ease(tc, 0, 4.8)), SUN_Y, 2, c.T, sunny);
+      shoot(g, driftX(tc), SUN_Y, 2, c.T, sunny);
       bars(easeOut(seg(t, 0, 0.8)));
       placeCard(t - 0.6, CARD.name, CARD.sub); // in at 0.8 (its first 0.2 s are off the screen), gone by 4.6
       cover(1 - seg(t, 0, 1.2));
     }),
     // 1 light: down the light onto the sunlit patches on the carpet, ending with the rocket's home face and the sunlit
-    // patch at its foot whole in the right third of the frame. No cut.
-    beat(5.0, (g, t, tc, c) => {
-      const k = ease(tc, 0, 5);
-      shoot(g, lerp(76, 200, k), lerp(SUN_Y, 60, k), 2, c.T, sunny);
+    // patch at its foot whole in the right third of the frame. No cut, and no stop: it carries on at the drift's speed.
+    beat(SLIDE.d1, (g, t, tc, c) => {
+      shoot(g, slideX(tc), lerp(SUN_Y, 60, ease(tc, 0, SLIDE.d1)), 2, c.T, sunny);
       bars(1);
     }),
     // 2 field: panning from the doors to the whole half field, station wall to centre line, as the mentor calls from
@@ -357,24 +394,25 @@ export function makeCutscene(world) {
     }, { ...SAY.field, auto: true, look: look('okafor') }),
     // 3 ready: the station, close. As long as its words take to read.
     beat(wordsEnd(SAY.ready), (g, t, tc, c) => {
-      shoot(g, STATION.x, STATION.y, 2, c.T, { ...still, cast: drivers });
+      shoot(g, STATION.x, STATION.y, 2, c.T, { ...still, cast: station });
       bars(1);
     }, { ...SAY.ready, auto: true, look: look('teammate') }),
     // 4 go: the same shot. Once she's called it and enabled it, the robot's light blinks (on the cut scene's clock, as
     // the robot itself holds still until GO).
     beat(wordsEnd(SAY.go), (g, t, tc, c) => {
-      shoot(g, STATION.x, STATION.y, 2, c.T, { robotU: 0, enabled: t >= ENABLE_AT, blink: c.T, cast: drivers });
+      shoot(g, STATION.x, STATION.y, 2, c.T, { robotU: 0, enabled: t >= ENABLE_AT, blink: c.T, cast: station });
       bars(1);
     }, { ...SAY.go, auto: true, look: look('mei') }),
     // 5 cycle: the whole run, station to cargo ship, the camera still. Hatch in, out to the rocket, place it, turn.
     beat(wordsEnd(SAY.cycle), (g, t, tc, c) => {
+      if (live(beats[5])) holdCycle(t);
       shoot(g, WIDE_X, 20, 1, c.T, run(0.4 + t));
       bars(1);
     }, { ...SAY.cycle, auto: true, look: look('teammate') }),
     // 6 home: back to the station as the robot comes home, carrying on its clock from the end of the run at the pace
     // the words are read; it comes into the frame at 0.3 and is home at 1.8.
     beat(2.3, (g, t, tc, c) => {
-      shoot(g, STATION.x, STATION.y, 2, c.T, { robotU: 8.2 + t, enabled: true, cast: drivers });
+      shoot(g, STATION.x, STATION.y, 2, c.T, { robotU: 8.2 + t, enabled: true, cast: station });
       bars(1);
     }, { ...SAY.home, auto: true, look: look('teammate') }),
     // 7 time: the mentor in profile, stopwatch in her hands, the scouting lead beside her with the tablet, a little behind

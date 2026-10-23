@@ -17,9 +17,10 @@ export const FT = 8, DEEP = 2.75;
 export const ROOM = { w: 680, h: 212, wallY: 84, shown: 192 };
 /** The floor line this many feet out from the back wall. */
 export const roomY = (ft) => ROOM.wallY + ft * DEEP;
-/** Where her feet can go at all: the floor, short of the walls and the edges of the world. At the front she can go 4
- *  pixels past `shown`, so there's room to walk round in front of someone standing in front of the carpet. */
-export const FLOOR = { x0: 8, x1: ROOM.w - 8, y0: ROOM.wallY + 4, y1: ROOM.shown + 4 };
+/** Where her feet can go at all: the floor, short of the walls and the edges of the world. At the front she can go 8
+ *  pixels past `shown`, so there's an easy lane to walk round in front of Kai, standing in front of the carpet; there
+ *  the camera still keeps 12 pixels of floor under her feet, down to the room's bottom edge. */
+export const FLOOR = { x0: 8, x1: ROOM.w - 8, y0: ROOM.wallY + 4, y1: ROOM.shown + 8 };
 
 // The back wall, left to right. x0-x1 along the wall; top is the y of the top edge on the wall.
 /** Double doors out to the hallway, 7 feet tall, with the EXIT sign over them. */

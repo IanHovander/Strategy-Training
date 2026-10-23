@@ -157,6 +157,8 @@ function makeCloud(puffs) {
     // The flat bottom, from a pixel in from either end (the end puffs round off into it).
     fill(2, base - 2, w - 2, 2, CLOUD[1]);
     fill(2, base, w - 2, 2, CLOUD[2]);
+    // Nothing under the flat bottom (the end puffs reach a row past it), so the outline runs straight along it.
+    lg.clearRect(0, base + 2, lw, 1);
     // The outline: ink on every empty pixel next to the cloud, above, below or either side.
     const a = lg.getImageData(0, 0, lw, lh).data, on = (px, py) => px >= 0 && py >= 0 && px < lw && py < lh && a[(py * lw + px) * 4 + 3] > 0;
     for (let py = 0; py < lh; py++) for (let px = 0; px < lw; px++) {
@@ -377,19 +379,22 @@ function paintSign() {
   text('IRON PANTHERS', cx, y + 3, { color: C.white, align: 'center', shadow: C.red0 });
 }
 
-// The panther in its hexagon, simplified: a white hexagon round a red disc with the white head in it, eye in ink.
+// The panther in its hexagon, as the team's logo has it (public/img/panther.png) and the hoodies' badge: a white
+// hexagon, and in it a red panther's head turned three-quarters to the left, its two ears breaking up into the
+// hexagon's top, the near eye and the far one under angry brows in ink, a white muzzle off to the left with the nose and
+// a snarl, a fang showing. Shaded like the banner's cloth: lit on its left edge, dark down its lower right.
 const BADGE = [
   '....WWWW....',
-  '..WWWWWWWW..',
-  'WWWWrrrrWWWW',
-  'WWWrrWWWrWWW',
-  'WWrWWWWWWrWW',
-  'WWrWkWWWWrWW',
-  'WWrWWWWWWrWW',
-  'WWrrWWrWWrWW',
-  'WWrrrWWWrrWW',
-  'WWWrrrWrrWWW',
-  'WWWWrrrrWWWW',
+  '..WRWWWWrW..',
+  'WWRrRWWRrdWW',
+  'WWRrrrrrrdWW',
+  'WRrrkrrrkrdW',
+  'WRkkrrrkkrdW',
+  'WRrrrrrrrrdW',
+  'WRWWkWWrrdWW',
+  'WWWkkkWrrdWW',
+  'WWWkWkrrdWWW',
+  'WWWWRrrdWWWW',
   '..WWWWWWWW..',
   '....WWWW....',
 ];
@@ -405,7 +410,7 @@ function paintBanner() {
     const edge = !inside(i - 1, j) || !inside(i + 1, j) || !inside(i, j + 1);
     rect(x0 + i, y0 + j, 1, 1, edge ? C.ink : i === 1 ? C.red2 : i === w - 2 ? C.red0 : C.red1);
   }
-  sprite(x0 + 2, y0 + 4, BADGE, { W: '#fff4ee', r: C.red1, k: C.ink });
+  sprite(x0 + 2, y0 + 4, BADGE, { W: '#fff4ee', R: C.red2, r: C.red1, d: C.red0, k: C.ink });
   text('50', x0 + w / 2, y0 + 20, { font: 3, color: '#fff4ee', align: 'center' });
   text('26', x0 + w / 2, y0 + 26, { font: 3, color: '#fff4ee', align: 'center' });
   rect(x0 + 2, y0 + 33, w - 4, 1, '#fff4ee');

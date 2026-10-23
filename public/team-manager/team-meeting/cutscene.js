@@ -117,17 +117,20 @@ const ROOM_BY_HER = { luis: [6, 0], bea: [12, 1] };
 const LOW = { tessa: { x: HEAD.tessa.x, y: 185 }, owen: { x: HEAD.owen.x, y: 185 } };
 /**
  * Film cheats for the framings the dialog box comes across, so it never cuts a face (people.js circle() nudge). Wide:
- * the box hides the front row whole and the sides from the lap down, but three sit right at its edge, so they sit a few
- * pixels off their seats in every wide shot, a little down, all of them under the box instead of the top of a head
- * alone over it: the two drivers on the left (one turned away while she listens, so only her hair would show over the
- * name tag) and the cap on the right. The co-captains' close-ups: the freshman and the drive coach, at the back left of
- * the circle, sit a little higher, so their faces clear the name tag; and in Owen's, the strategist sits a little
- * further round, out of the shot, not cut in half by its right edge. Every move from one framing to another is a cut,
- * so nobody sees anyone move.
+ * the box hides the front row whole and the sides from the lap down, but three sit right at its edge, turned away while
+ * they listen, where only the top of a head would show over it. So in every wide shot they sit a few pixels off their
+ * seats: the first driver and the cap on the right a little down, all of them under the box; the second driver, whose
+ * head is too high for that, a little up and to the left, clear of the freshman, so her shoulders show too and she
+ * reads as someone seen from behind, like the front row. The co-captains' close-ups: the freshman and the drive coach,
+ * at the back left of the circle, sit a little higher, so their faces clear the name tag; and in Owen's, the strategist
+ * sits a little further round, out of the shot, not cut in half by its right edge. Every move from one framing to
+ * another is a cut, so nobody sees anyone move.
  */
-const IN_WIDE = { drv1: [-3, 4], drv2: [0, 5], s6: [0, 7] };
+const IN_WIDE = { drv1: [-3, 7], drv2: [-3, -4], s6: [0, 7] };
 const IN_CLOSE_TESSA = { eli: [-4, -6], jamal: [0, -5] };
-const IN_CLOSE_OWEN = { ...IN_CLOSE_TESSA, hero: [10, 0] };
+/** In Owen's: her seat is right at the shot's right edge, and her crossed legs reach 11 pixels to her left, so 18 more
+ *  takes the whole of her out of it (just past the scouting lead, beside her and out of the shot too). */
+const IN_CLOSE_OWEN = { ...IN_CLOSE_TESSA, hero: [18, 0] };
 /** Where Owen stands while the camera is on her: at the head of the circle, a step to Tessa's side, out of the shot. */
 const OWEN_OFF = { x: HEAD.owen.x - 8, y: HEAD.owen.y };
 
