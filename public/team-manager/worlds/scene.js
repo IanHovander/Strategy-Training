@@ -14,7 +14,9 @@
 // divisions ahead of her and a greeter to say hello. The exploring is the walk back along the hall, past every
 // division's field and the people in its aisles, to Newton's queue, where the teammate waits; the way out is on past
 // Newton's red end and the info desk, through the doorway in the right wall under its EXIT sign, toward Einstein
-// (stage.js exit, TO EINSTEIN), and fields.js move() lets her through the wall's face only there.
+// (stage.js exit, TO EINSTEIN), and fields.js move() lets her through the wall's face only there (the left doorway, under
+// its IN sign, is the way in, not out: she stops at the wall's face). Seated scouts, parents, a coach, a pit crew member
+// and a mentor in the front rows along the way put someone to talk to in reach every ten to fifteen seconds at a run.
 // stage.js draws the exit's label right-aligned over its arrow, so with the camera short of the hall's end, the arrow
 // just in from the right edge, the label would be cut off there ('TO EINSTEI'). The scene's exit holds it back until
 // it fits on the screen (draw()), and the arrow comes in on its own first.

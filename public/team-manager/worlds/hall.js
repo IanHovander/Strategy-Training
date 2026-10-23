@@ -8,7 +8,8 @@
 // next begins. Past Newton the curtain carries on to the end of the hall with Newton's screen and a yellow sign for
 // Einstein (the finals are in another hall: this is the way out), and a concrete wall closes off each end, a doorway
 // through it to the concourse with the concourse's light on the floor in front: the way in on the left, and on the
-// right the way on to Einstein, with a red EXIT sign over it like the practice field's. The curtain by the left wall
+// right the way on to Einstein, with a red EXIT sign over it like the practice field's (a blue IN over the left one),
+// each hung from its door frame carried up the wall's corner. The curtain by the left wall
 // has a second Archimedes screen. On the floor stand two tables: the button traders' and the info desk.
 // Everything is in world pixels through pixel.js's camera, culled to the view: the hall is 6600 pixels long. What never
 // changes is drawn once into pixel.js layers and blitted after; a big screen is drawn again only when its numbers change.
@@ -24,7 +25,7 @@ import { tones } from '../cast.js';
 import { beam } from '../lights.js';
 import {
   ox, DIVISIONS, WORLD, WALL, TOP, STANDS, GATEWAY, SIGN, SCREEN, BUTTON_TABLE, INFO_DESK, BARRIERS, BARRIER_Y, DOOR,
-  EXIT_SIGN, matchState, clockText,
+  EXIT_SIGN, IN_SIGN, matchState, clockText,
 } from './layout.js';
 
 // Dim ramps beside the palette (lit, mid, shade): the curtains, the darker drape behind the stands, and the concrete
@@ -407,8 +408,8 @@ function einsteinArt(x, y, w, h) {
 /**
  * An end wall of the hall, from the roof to the floor: tilt-up concrete panels, their face toward the hall lit at the
  * right end (it faces the light) and in shade at the left, with seams and form-tie holes, and a doorway through it out
- * to the concourse (layout.js DOOR): the way in, on the left, and the way on to Einstein, on the right, under its EXIT
- * sign.
+ * to the concourse (layout.js DOOR): the way in, on the left, under its IN sign, and the way on to Einstein, on the
+ * right, under its EXIT sign.
  */
 function endWall(view, x0, side) {
   if (inView(view, x0 - 2, x0 + WALL + 2)) {
@@ -426,7 +427,7 @@ function endWall(view, x0, side) {
   }
   // The light and the sign reach out into the hall, so they come into view before the wall does.
   spill(view, side);
-  if (side === 'right') exitSign(view);
+  doorSign(view, side);
 }
 function wallArt(x0, side) {
   const x1 = x0 + WALL, left = side === 'left';
@@ -506,25 +507,41 @@ function doorwayArt(x0, side) {
 }
 
 /**
- * The EXIT sign over the right doorway (layout.js EXIT_SIGN), the same as the practice field's over its side doors:
- * white letters on red in an ink border, lit along the top and shaded along the bottom, here on a steel arm out of the
- * wall's face at its middle. It hangs well over the doorway, so whoever walks out through the passage under it has their
- * head below it. The way in, on the left, has none: it isn't a way out.
+ * The sign over each doorway (layout.js EXIT_SIGN, IN_SIGN), built like the practice field's over its side doors:
+ * white letters on a panel in an ink border, lit along the top and shaded along the bottom, red EXIT over the way out
+ * on the right, blue IN over the way in on the left. Each hangs on a steel arm from a jamb up the corner of its wall: the
+ * doorway's own steel frame (doorwayArt()) carried on up from the top of the opening (DOOR.y0 - DOOR.h - 1) to the arm,
+ * lit on its left, with an ink line between it and the wall, so sign and doorway read as one door. Both hang well over
+ * their doorways: whoever walks out through the passage under the EXIT sign has their head below it, and so does she
+ * walking in under the IN sign. Drawn under everyone: anyone in a passage stands in front of the frame.
  */
-function exitSign(view) {
-  const { x0: x, y0: y, w, h } = EXIT_SIGN, face = WORLD.w - WALL; // face: the wall's ink edge
-  if (!inView(view, x, face + 2)) return;
-  blit(once('exit', face + 2 - x, h, () => {
-    camera(x, y, 1);
-    // The arm, outlined in ink, from the sign's right edge into the wall's edge.
-    rect(x + w, y + 3, face + 2 - x - w, 3, C.ink);
-    rect(x + w, y + 4, face - x - w, 1, C.steel2);
+const DOOR_SIGNS = {
+  right: { ...EXIT_SIGN, text: 'EXIT', ramp: [C.red0, C.red1, C.red2] },
+  left: { ...IN_SIGN, text: 'IN', ramp: [C.blue0, C.blue1, C.blue2] },
+};
+function doorSign(view, side) {
+  const { x0: x, y0: y, w, h, text: words, ramp } = DOOR_SIGNS[side], left = side === 'left';
+  // The frame's three columns, as doorwayArt() puts them (fx), and the column of ink on its far side from the wall.
+  const fx = left ? WALL - 4 : WORLD.w - WALL + 1, ink = left ? fx - 1 : fx + 3;
+  const lx = Math.min(x, ink), rx = Math.max(x + w, ink + 1), top = DOOR.y0 - DOOR.h - 1;
+  if (!inView(view, lx, rx)) return;
+  blit(once(`door-sign-${side}`, rx - lx, top + 1 - y, () => {
+    camera(lx, y, 1);
+    // The jamb, from the arm down to the top of the doorway's frame.
+    rect(ink, y + 2, 1, top + 1 - y - 2, C.ink);
+    rect(fx, y + 2, 3, top + 1 - y - 2, C.ink);
+    rect(fx, y + 3, 3, top + 1 - y - 3, C.steel1);
+    rect(fx, y + 3, 1, top + 1 - y - 3, C.steel2);
+    // The arm, outlined in ink, from the sign's edge to the jamb.
+    const ax0 = left ? fx + 3 : x + w, ax1 = left ? x : fx;
+    rect(ax0, y + 3, ax1 - ax0, 3, C.ink);
+    rect(ax0, y + 4, ax1 - ax0, 1, C.steel2);
     rect(x, y, w, h, C.ink);
-    rect(x + 1, y + 1, w - 2, h - 2, C.red1);
-    rect(x + 1, y + 1, w - 2, 1, C.red2);
-    rect(x + 1, y + h - 2, w - 2, 1, C.red0);
-    text('EXIT', x + 10, y + 2, { font: 3, color: C.white, align: 'center' });
-  }), x, y);
+    rect(x + 1, y + 1, w - 2, h - 2, ramp[1]);
+    rect(x + 1, y + 1, w - 2, 1, ramp[2]);
+    rect(x + 1, y + h - 2, w - 2, 1, ramp[0]);
+    text(words, x + Math.floor(w / 2) + 1, y + 2, { font: 3, color: C.white, align: 'center' });
+  }), lx, y);
 }
 
 /**

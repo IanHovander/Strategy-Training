@@ -1,6 +1,6 @@
 // The people at the World Championship: the crowd in every division's stands, the drive teams at their stations, the
 // queue and the scoring table at each field's ends, people standing about in the aisles between the fields, and the
-// twelve she can stop and talk to. Everyone is the walker's rig (walker.js) in a cast.js look, like the arena's people, so a
+// fifteen she can stop and talk to. Everyone is the walker's rig (walker.js) in a cast.js look, like the arena's people, so a
 // better head or a better rig shows up here too.
 //
 // Teams sit together at Championship, so each division's stands are cut into blocks between the aisle stairs: some
@@ -44,6 +44,12 @@ const LANYARD = [
 const BUTTONS = [[-4, -2, 2, 2, C.yel1], [-1, -2, 2, 2, C.blue2], [2, -2, 2, 2, C.white], [-2, 1, 2, 2, C.org1]];
 /** A scouting tablet held up at the chest: a dark slab in an ink outline, its screen lit, with a glint. */
 const TABLET = [[-3, -1, 7, 5, C.ink], [-2, 0, 5, 3, C.steel0], [-1, 0, 3, 2, C.blue2], [-1, 0, 1, 1, C.white]];
+/** A drive coach's stopwatch on a cord: the cord, the crown, a white face in an ink case. */
+const STOPWATCH = [[-1, -4, 1, 3, C.ink], [-1, -2, 1, 1, C.ink], [-3, -1, 5, 5, C.ink], [-2, 0, 3, 3, C.white], [-1, 1, 1, 1, C.red1]];
+/** Safety glasses hooked in a pit crew's collar, as every pit has them: two clear lenses in an ink frame. */
+const GLASSES = [[-4, -4, 9, 3, C.ink], [-3, -3, 3, 1, C.blue3], [1, -3, 3, 1, C.blue3], [-3, -3, 1, 1, C.white]];
+/** A mentor's clipboard, the pick list on it: the board, its clip, the paper and a few lines of writing. */
+const CLIPBOARD = [[-3, -2, 7, 7, C.ink], [-2, -1, 5, 5, C.white], [-1, -3, 3, 2, C.steel2], [-1, 0, 3, 1, C.steel1], [-1, 2, 2, 1, C.steel1]];
 
 // Two heads the crowd doesn't have, drawn like cast.js's (16 columns, the same letters): hair cropped short, and a
 // headscarf. The scarf's cloth has letters of its own (v mid, V lit, u shade) for its colours in the head palette; the
@@ -254,7 +260,10 @@ const TALKERS = [
     ],
   },
   {
-    name: 'MS. OKAFOR, INFO DESK', x: Math.round((INFO_DESK.x0 + INFO_DESK.x1) / 2), y: INFO_DESK.back - 3, across: true,
+    // Close behind the desk, low on the right pad like it, so her head is a few rows under the feet of anyone going by
+    // along the top of the aisle on the way out. Her footprint stops at the desk (depth), so there's room in front of it
+    // to stand and talk across it.
+    name: 'MS. OKAFOR, INFO DESK', x: Math.round((INFO_DESK.x0 + INFO_DESK.x1) / 2), y: INFO_DESK.back - 2, across: true, depth: 4,
     look: look('w-okafor', { ...skinBody('deep'), shirt: tones.shirtGreen, jeans: tones.khaki, cuff: tones.khaki, print: '#ffc61a' }, 'curls',
       { ...SKIN.deep, ...HAIR.black }),
     badge: LANYARD,
@@ -343,6 +352,43 @@ const TALKERS = [
       ['OUR FIRST SEASON, AND WE ARE AT', 'CHAMPIONSHIP. I KEEP PINCHING MYSELF.'],
       ['WE WON ROOKIE ALL-STAR AT OUR', 'REGIONAL. IT SENDS A ROOKIE TEAM HERE.'],
       ['ARCHIMEDES IS THE FARTHEST FIELD', 'FROM THE PITS. MY LEGS HAVE NOTICED.'],
+    ],
+  },
+  {
+    // The three below sit in the front rows of Galileo, Hopper and Johnson, the stretch of the hall between Tamar and
+    // Diego, in seats picked so that walking (or running) straight along the walkways, someone to talk to comes up
+    // about every ten seconds. Galileo's: a drive coach, her stopwatch round her neck.
+    name: 'HANNA, DRIVE COACH FROM TORONTO', ...seated(3, 'dani'),
+    look: look('w-hanna', { ...skinBody('fair'), shirt: tones.shirtWhite, print: C.blue1 }, 'bob',
+      { ...SKIN.fair, ...HAIR.blonde, r: HAIR.blonde.h, R: HAIR.blonde.H }),
+    badge: STOPWATCH,
+    lines: [
+      ['I TIME EVERY CYCLE: GRAB A HATCH,', 'SCORE IT, BACK FOR THE NEXT ONE.'],
+      ['TWELVE SECONDS IS GOOD. UNDER EIGHT,', 'AND YOU ARE PLAYING ON EINSTEIN.'],
+      ['IT IS NOT TOP SPEED. IT IS SHORT', 'DRIVES, NO MISSES, NO WAITING.'],
+    ],
+  },
+  {
+    // Hopper's: a pit crew member, safety glasses in his collar, down from the pits to watch his team play.
+    name: 'KENJI, PIT CREW FROM OSAKA', ...seated(4, 'adeyemi'),
+    look: lookWith('w-kenji', { ...skinBody('light'), shirt: tones.shirtBlue, print: C.yel1 }, CROP, { ...SKIN.light, ...HAIR.black }),
+    badge: GLASSES,
+    lines: [
+      ['NO ROBOT PLAYS UNTIL IT PASSES', 'INSPECTION. SIZE, WEIGHT, WIRING.'],
+      ['125 POUNDS, NOT COUNTING BUMPERS OR', 'BATTERY. OURS WEIGHED 124.6. CLOSE!'],
+      ['BUMPERS MATCH YOUR ALLIANCE, RED OR', 'BLUE, YOUR NUMBER ON EVERY SIDE.'],
+      ['OURS FLIP INSIDE OUT, RED TO BLUE.', 'THE QUEUE WAITS FOR NOBODY.'],
+    ],
+  },
+  {
+    // Johnson's: a mentor, her team's pick list on a clipboard.
+    name: 'MS. HOLM, MENTOR FROM MINNEAPOLIS', ...seated(5, 'milo'),
+    look: look('w-holm', { ...skinBody('fair'), shirt: SHIRT.purple, print: C.white }, 'curls', { ...SKIN.fair, ...HAIR.grey }),
+    badge: CLIPBOARD,
+    lines: [
+      ['AFTER THE LAST QUALIFIER, THE TOP', 'EIGHT CAPTAINS PICK THEIR ALLIANCES.'],
+      ['A LIVE DRAFT. ROUND ONE GOES 1 TO 8,', 'ROUND TWO COMES BACK, 8 TO 1.'],
+      ['HERE THERE IS A THIRD ROUND. SO THIS', 'PICK LIST GOES DEEP. ASK ME HOW DEEP.'],
     ],
   },
   {
@@ -463,9 +509,11 @@ const AISLES = [
   // Milstein and Newton, a little lower than the others, clear of Milstein's scorekeeper, and far enough left of Bea
   // that there's room to stand between them and talk to her.
   [ox(7) - 48, 98, 1, T('pink', 5)], [ox(7) - 26, 97, 7, M(1)],
-  // Past Newton's red end: two beyond its scoring table, low enough that their heads are under Newton's big screen, and
-  // someone at the info desk (in a dark hoodie, not the orange of the volunteers).
-  [ox(7) + 744, 100, 1, M(10)], [ox(7) + 766, 101, 7, T('lime', 3)], [INFO_DESK.x0 - 10, INFO_DESK.back + 4, 2, M(13)],
+  // Past Newton's red end, on the way out: two beyond its scoring table and reset cart, and someone at the info desk's
+  // front left (in a dark hoodie, not the orange of the volunteers). All three, like the desk, stand low on the floor,
+  // their heads under the feet of anyone walking along the top of the aisle under the barrier, so on the last stretch
+  // to the doorway she never runs behind a head.
+  [ox(7) + 742, 122, 1, M(10)], [ox(7) + 764, 123, 7, T('lime', 3)], [INFO_DESK.x0 - 10, INFO_DESK.back + 4, 2, M(13)],
 ].map(([x, y, dir, lk, table]) => ({ x, y, dir, look: lk, table }));
 
 /** Everyone standing, by division (divisionAt their x): crews, people about, and the people to talk to. */
@@ -482,14 +530,15 @@ const STANDING = DIVISIONS.map((_, k) => [
  * few pixels between them (the cut scene's two-shot keeps 22), and one behind the other, the two heads (16 pixels
  * each) are one above the other, never one over the other's face. The teammate too: standing at the foot of the
  * curtain, left of the walkway, the teammate leaves the walkway's mouth and the way down to the aisle open.
- * Whoever works a table (the scorekeepers, the button traders, the info desk) has the table in front of them already,
- * and behind them only ten rows: then the floor between the hem's barrier and them is as wide as the floor between the
+ * Whoever works a table (the scorekeepers, the button traders, the info desk) has the table in front of them already
+ * (the info desk's volunteer stands so close behind it that her footprint stops at it: depth, rows in front of her
+ * feet), and behind them only ten rows: then the floor between the hem's barrier and them is as wide as the floor between the
  * barrier and every queue (scene.js QUEUES), the way along the aisle, and her head behind theirs is still above it.
  * Walking straight into someone she slides round them (fields.js move()) up to 14 rows, half their footprint's depth:
  * from beside the teammate, left into them, that takes her down past the teammate's feet into the aisle.
  */
 export const BLOCKS = [...STANDING.flat().filter((p) => !p.driver), MATE_PERSON]
-  .map(({ x, y, table, across }) => ({ x0: x - 15, x1: x + 15, y0: y - (table || across ? 10 : 14), y1: y + 14, slide: 14 }));
+  .map(({ x, y, table, across, depth }) => ({ x0: x - 15, x1: x + 15, y0: y - (table || across ? 10 : 14), y1: y + (depth ?? 14), slide: 14 }));
 
 /**
  * Everyone standing in division k near the view, each { x, y, draw() } to sort in with its field (drawFieldLive calls
@@ -513,8 +562,9 @@ export function standingIn(g, view, k, t, o = {}) {
 /**
  * The closest person in reach: standing, 24 across and 10 deep from her feet, so shoulder to shoulder beside them,
  * where their footprint (BLOCKS) stops her, and never straight behind or in front of them, where one would hide the
- * other; seated, beside their seat while she's on the walkway, 12 to 23 across (best 17, a head's width), never right
- * in front of it, where her head would hide theirs. Someone working a table (across) is talked to across it: from in
+ * other; seated, beside their seat while she's on the walkway, 12 to 39 across (best 17, a head's width), never right
+ * in front of it, where her head would hide theirs: wide enough that running by, the bubble stays up on each side long
+ * enough to notice. Someone working a table (across) is talked to across it: from in
  * front only, up to 18 rows, where the table stops her. Someone standing just above a way she walks along (below: the
  * teammate over Newton's aisle, the greeter over the walk-in) is in reach from that far in front of them too, so their
  * bubble comes up as she goes by under them: her head stays below theirs, over their legs at most.
@@ -524,7 +574,7 @@ export function reach(s) {
   for (const p of PEOPLE) {
     const dx = Math.abs(p.x - s.me.x), dy = s.me.y - p.y; // dy: how far in front of them she is (behind: under 0)
     const rows = p.across ? dy >= 0 && dy < 18 : dy > -10 && dy < (p.below ?? 10);
-    const d = p.seat ? (dx >= 12 && dx < 24 && s.me.y <= 64 ? Math.abs(dx - 17) : Infinity)
+    const d = p.seat ? (dx >= 12 && dx < 40 && s.me.y <= 64 ? Math.abs(dx - 17) : Infinity)
       : dx < 24 && rows ? dx + Math.abs(dy) : Infinity;
     if (d < bestD) [best, bestD] = [p, d];
   }

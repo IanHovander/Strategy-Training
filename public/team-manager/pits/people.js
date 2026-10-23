@@ -218,9 +218,11 @@ const RUN_OUT = [RUN_CART, [249, 97], [234, 97], RUN_BOT], RUN_BACK = [RUN_BOT, 
  * The runner's corner of the pit, between the battery cart and the robot, as a rectangle round the feet: scene.js keeps
  * the strategist out of it, so the runner never has to squeeze past her, and she can't stand close enough in front of
  * the runner's way for the two of them to run into one figure. It stops at the pit's front edge (move()'s margin
- * included), so the aisle is open from its back row, as it is everywhere else along the row.
+ * included), so the aisle is open from its back row, as it is everywhere else along the row. Nothing in the picture
+ * shows it, so walking along into it in front of the robot she's taken round it (set.js move()'s round), down into the
+ * aisle and on, rather than stopped dead.
  */
-export const RUN_LANE = { x0: 222, x1: 252, y0: 80, y1: 98 };
+export const RUN_LANE = { x0: 222, x1: 252, y0: 80, y1: 98, round: 9 };
 const CARRY = 22; // pixels a second with a battery in both hands
 function runner(t) {
   const out = along(RUN_OUT, 1e6, 'carry', CARRY).dist / CARRY, back = along(RUN_BACK, 1e6).dist / SPEED.walk;
@@ -281,11 +283,14 @@ export const NADIA_ID = 'nadia';
  * so the two heads don't meet; 20 beside a kneeler, whose head is down level with hers), on this side first (-1 left,
  * 1 right; the side they face if not given; the safety advisor comes over to her side instead, scene.js). Beside
  * an away board, the side away from it (out in the aisle if a divider's in the way); Ms. Kowalski has the divider on
- * one side and the board on the other, so she gets the board's corner. Behind the desk she stands at its plain end.
+ * one side and the board on the other, so she gets the board's corner. Oscar's side is the desk's: past the side drape
+ * and on up in front of the desk to his depth (asideY), clear of the QUEUE sign's panel, which would hide her from the
+ * knees down out in the aisle there. Behind the desk she stands at its plain end.
  * reachY: how far in depth she can talk from (12, or more for someone set back: Bea and Tomas behind the counter and
  * the desk, and Ms. Kowalski, so that anywhere she can stand in front of her offers the talk). reach: how far across
  * (scene.js: 17 for anyone standing still, whom she stops 14 short of, or 14). The teammate reaches a little further
- * both ways, to the spot at the front of the pit where the two of them talk in the cut scene; and the
+ * both ways, to the spot at the front of the pit where the two of them talk in the cut scene; Oscar as far as the spot
+ * beside him in front of the desk, so he can be talked to again from there, or from coming round the drape; and the
  * safety advisor 21 deep, more than she steps round the strategist by (scene.js ROUND: 13 coming toward her, 20 when
  * one overtakes the other), so she can be talked to as she goes by, not only while she stands at the ends of her
  * patrol; out in the open aisle there's nobody else that deep for it to reach past.
@@ -299,7 +304,7 @@ export const PEOPLE = [
   { id: 'okafor', name: 'MS. OKAFOR, JUDGE', x: 508, y: 97, dir: 2, gait: 'stand', look: LOOKS.okafor, reachY: 12, solid: true },
   { id: 'teammate', name: TEAMMATE_NAME, x: 588, y: 92, dir: 0, gait: 'stand', look: LOOKS.teammate, reach: 18, reachY: 17, side: -1, solid: true },
   { id: 'kowalski', name: 'MS. KOWALSKI, 5026 MENTOR', x: 648, y: 88, dir: 7, gait: 'stand', look: LOOKS.kowalski, reachY: 13, side: -1, solid: true },
-  { id: 'oscar', name: 'OSCAR, 1357', x: 722, y: 92, dir: 7, gait: 'stand', look: LOOKS.oscar, reachY: 12, side: 1, solid: true },
+  { id: 'oscar', name: 'OSCAR, 1357', x: 722, y: 92, dir: 7, gait: 'stand', look: LOOKS.oscar, reach: 27, reachY: 12, side: 1, aside: 26, asideY: 92, solid: true },
   { id: 'tomas', name: 'TOMAS, PIT ADMIN', x: 776, y: 77, dir: 0, gait: 'sit', faceGait: 'sit', look: LOOKS.tomas, reachY: 14, aside: 16, side: -1, solid: true },
   { id: NADIA_ID, name: 'NADIA, SAFETY ADVISOR', x: 104, y: 108, dir: 0, gait: 'stand', look: LOOKS.nadia, reachY: 21, solid: false, at: patrol },
 ];

@@ -20,10 +20,11 @@
 // round the safety advisor too, a step deeper or shallower than her. Only if she's right in front of them before
 // they've stepped aside do they stop for a moment. And nobody walks across a conversation: while she talks to someone,
 // a passer-by heading their way, or the safety advisor on her patrol, stops well short of the two of them (TALK_GAP)
-// and waits till they're done, so the faces over the dialog box stay clear; a passer-by waits where they're not in
-// front of anyone standing in the pits (a few steps further off if need be), so the pits don't look stacked, one head
-// over another's body. 1024's battery runner has a corner of the pit she can't walk into (people.js's RUN_LANE), and
-// would wait for her if she ever got in the way.
+// and waits till they're done, so the faces over the dialog box stay clear. They wait where they're not in front of
+// anyone standing in the pits (nor a passer-by in front of the safety advisor waiting too): a few steps further off if
+// need be, or on a few steps if the talk began as they came by, or where they're furthest from everyone, so the pits
+// don't look stacked, one head over another's body. 1024's battery runner has a corner of the pit she can't walk into
+// (people.js's RUN_LANE), and would wait for her if she ever got in the way.
 //
 // No running in the pits. It's a real rule at every event (batteries, tools and robots on carts in a crowded aisle), so
 // it's this scene's: run for half a second and the safety advisor calls out straight away, from wherever she is (off
@@ -75,10 +76,11 @@ const WAIT = { x: 16, y: 10 }, WAIT_PASSER = { x: 22, y: 10 };
  * TALK_GAP[2] pixels behind either of the two, or up to TALK_GAP[3] in front: enough to take in both of the passers'
  * lanes (y 114 and 118) from a talk set back in a pit (Bea at y 74 is the deepest; the strategist stands a step in front).
  * The safety advisor on her patrol waits a head's width further off across (TALK_GAP_PATROL), so that she and a
- * passer-by waiting too stand side by side, not one head over the other. A passer-by doesn't wait within CREW_CLEAR
- * across of anyone standing in the pits behind them, but up to TALK_GAP_MORE further off, where nobody is.
+ * passer-by waiting too stand side by side, not one head over the other. Neither waits within CREW_CLEAR across of
+ * anyone standing in the pits behind them (a passer-by, of the safety advisor either, if she's waiting), but up to
+ * TALK_GAP_MORE further off, where nobody is, or if nowhere's clear, where they're furthest from anyone.
  */
-const TALK_GAP = [20, 40, 24, 46], TALK_GAP_PATROL = [36, 56], CREW_CLEAR = 13, TALK_GAP_MORE = 40;
+const TALK_GAP = [20, 40, 24, 46], TALK_GAP_PATROL = [36, 56, 24, 46], CREW_CLEAR = 13, TALK_GAP_MORE = 40;
 /**
  * How the aisle's walkers get round someone: they start stepping aside this far ahead of them (pixels across), pass
  * this far in front or behind (pixels deep), and step aside this fast (pixels deep a second), keeping to the aisle.
@@ -112,8 +114,8 @@ const WORD = [24, 32], WORD_Y = [104, 110], CLEAR = 14, NEAR_CLEAR = 10;
  */
 const BODY = 8;
 /**
- * Stepping out from behind the sign for a word, the strategist goes up to SIGN_STEP pixels further along to stand
- * SIGN_CREW across (a head's width) from anyone standing in the pits behind her.
+ * Stopping for a word, the strategist goes up to SIGN_STEP pixels further along to stand SIGN_CREW across (a head's
+ * width) from anyone standing in the pits behind her, and out from behind the sign.
  */
 const SIGN_STEP = 20, SIGN_CREW = 16;
 const behindSign = (x, y) => x > QUEUE.x0 - BODY && x < QUEUE.x1 + BODY && y >= QUEUE.top && y < QUEUE.y;
@@ -179,18 +181,30 @@ const overtaking = (p, me) => {
 };
 /**
  * Whether someone at p, walking, is coming up on a conversation's speaker at o and should wait: [near, far] pixels
- * across short of them (TALK_GAP's, unless given), and within TALK_GAP's depth. crew: people standing in the pits; if
- * stopping `far` short would leave p in front of one of them (within CREW_CLEAR across, and behind p), p stops at the
- * first spot further off that's clear, up to TALK_GAP_MORE further.
+ * across short of them, from up to `behind` pixels behind them to `front` in front (TALK_GAP, unless given). crew:
+ * people standing in the pits (and the safety advisor, if she's waiting); if stopping `far` short would leave p in
+ * front of one of them (within CREW_CLEAR across, and behind p), p stops at the first spot further off that's clear, up
+ * to TALK_GAP_MORE further, or if none is, the one furthest from any of them. Already closer than that (the talk began
+ * as they came by), they stop where they are if it's clear, or else walk on to the next spot that is (short of `near`),
+ * or the one furthest from anyone.
  */
-const nearTalk = (p, o, [near, far] = TALK_GAP, crew = []) => {
+const nearTalk = (p, o, [near, far, behind, front] = TALK_GAP, crew = []) => {
   const go = across(p.dir), d = (o.x - p.x) * go;
   const dy = p.y - o.y;
-  if (go === 0 || d < near || dy <= -TALK_GAP[2] || dy >= TALK_GAP[3]) return false;
-  const clear = (k) => crew.every((c) => c.y >= p.y || Math.abs(c.x - (o.x - go * k)) >= CREW_CLEAR);
-  let stop = far;
-  while (stop < far + TALK_GAP_MORE && !(clear(stop) && clear(stop - 1))) stop += 1;
-  return d < (stop < far + TALK_GAP_MORE ? stop : far);
+  if (go === 0 || d < near || dy <= -behind || dy >= front) return false;
+  const back = crew.filter((c) => c.y < p.y);
+  const room = (k) => Math.min(Infinity, ...back.map((c) => Math.abs(c.x - (o.x - go * k))));
+  const clear = (k) => room(k) >= CREW_CLEAR && room(k - 1) >= CREW_CLEAR;
+  let stop = far, best = far;
+  for (; stop < far + TALK_GAP_MORE && !clear(stop); stop++) if (room(stop) > room(best)) best = stop;
+  if (stop >= far + TALK_GAP_MORE) stop = best;
+  if (d >= stop) return false;
+  best = Math.floor(d);
+  for (let k = Math.floor(d); k >= near; k--) {
+    if (clear(k)) return d < k + 1;
+    if (room(k) > room(best)) best = k;
+  }
+  return d < best + 1;
 };
 
 /**
@@ -241,9 +255,11 @@ function slide(x, y, tx, ty) {
  * Starting to talk to p: if she's standing in front of them (within IN_FRONT across), she'd hide them, so she walks
  * back a little and to their side (p.side, or the side they face, first), down or up first and then across, and the words wait till she's there.
  * If a side drape's in the way she goes round its front, out in the aisle. p.aside: how far to the side, 16 pixels
- * unless given (a head's width, so the heads don't meet). The safety advisor, out in the aisle wherever her patrol
- * has taken her (perhaps a step in front of the strategist, stepping round her), comes over to her side instead, the
- * way she does when she has a word about running, so both faces clear the dialog box.
+ * unless given (a head's width, so the heads don't meet); p.asideY: then up or down to there, to stand at their side
+ * rather than out in the aisle (Oscar's other side is behind the QUEUE sign's panel; up in front of the desk she's
+ * clear of it). The safety advisor, out in the aisle wherever her patrol has taken her (perhaps a step in front of the
+ * strategist, stepping round her), comes over to her side instead, the way she does when she has a word about running,
+ * so both faces clear the dialog box.
  */
 function stepAside(s, p) {
   const me = s.me;
@@ -252,15 +268,20 @@ function stepAside(s, p) {
     wordAsked = s.talk;
     return;
   }
-  if (Math.abs(me.x - p.x) >= IN_FRONT || me.y <= p.y) return;
+  // Beside them, she talks from where she is; unless that's behind the QUEUE sign, where its panel would hide her
+  // shoes, and they have a spot beside them clear of it (p.asideY): then she goes there.
+  const hidden = p.asideY != null && behindSign(me.x, me.y);
+  if (!hidden && (Math.abs(me.x - p.x) >= IN_FRONT || me.y <= p.y)) return;
   const aside = p.aside ?? 16;
   const faces = p.side ?? ([1, 2, 3].includes(p.dir) ? 1 : [5, 6, 7].includes(p.dir) ? -1 : Math.sign(me.x - p.x) || 1);
   const near = Math.max(me.y, p.y + FRONT);
   for (const side of [faces, -faces]) {
     for (const ty of [near, Math.max(near, AISLE_Y)]) {
       const to = p.x + side * aside, [x, y] = slide(me.x, me.y, to, ty);
+      // and on up or down to p.asideY, on that side, if the way's clear
+      const up = side === (p.side ?? side) && p.asideY != null && slide(to, ty, to, p.asideY)[1] === p.asideY ? [[to, p.asideY]] : [];
       if (Math.abs(to - x) <= 0.01 && Math.abs(ty - y) <= 0.01) {
-        const path = [[me.x, me.y], [me.x, ty], [to, ty]], t0 = s.talk.start;
+        const path = [[me.x, me.y], [me.x, ty], [to, ty], ...up], t0 = s.talk.start;
         herWalk = { path, t0, end: t0 + along(path, 1e6).dist / SPEED.walk, dist0: me.dist, face: () => p, talk: s.talk };
         s.talk.start = herWalk.end;
         return;
@@ -396,8 +417,10 @@ export const scene = {
     const hard = (id) => (passer(id) && lastNadia?.still ? [me, lastNadia] : [me]);
     // The two in a conversation, if one's going on: her and whoever she's talking to (the safety advisor where she is).
     const talkers = s.talk ? [me, ...(s.talk.person ? [talkingTo(NADIA_ID) && lastNadia ? lastNadia : s.talk.person] : [])] : [];
-    // A passer-by waits for a conversation clear of the people standing in the pits behind them (nearTalk's crew).
-    const crewStill = Object.values(at0).filter((p) => p.solid);
+    // Anyone waiting for a conversation waits clear of the people standing in the pits behind them, and a passer-by
+    // clear of the safety advisor too, if she's standing still (nearTalk's crew).
+    const crewSolid = Object.values(at0).filter((p) => p.solid);
+    const crewStill = [...crewSolid, ...(lastNadia?.still ? [lastNadia] : [])];
     const waiting = new Set();
     for (const id of MOVERS) {
       const p = at0[id], q = { ...p, y: p.y + offOf(id) };
@@ -407,7 +430,7 @@ export const scene = {
         waiting.add(id);
       } else if (['walk', 'carry'].includes(p.gait)
         && (hard(id).some((o) => blocks(q, o, passer(id) ? WAIT_PASSER : WAIT))
-          || (AISLE.includes(id) && talkers.some((o) => nearTalk(q, o, id === NADIA_ID ? TALK_GAP_PATROL : TALK_GAP, passer(id) ? crewStill : []))))) {
+          || (AISLE.includes(id) && talkers.some((o) => nearTalk(q, o, id === NADIA_ID ? TALK_GAP_PATROL : TALK_GAP, passer(id) ? crewStill : crewSolid))))) {
         held[id] += dt;
         waiting.add(id);
       } else if (passer(id) && p.gait === 'walk' && !leaving && overtaking(q, me)) held[id] += dt * (1 - ROUND.slow);
@@ -434,15 +457,17 @@ export const scene = {
       const mid = view.x + 128, off = Math.abs(pn.x - mid) > 120;
       const side = Math.sign(pn.x - (off ? mid : me.x)) || 1;
       const [ux, uy] = me.y > WORD_Y[1] ? slide(me.x, me.y, me.x, WORD_Y[1]) : [me.x, me.y];
-      // Not behind the QUEUE sign, where its panel would cover her: out to the nearer side of it that's open, and a
-      // head's width clear of anyone standing in the pits behind (Oscar's beside it on one side, Tomas on the other),
-      // so she isn't stood in front of them either; if there's nowhere like that, the nearest spot clear of the sign.
+      // Not in front of anyone standing in the pits, her head over their body: a head's width clear of them, a few
+      // steps along whichever way is nearer. Nor behind the QUEUE sign, where its panel would cover her: out to the
+      // nearer side of it that's open (Oscar's beside it on one side, Tomas on the other), clear of them too; if
+      // there's nowhere like that, the nearest spot clear of the sign.
       let [hx, hy] = [ux, uy];
-      if (behindSign(ux, uy)) {
-        const spots = Array.from({ length: SIGN_STEP + 1 }, (_, k) => [QUEUE.x0 - BODY - k, QUEUE.x1 + BODY + k]).flat()
-          .sort((a, b) => Math.abs(a - ux) - Math.abs(b - ux));
-        const clearOf = (x) => crew.every((p) => !p.solid || p.y >= uy || Math.abs(p.x - x) >= SIGN_CREW);
-        for (const tx of [...spots.filter(clearOf), ...spots]) {
+      const clearOf = (x) => crew.every((p) => !p.solid || p.y >= uy || Math.abs(p.x - x) >= SIGN_CREW);
+      if (behindSign(ux, uy) || !clearOf(ux)) {
+        const near = (list) => list.sort((a, b) => Math.abs(a - ux) - Math.abs(b - ux));
+        const spots = behindSign(ux, uy) ? near(Array.from({ length: SIGN_STEP + 1 }, (_, k) => [QUEUE.x0 - BODY - k, QUEUE.x1 + BODY + k]).flat())
+          : near(Array.from({ length: 2 * SIGN_STEP }, (_, k) => ux + (k % 2 ? 1 : -1) * Math.ceil((k + 1) / 2))).filter((x) => !behindSign(x, uy));
+        for (const tx of [...spots.filter(clearOf), ...(behindSign(ux, uy) ? spots : [])]) {
           const [x, y] = slide(ux, uy, tx, uy);
           if (Math.abs(x - tx) <= 0.01) {
             [hx, hy] = [x, y];

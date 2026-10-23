@@ -13,7 +13,7 @@
 import { W, clamp } from '../pixel.js';
 import { FIELD, STATION, makeFloor, drawFieldLive, WALK_Y, OPEN_Y, EDGE, blocked } from '../field.js';
 import { TIERS, drawStands, drawWalkway } from '../bleachers.js';
-import { PITCH, PAD_L, PAD_R, WALL, DIVISIONS, WORLD, ox, divisionAt, STANDS, matchState, PLAY, PASSAGE, EXIT, EXIT_SIGN } from './layout.js';
+import { PITCH, PAD_L, PAD_R, WALL, DIVISIONS, WORLD, ox, divisionAt, STANDS, matchState, PLAY, PASSAGE, EXIT, EXIT_SIGN, IN_SIGN } from './layout.js';
 
 const LAST = DIVISIONS.length - 1;
 /** Things standing near a division's edges (the queue sign, a cart, someone in the aisle) still get drawn this far out. */
@@ -163,9 +163,16 @@ const CORNER = 16;
  */
 const STEER = WORLD.w - WALL - 70, DOOR_SLIDE = 16, MID = Math.round((PASSAGE.y0 + PASSAGE.y1) / 2);
 const UNDER_SIGN = EXIT_SIGN.x0 - 11; // her hair two pixels clear of its edge
-/** The doorways' walls, which she gets past only in the passage's rows: past the right one's face on the way out, and
- *  into the left one's threshold, as far as its door frame, where she came in. */
-const FACE_R = WORLD.w - WALL - 17, FACE_L = WALL + 17, FRAME_L = WALL + 9;
+/**
+ * The same over the left doorway, under the IN sign: closer to the wall than UNDER_IN, her feet keep to IN_ROW or below,
+ * where her hair is two rows under the sign.
+ */
+const UNDER_IN = IN_SIGN.x0 + IN_SIGN.w + 10, IN_ROW = IN_SIGN.y0 + IN_SIGN.h + 1 + 47;
+/**
+ * The walls' faces: she gets past the right one's only in the passage's rows, on the way out. The left doorway is the way
+ * in, not out, so there she stops at the wall's face in every row, at the edge of the hall, not partway into the doorway.
+ */
+const FACE_R = WORLD.w - WALL - 17, FACE_L = WALL + 17;
 /** The rows from y up to the walkway's front row. */
 const rowsUp = (y) => Array.from({ length: Math.ceil(y - WALK_Y[1]) + 1 }, (_, i) => Math.max(WALK_Y[1], y - i));
 /**
@@ -194,9 +201,8 @@ function slideRow(x, nx, y, blocks) {
  */
 export function move(x, y, dx, dy, blocks = []) {
   // Her run reaches sixteen pixels ahead of her feet (the leading leg in its longest stride): far enough from either end
-  // wall that it never crosses the wall's edge. Only in the doorways does she go further, in the passage's rows: on the
-  // left as far as the door frame she came in by, on the right on past the wall's face as far as the way out (layout.js
-  // EXIT), and past either wall's face she keeps to those rows. Walking straight right toward the right doorway (from
+  // wall that it never crosses the wall's edge. Only through the right doorway does she go further, in the passage's
+  // rows, on past the wall's face as far as the way out (layout.js EXIT), and past the face she keeps to those rows. Walking straight right toward the right doorway (from
   // STEER, no more than DOOR_SLIDE rows from its passage), she bears toward its middle row at her own pace, as she slides
   // round anything else in her way: so holding right from the start walks her the length of the hall and out through
   // the middle of the doorway.
@@ -206,9 +212,11 @@ export function move(x, y, dx, dy, blocks = []) {
     if (!hits(Math.min(x + dx, FACE_R), ny, blocks)) y = ny;
   }
   const inDoor = y >= PASSAGE.y0 && y <= PASSAGE.y1;
-  let nx = clamp(x + dx, inDoor ? FRAME_L : FACE_L, inDoor ? EXIT.x : FACE_R);
-  // Above the right doorway, no further than where her head would come under the EXIT sign.
+  let nx = clamp(x + dx, FACE_L, inDoor ? EXIT.x : FACE_R);
+  // Above the right doorway, no further than where her head would come under the EXIT sign; by the left one, above IN_ROW,
+  // no nearer the wall than where her head would come under the IN sign.
   if (y < PASSAGE.y0) nx = Math.min(nx, Math.max(x, UNDER_SIGN));
+  if (y < IN_ROW) nx = Math.max(nx, Math.min(x, UNDER_IN));
   // Off the open floor into a field's driver stations: back to the edge she came from. Walking straight along the
   // aisle just below a walkway (no more than CORNER rows below it), she steps up round the station's corner onto the
   // walkway instead, at her own pace, as she slides round anything else, if nothing's in the way.
@@ -226,8 +234,8 @@ export function move(x, y, dx, dy, blocks = []) {
       if (hits(nx, y, blocks)) nx = x;
     } else nx = x;
   }
-  const [lo, hi] = nx > FACE_R || nx < FACE_L ? [PASSAGE.y0, PASSAGE.y1] : band(nx);
-  let ny = clamp(y + dy, nx > UNDER_SIGN ? Math.max(lo, PASSAGE.y0) : lo, hi);
+  const [lo, hi] = nx > FACE_R ? [PASSAGE.y0, PASSAGE.y1] : band(nx);
+  let ny = clamp(y + dy, nx > UNDER_SIGN ? Math.max(lo, PASSAGE.y0) : nx < UNDER_IN ? Math.max(lo, IN_ROW) : lo, hi);
   if (hits(nx, ny, blocks)) ny = y;
   return [nx, ny];
 }

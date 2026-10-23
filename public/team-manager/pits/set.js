@@ -852,15 +852,17 @@ const BLOCKS = [
 const hits = (bs, x, y) => bs.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
 
 /**
- * How far round the end of something she's taken rather than stopped dead (rows of depth going along, pixels going up
- * or down; see move()), and how much further a step goes across than down the screen (stage.js: the floor recedes).
+ * How far round the end of something she's taken rather than stopped dead (see move()): rows of depth going along
+ * (floor: round the front of a side drape, from anywhere in front of the cart or board beside it), pixels going up or
+ * down. And how much further a step goes across than down the screen (stage.js: the floor recedes).
  */
-const ROUND = { y: 5, x: 5 }, DEPTH = 0.8;
+const ROUND = { y: 5, floor: 8, x: 5 }, DEPTH = 0.8;
 
 /**
  * Where a step from (x, y) by (dx, dy) ends up, as [x, y]: along, then across, each as far as the floor allows (like
- * field.js move). extra: more rectangles { x0, x1, y0, y1 } that block, such as people standing still. o.round: false
- * for a plain step that never goes round anything (scene.js tries straight paths with it).
+ * field.js move). extra: more rectangles { x0, x1, y0, y1, round } that block, such as people standing still (round:
+ * how far round it she's taken, if further than ROUND, for a rectangle nothing in the picture shows). o.round: false for
+ * a plain step that never goes round anything (scene.js tries straight paths with it).
  */
 export function move(x, y, dx, dy, extra = [], { round = true } = {}) {
   // Somewhere she shouldn't be (someone stepped into her): let her walk out.
@@ -884,7 +886,7 @@ export function move(x, y, dx, dy, extra = [], { round = true } = {}) {
   const veer = round && dx !== 0 && Math.abs(dy) < 0.01 && ahead > -1 && ahead < VEER && hits([POST], POST.x0, y);
   const post = round && dx !== 0 && dy > -0.01 && Math.abs(nx - x) < Math.abs(dx) && hits([POST], x + dx, y);
   const [, ny] = reach(nx, y, 0, corner ? Math.max(dy, dx * 0.8) : post ? Math.max(dy, Math.abs(dx) * 0.8) : veer ? Math.abs(dx) * 0.5 : dy);
-  if (round && nx === x && ny === y) return roundEnd(ok, x, y, dx, dy) ?? [x, y];
+  if (round && nx === x && ny === y) return roundEnd(ok, x, y, dx, dy, extra) ?? [x, y];
   return [nx, ny];
 }
 
@@ -892,15 +894,17 @@ export function move(x, y, dx, dy, extra = [], { round = true } = {}) {
  * Stopped dead walking straight along (or straight up or down) at the end of something, a side drape's front, a cart's
  * corner, someone's shoulder, the post, with floor a few steps to one side that would let her carry on: she steps round
  * that way instead of treading on the spot, as far as a step goes (so it reads as stepping round, not being pulled).
- * Within ROUND.y rows going along, ROUND.x pixels going up or down, the nearer side first (on a tie, toward the aisle or
- * toward the way out); the floor between has to be clear. Square against anything wider, she stops.
+ * Within ROUND.y rows going along (ROUND.floor where the floor itself ends, at a side drape), ROUND.x pixels going up or
+ * down (or a rectangle's own round, further), the nearer side first (on a tie, toward the aisle or toward the way out);
+ * the floor between has to be clear. Square against anything wider, she stops.
  */
-function roundEnd(ok, x, y, dx, dy) {
+function roundEnd(ok, x, y, dx, dy, extra) {
   const along = Math.abs(dx) >= 0.01 && Math.abs(dy) < 0.01, upDown = Math.abs(dy) >= 0.01 && Math.abs(dx) < 0.01;
   if (!along && !upDown) return null;
-  const max = along ? ROUND.y : ROUND.x, shut = {};
+  const [sx, sy] = [x + dx * 0.25, y + dy * 0.25], shut = {};
+  const max = Math.max(along ? (open(sx, sy) ? ROUND.y : ROUND.floor) : ROUND.x, ...extra.filter((b) => b.round && hits([b], sx, sy)).map((b) => b.round));
   const at = (o) => (along ? [x, y + o] : [x + o, y]);
-  const on = (o) => (along ? ok(x + dx * 0.25, y + o) : ok(x + o, y + dy * 0.25));
+  const on = (o) => (along ? ok(sx, y + o) : ok(x + o, sy));
   for (let o = 0.5; o <= max; o += 0.5) {
     for (const side of [1, -1]) {
       if (shut[side] || (shut[side] = !ok(...at(side * o)))) continue;

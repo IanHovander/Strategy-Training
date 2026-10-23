@@ -147,36 +147,38 @@ function moveMc(t, s) {
  *   strip keeps its last rows clear of Robin's box: set.js moving()); and coming up through the gate past the lane in
  *   front of the line, she'd be stuck between the two captains either side of it.
  * - In the gate, between the strip and the floor in front, where its posts stop her: she goes on through, and along.
- * Either way she steps toward the nearer depth (in front or behind) from which the step gets on (roundSide), and only
- * when nothing but people or the gate's posts stop her: square against a wall she stays put.
+ * Either way she steps up or down the screen to where the step gets on (roundSide), and only when nothing but people
+ * or the gate's posts stop her: square against a wall she stays put.
  */
 function move(x, y, dx, dy) {
   const to = moveIn(x, y, dx, dy, CROWD, [mc]);
   if (!dx || to[0] !== x || to[1] !== y) return to;
   const inGate = x >= NEAR_GATE.x0 && x <= NEAR_GATE.x1 && y > BAND.y1 && y < FRONT_FLOOR;
   if (!inGate && moveIn(x, y, dx, dy)[0] === x) return to;
-  const side = roundSide(x, y, dx);
+  const side = roundSide(x, y, dx, inGate);
   return side ? moveIn(x, y, 0, side * Math.abs(dx) * DEPTH, CROWD, [mc]) : to;
 }
 /** Slipping round: no further than this, in front or behind. */
 const ROUND = 28;
 /**
- * Which way to slip round what stops a step along by dx: down the screen (1, in front, if it's as near) or up (-1),
- * whichever is the shorter walk, a pixel at a time over floor she can stand on, to where the step gets on; 0 if neither
- * is within ROUND. It depends only on where things stand, so it's the same from one frame to the next and she never
- * dithers between the two.
+ * Which way to slip round what stops a step along by dx: down the screen (1) or up (-1), walking a pixel at a time over
+ * floor she can stand on to where the step gets on, no further than ROUND; 0 if neither way gets there. Round someone,
+ * in front of them if she can (behind, she'd be lost behind them); in the gate, whichever end is nearer. It depends
+ * only on where things stand, so it's the same from one frame to the next and she never dithers between the two.
  */
-function roundSide(x, y, dx) {
-  const open = new Map([[1, true], [-1, true]]);
-  for (let k = 1; k <= ROUND; k++) {
-    for (const side of [1, -1]) {
-      if (!open.get(side)) continue;
+function roundSide(x, y, dx, nearest) {
+  const dist = (side) => {
+    for (let k = 1; k <= ROUND; k++) {
       const ny = y + side * k;
-      if (Math.abs(moveIn(x, ny - side, 0, side, CROWD, [mc])[1] - ny) > 1e-6) open.set(side, false);
-      else if (Math.abs(moveIn(x, ny, dx, 0, CROWD, [mc])[0] - x) > 1e-6) return side;
+      if (Math.abs(moveIn(x, ny - side, 0, side, CROWD, [mc])[1] - ny) > 1e-6) return Infinity;
+      if (Math.abs(moveIn(x, ny, dx, 0, CROWD, [mc])[0] - x) > 1e-6) return k;
     }
-  }
-  return 0;
+    return Infinity;
+  };
+  const down = dist(1);
+  if (down < Infinity && !nearest) return 1;
+  const up = dist(-1);
+  return Math.min(down, up) === Infinity ? 0 : down <= up ? 1 : -1;
 }
 
 /**

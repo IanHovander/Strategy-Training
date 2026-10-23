@@ -95,12 +95,16 @@ export const ENTER = [[-20, START.y]];
  */
 export const EXIT = { x: WORLD.w - WALL + 4, y0: PASSAGE.y0, y1: PASSAGE.y1, label: 'TO EINSTEIN', sign: { y: DOOR.y0 - 6 } };
 /**
- * The EXIT sign over the right doorway (hall.js draws it; the way in on the left has none), out from the wall's face on
- * a bracket: x0 to x0 + w, rows y0 to y0 + h. It hangs high enough that whoever stands in the passage, even on its
- * back row, has their head under it, and fields.js move() keeps her off the floor above the doorway from which her head
- * would be across it.
+ * The signs over the two doorways (hall.js draws them), each out from its wall's face on an arm, at x0 to x0 + w, rows
+ * y0 to y0 + h, its wall's steel door frame carried up the corner to the arm, so sign and doorway read as one. Over the
+ * right doorway a red EXIT, the way out; over the left a blue IN, the way she came in, which is not a way out. The EXIT
+ * sign hangs high enough that whoever stands in the passage, even on its back row, has their head under it. The IN sign
+ * is narrower (the left wall's doorway has Archimedes' second big screen just along from it) and hangs under that
+ * screen and its shadow, over the row she walks in along. fields.js move() keeps her off the floor beside either wall
+ * from which her head would be across its sign.
  */
 export const EXIT_SIGN = { x0: WORLD.w - WALL - 23, y0: 28, w: 19, h: 9 };
+export const IN_SIGN = { x0: WALL + 2, y0: 35, w: 13, h: 9 };
 /**
  * Belt barriers along the curtains' hems, their posts standing on floor line BARRIER_Y (hall.js draws them, and they
  * stop her): the floor at the foot of a curtain is kept clear, so nobody walks along under the signs and screens with
@@ -121,7 +125,9 @@ export const BARRIERS = [
  * front, far enough forward that whoever stands behind one leaves the floor in front of the hem's barrier open.
  */
 export const BUTTON_TABLE = { x0: ox(6) - 44, x1: ox(6) - 4, back: 95, front: 102 };
-export const INFO_DESK = { x0: ox(HOME) + PITCH + 38, x1: ox(HOME) + PITCH + 94, back: 90, front: 98 };
+// The info desk stands low on the right pad, so the head of whoever works it is under the feet of anyone walking along
+// the top of the aisle there, under the barrier, on the way out.
+export const INFO_DESK = { x0: ox(HOME) + PITCH + 38, x1: ox(HOME) + PITCH + 94, back: 125, front: 131 };
 
 // ---- The matches ----
 // Every division plays its own qualification matches, out of step with the others: two and a half minutes of play,
