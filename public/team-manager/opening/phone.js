@@ -17,8 +17,9 @@ import { HERO_LOOK } from '../walker.js';
 
 /** Who's texting: the senior strategist, out sick (a placeholder name). */
 export const SENDER = 'JULES';
-/** When things happen, seconds into the shot: the dots, the first message, the dots again, the second. */
-export const PHONE_TIMES = { dots: 0.2, first: 0.8, dots2: 0.95, second: 1.3 };
+/** When things happen, seconds into the shot: the dots, the first message, the dots again, the second; and how long the
+ * phone buzzes in her hand as each lands. */
+export const PHONE_TIMES = { dots: 0.2, first: 0.8, dots2: 0.95, second: 1.3, buzz: 0.25 };
 
 /** The phone: its outline's left, top and width; it runs on past the bottom of the picture. */
 const PH = { x: 66, y: 3, w: 124 };
@@ -88,7 +89,7 @@ export function drawPhone(t) {
   screen();
   fill(0, 0, W, H, C.ink);
   // A buzz as each message lands: a pixel either way for a quarter of a second.
-  const buzz = [PHONE_TIMES.first, PHONE_TIMES.second].some((at) => t >= at && t < at + 0.25);
+  const buzz = [PHONE_TIMES.first, PHONE_TIMES.second].some((at) => t >= at && t < at + PHONE_TIMES.buzz);
   const dx = buzz ? (Math.floor(t * 40) % 2 ? 1 : -1) : 0;
   // A faint glow of the stands round the edges, out of focus behind the phone.
   for (let i = 0; i < 14; i++) {

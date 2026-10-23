@@ -35,6 +35,7 @@
 //   status(s)             the phone's status line under her name, if not STANDING, WALKING N and so on
 //   act(s), actLabel(s)   A when nobody's in reach, for a scene where A does something else (the opening's pick: A
 //                         picks a card), and what the phone's A button says for it then
+//   clock(s)              the seconds left on a clock that's running, or null: not the stage's, but sound.js ticks it
 //   pointer(type, x, y, s)
 //                         a tap or a drag on the screen, for a scene with things on it to press or drag (the opening's
 //                         tablet, the van's seats): type 'down', then 'move' and 'up' if it took the 'down'; (x, y) in
@@ -60,7 +61,8 @@
 // finishes the typing, turns the page and, after the last page, moves on.
 // With auto the pages turn by themselves (A still hurries them). While a beat waits, t runs on past dur, so hold still
 // past it. A beat without words moves on after dur, or straight away on A (not before its hold, in seconds, if it has
-// one: something A mustn't skip). SKIP (or Esc) ends the cut scene.
+// one: something A mustn't skip); with wait: true it waits at its end for A instead, the dialog box's arrow blinking in
+// the corner (something to read that isn't words in the box: a text on her phone). SKIP (or Esc) ends the cut scene.
 // Draw with pixel.js: the context is set and the camera is at the screen for you. cover, bars, placeCard and along
 // (below) are here so every scene's cut scene shares one style.
 //
@@ -84,7 +86,7 @@
 
 import { W, H, C, useContext, screen, fill, text, measure, withAlpha, stepped, clamp, lerp, seg, easeOut, easeIn } from './pixel.js';
 import { DIRS, CELL_W, CELL_H, walkerFrame, drawWalker, HERO_LOOK } from './walker.js';
-import { conversation, drawBubble, drawDialog, advance, dialogText, typed, typedAt } from './talk.js';
+import { conversation, drawBubble, drawDialog, drawMore, advance, dialogText, typed, typedAt } from './talk.js';
 import { HERO_NAME } from './cast.js';
 
 /** Pixels a second at each gait, and pixels of travel per animation frame, so feet don't slide. */
@@ -388,13 +390,20 @@ export function runScene(scene, opts = {}) {
       const page = c.conv.pages[c.conv.page], chars = (Array.isArray(page) ? page : page.lines).join('').length;
       if (now > typedAt(c.conv) + 1.2 + chars * 0.035 && !advance(c.conv, now)) c.read = true;
     }
-    if (now - c.t0 >= b.dur && c.read) {
+    if (now - c.t0 >= b.dur && c.read && !b.wait) {
       startBeat(c.i + 1, now);
       if (s.mode !== 'cut') return false;
       c = s.cut;
     }
     const t = now - c.t0;
     drawBeat(beats[c.i], t, offsets[c.i] + t, c.read ? null : c.conv, now);
+    // A beat that waits for A, waiting.
+    if (beats[c.i].wait && t >= beats[c.i].dur && Math.floor(now * 2.5) % 2 === 0) {
+      useContext(g);
+      screen();
+      g.globalAlpha = 1;
+      drawMore(240, H - 8, C.white);
+    }
     return true;
   }
   /** ?at=SECONDS: that moment of the cut scene, held still. */

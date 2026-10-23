@@ -158,8 +158,15 @@ export const SFX = {
     bus: 'sfx',
     play: (c, t) => [[74, 0], [78, 0.18], [81, 0.36], [86, 0.54]].forEach(([m, d], i) => c.tone(t + d, i === 3 ? 1 : 0.17, hz(m), { wave: 'p25', vol: 0.04, decay: i === 3 })),
   },
-  /** A clock's second, and the last ten louder. o.hi for the last few. */
-  tick: { bus: 'sfx', play: (c, t, o) => c.tone(t, 0.03, o.hi ? 2350 : 1980, { wave: 'p50', vol: o.hi ? 0.04 : 0.025 }) },
+  /** A clock's second: o.soft for the long count down to the last ten, plain for those, o.hi for the last three. */
+  tick: {
+    bus: 'sfx',
+    play: (c, t, o) => {
+      const [f, v] = o.soft ? [1660, 0.03] : o.hi ? [2350, 0.07] : [1980, 0.05];
+      c.tone(t, 0.03, f, { wave: 'p50', vol: v });
+      c.noise(t, 0.015, { vol: v * 0.8, type: 'highpass', hz: 4000 });
+    },
+  },
   /** The clock hits zero: the intro's alarm, softer. */
   timeUp: { bus: 'sfx', play: (c, t) => [0, 0.2].forEach((d) => c.tone(t + d, 0.16, d ? 988 : 1319, { wave: 'p50', vol: 0.045 })) },
   /** The clock slamming onto the screen. */
@@ -168,21 +175,36 @@ export const SFX = {
     play: (c, t) => {
       c.tone(t, 0.16, 150, { wave: 'sine', slide: 40, vol: 0.32, decay: true });
       c.noise(t, 0.18, { vol: 0.12, type: 'lowpass', hz: 1500 });
+      // A thwack for a phone's speaker, which plays nothing as low as the thump.
+      c.tone(t, 0.12, 330, { wave: 'p50', slide: 110, vol: 0.12, decay: true });
     },
   },
-  /** A phone buzzing in her hand. */
+  /**
+   * A phone buzzing in her hand, o.dur long (as long as the picture shakes): a motor's rattle, a low pulse chopped about
+   * thirty times a second. Pitched where a phone's own speaker still plays it (an 82 Hz hum was lost on one).
+   */
   buzz: {
     bus: 'sfx',
-    play: (c, t) => [0, 0.13].forEach((d) => c.tone(t + d, 0.1, 82, { wave: 'p50', vol: 0.045 })),
+    play: (c, t, o) => {
+      const d = o.dur ?? 0.3;
+      for (let k = 0; k < d; k += 0.034) c.tone(t + k, 0.026, 175, { wave: 'p50', vol: 0.08 });
+      c.noise(t, d, { vol: 0.03, type: 'bandpass', hz: 350, q: 3 });
+    },
   },
-  /** A message bubble landing. */
-  msg: { bus: 'sfx', play: (c, t) => c.tone(t, 0.08, 1568, { wave: 'p25', slide: 2093, vol: 0.03, decay: true }) },
+  /** A text arriving: a phone's two-note ping, up a fourth, each note a bell's quick decay over a triangle for body. */
+  msg: {
+    bus: 'sfx',
+    play: (c, t) => [[88, 0], [93, 0.11]].forEach(([m, d]) => {
+      c.tone(t + d, 0.35, hz(m), { wave: 'p25', vol: 0.05, decay: true });
+      c.tone(t + d, 0.4, hz(m - 12), { wave: 'tri', vol: 0.08, decay: true });
+    }),
+  },
   /** Norbert's ear glints. */
   glint: {
     bus: 'sfx',
     play: (c, t) => {
-      c.tone(t, 0.25, 3136, { wave: 'p12', vol: 0.03, decay: true });
-      c.tone(t + 0.06, 0.35, 4186, { wave: 'p12', vol: 0.025, decay: true });
+      c.tone(t, 0.25, 3136, { wave: 'p12', vol: 0.05, decay: true });
+      c.tone(t + 0.06, 0.35, 4186, { wave: 'p12', vol: 0.04, decay: true });
     },
   },
   /** A spotlight coming on: a big switch's clunk, and the lamp's hum catching. */

@@ -1,5 +1,7 @@
 // The cold open of Blue Banner: the first minute of the game, cut shot by shot to the design's list (docs/blue-banner-
-// design.md, section 5, "Building the opening"), in under 22 seconds with the words turning by themselves. Saturday,
+// design.md, section 5, "Building the opening"). Until Robin calls her up it goes at the player's pace: the words, and
+// her phone once both texts are in, wait for A. From the call on it's in a hurry: the words turn by themselves, and the
+// 45-second clock is running from the moment Robin says it (pick.js). Saturday,
 // 12:38 PM, alliance selection, and 5026 is seed 4: an alliance captain, with a pick to make and nobody to make it.
 // It opens in the dark with the crowd's noise rising (a line of sound across the black that grows from a murmur to a
 // roar), then her phone, full screen, in her hand: the senior strategist's typing dots, and "SICK. CAN'T COME." and
@@ -12,9 +14,9 @@
 // A cutaway to the hands at twice the size (handoff.js): Norbert passed across from the co-captain's red sleeves to
 // her, his 26 ear glinting once. From then on he's in the top left corner with his voltage (norbert-held.js), and she
 // holds him. Close on her: "...OKAY." Meanwhile the first three alliances have picked: Robin calls "5026, COME ON UP!"
-// over the audience display (alliances 1 to 3 filled, row 4 lit, the clock at 0:45), and she sets off through the gate
-// to the field, Riley watching her go. A hard cut to the pick: the 45-second clock (pick.js) slams in, and the scene
-// hands over.
+// over the audience display (alliances 1 to 3 filled, row 4 lit, the clock starting from 0:45), and she sets off
+// through the gate to the field, Riley watching her go. A hard cut to the pick: the clock (pick.js), still running,
+// slams in, and the scene hands over.
 //
 // It's built like the intro and alliance selection's cut scene (stage.js): hard cuts between shots, whole-number 2x
 // close-ups for the people talking (a 1x view drawn into a 256x144 canvas of its own, a 128x72 window of it copied up
@@ -28,9 +30,9 @@
 // three alliances have picked, their first picks stand behind their captains and are gone from the crowd. While words
 // are up, the dialog box covers the bottom of the screen, so every shot with words keeps the faces in its top 88 rows.
 //
-//   makeCutscene()   the beats, in stage.js's form ({ dur, draw(g, t, c), say, hold }), with b.name, b.at (when each
-//                    starts, for ?at=), and beats.total and beats.autoTotal (the length with words read at the pace
-//                    stage.js turns them by itself)
+//   makeCutscene()   the beats, in stage.js's form ({ dur, draw(g, t, c), say, hold, wait }), with b.name, b.at (when
+//                    each starts, for ?at=), and beats.total and beats.autoTotal (the length with words read at the
+//                    pace stage.js turns them by itself)
 
 import { W, H, C, useContext, camera, screen, fill, text, measure, clamp, lerp, seg, easeOut, rnd } from '../pixel.js';
 import { bars, along, drawWithShadow } from '../stage.js';
@@ -45,9 +47,9 @@ import {
 } from '../alliance-selection/layout.js';
 import { COCAPTAIN_LOOK, COCAPTAIN_NAME } from './cocaptain.js';
 import { drawHeldNorbert, heldAt, heldShows, drawHud } from './norbert-held.js';
-import { drawPhone } from './phone.js';
+import { drawPhone, PHONE_TIMES } from './phone.js';
 import { drawHandoff, HANDOFF } from './handoff.js';
-import { drawPick, PICK_CLOCK } from './pick.js';
+import { drawPick, PICK_CLOCK, callClock } from './pick.js';
 
 // ---- Who's where ----
 /** The eight captains by seed, left to right along the line; 5026 is the fourth, its sign empty till she gets there. */
@@ -85,7 +87,8 @@ const crowdOf = (picked) => [
   { ...still(REF_AT.x, REF_AT.y, REF_AT.dir), look: lookOf('ref') },
 ].filter(Boolean);
 const CROWD = [crowdOf(false), crowdOf(true)];
-/** The audience display: the eight captains; then, as Robin calls her, alliances 1 to 3 picked, row 4 lit, 0:45. */
+/** The audience display: the eight captains; then, as Robin calls her, alliances 1 to 3 picked, row 4 lit, the clock
+ * (drawWorld's clock) running from 0:45. */
 const BOARD = { rows: SEEDS.map((num) => [num, '', '']), hot: null, clock: null, backups: null };
 const BOARD_CALL = {
   rows: SEEDS.map((num, i) => [num, PICKS[i] ?? '', '']), hot: OURS, clock: PICK_CLOCK, backups: null,
@@ -93,9 +96,10 @@ const BOARD_CALL = {
 
 /**
  * The arena for a frame: the set, everyone standing, Robin, Riley and her; whoever holds Norbert has him drawn on
- * them (holds: true), sorted in just in front of them, unless they've turned their back to you.
+ * them (holds: true), sorted in just in front of them, unless they've turned their back to you. clock: the seconds on
+ * the audience display once they've picked.
  */
-function drawWorld(g, view, t, { riley, her, mc, cheer, picked = false }) {
+function drawWorld(g, view, t, { riley, her, mc, cheer, picked = false, clock = PICK_CLOCK }) {
   const people = CROWD[picked ? 1 : 0].map((p) => ({ y: p.y, draw: () => drawWithShadow(g, view, p) }));
   for (const p of [{ ...riley, look: COCAPTAIN_LOOK }, { ...her, look: HERO_LOOK }]) {
     people.push({ y: p.y, draw: () => drawWithShadow(g, view, p) });
@@ -105,7 +109,7 @@ function drawWorld(g, view, t, { riley, her, mc, cheer, picked = false }) {
     }
   }
   people.push({ y: mc.y, draw: () => drawSkater(g, view, { ...mc, look: MC_LOOK }) });
-  drawSet(g, view, t, { people, cheer, board: picked ? BOARD_CALL : BOARD, exitSign: false });
+  drawSet(g, view, t, { people, cheer, board: picked ? { ...BOARD_CALL, clock } : BOARD, exitSign: false });
 }
 
 /** The spotlight on Riley and her on the floor: soft in the wide shot, full close on them. */
@@ -198,12 +202,13 @@ const UP = [[HER_AT.x, HER_AT.y], [GATE_OUT.x + 18, GATE_OUT.y + 4], [GATE_OUT.x
 
 // ---- The words ----
 // Short lines and real pauses (the design's pacing notes): one line a page where it can be, two lines of at most 38
-// characters where it can't (talk.js). Each page starts with its shot, so no time is spent waiting for words.
+// characters where it can't (talk.js). Each page starts with its shot, so no time is spent waiting for words. They wait
+// for A, so they can be read at leisure, until Robin's call, which turns by itself (auto).
 const pageChars = (page) => page.join('').length;
 /** How long stage.js takes over a page when the pages turn by themselves: typing at 40 a second, then a pause. */
 const pageTime = (page) => pageChars(page) / 40 + 1.2 + pageChars(page) * 0.035;
-const says = (name, look, lines, at = 0, extra = {}) => ({ name, look, lines, at, auto: true, ...extra });
-const robinSays = (lines, at) => says(MC_NAME, MC_LOOK, lines, at, { faceGait: 'emcee' });
+const says = (name, look, lines, at = 0, extra = {}) => ({ name, look, lines, at, ...extra });
+const robinSays = (lines, at, extra = {}) => says(MC_NAME, MC_LOOK, lines, at, { faceGait: 'emcee', ...extra });
 const rileySays = (lines, at) => says(COCAPTAIN_NAME, COCAPTAIN_LOOK, lines, at, { tag: C.red0 });
 const herSays = (lines, at) => says(HERO_NAME, HERO_LOOK, lines, at, { tag: C.red1 });
 
@@ -300,8 +305,9 @@ export function makeCutscene() {
   // 1. black: the crowd's noise rising in the dark.
   card('black', 0.7, (t) => drawNoise(t, 0.7));
 
-  // 2. phone: hers, full screen; the dots, then the two messages, each with a buzz (phone.js).
-  card('phone', 2.4, (t) => drawPhone(t));
+  // 2. phone: hers, full screen; the dots, then the two messages, each with a buzz (phone.js). A can't skip it till
+  // both have landed, and it waits for A, to be read at leisure.
+  card('phone', 2.4, (t) => drawPhone(t), { hold: PHONE_TIMES.second + 0.2, wait: true });
 
   // 3. card: ALLIANCE SELECTION, SATURDAY 12:38 PM, and Robin's welcome over the PA.
   card('card', 1.3, (t) => drawCard(t), { say: robinSays([['WELCOME TO ALLIANCE SELECTION!']], 0.1) });
@@ -362,10 +368,11 @@ export function makeCutscene() {
   });
 
   // 10. call: while Norbert changed hands, alliances 1 to 3 picked. Robin calls her up over the audience display (the
-  // first three filled, row 4 lit, the clock waiting at 0:45); she sets off at once, and the camera cuts to her walking
-  // up to the gate and through it toward sign 4, Robin at the mic beyond, Riley watching her go.
+  // first three filled, row 4 lit, and the clock starting from 0:45 as Robin says it); she sets off at once, and the
+  // camera cuts to her walking up to the gate and through it toward sign 4, Robin at the mic beyond, Riley watching her
+  // go. From here the words turn by themselves.
   const CALL = { board: 0.8, go: 0.1 };
-  arena({
+  const call = arena({
     name: 'call', dur: 2.0,
     who: (t) => {
       const p = along(UP, t - CALL.go, 'walk');
@@ -374,17 +381,18 @@ export function makeCutscene() {
         her: { ...p, gait: p.gait === 'stand' ? 'clap' : 'walk', frame: 1, holds: true },
         mc: robin('emcee'),
         picked: true,
+        clock: PICK_CLOCK - t,
       };
     },
     shot: (t) => at1x(t < CALL.board ? BOARD_SHOT : WALK_SHOT),
     cheer: (t) => lerp(0.3, 0.8, seg(t, CALL.board, 2)),
     hud: true,
-    say: robinSays([['5026, COME ON UP!']], 0),
+    say: robinSays([['5026, COME ON UP!']], 0, { auto: true }),
   });
 
-  // 11. pick: a hard cut to the pick, the clock slamming in at 0:45 (pick.js). It starts counting as the cut scene
-  // hands over (scene.js).
-  beats.push({ name: 'pick', dur: 0.8, draw: (g, t) => drawPick(t, PICK_CLOCK) });
+  // 11. pick: a hard cut to the pick, the clock slamming in, still running from the call (pick.js), and on as the cut
+  // scene hands over (scene.js).
+  beats.push({ name: 'pick', dur: 0.8, draw: (g, t, c) => drawPick(t, callClock(c.T - call.at)) });
 
   // When each beat starts (for ?at=), and how long it all takes at the automatic pace.
   let T = 0, A = 0;

@@ -51,11 +51,13 @@ export function drawDialog(g, d, t) {
     text(line, 12, 107 + i * 13, { color: C.ink, upto: Math.max(0, left) });
     left -= line.length;
   });
-  if (shown >= pageLength(page) && Math.floor(t * 2.5) % 2 === 0) {
-    fill(240, 130, 5, 1, C.blue1);
-    fill(241, 131, 3, 1, C.blue1);
-    fill(242, 132, 1, 1, C.blue1);
-  }
+  if (shown >= pageLength(page) && Math.floor(t * 2.5) % 2 === 0) drawMore(240, 130, C.blue1);
+}
+/** The arrow that says A reads on: five pixels wide at (x, y), pointing down. */
+export function drawMore(x, y, color) {
+  fill(x, y, 5, 1, color);
+  fill(x + 1, y + 1, 3, 1, color);
+  fill(x + 2, y + 2, 1, 1, color);
 }
 
 /** Press A in a conversation: finish typing the page, or turn it, or say goodbye. Returns false when it's over. */

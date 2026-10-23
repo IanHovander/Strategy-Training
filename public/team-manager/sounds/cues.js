@@ -11,8 +11,8 @@
 // is re-timed, these move with it.
 //
 // status (for a scene with no walking, whose phone status line says what's going on: the opening's pick): sounds for
-// when the status line changes to that text. clock: a countdown that ticks its last seconds while the status is one of
-// `while`, from the moment the status first reads `from`.
+// when the status line changes to that text. clock: { last } ticks the scene's clock (scene.clock(s), the seconds left
+// while it runs): softly every second, louder for the last `last`, and the time running out (sound.js clockCues).
 
 import { PHONE_TIMES } from '../opening/phone.js';
 import { HANDOFF } from '../opening/handoff.js';
@@ -25,7 +25,8 @@ export const SCENES = {
     bed: 'crowd', surface: 'hard', music: null, cut: 1, free: 0.45,
     beats: {
       black: [bed(0, 0.08, 0.02), bed(0.05, 1.1, 0.65)], // in the dark, the crowd's noise rising from a murmur to a roar
-      phone: [bed(0, 0.35, 0.15), [PHONE_TIMES.first, 'buzz'], [PHONE_TIMES.first, 'msg'], [PHONE_TIMES.second, 'buzz'], [PHONE_TIMES.second, 'msg']],
+      // Her phone: the crowd drops away, and each text lands with its ping and the buzz in her hand.
+      phone: [bed(0, 0.35, 0.15), ...[PHONE_TIMES.first, PHONE_TIMES.second].flatMap((t) => [[t, 'msg'], [t, 'buzz', { dur: PHONE_TIMES.buzz }]])],
       card: [bed(0, 1, 0.2), [0, 'card'], [0.5, 'cheer', { size: 0.5 }]],
       cocaptain: [bed(0, 0.3, 1), [0, 'music', 'moment']], // the arena goes down to a glimmer close on them; a soft swell
       handoff: [[HANDOFF.glint[0] + 0.1, 'glint']],
@@ -40,7 +41,7 @@ export const SCENES = {
     },
     // The bet log's verdict, from what A says on it: CONTINUE for the right pick, REWIND for the wrong one.
     label: { CONTINUE: [[0.25, 'jingle']], REWIND: [[0.25, 'miss']] },
-    clock: { secs: 45, last: 10, from: 'ON THE CLOCK', while: ['ON THE CLOCK', 'INVITING'] },
+    clock: { last: 10 },
   },
 
   'TEAM MEETING': {

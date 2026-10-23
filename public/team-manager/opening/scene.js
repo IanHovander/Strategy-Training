@@ -5,18 +5,21 @@
 // only ties them together.
 //
 // Once the cut scene is over (or skipped) she isn't walking: it's her pick, and the screen is the scouting tablet, the
-// 45-second clock counting down from the moment it's hers. The stick moves between the cards (update), A picks (act),
+// 45-second clock counting down from the moment Robin called her up (or from the pick, if SKIP got there first). The stick moves between the cards (update), A picks (act),
 // and everything on the tablet can be tapped, the cards picked up and dragged (pointer); pick.js has the rest. On this page, Replay plays the cut scene again; in the play-through, NEXT SCENE moves on.
 
 import { W, H } from '../pixel.js';
+import { onStage } from '../stage.js';
 import { makeCutscene } from './cutscene.js';
-import { startPick, updatePick, pressPick, pointPick, drawPickScreen, pickLabel, pickStatus } from './pick.js';
+import {
+  startPick, updatePick, pressPick, pointPick, drawPickScreen, pickLabel, pickStatus, callUp, pickClock,
+} from './pick.js';
 
 export const scene = {
   name: 'THE OPENING',
   label: "The opening of Blue Banner: her phone, alliance selection in the arena, the co-captain handing her the pick list and Norbert, and the pick: a scouting tablet with two teams to choose from and a 45-second clock",
   hint: 'Tap a team to pick it, or the stick and A',
-  note: "The cut scene plays by itself; A reads on, except in the two moments it holds (the co-captain's silent look and Norbert's handoff), and SKIP jumps to the pick. Then the scouting tablet: 45 seconds to pick a team. Tap a team's card to pick it, or pick the card up and drag it onto your robot's row; or the stick moves between the cards and A picks. The invite asks INVITE or BACK: tap one, or the stick and A. On a keyboard: arrow keys, Space or Enter for A, Esc to skip.",
+  note: "The cut scene waits for A to read on until MC Robin calls her up (A can't hurry the two moments it holds: the co-captain's silent look and Norbert's handoff); from the call it plays by itself, with the clock running, and SKIP jumps to the pick. Then the scouting tablet: 45 seconds to pick a team. Tap a team's card to pick it, or pick the card up and drag it onto your robot's row; or the stick moves between the cards and A picks. The invite asks INVITE or BACK: tap one, or the stick and A. On a keyboard: arrow keys, Space or Enter for A, Esc to skip.",
   world: { w: W, h: H },
   start: { x: -100, y: -100 },
   move: (x, y) => [x, y],
@@ -27,8 +30,16 @@ export const scene = {
   pointer: (type, x, y, s) => s.mode === 'free' && pointPick(type, x, y),
   actLabel: () => pickLabel(),
   status: () => pickStatus(),
+  // The seconds left while the clock runs, for the sound's ticks.
+  clock: (s) => pickClock(s.mode === 'cut'),
   cutscene: makeCutscene(),
 
   onFree: () => startPick(),
   draw: (g, view, t) => drawPickScreen(t),
 };
+
+// Robin's call starts the clock; going back before it (Replay) takes it back.
+onStage((type, d, s) => {
+  if (type !== 'beat' || s.scene !== scene || d.beat.name === 'pick') return;
+  callUp(d.beat.name === 'call' ? performance.now() / 1000 : null);
+});
