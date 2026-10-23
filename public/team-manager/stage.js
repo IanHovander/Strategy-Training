@@ -447,9 +447,11 @@ export function runScene(scene, opts = {}) {
   /** The way out: an arrow nudging right, white on an ink outline like the bubbles, with where it goes over it. Neither
    * is drawn over her: it's an overlay, drawn after the scene, so it would sit on her face (she's found it by then). */
   function drawExit(e, view, now) {
-    const x = Math.round(e.x - view.x) - 3 + (Math.floor(now * 2.5) % 2);
+    // Just past the right edge, it waits at the edge, whole, pointing on: the way out is that way.
+    const at = Math.round(e.x - view.x) - 3;
+    if (at < -4 || at > W + 60) return;
+    const x = Math.min(at, W - 5) + (Math.floor(now * 2.5) % 2);
     const y = Math.round((e.sign?.y ?? (e.y0 + e.y1) / 2 - 24) - view.y);
-    if (x < -4 || x > W + 60) return;
     // Her, 12 pixels either side of her feet and from 48 over them to 2 under; the arrow, ink outline and nudge included.
     const hx = Math.round(s.me.x - view.x), hy = Math.round(s.me.y - view.y);
     const onHer = (x0, x1, y0, y1) => hx + 12 > x0 && hx - 12 < x1 && hy - 48 < y1 && hy + 2 > y0;
