@@ -210,7 +210,7 @@ export function runScene(scene, opts = {}) {
   const root = opts.root ?? document.getElementById('stage');
   root.innerHTML = full ? fullMarkup(scene, nextLabel) : markup(scene);
   const $ = (sel) => root.querySelector(sel);
-  const tv = $('.screen'), face = $('.face');
+  const tv = $('.screen'), face = $('.face'), box = full ? $('.full') : null;
   const g = tv.getContext('2d', { alpha: false }), fg = face?.getContext('2d');
   g.imageSmoothingEnabled = false;
   if (fg) fg.imageSmoothingEnabled = false;
@@ -218,13 +218,20 @@ export function runScene(scene, opts = {}) {
   const ac = new AbortController(), on = { signal: ac.signal };
 
   // Whole-number zoom, so every pixel stays square. Filling the window, that's whole device pixels (like the intro),
-  // falling back to a smooth fit when the whole-number one would be much smaller.
+  // falling back to a smooth fit when the whole-number one would be much smaller. The room to spare beside the picture
+  // goes to the right first, as far in as the stick's ring reaches, so on a long phone held sideways the ring sits beside
+  // the picture rather than over the right edge of it, where every scene's way out is.
   const fit = full ? () => {
-    const dpr = window.devicePixelRatio || 1, box = root.getBoundingClientRect();
-    const exact = Math.min(box.width / W, box.height / H), whole = Math.floor(exact * dpr) / dpr;
+    const dpr = window.devicePixelRatio || 1, r = box.getBoundingClientRect(), css = getComputedStyle(box);
+    const left = parseFloat(css.paddingLeft), right = parseFloat(css.paddingRight);
+    const bw = r.width - left - right, bh = r.height - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom);
+    const exact = Math.min(bw / W, bh / H), whole = Math.floor(exact * dpr) / dpr;
     const z = whole >= exact * 0.8 && whole > 0 ? whole : exact;
-    tv.style.width = `${Math.floor(W * z)}px`;
+    const cw = Math.floor(W * z), spare = bw - cw, ring = $('.ring').getBoundingClientRect();
+    const reach = ring.width ? r.right - right - ring.left + 6 : 0;
+    tv.style.width = `${cw}px`;
     tv.style.height = `${Math.floor(H * z)}px`;
+    tv.style.marginLeft = `${Math.round(spare - Math.max(spare / 2, Math.min(spare, reach)))}px`;
   } : () => {
     const room = tv.parentElement.clientWidth - 4;
     tv.style.width = `${W * Math.max(1, Math.min(4, Math.floor(room / W)))}px`;
@@ -430,8 +437,11 @@ export function runScene(scene, opts = {}) {
     };
     arrow(C.ink, 1);
     arrow(C.white, 0);
-    const label = exitLabel ?? e.label;
-    if (label) text(label, x + 1, y - 13, { font: 3, color: C.white, outline: C.ink, align: 'right' });
+    // Where it goes, unless she's standing under the words (she's found it by then).
+    const label = exitLabel ?? e.label, lw = label ? measure(label, { font: 3 }) : 0;
+    const hx = Math.round(s.me.x - view.x), hy = Math.round(s.me.y - view.y);
+    const under = hx + 9 > x - lw && hx - 9 < x + 2 && hy > y - 14 && hy - 50 < y - 6;
+    if (label && !under) text(label, x + 1, y - 13, { font: 3, color: C.white, outline: C.ink, align: 'right' });
   }
 
   // ---- A, and skipping ----
@@ -537,7 +547,6 @@ export function runScene(scene, opts = {}) {
   else if (full && num('at') == null) endCut(); // in the game, ?play still walks her in
 
   // ---- Input ----
-  const box = full ? $('.full') : null;
   $('.skip').addEventListener('click', skip, on);
   if (full) {
     $('.next').addEventListener('click', moveOn, on);
@@ -584,12 +593,14 @@ export function runScene(scene, opts = {}) {
     knob.style.transform = '';
     knob.style.left = knob.style.top = full ? '' : '50%';
     pad.style.cursor = full ? '' : 'grab';
+    pad.classList.remove('held');
   }
   pad.addEventListener('pointerdown', (e) => {
     if (dragging != null) return;
     dragging = e.pointerId;
     pad.setPointerCapture(e.pointerId);
     if (!full) pad.style.cursor = 'grabbing';
+    pad.classList.add('held');
     moveStick(e);
     e.preventDefault();
   }, on);
