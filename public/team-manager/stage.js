@@ -52,7 +52,8 @@
 // look, faceGait, faceDir, faceDy } shows its own speaker. Then the beat waits at its end until it's been read: A
 // finishes the typing, turns the page and, after the last page, moves on.
 // With auto the pages turn by themselves (A still hurries them). While a beat waits, t runs on past dur, so hold still
-// past it. A beat without words moves on after dur, or straight away on A. SKIP (or Esc) ends the cut scene.
+// past it. A beat without words moves on after dur, or straight away on A (not before its hold, in seconds, if it has
+// one: something A mustn't skip). SKIP (or Esc) ends the cut scene.
 // Draw with pixel.js: the context is set and the camera is at the screen for you. cover, bars, placeCard and along
 // (below) are here so every scene's cut scene shares one style.
 //
@@ -444,7 +445,7 @@ export function runScene(scene, opts = {}) {
           c.read = true;
           if (now - c.t0 >= b.dur) startBeat(c.i + 1, now);
         }
-      } else startBeat(c.i + 1, now);
+      } else if (now - c.t0 >= (b.hold ?? 0)) startBeat(c.i + 1, now);
     } else if (s.talk) {
       if (!advance(s.talk, now)) {
         const p = s.talk.person;
