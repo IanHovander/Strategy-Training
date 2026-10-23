@@ -33,7 +33,12 @@
 //                         For a scene with no room to walk (the van): the stick picks who to talk to.
 //   hint, note            the phone's hint line and the note under the controls, if the usual ones don't fit
 //   status(s)             the phone's status line under her name, if not STANDING, WALKING N and so on
-//   stick: false          in play.html, no stick on the screen: for a card with nobody to steer
+//   stick: false          in play.html, no stick on the screen: for a card with nobody to steer, or a screen you tap
+//   press(s, now)         A, walking about, before anyone in reach: true if the scene did something with it (the laptop
+//                         presses the button its cursor is on)
+//   action(s)             the phone's label for A, walking about, if not TALK TO someone: 'INVITE APEX'
+//   click(x, y, s)        a click or a tap on the big screen at (x, y) in its own pixels, walking about: true if the
+//                         scene took it (in play.html anything else is A, as ever). hover(x, y, s): the mouse over it
 //   exit: { x, y0, y1, label, sign }
 //                         the way out, on the right (every scene is entered on the left and left on the right): once
 //                         her feet are past x, between y0 and y1, she walks on out of the picture and the screen fades.
@@ -42,7 +47,9 @@
 //                         play.html leaving is on to the next scene; on the scene's own page she comes back in.
 //   enter                 a path, [[x, y], ...], she walks in along as the cut scene ends, on to start: from off the left
 //                         edge, say. The stick is hers once she gets there. Not with ?x= in the address.
-// A scene with no exit, in play.html, gets a NEXT SCENE button instead.
+// A scene with no exit, in play.html, gets a NEXT SCENE button instead, unless it says next: false and has a way on of
+// its own: s.leave() moves on as NEXT SCENE would, and s.canLeave is whether there's anywhere to go (not on the scene's
+// own page).
 //
 // A cut scene is a list of beats. Each is { dur, draw(g, t, c) }: draw the whole screen t seconds into the beat; c.T is
 // seconds into the cut scene and c.k is t / dur (0 to 1). A beat can say something: say: { name, lines, at, auto, tag,
@@ -463,7 +470,7 @@ export function runScene(scene, opts = {}) {
         s.talk = null;
         scene.onTalked?.(s, p);
       }
-    } else if (s.near) {
+    } else if (!scene.press?.(s, now) && s.near) {
       const p = s.near, at = scene.faceTo?.(p) ?? p;
       if (!scene.update) s.me.dir = dirToward(at.x - s.me.x, (at.y - s.me.y) / DEPTH);
       s.talk = conversation(p.name, p.lines, now, { person: p });
@@ -500,7 +507,8 @@ export function runScene(scene, opts = {}) {
         : me.gait === 'sit' ? 'SITTING' : 'STANDING');
     set('mode', mode, (v) => ($('.mode').textContent = v));
     set('who', s.mode === 'cut' ? scene.name : talking ? 'TALKING TO' : HERO_NAME, (v) => ($('.whoname').textContent = v));
-    const label = s.mode === 'cut' || s.talk ? 'NEXT' : s.near ? `TALK TO ${s.near.name.split(',')[0]}` : 'NOBODY NEARBY';
+    const label = s.mode === 'cut' || s.talk ? 'NEXT' : (s.mode === 'free' && scene.action?.(s))
+      || (s.near ? `TALK TO ${s.near.name.split(',')[0]}` : 'NOBODY NEARBY');
     set('label', label, (v) => {
       $('.alabel').textContent = v;
       $('.abtn').disabled = v === 'NOBODY NEARBY';
@@ -518,7 +526,7 @@ export function runScene(scene, opts = {}) {
   function drawHud() {
     set('hud', s.mode === 'free' && s.talk ? 'talk' : s.mode, (v) => (box.dataset.mode = v));
     set('skip', s.mode === 'cut', (v) => ($('.skip').hidden = !v));
-    set('next', s.mode === 'free' && !!onLeave && !scene.exit, (v) => ($('.next').hidden = !v));
+    set('next', s.mode === 'free' && !!onLeave && !scene.exit && scene.next !== false, (v) => ($('.next').hidden = !v));
   }
 
   // ---- The clock ----
@@ -538,6 +546,8 @@ export function runScene(scene, opts = {}) {
     else drawPhone();
     raf = requestAnimationFrame(frame);
   }
+  s.leave = moveOn;
+  s.canLeave = !!onLeave;
   s.stop = () => {
     stopped = true;
     cancelAnimationFrame(raf);
@@ -548,17 +558,34 @@ export function runScene(scene, opts = {}) {
   else if (full && num('at') == null) endCut(); // in the game, ?play still walks her in
 
   // ---- Input ----
+  // A click or a tap on the big screen itself, for a scene that takes them (scene.click): where, in its own pixels.
+  const pixelAt = (e) => {
+    const r = tv.getBoundingClientRect();
+    return [Math.floor(((e.clientX - r.left) / r.width) * W), Math.floor(((e.clientY - r.top) / r.height) * H)];
+  };
+  const clicked = (e) => e.target === tv && s.mode === 'free' && !s.talk && !!scene.click?.(...pixelAt(e), s);
+  if (scene.hover) {
+    tv.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse' && s.mode === 'free' && !s.talk) scene.hover(...pixelAt(e), s);
+    }, on);
+  }
   $('.skip').addEventListener('click', skip, on);
   if (full) {
     $('.next').addEventListener('click', moveOn, on);
     // A is a tap anywhere on the screen that isn't the stick or a button (a mouse click, on a computer).
     box.addEventListener('pointerdown', (e) => {
       if (e.button > 0 || e.target.closest('.stick, button')) return;
-      pressA();
+      if (!clicked(e)) pressA();
       e.preventDefault();
     }, on);
   } else {
     $('.abtn').addEventListener('click', pressA, on);
+    if (scene.click) {
+      tv.addEventListener('pointerdown', (e) => {
+        if (e.button > 0 || !clicked(e)) return;
+        e.preventDefault();
+      }, on);
+    }
     const replay = $('.replay');
     if (!beats.length) replay.hidden = true;
     replay.addEventListener('click', () => {

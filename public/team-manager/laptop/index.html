@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Laptop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+<style>
+  /* Nobody walks at a laptop: the stick only moves the cursor, so the pad's inner walk ring goes (stage.js leaves out
+     the WALK and RUN labels for a scene that steers itself). The big screen takes the mouse too. */
+  #stage .ring.walk { visibility: hidden; }
+  #stage .view canvas { cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: the laptop</h1>
+  <p class="intro">An evening before the regional, and the strategist trains the way 5026 trains its strategy team: the Showdown from Strategy Training, on the team's scouting laptop. A practice event of sixteen teams, ten scouted matches each. Study the data, build a picklist, run alliance selection against the other alliance, plan every match of a best of three, then see the truth about every robot. A practice bot runs the other alliance for now; the strategy team will take it over in a scene of their own.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div id="stage"></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it's made</h2>
+    <ul>
+      <li><b>The Showdown itself:</b> the laptop runs Strategy Training's own rules (games/frc-strategy/draft-rules.js) for two players, her and the practice bot, the same rules the team game runs for a room of phones. It draws her view of it just as her phone would get it: the scouting everyone has, her own picklist and plans, and the truth only at the end. The teams, the match model, the clocks, the rules and the lessons are all the Showdown's, so a change there shows up here too.</li>
+      <li><b>The laptop:</b> the screen fills the picture inside a thin bezel, with the webcam over the middle, a 5026 sticker on the chin and the keyboard deck along the bottom. The app is 5026 SCOUT, in the game's colours: a blue title bar with the tabs and a gold button for what's next, a strip of news, the page, and a line along the bottom that says what the cursor's on.</li>
+      <li><b>Picklists:</b> the TEAMS tab is the scouting table, sixteen rows, sorted by any column (seed, average cycles, zeros, how much defense slows them, how well they defend). The panel beside it shows the team the cursor's on: its ten matches as a histogram, the zero bar (a breakdown) in red, its numbers, and buttons to put it on the picklist or Do Not Pick. A on a row adds it to the picklist, so a list builds in order. The PICKLIST tab puts it in order: pick a team up, move it, put it down.</li>
+      <li><b>Alliance selection:</b> the two alliances along the top fill in as the picks are made, serpentine (1, 2, 2, 1), with the pick clock: 45 seconds in round one, 90 in round two. On her turn, A on a team goes to INVITE, which asks once more, since an invitation can't be taken back. If the clock runs out, she gets the top of her picklist.</li>
+      <li><b>The matches:</b> before each, every robot plays offense or defends one of theirs (with what the scouts say that takes off its cycles), and, defending, stays on its robot or switches if that one defends too. LOCK IN, and the match plays when both alliances have: the score counts up, then what every robot did, breakdowns in red.</li>
+      <li><b>The reveal:</b> her chance in every match given both plans, from 20,000 simulated matches; THE TRUTH, every team's scouted numbers beside its real ones and its real cycle chances over the ten scouted matches; and the Showdown's lessons. TRAIN AGAIN starts a new event.</li>
+      <li><b>The practice bot:</b> ranks every team by its average cycles, less a cycle for each zero, plus a little for a good defender; takes the top of that list on its turn after thinking it over; and plays offense, unless one of its robots would take more off her best scorer by defending it than it would score. It sees only what she sees.</li>
+      <li><b>The cut scene:</b> her at a table in the dark, lit by the laptop, the lid's back to you with 5026's sticker on it; then the screen as the app starts, and the briefing over its title screen.</li>
+    </ul>
+  </section>
+  <p class="foot">The scene is in this folder: room.js (the Showdown run on the laptop), rival.js (the practice bot), kit.js (the laptop and the app's pieces), app.js (the app's pages), cutscene.js and scene.js. It runs on the shared stage.js (the controller and the cut scene clock) and draws with pixel.js and walker.js.</p>
+</div>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
+</body>
+</html>

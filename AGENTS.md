@@ -19,6 +19,9 @@ tunnel), and `npm start` (Node, same Wi-Fi only).
   - The moderator's private brief is in `lesson1-room-brief.js`. Import it only from `room-rules.js`: anything
     `player.js` or `host.js` imports reaches every phone or the projector.
   - Learn on the solo page is the scored case studies in `lesson1-learn.js` (the Learn part's `solo`).
+  - Blue Banner's laptop scene (`public/team-manager/laptop/`) runs the Showdown too: `draft-rules.js` for two players
+    (the strategist and a practice bot), drawn from `playerView`. Keep the Showdown's rules and views working for two
+    players; `test/team-manager-laptop.mjs` plays a whole series.
 - **Commands:**
   - `npm test`: must say ALL PASSED.
   - `npm run dev`: laptop server, restarts on change.
