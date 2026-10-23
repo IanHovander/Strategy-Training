@@ -1,9 +1,9 @@
 // Where everything is on the back lawn, in world pixels, at the arena's scale (field.js): 8 pixels to the foot across
 // and 2.75 to the foot of depth, so a person is about 48 pixels tall. The school's wall runs along the top with the sky
 // over its roof, the concrete path runs along its foot, and the lawn fills the rest, where the team sits in a circle.
-// She comes out of the robotics shop's door on the left once the meeting's over (ENTER), and leaves along the path on
-// the right, under the covered walkway round to the cafeteria (WALKWAY, EXIT). Every part of the scene places things
-// from these numbers.
+// She comes out of the robotics shop's door on the left once the meeting's over (ENTER), and leaves on the right, along
+// the path under the covered walkway (or the lawn beside it) round to the cafeteria (WALKWAY, EXIT). Every part of the
+// scene places things from these numbers.
 
 export const FT = 8, DEEP = 2.75;
 export const WORLD = { w: 512, h: 264 };
@@ -53,14 +53,19 @@ export const ASIDE = { tessa: { x: 234, y: 171 }, owen: { x: 278, y: 171 } };
  * y: the floor line along its front, where the post stands.
  */
 export const WALKWAY = { x0: 452, post: 458, y: 159 };
-/** The way out (stage.js exit): the path under the walkway, off the right edge. Its arrow sits on the wall's base
- *  course just over the path, low enough that its label still shows with the view at the bottom of the world. */
-export const EXIT = { x: 494, y0: WALL_Y + 4, y1: LAWN_Y, label: 'TO THE CAFETERIA', sign: { y: 136 } };
+/** The way out (stage.js exit): the path under the walkway, and the lawn beside it, off the right edge. The whole of
+ *  the right edge, from the wall's foot down to the lowest she can stand (place.js blocked()), so wherever she walks
+ *  into it she goes on round to the cafeteria rather than walking in place; nobody stands there. Its arrow sits on the
+ *  wall's base course just over the path, low enough that its label still shows with the view at the bottom of the
+ *  world. */
+export const EXIT = { x: 494, y0: WALL_Y + 4, y1: WORLD.h - 6, label: 'TO THE CAFETERIA', sign: { y: 136 } };
 /**
  * The way in: once the meeting's over she's been into the shop, and comes back out of its door. She walks in from the
- * left along the shop's floor (behind the wall at first, so she's out of sight while the lawn fades in), turns and
- * steps out onto the path and the grass, to START (stage.js enter adds it), clear of the build lead at the door's left
- * edge and the thank-you card on its right.
+ * left along the front of the shop's floor, its last row before the threshold, a few pixels in front of the robot
+ * parked there (behind the wall at first, so she's out of sight while the lawn fades in), turns and steps out over the
+ * path onto the grass, to START (stage.js enter adds it): clear of the build lead at the door's left edge and the
+ * thank-you card on its right, and far enough down the lawn that her head is under the robot's 5026 bumper, not over
+ * it. From there the top of the lawn is open all the way to the way out.
  */
-export const ENTER = [[98, WALL_Y - 2], [162, WALL_Y - 2]];
-export const START = { x: 162, y: 168, dir: 0 };
+export const ENTER = [[98, WALL_Y - 1], [162, WALL_Y - 1]];
+export const START = { x: 162, y: 182, dir: 0 };
