@@ -304,6 +304,84 @@ season moves on.
 - The timer means they can't learn everything, so every ride is a new plan.
 - Norbert and the 12.9 volts are a second mystery running alongside.
 
+### Building the opening: what to prepare
+
+**1. The cold open, shot by shot, cut to the music.** The intro (`public/team-manager/intro.js`) cuts on the beat of
+the music clock, and the opening should feel like it. A first pass to time and then tune:
+
+| Shot | Seconds | What happens |
+|---|---|---|
+| Black | 1.5 | Crowd noise rising. No music yet. |
+| Her phone, full screen | 3 | A text from the senior strategist, the typing dots first: *"Sick. Can't come. You've got this."* |
+| Card | 2 | ALLIANCE SELECTION · SATURDAY 12:38 PM. The music comes in. |
+| Wide, then Robin | 4 | The arena, Robin skating to the mic: "WELCOME TO ALLIANCE SELECTION!" |
+| Close on the co-captain | 2, silent | The co-captain turns to her. A wordless beat with a hold, so A can't skip it. |
+| The handoff | 4 | "YOU'RE UP. THE LIST IS YOURS." Then Norbert: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2009." |
+| Her | 1.5 | "...OKAY." |
+| The dashboard | 45 s clock | The pick (beat 1 in section 5). |
+
+**Pacing the words.** Short lines and real pauses. The co-captain's handoff lands best after a silent beat: let the
+camera sit on the co-captain's face for two seconds before anyone speaks. One line a page, and no tutorial text in the
+first minute: the 45-second clock explains itself.
+
+**2. Norbert.** The handoff is his first appearance: given to her "for luck", so he arrives as a gift, not an
+interface. After that he lives in the corner of the screen as her one inventory item:
+
+- **The corner:** him (16x19, `public/team-manager/norbert.js`) with his battery voltage, the depth meter from
+  section 4.
+- **His ear glows at big calls**, before the player knows why. That's the bet log being foreshadowed.
+- **Time leaves from him.** The vortex opens around her and him, never from somewhere unrelated.
+- **Later:** tapping him could open the notebook, so the one thing the player can always touch is the thing that
+  holds what they know.
+- **Art needed:** a walker pose with Norbert under her arm (she holds a whiteboard now), and the co-captain's handoff.
+
+**3. Time travel.** Four looks to try, on the real cut scene, in the lab: `public/team-manager/time/` (open
+`team-manager/time/` on the site). Every scene draws its frames from time, so a rewind plays the real scene
+backwards; the lab records each moment as it plays and draws them again in reverse.
+
+- **STOP:** everything stops but her. The world drains to cold blue, she alone keeps her colour and looks round,
+  and then the world runs backwards around her.
+- **SWIRL:** a vortex around her, counterclockwise for a rewind and clockwise for forward.
+- **TAPE:** a tape rewinding, with REW and a clock in the corner.
+- **ALL:** STOP, then the vortex with her still and in colour at its centre, a white flash, a clock card spinning
+  back to 12:38, then the world unwinds back into colour.
+
+Proposed use:
+
+| Jump | Look | Length |
+|---|---|---|
+| A gift or long jump (to the van, to kickoff) | ALL | about 6 s |
+| A rewind (a few minutes back) | A short STOP: the tick, she looks round, a quick counterclockwise swirl, no clock card | under 2.5 s; it repeats, so it has to stay quick |
+| Skipping ahead (Friday's montage) | SWIRL, clockwise | about 3 s |
+| The very first rewind | ALL in full, so the player sees what's happening once | about 6 s |
+
+**4. The scouting dashboard.** It's the screen the player spends the opening on, so it has to be the nicest thing in
+the game. A sketch to mock up next:
+
+- **Where:** on the phone in single-device play, and as a full-screen pixel overlay on the big screen. It's built
+  like a real scouting app on a tablet.
+- **Your robot pinned at the top**, as a card like every other. A careful player compares chips straight down.
+- **One card per pickable team:**
+  - the team number and name;
+  - the **average, big**: the tempting number;
+  - **chips** for what it scores (ROCKET HATCH, CARGO SHIP, L3 CLIMB, DEFENSE);
+  - a **sparkline of every qualification match**, so consistency and trends show without a lecture. 6417's line
+    jumps after match 5; that's the whole lesson in one picture, once you have the data;
+  - **"?" entries**, each with the face of the person who knows.
+- **The pick clock**, 45 seconds, big and red as it runs down.
+- **Friendly:** big touch targets, one tap to compare two teams side by side (the "71 on paper" sum appears there),
+  no menus.
+
+**5. The rest of the art and code.**
+
+- **The co-captain:** a new character on the walker rig.
+- **Her phone's text screen:** for the cold open.
+- **The quarterfinal replay shot:** two robots and one Level 3 platform, on the arena's field (`field.js`).
+- **The van conversation picker with the GPS timer:** the van scene already picks people by seat.
+- **The recorder in `stage.js`:** the lab's rewind recorder, moved into `stage.js` so any scene can rewind. That
+  file is shared by every scene, so agree it with whoever's working on the scenes.
+- **The numbers:** the selection puzzle's averages and odds, tuned in `games/frc-strategy/alliance.js`'s model.
+
 ---
 
 ## 6. Banners
