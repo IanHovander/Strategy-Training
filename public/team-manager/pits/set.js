@@ -18,6 +18,12 @@
 // dashed yellow lines (a lane down the middle, the edge near you), with a couple of floor boxes the pits' power comes
 // from.
 //
+// The way in and out. The row is closed off at each end by an end drape, the back drape's full height, seen end-on like
+// the side drapes, from the back as far as the aisle; the aisle runs on past both, out of the hall. You come in along
+// it from the left, from the rest of the hall, and leave along it at the right, to the field: there the arena's light
+// comes in through the opening and lies on the concrete in hard-edged bands, brighter toward the edge, and the QUEUE
+// sign stands at the aisle's near edge pointing on. EXIT is the walking part's way out (stage.js scene.exit).
+//
 // It's drawn like the arena: the floor once into a layer, the hall wall, drapes and banners once into another, then
 // everything that stands up back to front by its floor line, with the people sorted in. Boxes are field.js boxes (the
 // top face lighter, the face toward you darker, an ink outline round it all and a lit line along the top edge); the
@@ -36,8 +42,23 @@ export const FT = 8, DEEP = 2.75, BACK = 72;
 /** The floor line this many feet out from the back drape. */
 export const floorY = (z) => BACK + z * DEEP;
 
-const DRAPE_X1 = 816; // the drape ends here; past it is the way out to the field
+/** The end drapes' lines across, left and right: the row of pits is between them. */
+const END_X = [2, 830];
 const CONCRETE = '#353a4c', SPECKS = ['#3b4154', '#30354a']; // the arena's floor (field.js, bleachers.js)
+/**
+ * The arena's light on the aisle at the way out, like the sun through the practice field's side doors: two flat steps
+ * of lit concrete (a ramp beside CONCRETE, toward the arena's steel), the bright one by the opening, a two-pixel checker
+ * between them and at the far edge. It lies on the floor of the opening, from the right end drape's front post (y0) to
+ * the near edge of the picture: `reach` pixels in from the right edge, the bright step `step`, and a pixel further for
+ * every 1 / fan rows nearer you, so it fans out from the opening. Each step has its specks (lighter, darker).
+ */
+const LIGHT = { y0: 101, reach: 46, step: 18, fan: 0.5, hi: ['#59627c', '#646e89', '#4f5770'], lo: ['#454c63', '#4d556c', '#3e4459'] };
+/**
+ * The way out, for the walking part (stage.js scene.exit): once her feet are past x, anywhere across the aisle from a
+ * step in front of the right end drape's post to its near edge, she walks on out along it to the field. The arrow sits
+ * low in the aisle's back half, clear of the desk, the glasses stand and the QUEUE sign.
+ */
+export const EXIT = { x: 818, y0: 103, y1: 138, label: 'TO THE FIELD', sign: { y: 106 } };
 /** The aisle's dashed lines (the lane, the near edge), and its floor boxes: [x, y, the x their cable runs up to a pit at]. */
 const LANE_Y = 121, EDGE_Y = 140, FLOOR_BOXES = [[278, 112, 300], [692, 113, 676]];
 const INSIDE = '#181b29'; // the dark inside of a bin
@@ -120,6 +141,18 @@ function drawFloor() {
     rect(x0, 90, 41, 1, C.steel2);
     rect(x0, y0, 1, 8, C.steel2);
     rect(x0 + 40, y0, 1, 8, C.steel2);
+  }
+  // The arena's light through the way out, a pixel at a time: which step (u pixels in from the edge, less the fan), and
+  // now and then one of its specks.
+  const { y0, reach, step, fan, hi, lo } = LIGHT;
+  for (let y = y0; y < WORLD.h; y++) {
+    for (let x = WORLD.w - reach - Math.ceil(fan * (WORLD.h - y0)); x < WORLD.w; x++) {
+      const u = WORLD.w - 1 - x - Math.floor(fan * (y - y0)), even = (x + y) % 2 === 0;
+      const tone = u < step ? hi : u < step + 2 ? (even ? lo : hi) : u < reach - 2 ? lo : u < reach && !even ? lo : null;
+      if (!tone) continue;
+      const k = rnd(x * 7 + y * 131 + 5000);
+      rect(x, y, 1, 1, k < 0.05 ? tone[1] : k < 0.1 ? tone[2] : tone[0]);
+    }
   }
   // Dashed yellow lines on the concrete, the arena's queue lines exactly (3 pixels on, 1 off): a lane down the middle of the aisle and its near
   // edge. Then the floor boxes the pits' power comes from: a steel plate flush with the floor, lit along its top edge,
@@ -287,27 +320,21 @@ function drawBack() {
     rect(x - 1, 5, 3, 1, C.ink);
     rect(x, 5, 1, 1, C.yel2);
   }
-  // The back drape: dim navy hanging in folds from its pipe, the hem in shade on the floor.
-  rect(0, 9, DRAPE_X1, 63, C.stand1);
-  for (let x = 3; x < DRAPE_X1 - 2; x += 5 + Math.floor(rnd(x + 40) * 3)) {
+  // The back drape: dim navy hanging in folds from its pipe, the hem in shade on the floor, from end drape to end drape.
+  rect(0, 9, WORLD.w, 63, C.stand1);
+  for (let x = 3; x < WORLD.w - 2; x += 5 + Math.floor(rnd(x + 40) * 3)) {
     rect(x, 9, 1, 62, C.stand2);
     rect(x + 2, 9, 1, 62, C.stand0);
   }
-  rect(0, 71, DRAPE_X1, 1, C.stand0);
-  rect(0, 7, DRAPE_X1, 1, C.steel2);
-  rect(0, 8, DRAPE_X1, 1, C.ink);
+  rect(0, 71, WORLD.w, 1, C.stand0);
+  rect(0, 7, WORLD.w, 1, C.steel2);
+  rect(0, 8, WORLD.w, 1, C.ink);
   // An upright at every pit's back corner, above its side drape, outlined like the side drape's own post under it.
   for (let k = 0; k <= 8; k++) {
     const x = 96 + 80 * k;
     rect(x - 1, 9, 3, 39, C.ink);
     rect(x, 9, 1, 39, C.steel2);
   }
-  // Past the drape's end post, the dark way out to the field.
-  rect(DRAPE_X1 + 1, 6, WORLD.w - DRAPE_X1 - 1, 66, C.night0);
-  rect(DRAPE_X1 + 4, 20, 1, 52, C.night1);
-  rect(DRAPE_X1 - 1, 6, 3, 66, C.ink);
-  rect(DRAPE_X1, 7, 1, 65, C.steel2);
-  rect(DRAPE_X1, 7, 1, 1, C.steel3);
   for (const p of PITS) {
     banner(p);
     if (SPONSORS[p.num]) sponsorBoard(p);
@@ -562,9 +589,12 @@ export function drawCartBot(x, y, spec) {
   }
 }
 
-/** One side drape between pits, end-on: its top rail running back to the drape, the upright at its front corner. */
-function divider(x) {
-  const { yTop, yFront, yFloor } = box(x - 1, 3, 0, 10, 24, C.stand2, C.stand1, C.stand2);
+/**
+ * One side drape between pits, end-on: its top rail running back to the drape, the upright at its front corner. h: how
+ * tall (3 feet; an end drape is the back drape's 8).
+ */
+function divider(x, h = 24) {
+  const { yTop, yFront, yFloor } = box(x - 1, 3, 0, 10, h, C.stand2, C.stand1, C.stand2);
   rect(x, yTop, 1, yFront - yTop, C.steel2);
   rect(x, yFront - 1, 1, yFloor - yFront + 1, C.steel3);
   rect(x + 1, yFront, 1, yFloor - yFront, C.steel1);
@@ -668,8 +698,8 @@ function adminDesk() {
 /** Safety glasses for anyone who needs a pair, under the sign on the drape's end post. */
 function glassesStand() {
   // The sign, yellow all round its words like the QUEUE sign (two pixels each side of the longest), clear of the end
-  // of the hall, and hung high enough that its words show over the head of anyone standing at the desk's end below it.
-  const sx = 793, sy = 26, w = 37;
+  // drape's top rail, and hung high enough that its words show over the head of anyone standing at the desk's end below it.
+  const sx = 789, sy = 26, w = 37;
   rect(sx, sy, w, 21, C.ink);
   rect(sx + 1, sy + 1, w - 2, 19, C.yel1);
   rect(sx + 1, sy + 1, w - 2, 1, C.yel2);
@@ -686,9 +716,13 @@ function glassesStand() {
   rect(814, yTop + 1, 14, 1, C.steel3);
 }
 
-/** The arena's QUEUE sign (field.js), pointing the way out to the field. */
+/**
+ * The arena's QUEUE sign (field.js), pointing the way out to the field: at the aisle's near edge where the row ends,
+ * between 1357's pit and the desk, so the floor at the way out is clear (and the arrow stage.js puts there).
+ */
+const QUEUE_X = 744;
 function queueSign() {
-  const x = 812, y = 134;
+  const x = QUEUE_X, y = 134;
   rect(x - 4, y - 1, 9, 2, C.ink);
   rect(x - 1, y - 26, 3, 26, C.ink);
   rect(x, y - 25, 1, 25, C.steel3);
@@ -726,11 +760,12 @@ function standing(t, pit5026) {
     if (p.num === '7777') list.push({ x0: p.x0, x1: p.x0 + 24, y: floorY(0.5), draw: () => flag(p.x0 + 4, 74) });
   }
   for (let k = 0; k <= 8; k++) list.push({ x0: 96 + 80 * k - 3, x1: 96 + 80 * k + 3, y: floorY(10), draw: () => divider(96 + 80 * k) });
+  for (const x of END_X) list.push({ x0: x - 4, x1: x + 4, y: floorY(10), draw: () => divider(x, 64) });
   list.push({ x0: 0, x1: 96, y: floorY(3.5), draw: sparePartsCounter });
   list.push({ x0: 748, x1: 808, y: BACK, draw: () => monitor(t) });
   list.push({ x0: 748, x1: 808, y: floorY(4.6), draw: adminDesk });
-  list.push({ x0: 793, x1: 832, y: floorY(5.5), draw: glassesStand });
-  list.push({ x0: 798, x1: 828, y: 134, draw: queueSign });
+  list.push({ x0: 789, x1: 832, y: floorY(5.5), draw: glassesStand });
+  list.push({ x0: QUEUE_X - 14, x1: QUEUE_X + 16, y: 134, draw: queueSign });
   return list;
 }
 
@@ -765,7 +800,8 @@ export function drawWorld(g, view, t, o = {}) {
 // ---- Where people can walk ----
 // The aisle, and into each pit's open front as far as its robot or its board (as wide as the cart or the board's panel,
 // so nobody slips behind one); in front of the counter and the desk at the ends. The side drapes stop anyone crossing
-// from pit to pit. 5026's spot is as it is while you walk: the board.
+// from pit to pit. 5026's spot is as it is while you walk: the board. The aisle stops short of each end of the picture:
+// the way out at the right is EXIT's, which stage.js walks her out of by herself.
 const AISLE = { x0: 10, x1: 822, y0: 100, y1: 138 };
 function open(x, y) {
   if (x < AISLE.x0 || x > AISLE.x1 || y > AISLE.y1) return false;
@@ -779,7 +815,7 @@ const BLOCKS = [
   ...PITS.filter((p) => p.state === 'busy' && p.num !== '5026').map((p) => ({ x0: p.mid - 19, x1: p.mid + 19, y0: 84, y1: 90 })),
   ...PITS.filter((p) => p.state !== 'busy' || p.num === '5026').map((p) => ({ x0: p.mid - 17, x1: p.mid + 17, y0: 84, y1: 90 })),
   { x0: 792, x1: 828, y0: 83, y1: 90 }, // the safety glasses stand, and under its sign at the desk's end
-  { x0: 808, x1: 816, y0: 131, y1: 134 }, // the QUEUE sign's post
+  { x0: QUEUE_X - 4, x1: QUEUE_X + 4, y0: 131, y1: 134 }, // the QUEUE sign's post
 ];
 const hits = (bs, x, y) => bs.some((b) => x > b.x0 - 4 && x < b.x1 + 4 && y > b.y0 - 2 && y < b.y1 + 2);
 

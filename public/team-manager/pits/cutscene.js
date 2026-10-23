@@ -18,16 +18,21 @@
 //                    cart and the teammate goes round into the next pit's corner, all before the words are read, so
 //                    the robot stands whole. Nothing rolls while the words are up: the page waits for A like every
 //                    other, and the A that closes the box starts B5b.
-//   B5b rolling out  three beats with no words (so one stray A skips only a part): the robot rolls out of the pit on
-//                    its cart, easing off its spot, and away down the aisle to the right, Noor's hands on its handle
-//                    from the first inch and Eli leading, the camera going with it, never faster, to the end of the
-//                    hall, where it passes the QUEUE sign; the IN QUEUE / MATCH 44 board, folded against the table
-//                    behind the robot (its edges showing round the mast from the first frame), shows whole as it goes,
-//                    and once Noor's past, the teammate picks it up, turns it round and stands it on 5026's spot, and
-//                    goes over to the battery cart. It ends as Noor goes off the screen
+//   B5b rolling out  no words, and A doesn't hurry it (stage.js hold), so no stray A skips the robot leaving: it rolls
+//                    out of the pit on its cart, easing off its spot, and away down the aisle to the right, Noor's
+//                    hands on its handle from the first inch and Eli leading, the camera going with it, never faster,
+//                    to the end of the hall, where it passes the QUEUE sign and goes out through the way out to the
+//                    field, into the arena's light; the IN QUEUE / MATCH 44 board, folded against the table behind
+//                    the robot (its edges showing round the mast from the first frame), shows whole as it goes, and
+//                    once Noor's past, the teammate picks it up, turns it round and stands it on 5026's spot, and goes
+//                    over to the battery cart. It ends as Noor goes off the screen
 //   B6 pit duty      the camera comes back to our pit, the strategist stepping back to the front of it, and once it's
 //                    settled she turns to the teammate: she's staying with it, and the safety advisor is watching
-//   B7 hand over     the film bars go and she turns to you: the walking part's first frame exactly (END)
+//   B7 later         a fade to black on the pit, and up again on the near end of the hall, the film bars going: the
+//                    SPARE PARTS counter, and the safety advisor watching the aisle, the aisle's walkers on the
+//                    walking part's own clocks, so this shot's last frame is walking's first (END). The strategist
+//                    isn't in it: she comes in along the aisle from off its left edge, as every scene is entered,
+//                    and walks the row to the way out at its far end (scene.js's enter, START and exit)
 //
 // It's drawn the way every cut scene is (stage.js): the place card, film bars and fades are stage.js's, the camera moves
 // are eased pans and hard cuts like the intro's, the close-up zooms by a whole number, and every frame is a pure function
@@ -41,7 +46,8 @@
 // Nothing moves in a say beat once its time is up: its t runs on while the words are read, so people arrive and turn
 // before then and hold still after.
 //
-//   END                 where she is and what the view is on the cut scene's last frame: the walking part starts there
+//   START               where the walking part has her stop once she's walked in from off the left edge
+//   END                 the view on the cut scene's last frame, and the aisle's walkers' clock then: walking starts there
 //   makeCutscene(world) the beats; world = { drawWorld, drawCartBot, drawFolk, folk, LOOKS } (set.js and people.js)
 
 import { lerp, seg } from '../pixel.js';
@@ -49,8 +55,17 @@ import { placeCard, bars, cover, along, dirToward, SPEED } from '../stage.js';
 import { TEAMMATE_NAME } from '../cast.js';
 import { SCRIPT } from './lines.js';
 
-/** Her and the view when the cut scene ends, which is where the walking part begins. */
-export const END = { hero: { x: 572, y: 108, dir: 0 }, view: { x: 444, y: 0 } };
+/**
+ * Where the walking part begins: she comes into the hall along the aisle from off its left edge (scene.js's enter)
+ * and stops here, at the near end of the row in front of the SPARE PARTS counter, between the safety advisor's patrol
+ * and the passers-by's lanes, with the whole row ahead of her and the way out at its far end. She turns to you there.
+ */
+export const START = { x: 40, y: 111, dir: 0 };
+/**
+ * The cut scene's last frame: the near end of the hall, waiting for her. The aisle's walkers' clocks (scene.js) start
+ * at 0 there, and this shot runs them up to it.
+ */
+export const END = { view: { x: 0, y: 0 } };
 
 // ---- 5026's pit ----
 // Where everyone is when the pan gets there: Noor kneeling left of the robot with the drill, the teammate kneeling at
@@ -79,7 +94,8 @@ const MATE_ASIDE = [668, 96], MATE_SET = [630, 92], MATE_END = [588, 92];
 const MATE_OUT = [MATE_UP, [658, 103], MATE_ASIDE], MATE_IN = [MATE_ASIDE, [658, 103], MATE_SET];
 const MATE_GO = 0.7;
 const SET_AT = 3.9, LEAN_AT = SET_AT + along(MATE_IN, 1e6).dist / SPEED.walk, OFF_AT = LEAN_AT + 1.15;
-const HERO = [END.hero.x, END.hero.y];
+/** Her mark at the front of 5026's pit, where she takes her leave of the teammate in B6. */
+const HERO = [572, 108];
 // Her walk in from off the left of the screen. The robot's way to the queue: out of the pit on a slant to the middle
 // of the aisle, the way a cart pushed from one end goes, then right, along the aisle, past the QUEUE sign and off the
 // end of the hall, from ROLL_AT seconds into B5b. It eases off its spot, up to walking pace over its first EASE seconds
@@ -90,12 +106,11 @@ const HERO = [END.hero.x, END.hero.y];
 // its bumper, so the robot shows whole as it's called; in B5b he leads it along the aisle, a cart's length ahead
 // (LEAD, from LEAD_AT). The strategist steps back a little, out of its way (HERO_ASIDE): far enough left that when
 // the camera has followed the robot to the end of the hall she's just off the screen rather than a sliver at its edge,
-// and in B6 she steps back to HERO, where the walking part starts. B5b ends as Noor goes off the right of the screen
-// (ROLL_END), and it's three beats with no words (ROLL_PARTS), so one stray A skips a third of it, not all of it.
+// and in B6 she steps back to HERO. B5b ends as Noor goes off the right of the screen (ROLL_END), and A doesn't hurry
+// it (its hold is all of it).
 const WALK_IN = [[424, 120], HERO_PLAN];
 const ROLL = [CART, [630, 112], [652, 122], [880, 122]];
 const ROLL_AT = 0.55, GET_UP = 0.15, ROLL_END = 8.7;
-const ROLL_PARTS = [0, 2.4, 5.6, ROLL_END];
 const PUSH = 26, NOOR_PUSH = [CART[0] - PUSH, CART[1]];
 const NOOR_OUT = ROLL.map(([x, y]) => [x - PUSH, y]);
 const EASE = 0.6;
@@ -116,19 +131,25 @@ const AISLE = ['pass1', 'pass2', 'nadia'];
 
 // ---- The camera ----
 const ROW = { x: 0, y: 0, s: 1 };
-const PIT = { x: END.view.x, y: 0, s: 1 };
+const PIT = { x: 444, y: 0, s: 1 };
 // The plan, at twice the size: every head clears the top film bar (Ms. Kowalski's, the highest, by a pixel), the three
 // who speak show down to the waist above the dialog box, and the strategist stands clear of the name tag's corner. Its
 // edges fall between faces: Lena's (people.js has her at the laptop far enough left) is just out of the frame.
 const CLOSE = { x: 537, y: 34, s: 2 };
 const B2 = 16.5; // when the call comes, in cut scene seconds: the pan down the row is over
 /**
- * Where the pan after the robot stops: the end of the hall, the QUEUE sign whole at the right edge as the robot goes by
- * it, the strategist (at HERO_ASIDE) just off the left. The pan goes with the cart, from where it starts to PAN_RUN
+ * Where the pan after the robot stops: the end of the hall, the QUEUE sign and the way out on the screen as the robot
+ * goes by and out, the strategist (at HERO_ASIDE) just off the left. The pan goes with the cart, from where it starts to PAN_RUN
  * pixels further on, so it never outruns it (its fastest is 0.9 of the cart's pace: the robot always moves forward on
  * the screen). B6's pan back takes BACK_PAN seconds, no quicker than the long pan down the row.
  */
 const B5_END = 576, PAN_RUN = 220, BACK_PAN = 3.2;
+/**
+ * B7: the fade to black on the pit (from FADE[0] to FADE[1] seconds in), and up again on the near end of the hall (from
+ * FADE[2] to FADE[3]), the film bars going over BARS_OFF. A doesn't hurry it (its hold is all of it): the A that closes
+ * the teammate's last page starts it, and one more never cuts the fade short.
+ */
+const FADE = [0.1, 0.5, 0.7, 1.1], BARS_OFF = [0.9, 1.5], LATER = 1.6;
 /** A gentler ease than pixel.js's easeInOut for the long pans: the busy pits in the middle of the row don't rush past. */
 const glide = (u) => u * u * (3 - 2 * u);
 /** The pan down the row, t seconds into it. */
