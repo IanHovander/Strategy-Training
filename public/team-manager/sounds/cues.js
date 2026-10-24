@@ -16,6 +16,7 @@
 
 import { PHONE_TIMES } from '../opening/phone.js';
 import { HANDOFF } from '../opening/handoff.js';
+import { ORDER, OPPONENT, statusOf } from '../opening/teams2.js';
 
 const card = (t, o) => [t, 'card', o];
 const bed = (t, to, secs = 0.8) => [t, 'bed', { to, secs }];
@@ -38,9 +39,19 @@ export const SCENES = {
       'BET LOG': [[0, 'stamp']],
       'REWINDING': [[0, 'rewind']],
       'TO BE CONTINUED': [[0.1, 'continued']],
+      // The second pick (opening/second.js). The goal card slides in as Riley sets the goal.
+      'THE PLAN': [[0.15, 'card']],
+      // Each pick while she waits: the PA chime as Robin calls it, and the TAKEN stamp coming down on its tile a second
+      // later; alliance 5's picks, the quarterfinal's other side, get a cheer from their end of the stands.
+      ...Object.fromEntries(ORDER.map((p) => [statusOf(p), [
+        [0, 'chime'], [1, 'click'], ...(p.alliance === OPPONENT ? [[1, 'cheer', { size: 0.45 }]] : []),
+      ]])),
+      // Her turn: the clock slams in, as at the first pick.
+      'PICK 2: ON THE CLOCK': [[0, 'slam']],
     },
-    // The bet log's verdict, from what A says on it: CONTINUE for the right pick, REWIND for the wrong one.
-    label: { CONTINUE: [[0.25, 'jingle']], REWIND: [[0.25, 'miss']] },
+    // The bet log's verdict, from what A says on it: CONTINUE for the right pick, REWIND for the wrong one. CLOSE: the
+    // goal card opened from its pill in the second pick's header.
+    label: { CONTINUE: [[0.25, 'jingle']], REWIND: [[0.25, 'miss']], CLOSE: [[0, 'card', { soft: true }]] },
     clock: { last: 10 },
   },
 

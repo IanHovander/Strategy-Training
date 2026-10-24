@@ -203,9 +203,9 @@ for 7461 and green for 6834:
 > **Look at the trend, not the average.**
 
 A wrong pick rewinds to the start of the pick clock, Norbert's 26 ear glowing in the corner, and she thinks:
-*"...didn't this just happen?"* A right pick goes on to the quarterfinals (beat 2); for now that's a "to be continued"
-card. Not built yet: a wrong pick's quarterfinals played out and lost before the rewind, and the rewind's time-travel
-look ("Building the opening", part 3).
+*"...didn't this just happen?"* A right pick goes on to the second pick (beat 1b, below). Not built yet: a wrong
+pick's quarterfinals played out and lost before the rewind, and the rewind's time-travel look ("Building the opening",
+part 3).
 
 **Why not "averages don't add up"?** The first version of this puzzle had 7461 and your robot both climbing to Level 3
 and feeding from the same loading station, so the pair would score far less than the sum of their averages. The 2019
@@ -216,6 +216,67 @@ on the card. (A second version had 7461 sit dead on Saturday, its boxes left bla
 too easy to miss, and the trend reads more clearly.)
 
 The tablet is built in `public/team-manager/opening/` (`pick.js`, `tablet.js`, `teams.js`).
+
+### Beat 1b: the second pick
+
+6834 accepts, and selection isn't over: the second robot is hers to pick when the order comes back up the line. The
+player is thrown in the deep end, so the goal is made plain and kept on screen.
+
+**The goal.** The tablet turns to a dashboard of the whole selection: the eight alliances, 1 to 3 with their first
+picks and hers with 6834 just in. Her **goal card** slides in, the whiteboard checklist from section 4, in its first
+use:
+
+> ✓ FIRST PICK: 6834
+> ▶ SECOND PICK: ? (to beat alliance 5)
+> ○ WIN THE QUARTERFINAL (best 2 of 3)
+
+Riley says it in two lines: the quarterfinal is alliance 4 against alliance 5, best 2 of 3; alliance 5 has 7777, the
+top scorer at the event, and they pick before we do. She answers: *"Then we pick to beat alliance 5. Not just the
+biggest number left."* The card then folds into a pill in the dashboard's header (GOAL: SECOND PICK TO BEAT ALLIANCE
+5), which a tap opens again.
+
+**The wait, about 33 seconds.** Round 1 finishes (alliances 5, 6, 7, 8) and round 2 runs back up (8, 7, 6, 5), one
+pick every four seconds: MC Robin's call on a slim PA line, the pick going into its row, and its tile on her list
+stamped TAKEN BY ALLIANCE n and dropping away. She can browse every card, but can't invite anyone, and can't hurry
+it: the picks are the event's, and they're the clue. Alliance 5 is built to score cargo:
+
+| Alliance 5 | Role | Avg |
+|---|---|---|
+| **7777**, captain | cargo | **46**, the top scorer at the event |
+| 6417, first pick | cargo | 36 |
+| 7311, second pick | hatch | 20 |
+
+The others take 7461 (the fading one from the first pick), 6038, 6612, 8248, 9785 and 6017.
+
+**Her turn: 45 seconds, three teams left.**
+
+| Card | The tablet says | The truth |
+|---|---|---|
+| **2202** | **avg 27**, the biggest average left; "CARGO. 27 A MATCH. STEADY." | The trap. It adds 27: 105 to alliance 5's 102, a coin flip each match, with nobody stopping 7777. |
+| **5518** | avg 20; "GOES FOR LEVEL 3 EVERY MATCH." "MADE THE L3 CLIMB 2 TIMES IN 7." (two big boxes) | 98 to 102, and only if the climb works. |
+| **4471** | avg 14, the smallest on the screen; "DEFENSE. QUICK. HARD TO PUSH." "Q23: ON 7777. HELD IT TO 22." (that match outlined) | The right pick. Its own points are few because it spends its matches on defense. On 7777 it takes 24 off their star: 92 to 78. |
+
+The sums are the scouting app's: each robot's average, added up, counting 6834 at 48 (its last four: the first pick's
+lesson carries over) and her robot at 30.
+
+**It's fair** because everything is on screen: the goal says *to beat alliance 5*, Riley names 7777, the opponent box
+marks 7777's 46 as the best at the event, and 4471's card says what it did to 7777. **It's real**, not a trick: in
+2019 the third robot on an alliance often played defense, and a defender on the other side's top scorer is a standard
+quarterfinal plan. Students who know the game will recognize it.
+
+**After the pick:** INVITE or BACK, "4471 ACCEPTS!", then the bet log for PICK 2, GOOD CALL or BAD CALL, and one
+picture: the quarterfinal as two bars, her alliance in red and alliance 5 in blue, each robot a block as long as its
+average. With 4471, 7777's block shrinks from 46 to 22 and the blue bar with it.
+
+> **Pick for the matchup, not the list.**
+
+A wrong pick rewinds **only to her turn on the clock**, not to the start of selection: the first pick was right and
+the picks before hers were never hers. Norbert's ear glows, and she thinks *"...didn't this just happen?"* The right
+pick ticks the card's second line (✓ ✓ ○) and, for now, ends on TO BE CONTINUED: THE QUARTERFINAL, best 2 of 3
+against alliance 5 (beat 2).
+
+It's built in the same folder (`second.js`, `board.js`, `goals.js`, `verdict.js`, `teams2.js`); `?pick2` in the
+address starts there, and `?pick2=turn` at her turn. Not built yet: the quarterfinal itself.
 
 ### Beat 2: the quarterfinal endgame call
 

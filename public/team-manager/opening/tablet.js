@@ -397,3 +397,6 @@ export function drawContinued(t) {
   stroke(W / 2 + 28, 118, W / 2 + 33, 112, 2, GOOD);
   drawHud();
 }
+
+// The bet log's stamp and its blinking "A: ..." line, for the second pick's bet log (verdict.js).
+export { stamp as stampCall, prompt as blinkPrompt };

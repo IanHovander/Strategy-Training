@@ -86,6 +86,8 @@ export function pickClock(cut, now = nowS()) {
   return P.clock0 != null && (P.phase === 'browse' || P.phase === 'confirm') ? Math.max(0, leftAt(now)) : null;
 }
 const good = () => P.picked?.num === RIGHT;
+/** Whether the first pick's done and carried on from (the right pick, past its bet log): the second pick's turn. */
+export const pickOver = () => P.phase === 'end';
 function go(phase, now) {
   P.phase = phase;
   P.t0 = now;

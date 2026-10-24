@@ -74,6 +74,10 @@ colour, so it can follow the new team colour or stay as a UI accent.
 | `teams.js` | `OURS` ~20 | '5026' on the scouting tablet: her robot's pinned row and "5026 RESPECTFULLY INVITES TEAM ..." | The new number. The other teams (7461, 6834) are made up; keep them made up. |
 | `tablet.js` | `pinned()` ~145-150 | Her robot's row: a team-red stripe (`C.red1`) and YOUR ROBOT in pale red (`C.red3`) | The team colour, or keep as a UI accent. |
 | `pick.js` | `drawPickScreen()` ~130-151 | Norbert's 26 ear glowing in the corner as the pick rewinds (`drawHud({ glow })`), and pulsing on a wrong pick's bet log | Follows `norbert.js` and `norbert-held.js`. |
+| `teams2.js` | `SEEDS` ~37, `BASE` | The second pick: her team as seed 4 on the alliance board (from `teams.js` `OURS`), and her robot's average in the matchup sums | Follows `teams.js`; keep `SEEDS` the same as `cutscene.js`'s. The other teams are made up; keep them made up. |
+| `second.js` | `paAt()`; `BRIEF_LINES` | Robin's "ALLIANCE 4, 5026, YOU'RE UP!" (from `SEEDS`); Riley's dark red name tag (`C.red0`) and hers (`C.red1`) | Follows `teams2.js`; the tags as in `cutscene.js`. |
+| `board.js` | `board()` ~110-127 | Her alliance's row on the dashboard in team red (`C.red0`, `C.red1`, `C.red3`), tagged US | The team colour, or keep as a UI accent (alliance 4 is the red alliance in the quarterfinal either way). |
+| `second.js`, `verdict.js` | `drawSecond()` (rewind, result); `drawResult2()`, `drawEnd()` | Norbert's 26 ear glowing as the second pick rewinds, and in the corner | Follows `norbert.js` and `norbert-held.js`. |
 
 ### Team meeting (`public/team-manager/team-meeting/`)
 
