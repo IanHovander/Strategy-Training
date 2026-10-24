@@ -3,7 +3,7 @@
 //
 //   drawSeriesCard(t)                      QUARTERFINAL, best 2 of 3: the two alliances side by side, the series so far
 //   drawMatch(g, i, at, t, o)              match i on the field, `at` seconds into it (t: since it started showing)
-//   drawMatchOver(g, i, t, wins, camX)     its result over its last moment: RED WINS 100-86, and the series
+//   drawMatchOver(g, i, t, wins, camX)     its result over its last moment: RED WINS 105-99, and the series
 //   drawFrozen(g, t, o)                    match 3 stopped at 0:20, the field gone dark
 //   drawCall(g, v)                         the call: LEVEL 2 or LEVEL 3, over the frozen field
 //   callRect(i)                            where the call's two cards are, for taps

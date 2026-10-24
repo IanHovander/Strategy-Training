@@ -336,11 +336,11 @@ each match's seed, and `test/match-sim.mjs` checks the matches still go its way.
 
 - **The series card:** QUARTERFINAL, BEST 2 OF 3, the two alliances side by side with each robot's job.
 - **Match 1, about 10 seconds** (the match at 15 times speed, the camera on the action): 4471 defends 7777 all match.
-  Red wins 100 to 86, and 7777 scores 25. The second pick paying off.
+  Red wins 105 to 99, and 7777 scores 29. The second pick paying off.
 - **Match 2:** the same plans, but 6834's battery browns out at 1:12 and it's dead on the field, the line under the
-  picture turning red as it happens. Blue wins 91 to 69. A loose battery, nothing she could have seen; it's a clue for
+  picture turning red as it happens. Blue wins 82 to 77. A loose battery, nothing she could have seen; it's a clue for
   the van to find on a later run (section 9). 1-1.
-- **Match 3** slows down as it nears 0:20 and freezes there: a flash, the field going dark, red up 89 to 81. Everyone
+- **Match 3** slows down as it nears 0:20 and freezes there: a flash, the field going dark, red up 94 to 86. Everyone
   but the two climbers has gone home early, so every point left is 6834's climb and 6417's. Riley on the headset
   ("6834 has to climb. Your call."), 6834's driver ("Let us go for Level 3! We practiced it all week!"), and Riley
   again: 6417 is going for Level 3 too.
