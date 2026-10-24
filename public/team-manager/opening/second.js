@@ -26,7 +26,8 @@
 //             A wrong pick: Norbert's ear glows, and A rewinds. The right one: A carries on.
 //   rewind    the tape runs back to her turn at 0:45, not to the start: the picks before hers were never the problem.
 //             Then turn again, and her thought: "...DIDN'T THIS JUST HAPPEN?"
-//   end       the goal card, the second line ticked, and TO BE CONTINUED: THE QUARTERFINAL.
+//   end       the goal card, the second line ticked, and PICKS DONE. A goes on to the quarterfinal (quarter.js).
+//   over      the quarterfinal has the screen.
 // The goal card can be opened again from the pill any time in wait and turn (a tap on it); A, or a tap anywhere,
 // closes it. The clock doesn't stop for it.
 //
@@ -275,9 +276,14 @@ export function pressSecond(s, now = nowS()) {
       if (t < 0.6) break;
       go(good() ? 'end' : 'rewind', now);
       break;
+    case 'end':
+      if (t > 1) go('over', now);
+      break;
     default:
   }
 }
+/** Both picks made and the goal card ticked: the quarterfinal (quarter.js) has the screen from here. */
+export const secondOver = () => S.phase === 'over';
 
 /** A finger: true from 'down' if this takes it; false leaves it to the stage (a tap is A). */
 export function pointSecond(type, x, y, s, now = nowS()) {
@@ -343,7 +349,7 @@ export function secondLabel() {
     case 'turn': return `PICK ${S.on}`;
     case 'confirm': return S.choice ? 'BACK' : 'INVITE';
     case 'result': return good() ? 'CONTINUE' : 'REWIND';
-    case 'end': return undefined;
+    case 'end': return 'QUARTERFINAL';
     default: return 'NEXT';
   }
 }
@@ -363,7 +369,7 @@ export function secondStatus(now = nowS()) {
     case 'accept': return 'PICKED';
     case 'result': return 'BET LOG';
     case 'rewind': return 'REWINDING';
-    case 'end': return 'TO BE CONTINUED';
+    case 'end': return 'PICKS DONE';
     default: return undefined;
   }
 }

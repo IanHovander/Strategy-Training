@@ -272,11 +272,11 @@ average. With 4471, 7777's block shrinks from 46 to 22 and the blue bar with it.
 
 A wrong pick rewinds **only to her turn on the clock**, not to the start of selection: the first pick was right and
 the picks before hers were never hers. Norbert's ear glows, and she thinks *"...didn't this just happen?"* The right
-pick ticks the card's second line (✓ ✓ ○) and, for now, ends on TO BE CONTINUED: THE QUARTERFINAL, best 2 of 3
-against alliance 5 (beat 2).
+pick ticks the card's second line (✓ ✓ ○): PICKS DONE, and A goes on to the quarterfinal, best 2 of 3 against
+alliance 5 (beat 2).
 
 It's built in the same folder (`second.js`, `board.js`, `goals.js`, `verdict.js`, `teams2.js`); `?pick2` in the
-address starts there, and `?pick2=turn` at her turn. Not built yet: the quarterfinal itself.
+address starts there, and `?pick2=turn` at her turn.
 
 ### Beat 2: the quarterfinal endgame call
 
@@ -290,6 +290,34 @@ for +3). The opposing climber gets to Level 3 (+12) 60% of the time, otherwise L
 Everything pushes toward Level 3: the crowd chants, the partner's driver says "We practiced it!", and 12 is a bigger
 number than 6. That's the trap, and it's the Learn lesson *When the sure thing is enough, take it*. A wrong call
 rewinds **only to the frozen moment**, not to selection: the pick was right, so it stays.
+
+**As built** (`quarter.js`, `match.js`, `series.js`, and the bet log in `verdict.js`): the series against alliance 5,
+best 2 of 3, with alliance 4 (hers) as red, the higher seed.
+
+- **The series card:** QUARTERFINAL, BEST 2 OF 3, the two alliances side by side with each robot's job.
+- **Match 1, about 5 seconds:** the arena's field with this series' numbers on the robots, the camera running along
+  it, the score climbing on the scoreboard. 4471 stays on 7777 all match: red wins 88 to 74, and 7777 scores 22.
+  The second pick paying off.
+- **Match 2:** 6834 browns out at 1:12, dead on the field: blue wins 80 to 61. A loose battery, nothing she could
+  have seen; it's a clue for the van to find on a later run (section 7). 1-1.
+- **Match 3** runs to 0:20 and freezes: a flash, the field going dark, red up 71 to 64. Riley on the headset ("6834
+  has to climb. Your call."), 6834's driver ("Let us go for Level 3! We practiced it all week!"), and Riley again:
+  6417 is going for Level 3 too.
+- **The call:** two cards over the frozen field. LEVEL 2, +6, made 10 of 10. LEVEL 3, +12, made 5 of 10, a miss is
+  Level 1, +3. Under them, blue's 6417: Level 3, +12, made 6 of 10, a miss is Level 1, +3. The crowd chants LEVEL
+  THREE and 6834's driver says they practiced it. No clock: time's stopped. Tap a card, or the stick and A.
+- **The climb:** the intro's shot, the HAB from the side at twice the size, in red for her alliance: 6834 lifting
+  itself on its stilts. Then 6417 on blue's. The dice are honest: rolled as she calls (`?climb=made|missed` and
+  `?theirs=made|missed` fix them for testing). A missed Level 3 gets the front wheels over the edge, then the rear
+  stilts give and it drops back to Level 1.
+- **The buzzer:** the final score and the series won or lost, then the bet log for the call: ten replays of the last
+  20 seconds for each call as boxes, LEVEL 2 winning 10 of 10 and LEVEL 3 7 of 10, the sum that settles it ("Up 7,
+  plus 6 from Level 2: up 13. They can add 12 at most."), and *When the sure thing is enough, take it.* A Level 3
+  call is a BAD CALL even when it works ("It held this time. 3 times in 10, it doesn't."), and rewinds to the call.
+- **The end:** the goal card with all three ticked, and TO BE CONTINUED: the semifinal against alliance 1 (beat 3),
+  with the bet log's PICK 1, PICK 2 and ENDGAME ticked.
+
+`?qf` in the address starts at the series card, and `?qf=call` at the frozen moment.
 
 ### Beat 3: the semifinal, played fair
 

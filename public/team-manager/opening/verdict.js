@@ -18,7 +18,9 @@
 // of 3 against alliance 5.
 //
 //   drawResult2(team, good, t, { glow })   the bet log, t seconds in
-//   drawEnd(t, picked)                     the end, t seconds in
+//   drawEnd(t, picked)                     the picks done, t seconds in: on to the quarterfinal
+//   drawResult3(key, won, t, { glow })     the bet log for the quarterfinal's endgame call
+//   drawEnd3(t)                            the end of what's built: the quarterfinal won
 //   LESSON2                                the line to remember
 
 import { W, H, C, screen, fill, text, measure, dither, clamp, easeOut, seg } from '../pixel.js';
@@ -26,6 +28,7 @@ import { drawHud } from './norbert-held.js';
 import { stampCall, blinkPrompt } from './tablet.js';
 import { drawGoalCard, tick, GOAL_W } from './goals.js';
 import { matchup, RIGHT2, STAR, HELD, OPPONENT } from './teams2.js';
+import { CALLS, THEIRS, LEAD, RIGHT3, LESSON3, winsOutOf10 } from './series.js';
 
 export const LESSON2 = 'PICK FOR THE MATCHUP, NOT THE LIST.';
 const GOOD = '#3fd06a';
@@ -96,7 +99,7 @@ export function drawResult2(team, good, t, { glow = 0 } = {}) {
   drawHud({ glow });
 }
 
-/** The end of what's built: the goal card with two ticks, TO BE CONTINUED, and what's next. */
+/** The picks done: the goal card with two ticks, and on to the quarterfinal (quarter.js). */
 export function drawEnd(t, picked) {
   screen();
   fill(0, 0, W, H, C.night0);
@@ -106,10 +109,9 @@ export function drawEnd(t, picked) {
   drawGoalCard(Math.round((W - GOAL_W) / 2), Math.round(-70 + 94 * slide), { done: 2, picked, tickAt: 0.7, t, next: false });
   if (t > 1.4) {
     text(`NEXT: THE QUARTERFINAL - BEST 2 OF 3 VS ALLIANCE ${OPPONENT}`, W / 2, 98, { font: 3, align: 'center', color: C.blue3 });
-    const dots = '...'.slice(0, Math.min(3, Math.floor((t - 1.4) * 2)));
-    const x = Math.round(W / 2 - measure('TO BE CONTINUED...', { scale: 2 }) / 2);
-    text(`TO BE CONTINUED${dots}`, x, 106, { scale: 2, color: C.white, outline: C.ink });
+    text('PICKS DONE', W / 2, 106, { scale: 2, align: 'center', color: C.white, outline: C.ink });
   }
+  blinkPrompt('A: TO THE QUARTERFINAL', 122, t, 1.8);
   if (t > 2) {
     const s = 'BET LOG: PICK 1', s2 = 'PICK 2', w1 = measure(s, { font: 3 }), w2 = measure(s2, { font: 3 });
     const total = w1 + 8 + w2 + 8, x = Math.round(W / 2 - total / 2);
@@ -117,6 +119,83 @@ export function drawEnd(t, picked) {
     tick(x + w1 + 2, 132, 5, GOOD);
     text(s2, x + w1 + 10, 132, { font: 3, color: C.steel2 });
     tick(x + w1 + 12 + w2, 132, 5, GOOD);
+  }
+  drawHud();
+}
+
+// ---- The quarterfinal's endgame call (quarter.js) ----
+//
+// The bet log for the call, laid out like the picks': BET LOG, the call, the stamp, one picture and one line. The
+// picture is ten replays of the last 20 seconds for each call, a box each, green for a win and red for a loss:
+// LEVEL 2 wins all ten, LEVEL 3 seven. The row she called is lit. Under it, the sum that settles it:
+//
+//   UP 7, PLUS 6 FROM LEVEL 2: UP 13. THEY CAN ADD 12 AT MOST.
+//
+//   WHEN THE SURE THING IS ENOUGH, TAKE IT.
+//
+// A Level 3 that worked is still a bad call (it held this time; three times in ten it doesn't), and rewinds the same.
+
+/** The bet log for the endgame call. key: 'l2' or 'l3'; won: how the match went. */
+export function drawResult3(key, won, t, { glow = 0 } = {}) {
+  const good = key === RIGHT3, call = CALLS.find((c) => c.key === key);
+  screen();
+  fill(0, 0, W, H, C.night0);
+  dither(0, 120, W, 4, C.night0, C.night1);
+  fill(0, 124, W, H - 124, C.night1);
+  text('BET LOG', W / 2, 4, { font: 3, align: 'center', color: C.steel2 });
+  text(`ENDGAME CALL: ${call.name}`, W / 2, 11, { align: 'center', color: C.white });
+  stampCall(good, t, 23);
+  if (t > 0.5) {
+    text('20 SECONDS LEFT, UP 7, TEN TIMES OVER:', W / 2, 54, { font: 3, align: 'center', color: C.steel2 });
+    CALLS.forEach((c, row) => {
+      const y = 62 + row * 13, wins = winsOutOf10(c.key), mine = c.key === key;
+      // Her call, framed.
+      if (mine) {
+        fill(24, y - 3, 200, 14, C.yel1);
+        fill(25, y - 2, 198, 12, C.night0);
+      }
+      text(c.name, 66, y + 1, { align: 'right', color: mine ? C.yel2 : C.steel3 });
+      for (let i = 0; i < 10; i++) {
+        const shown = t > 0.6 + row * 0.5 + i * 0.05, win = i < wins;
+        fill(72 + i * 10, y, 8, 8, C.ink);
+        if (shown) fill(73 + i * 10, y + 1, 6, 6, win ? GOOD : C.red2);
+      }
+      if (t > 1.2 + row * 0.5) text(`WINS ${wins} OF 10`, 176, y + 1, { font: 3, color: mine ? C.yel2 : C.steel3 });
+    });
+  }
+  if (t > 1.8) {
+    const sure = CALLS.find((c) => c.key === RIGHT3);
+    text(`UP ${LEAD}, PLUS ${sure.pts} FROM ${sure.name}: UP ${LEAD + sure.pts}. THEY CAN ADD ${THEIRS.pts} AT MOST.`, W / 2, 91, { font: 3, align: 'center', color: C.steel3 });
+    if (!good) text(won ? 'IT HELD THIS TIME. 3 TIMES IN 10, IT DOESN\'T.' : 'THIS WAS ONE OF THE 3 IN 10.', W / 2, 98, { font: 3, align: 'center', color: C.red2 });
+  }
+  if (t > 2.2) text(LESSON3, W / 2, 106, { align: 'center', color: C.yel2, outline: C.ink });
+  blinkPrompt(good ? 'A: CONTINUE' : 'A: REWIND', 130, t, 2.6);
+  drawHud({ glow });
+}
+
+/** The end of what's built now: all three goals ticked, the quarterfinal won, and the semifinal next. */
+export function drawEnd3(t) {
+  screen();
+  fill(0, 0, W, H, C.night0);
+  dither(0, 112, W, 6, C.night0, C.night1);
+  fill(0, 118, W, H - 118, C.night1);
+  const slide = easeOut(clamp(t / 0.5, 0, 1));
+  drawGoalCard(Math.round((W - GOAL_W) / 2), Math.round(-70 + 94 * slide), { done: 3, picked: RIGHT2, tickAt: 0.7, t, next: false });
+  if (t > 1.4) {
+    text('NEXT: THE SEMIFINAL VS ALLIANCE 1', W / 2, 98, { font: 3, align: 'center', color: C.blue3 });
+    const dots = '...'.slice(0, Math.min(3, Math.floor((t - 1.4) * 2)));
+    const x = Math.round(W / 2 - measure('TO BE CONTINUED...', { scale: 2 }) / 2);
+    text(`TO BE CONTINUED${dots}`, x, 106, { scale: 2, color: C.white, outline: C.ink });
+  }
+  if (t > 2) {
+    const parts = ['BET LOG: PICK 1', 'PICK 2', 'ENDGAME'];
+    const ws = parts.map((s) => measure(s, { font: 3 }));
+    let x = Math.round(W / 2 - (ws.reduce((a, b) => a + b, 0) + parts.length * 10) / 2);
+    parts.forEach((s, i) => {
+      text(s, x, 132, { font: 3, color: C.steel2 });
+      tick(x + ws[i] + 2, 132, 5, GOOD);
+      x += ws[i] + 10;
+    });
   }
   drawHud();
 }

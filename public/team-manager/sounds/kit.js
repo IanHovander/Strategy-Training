@@ -136,6 +136,15 @@ export const SFX = {
       c.tone(at, 0.9, hz(root - 12), { wave: 'tri', vol: 0.12 });
     },
   },
+  /** The match horn: the field's start and end, a low brassy chord held. */
+  horn: {
+    bus: 'sfx',
+    play: (c, t, o) => {
+      const d = o.dur ?? 0.8;
+      [[45, 'p50', 0.05], [52, 'p25', 0.035], [57, 'p50', 0.03]].forEach(([m, wave, vol]) => c.tone(t, d, hz(m), { wave, vol }));
+      c.noise(t, d * 0.6, { vol: 0.02, type: 'lowpass', hz: 700 });
+    },
+  },
   /** Something going right, smaller: three notes up. */
   jingle: { bus: 'sfx', play: (c, t) => [79, 83, 86].forEach((m, i) => c.tone(t + i * 0.08, i === 2 ? 0.4 : 0.08, hz(m), { wave: 'p25', vol: 0.04, decay: i === 2 })) },
   /** Something going wrong: two notes down, low. */

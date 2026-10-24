@@ -283,12 +283,15 @@ const shadow = (x, y) => withAlpha(0.45, () => {
 /**
  * The HAB at the alliance wall: level 1 runs along the floor, level 3 is the tall step at x = x3,
  * and the alliance wall stands at x3 + 40, with the drive team behind it, facing the field.
- * o: cheer (the drive team jumps, pumping their fists), t (beats, for the jumps), glow (the alliance light strip lights up).
+ * o: cheer (the drive team jumps, pumping their fists), t (beats, for the jumps), glow (the alliance light strip lights up),
+ * red (a red alliance's HAB and wall: blue otherwise).
  */
 export const HAB = { l1: -2, l3: -16, depth: 40 };
 export function hab(x3, o = {}) {
   const x0 = cam.x - 4, x1 = cam.x + 260 / cam.s;
   const wx = x3 + HAB.depth, { top, plate } = WALL;
+  // The alliance's colours: blue unless o.red.
+  const T = o.red ? [C.red0, C.red1, C.red2, C.red3] : [C.blue0, C.blue1, C.blue2, C.blue3];
   // Past the alliance wall the field's guardrail stops: behind the drive team there's only the dark of the arena,
   // and the carpet of their station going back from the wall.
   rect(wx + 3, -22, x1 - wx, 22, C.stand0);
@@ -350,30 +353,30 @@ export function hab(x3, o = {}) {
   // top and its field side (down to level 3, which hides the rest), with a dark line 3 ft up where the diamond plate
   // stops and the glass starts. Above it, the pale edge of the clear polycarbonate on the drivers' side.
   rect(wx - 1, top - 1, 8, 1 - top, C.ink);
-  rect(wx, top, 6, -top, C.blue1);
-  rect(wx, top, 1, HAB.l3 - 1 - top, C.blue2);
-  rect(wx, top, 6, 1, C.blue3);
-  withAlpha(0.5, () => rect(wx + 5, top + 1, 1, plate - top - 1, C.blue3));
+  rect(wx, top, 6, -top, T[1]);
+  rect(wx, top, 1, HAB.l3 - 1 - top, T[2]);
+  rect(wx, top, 6, 1, T[3]);
+  withAlpha(0.5, () => rect(wx + 5, top + 1, 1, plate - top - 1, T[3]));
   // The 3 ft line is the end of the alliance light strip along the top of the plate: lit, it blinks.
-  rect(wx, plate, 6, 1, o.glow ? C.blue3 : C.blue0);
-  if (o.glow) rect(wx, plate + 1, 6, 1, C.blue2);
+  rect(wx, plate, 6, 1, o.glow ? T[3] : T[0]);
+  if (o.glow) rect(wx, plate + 1, 6, 1, T[2]);
   // On top: the team number sign, a flat panel seen edge on (the number faces the field), and sitting on it the stack
   // light that shows the robot is connected.
   rect(wx + 1, top - 5, 4, 5, C.ink);
   rect(wx + 2, top - 4, 2, 3, '#16204a');
-  rect(wx + 2, top - 4, 1, 3, C.blue2);
+  rect(wx + 2, top - 4, 1, 3, T[2]);
   rect(wx + 1, top - 8, 4, 4, C.ink);
-  rect(wx + 2, top - 7, 2, 1, C.blue2);
-  rect(wx + 2, top - 7, 1, 1, C.blue3);
+  rect(wx + 2, top - 7, 2, 1, T[2]);
+  rect(wx + 2, top - 7, 1, 1, T[3]);
   rect(wx + 2, top - 6, 2, 1, C.org0);
   // Level 3 platform.
   rect(x3 - 1, HAB.l3 - 1, HAB.depth + 2, HAB.l1 - HAB.l3 + 1, C.ink);
-  rect(x3, HAB.l3, HAB.depth, HAB.l1 - HAB.l3, C.blue1);
+  rect(x3, HAB.l3, HAB.depth, HAB.l1 - HAB.l3, T[1]);
   rect(x3, HAB.l3, HAB.depth, 2, C.steel3);
   for (let x = 0; x < HAB.depth; x += 3) rect(x3 + x, HAB.l3, 1, 1, C.steel2);
-  rect(x3, HAB.l3 + 2, HAB.depth, 1, C.blue2);
-  rect(x3, HAB.l1 - 2, HAB.depth, 1, C.blue0);
-  for (let x = 4; x < HAB.depth - 2; x += 8) rect(x3 + x, HAB.l3 + 5, 4, 6, C.blue0);
+  rect(x3, HAB.l3 + 2, HAB.depth, 1, T[2]);
+  rect(x3, HAB.l1 - 2, HAB.depth, 1, T[0]);
+  for (let x = 4; x < HAB.depth - 2; x += 8) rect(x3 + x, HAB.l3 + 5, 4, 6, T[0]);
 }
 
 // ---- The arena ----

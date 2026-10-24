@@ -48,6 +48,25 @@ export const SCENES = {
       ]])),
       // Her turn: the clock slams in, as at the first pick.
       'PICK 2: ON THE CLOCK': [[0, 'slam']],
+      // Both picks done, on to the quarterfinal: the second line's tick stamped on.
+      'PICKS DONE': [[0.7, 'stamp'], [0.9, 'jingle']],
+      // The quarterfinal (opening/quarter.js): the matches loud, the freeze quiet, each climb's outcome heard.
+      QUARTERFINAL: [[0, 'card'], bed(0, 0.6, 0.6)],
+      'QF MATCH 1': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }]],
+      'QF MATCH 2': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }]],
+      'QF MATCH 3': [bed(0, 1.2, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.9 }]],
+      'QF: RED WINS': [[0, 'horn', { dur: 1.1 }], [0.1, 'cheer', { size: 0.9 }], [0.3, 'jingle'], bed(1.4, 0.7, 1)],
+      'QF: BLUE WINS': [[0, 'horn', { dur: 1.1 }], [0.2, 'aww'], [0.3, 'miss'], bed(1.4, 0.7, 1)],
+      'QF: 0:20 LEFT': [[0, 'slam'], bed(0, 0.25, 0.3)],
+      'QF: YOUR CALL': [bed(0, 0.5, 1.5)],
+      'QF: 6834 CLIMBS': [bed(0, 1, 0.4), [0.5, 'robot', { dur: 1.2 }], [2.6, 'robot', { dur: 0.6, vol: 0.8 }]],
+      'QF: 6834 MADE IT': [[0, 'clunk'], [0.05, 'cheer', { size: 1 }]],
+      'QF: 6834 MISSED': [[0, 'clunk'], [0.15, 'aww']],
+      'QF: 6417 CLIMBS': [[0.5, 'robot', { dur: 1.2, vol: 0.7 }], [2.6, 'robot', { dur: 0.6, vol: 0.6 }]],
+      'QF: 6417 MADE IT': [[0, 'clunk'], [0.1, 'aww']],
+      'QF: 6417 MISSED': [[0, 'clunk'], [0.1, 'cheer', { size: 0.8 }]],
+      'QF: WE WIN THE SERIES': [[0, 'horn', { dur: 1.2 }], [0.1, 'cheer', { size: 1 }], [0.3, 'fanfare'], bed(1.5, 0.7, 1.5)],
+      'QF: KNOCKED OUT': [[0, 'horn', { dur: 1.2 }], [0.2, 'aww'], [0.4, 'miss'], bed(1.5, 0.5, 1.5)],
     },
     // The bet log's verdict, from what A says on it: CONTINUE for the right pick, REWIND for the wrong one. CLOSE: the
     // goal card opened from its pill in the second pick's header.
