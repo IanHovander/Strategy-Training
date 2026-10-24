@@ -7,20 +7,21 @@ import { walkerFrame, CELL_W, CELL_H, FOOT_X, FOOT_Y } from './walker.js';
 import { student, tones, HAIR, SKIN, hairPal, skinBody } from './cast.js';
 
 // ---- Robot parts ----
+// Shared with match/bots.js, which draws the match's other kinds of robot the same way.
 // A drawing frame: d is the facing (+1 right, -1 left) times a squash used to fake a spin.
-const frame = (x, y, d) => ({ x: snap(x), y: snap(y), d });
-function part(f, dx, dy, w, h, c) {
+export const frame = (x, y, d) => ({ x: snap(x), y: snap(y), d });
+export function part(f, dx, dy, w, h, c) {
   const a = f.x + f.d * dx, b = f.x + f.d * (dx + w);
   rect(Math.min(a, b), f.y + dy, Math.abs(b - a), h, c);
 }
-const TEAM = {
+export const TEAM = {
   blue: [C.blue0, C.blue1, C.blue2, C.blue3],
   red: [C.red0, C.red1, C.red2, C.red3],
 };
 const RING = [[-2, -2], [-1, -2], [0, -2], [1, -2], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-2, 1], [-2, 0], [-2, -1]];
 
 /** A 6px wheel centered between pixels (cx, cy); spin moves the tread marks. */
-function wheel(f, cx, cy, spin) {
+export function wheel(f, cx, cy, spin) {
   part(f, cx - 2, cy - 3, 4, 6, C.ink);
   part(f, cx - 3, cy - 2, 6, 4, C.ink);
   part(f, cx - 2, cy - 2, 4, 4, C.tire);
@@ -30,7 +31,7 @@ function wheel(f, cx, cy, spin) {
 }
 
 /** Fabric bumpers with the team number, the way every FRC robot wears them. */
-function bumper(f, x0, w, top, cols, num) {
+export function bumper(f, x0, w, top, cols, num) {
   part(f, x0 - 1, top - 1, w + 2, 9, C.ink);
   part(f, x0, top, w, 7, cols[1]);
   part(f, x0, top, w, 1, cols[2]);
@@ -42,7 +43,7 @@ function bumper(f, x0, w, top, cols, num) {
 }
 
 /** A hatch panel (the yellow disc) seen almost edge-on, centered at height cy. */
-function hatchPart(f, dx, cy) {
+export function hatchPart(f, dx, cy) {
   part(f, dx, cy - 7, 4, 15, C.ink);
   part(f, dx - 1, cy - 5, 6, 11, C.ink);
   part(f, dx, cy - 6, 4, 13, C.yel1);
@@ -135,7 +136,7 @@ export const hatchHeight = (e1, e2) => -22 - Math.round(e1 * 28) - Math.round(e2
 
 /**
  * The defender: low, wide, all drivetrain, with hazard stripes and a red light bar for eyes.
- * o: dir (default faces left), k, spin, glint (0..1 sweeps a highlight across the light bar), num.
+ * o: dir (default faces left), k, spin, glint (0..1 sweeps a highlight across the light bar), num, team (red if not given).
  */
 export function defBot(x, y, o = {}) {
   const f = frame(x, y, (o.dir ?? -1) * (o.k ?? 1));
@@ -159,7 +160,7 @@ export function defBot(x, y, o = {}) {
   part(f, -11, -26, 2, 2, o.rsl === false ? C.org0 : C.org1);
   if (o.rsl !== false) part(f, -11, -26, 1, 1, C.org2);
   part(f, -5, -28, 1, 5, C.ink);
-  bumper(f, -18, 36, -12, TEAM.red, o.num ?? '7777');
+  bumper(f, -18, 36, -12, TEAM[o.team ?? 'red'], o.num ?? '7777');
 }
 
 /**

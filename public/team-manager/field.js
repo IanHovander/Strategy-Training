@@ -6,6 +6,8 @@
 // half (drawn like the intro's), tape, and four robots running cycles. The drive teams stand in their stations. Past the
 // blue end is the queue for the next match; past the red end, the scoring table. The stands are beyond the far wall
 // (bleachers.js), with the walkway between. Everything is in world pixels, drawn through pixel.js's camera.
+// For a real match (match/), drawFieldLive's live option takes the robots and every piece from outside, and adds the
+// near wall's rockets too, see-through, since the camera sees them from behind; portAt() says where each piece goes.
 
 import { C, useContext, camera, screen, rect, disk, text, withAlpha, rnd } from './pixel.js';
 import { eleBot, defBot, armBot, cargo } from './sprites.js';
@@ -71,19 +73,9 @@ export function makeFloor() {
     // Alignment lines: out from the rocket, from the cargo ship's side bays, and from its two front bays.
     rect(ROCKETS.find((r) => r.alliance === a).x, floorY(ROCKET_Z), 1, 3 * DEEP, C.tape);
     for (const bx of shipBays(a)) rect(bx, floorY(SHIP.z1), 1, 1.5 * DEEP, C.tape);
-    for (const z of [12.4, 14.6]) rect(mirrorX(a, SHIP.x0 - 1.5 * FT, 1.5 * FT), floorY(z), 1.5 * FT, 1, C.tape);
+    for (const z of FRONT_Z) rect(mirrorX(a, SHIP.x0 - 1.5 * FT, 1.5 * FT), floorY(z), 1.5 * FT, 1, C.tape);
     // Cargo depots beside the HAB: a low bin of balls on each side of it.
-    for (const z of [4.6, 20.6]) {
-      const x = mirrorX(a, FIELD.x0, 3.5 * FT);
-      const top = floorY(z), bottom = floorY(z + 1.8);
-      rect(x - 1, top - 3, 3.5 * FT + 2, bottom - top + 4, C.ink);
-      rect(x, top - 2, 3.5 * FT, bottom - top + 2, '#3f4761');
-      rect(x, top - 2, 3.5 * FT, 1, STEEL);
-      for (let i = 0; i < 6; i++) {
-        rect(x + 2 + i * 4, top - 4 + (i % 2), 3, 3, C.ink);
-        rect(x + 2 + i * 4, top - 4 + (i % 2), 2, 2, C.org1);
-      }
-    }
+    for (const z of DEPOT_Z) depot(a, z, 6);
   }
   // The queue lane past the blue end, taped out on the concrete.
   for (const y of [QUEUE_LANE.y0, QUEUE_LANE.y1]) {
@@ -91,6 +83,24 @@ export function makeFloor() {
   }
   useContext(prev);
   return c;
+}
+
+/**
+ * A cargo depot: the low bin at depth z, with `balls` of its six showing (each one there is two cargo, full it's twelve).
+ * cover: drawn again over the floor's full one (a live match), so the carpet goes back where a ball's gone.
+ */
+const DEPOT_Z = [4.6, 20.6];
+function depot(alliance, z, balls, cover = false) {
+  const x = mirrorX(alliance, FIELD.x0, 3.5 * FT);
+  const top = floorY(z), bottom = floorY(z + 1.8);
+  if (cover) rect(x, top - 4, 3.5 * FT, 1, CARPET);
+  rect(x - 1, top - 3, 3.5 * FT + 2, bottom - top + 4, C.ink);
+  rect(x, top - 2, 3.5 * FT, bottom - top + 2, '#3f4761');
+  rect(x, top - 2, 3.5 * FT, 1, STEEL);
+  for (let i = 0; i < balls; i++) {
+    rect(x + 2 + i * 4, top - 4 + (i % 2), 3, 3, C.ink);
+    rect(x + 2 + i * 4, top - 4 + (i % 2), 2, 2, C.org1);
+  }
 }
 
 // ---- Walls and barriers ----
@@ -183,6 +193,8 @@ function hab(alliance) {
 // here; from above you see into every bay.
 const SHIP = { x0: FIELD.mid - 63, x1: FIELD.mid + 63, z0: 11.2, z1: 15.8, h: 4 * FT };
 const BAY_W = 15;
+/** The front pair's depths (their alignment tape). */
+const FRONT_Z = [12.4, 14.6];
 /** The middles of each half's three side bays, from the centre line out. */
 const shipBays = (alliance) => [0, 1, 2].map((i) => mirrorX(alliance, FIELD.mid - 8 - i * BAY_W));
 // What's in each half's bays so far: the near side's [cargo, hatch] from the middle out, the far side's cargo, the front pair's.
@@ -201,12 +213,23 @@ export function hatchFaceOn(cx, cy, full) {
   disk(cx, cy, 2, C.ink);
   if (full) rect(cx - 1, cy - 1, 2, 2, C.org1);
 }
+/** A null hatch panel, put in before the match: worth nothing, so it's grey, but cargo stays in behind it. */
+function nullFaceOn(cx, cy, full) {
+  disk(cx, cy, 7, C.ink);
+  disk(cx, cy, 6, C.steel2);
+  rect(cx - 4, cy - 4, 3, 2, C.steel3);
+  rect(cx + 3, cy + 2, 2, 2, C.steel1);
+  disk(cx, cy, 2, C.ink);
+  if (full) rect(cx - 1, cy - 1, 2, 2, C.org1);
+}
+/** A bay's [cargo, hatch], from the arena's (cargo only on the far side and the front) or a live match's. */
+const bayOf = (v) => (Array.isArray(v) ? v : [v, 0]);
 
-function cargoShip() {
+function cargoShip(fills = SHIP_FILL) {
   const { yTop, yFront, yFloor } = box(SHIP.x0, SHIP.x1 - SHIP.x0, SHIP.z0, SHIP.z1, SHIP.h, HOLE, PANEL, C.steel3);
   const deck = yFront - yTop, rowH = Math.floor((deck - 3) / 2);
   for (const a of ['blue', 'red']) {
-    const T = TEAM[a], fill = SHIP_FILL[a];
+    const T = TEAM[a], fill = fills[a];
     const half = mirrorX(a, SHIP.x0, 63);
     // From above: the near row and far row of bays, the front pair at the end, the rim round it all.
     rect(half, yTop, 63, 1, C.steel3);
@@ -215,14 +238,25 @@ function cargoShip() {
     const edges = [1, 2, 3].map((i) => mirrorX(a, FIELD.mid - 1 - i * BAY_W, 1));
     for (const x of edges) rect(x, yTop, 1, deck, C.steel2);
     shipBays(a).forEach((cx, i) => {
-      if (fill.far[i]) rect(cx - 2, yTop + 2, 4, rowH - 1, C.org1);
+      const [far, farHatch] = bayOf(fill.far[i]);
+      if (far) rect(cx - 2, yTop + 2, 4, rowH - 1, C.org1);
+      // A hatch on a far bay faces away: from up here it's a line of yellow (grey for a null one) along the far rim.
+      if (farHatch) rect(cx - 3, yTop, 6, 2, farHatch === 'null' ? C.steel2 : C.yel1);
       if (fill.near[i][0]) {
         rect(cx - 2, yTop + 2 + rowH, 4, rowH - 1, C.org1);
         rect(cx - 2, yTop + 2 + rowH, 2, 1, C.org2);
       }
     });
-    fill.front.forEach((full, i) => {
+    fill.front.forEach((v, i) => {
+      const [full, hatch] = bayOf(v);
       if (full) rect(mirrorX(a, SHIP.x0 + 7) - 2, yTop + 2 + i * (rowH + 1), 4, rowH - 1, C.org1);
+      // A hatch on a front bay faces the HAB: edge-on, it sticks out past the ship's end.
+      if (hatch) {
+        const y = floorY(FRONT_Z[i]) - 12, x = mirrorX(a, SHIP.x0 - 3, 3);
+        rect(x, y - 5, 3, 10, C.ink);
+        rect(x + (a === 'blue' ? 1 : 0), y - 4, 2, 8, C.yel1);
+        rect(x + (a === 'blue' ? 1 : 0), y - 4, 1, 8, C.yel2);
+      }
     });
     // The side toward you: the alliance's colour along the bottom, its outer end painted, then the bays.
     rect(half, yFloor - 5, 63, 5, C.steel0);
@@ -239,7 +273,8 @@ function cargoShip() {
       rect(cx - 4, yFloor - 30, 8, 8, HOLE);
       if (hasCargo) cargo(cx, yFloor - 24, 3);
       rect(cx - 5, yFloor - 21, 10, 1, C.steel3);
-      if (hasHatch) hatchFaceOn(cx, port, hasCargo);
+      if (hasHatch === 'null') nullFaceOn(cx, port, hasCargo);
+      else if (hasHatch) hatchFaceOn(cx, port, hasCargo);
       else {
         disk(cx, port, 5, C.steel2);
         disk(cx, port, 4, C.ink);
@@ -270,56 +305,126 @@ export function hatchOnFace(cx, cy) {
   rect(cx - 1, cy - 1, 2, 3, C.ink);
 }
 
-function rocket(cx, alliance, fill) {
-  const T = TEAM[alliance], b = floorY(ROCKET_Z), top = b - HULL;
-  // Outlines: the cone, the hull, the skirt.
-  for (let i = 0; i < CONE; i++) rect(cx - coneW(i) - 1, top - CONE + i, coneW(i) * 2 + 2, 1, C.ink);
-  rect(cx - coneW(0) - 1, top - CONE - 1, coneW(0) * 2 + 2, 1, C.ink);
-  rect(cx - 15, top, 30, HULL - 4, C.ink);
-  rect(cx - 17, b - 6, 34, 6, C.ink);
-  // Nose cone: the alliance colour at the tip, silver below, shaded on the right, a glint on the left.
-  for (let i = 0; i < CONE; i++) {
-    const hw = coneW(i), y = top - CONE + i, tip = i < 3;
-    rect(cx - hw, y, hw * 2, 1, tip ? T[1] : C.steel3);
-    rect(cx + hw - Math.max(1, hw >> 1), y, Math.max(1, hw >> 1), 1, tip ? T[0] : C.steel2);
-    if (hw > 3) rect(cx - hw + 2, y, 1, 1, tip ? T[2] : C.white);
-  }
-  // Hull: the left face catches the light, the middle is silver with a highlight, the right face is in shade.
-  rect(cx - 14, top, 6, HULL - 5, C.steel3);
-  rect(cx - 12, top, 2, HULL - 5, C.white);
-  rect(cx - 8, top, 16, HULL - 5, PANEL);
-  rect(cx - 7, top, 1, HULL - 5, C.steel3);
-  rect(cx + 8, top, 6, HULL - 5, C.steel2);
-  rect(cx + 12, top, 2, HULL - 5, C.steel1);
-  for (const x of [cx - 8, cx + 8]) rect(x, top, 1, HULL - 5, C.steel2);
-  // Alliance bands between the levels and round the top.
-  for (const up of [HULL, 45, 26]) {
-    rect(cx - 14, b - up, 28, 3, T[1]);
-    rect(cx - 14, b - up, 28, 1, T[2]);
-    rect(cx + 8, b - up, 6, 3, T[0]);
-  }
-  // Skirt with its vents.
-  rect(cx - 16, b - 5, 32, 5, C.steel1);
-  rect(cx - 16, b - 5, 32, 1, C.steel2);
-  for (let x = cx - 14; x < cx + 15; x += 5) rect(x, b - 3, 2, 1, C.steel0);
-  // The ports. Home is the face toward the alliance's own end.
+/**
+ * A rocket at cx, its face toward you on the floor line `base`. fill: { home, away, cargo }, three a level each:
+ * hatches on the home face (toward its own end) and the away face, and cargo (true, or [home, away] for which of the
+ * two behind that level are in). ghost: a near wall rocket, seen from behind: 'hull' draws it see-through, 'pieces'
+ * the pieces in it, solid (drawFieldLive sorts the two apart: see liveParts).
+ */
+function rocket(cx, alliance, fill, base = floorY(ROCKET_Z), ghost = null) {
+  const T = TEAM[alliance], b = base, top = b - HULL;
   const [homeX, awayX] = alliance === 'blue' ? [cx - 11, cx + 11] : [cx + 11, cx - 11];
-  HATCH_UP.forEach((up, l) => {
-    for (const [x, full] of [[homeX, fill.home[l]], [awayX, fill.away[l]]]) {
-      if (full) hatchOnFace(x, b - up);
-      else {
-        rect(x - 2, b - up - 5, 4, 10, C.ink);
-        rect(x - 1, b - up - 4, 2, 8, C.steel0);
-      }
+  const hull = () => {
+    // Outlines: the cone, the hull, the skirt.
+    for (let i = 0; i < CONE; i++) rect(cx - coneW(i) - 1, top - CONE + i, coneW(i) * 2 + 2, 1, C.ink);
+    rect(cx - coneW(0) - 1, top - CONE - 1, coneW(0) * 2 + 2, 1, C.ink);
+    rect(cx - 15, top, 30, HULL - 4, C.ink);
+    rect(cx - 17, b - 6, 34, 6, C.ink);
+    // Nose cone: the alliance colour at the tip, silver below, shaded on the right, a glint on the left.
+    for (let i = 0; i < CONE; i++) {
+      const hw = coneW(i), y = top - CONE + i, tip = i < 3;
+      rect(cx - hw, y, hw * 2, 1, tip ? T[1] : C.steel3);
+      rect(cx + hw - Math.max(1, hw >> 1), y, Math.max(1, hw >> 1), 1, tip ? T[0] : C.steel2);
+      if (hw > 3) rect(cx - hw + 2, y, 1, 1, tip ? T[2] : C.white);
     }
-  });
-  CARGO_UP.forEach((up, l) => {
+    // Hull: the left face catches the light, the middle is silver with a highlight, the right face is in shade.
+    rect(cx - 14, top, 6, HULL - 5, C.steel3);
+    rect(cx - 12, top, 2, HULL - 5, C.white);
+    rect(cx - 8, top, 16, HULL - 5, PANEL);
+    rect(cx - 7, top, 1, HULL - 5, C.steel3);
+    rect(cx + 8, top, 6, HULL - 5, C.steel2);
+    rect(cx + 12, top, 2, HULL - 5, C.steel1);
+    for (const x of [cx - 8, cx + 8]) rect(x, top, 1, HULL - 5, C.steel2);
+    // Alliance bands between the levels and round the top.
+    for (const up of [HULL, 45, 26]) {
+      rect(cx - 14, b - up, 28, 3, T[1]);
+      rect(cx - 14, b - up, 28, 1, T[2]);
+      rect(cx + 8, b - up, 6, 3, T[0]);
+    }
+    // Skirt with its vents.
+    rect(cx - 16, b - 5, 32, 5, C.steel1);
+    rect(cx - 16, b - 5, 32, 1, C.steel2);
+    for (let x = cx - 14; x < cx + 15; x += 5) rect(x, b - 3, 2, 1, C.steel0);
+  };
+  // The ports. Home is the face toward the alliance's own end.
+  const hatchPort = (x, up, full) => {
+    if (full) hatchOnFace(x, b - up);
+    else {
+      rect(x - 2, b - up - 5, 4, 10, C.ink);
+      rect(x - 1, b - up - 4, 2, 8, C.steel0);
+    }
+  };
+  const cargoPort = (up) => {
     disk(cx, b - up, 6, C.ink);
     disk(cx, b - up, 5, C.steel1);
     rect(cx - 4, b - up - 4, 2, 1, C.steel2);
     disk(cx, b - up, 4, C.ink);
-    if (fill.cargo[l]) cargo(cx, b - up, 3);
+  };
+  const cargoIn = (up, c) => {
+    if (Array.isArray(c) && c[0] && c[1]) {
+      cargo(cx - 2, b - up, 2);
+      cargo(cx + 2, b - up, 2);
+    } else if (Array.isArray(c) ? c[0] || c[1] : c) cargo(cx, b - up, 3);
+  };
+  if (!ghost) {
+    hull();
+    HATCH_UP.forEach((up, l) => {
+      for (const [x, full] of [[homeX, fill.home[l]], [awayX, fill.away[l]]]) hatchPort(x, up, full);
+    });
+    CARGO_UP.forEach((up, l) => {
+      cargoPort(up);
+      if (fill.cargo[l]) cargoIn(up, fill.cargo[l]);
+    });
+    return;
+  }
+  // Seen through: the rocket faint (it stands in front of the cargo ship's end), every piece in it solid.
+  if (ghost === 'hull') {
+    withAlpha(0.2, () => {
+      hull();
+      HATCH_UP.forEach((up) => [homeX, awayX].forEach((x) => hatchPort(x, up, false)));
+      CARGO_UP.forEach(cargoPort);
+    });
+    return;
+  }
+  HATCH_UP.forEach((up, l) => {
+    for (const [x, full] of [[homeX, fill.home[l]], [awayX, fill.away[l]]]) if (full) hatchOnFace(x, b - up);
   });
+  CARGO_UP.forEach((up, l) => fill.cargo[l] && cargoIn(up, fill.cargo[l]));
+}
+/** The near wall's rockets stand at the same place along the field as the far wall's, their face this far in. */
+const NEAR_ROCKET_Z = 24.8;
+
+/**
+ * Where a piece goes, in world pixels, for a live match to move it there: p = { alliance, piece ('hatch' | 'cargo'),
+ * struct: 'rocket' (rocket: 'far' | 'near', level 1-3, face: 'home' | 'away') or 'ship' (bay: 'front0', 'near1',
+ * 'far2'...) }. For cargo in a rocket, the port it goes in by; in the ship, over the near side's lip, into the bay from
+ * above (the far side), or in from above at the front. Also where pieces come from: struct 'station' (which: 'far' |
+ * 'near': its hatch slot or its cargo chute) and 'depot' (which: 'far' | 'near').
+ */
+export function portAt(p) {
+  const a = p.alliance;
+  if (p.struct === 'station') {
+    // A loading station (far or near): its hatch slot low, its cargo chute high.
+    const z = p.which === 'far' ? 0.5 : 25.25, x = mirrorX(a, FIELD.x0, 1.25 * FT) + 0.625 * FT;
+    return p.piece === 'cargo' ? { x, y: floorY(z + 1.75) - 4 * FT + 6 } : { x, y: floorY(z + 1.75) - 9 };
+  }
+  if (p.struct === 'depot') return { x: mirrorX(a, FIELD.x0 + 3 * FT), y: floorY(DEPOT_Z[p.which === 'far' ? 0 : 1]) - 3 };
+  if (p.struct === 'rocket') {
+    const cx = ROCKETS.find((r) => r.alliance === a).x, b = floorY(p.rocket === 'near' ? NEAR_ROCKET_Z : ROCKET_Z);
+    if (p.piece === 'cargo') return { x: cx + (p.face === 'home' ? -2 : 2) * (a === 'blue' ? 1 : -1), y: b - CARGO_UP[p.level - 1] };
+    const home = a === 'blue' ? cx - 11 : cx + 11, away = a === 'blue' ? cx + 11 : cx - 11;
+    return { x: p.face === 'home' ? home : away, y: b - HATCH_UP[p.level - 1] };
+  }
+  const yFloor = floorY(SHIP.z1), yTop = floorY(SHIP.z0) - SHIP.h, deck = floorY(SHIP.z1) - SHIP.h - yTop;
+  const rowH = Math.floor((deck - 3) / 2), i = +p.bay.at(-1);
+  if (p.bay.startsWith('front')) {
+    return p.piece === 'cargo'
+      ? { x: mirrorX(a, SHIP.x0 + 7), y: yTop + 2 + i * (rowH + 1) + rowH / 2 }
+      : { x: mirrorX(a, SHIP.x0 - 2), y: floorY(FRONT_Z[i]) - 12 };
+  }
+  const cx = shipBays(a)[i];
+  if (p.bay.startsWith('far')) return p.piece === 'cargo' ? { x: cx, y: yTop + 2 + rowH / 2 } : { x: cx, y: yTop };
+  return p.piece === 'cargo' ? { x: cx, y: yFloor - 24 } : { x: cx, y: yFloor - 12 };
 }
 
 // ---- The robots ----
@@ -476,15 +581,22 @@ export function move(x, y, dx, dy) {
  * arena's: o.teams, the numbers on the blue elevator, the red elevator, the blue arm and the red defender; o.queue, on
  * the arm and the elevator waiting on their carts; o.score, [blue, red] on the scoring table's monitors. o.nearGate:
  * { x0, x1, open } puts a gate in the near wall too, like the far wall's (open: its chain unhooked and hanging).
+ * o.live: a real match instead of the four robots running their loops (match/draw.js makes it, from match/sim.js):
+ *   bots    the robots, as { y: floor line, draw() }, sorted in with everything else
+ *   fill    every piece: { blue, red }, each { far, near: rockets as rocket() takes them, ship: { near, far, front }
+ *           as [cargo, hatch] a bay (hatch 'null' for a null hatch panel), depots: [far, near] cargo left in each }
+ *   loose   pieces dropped on the carpet: { x, y, piece }
+ * With it, the near wall's rockets are drawn too, see-through.
  */
 export function drawFieldLive(g, camX, t, o = {}) {
-  const who = o.who ?? [], camY = o.camY ?? 0;
-  const { fill, bots } = robots(o.robots === false ? 0 : t, o.teams);
+  const who = o.who ?? [], camY = o.camY ?? 0, live = o.live;
+  const { fill, bots } = live ? { fill: null, bots: [] } : robots(o.robots === false ? 0 : t, o.teams);
+  const rocketFill = (a) => (live ? live.fill[a].far : fill[a]);
   const things = [
     { y: FIELD.y0, draw: () => sideWall(0, GATE) },
     ...ROCKETS.map((r) => ({
       y: floorY(ROCKET_Z), span: [r.x - 17, r.x + 17], top: floorY(ROCKET_Z) - HULL - CONE,
-      draw: () => rocket(r.x, r.alliance, fill[r.alliance]),
+      draw: () => rocket(r.x, r.alliance, rocketFill(r.alliance)),
     })),
     ...['blue', 'red'].flatMap((a) => [
       { y: floorY(2.25), draw: () => loadingStation(a, 0.5) },
@@ -493,8 +605,9 @@ export function drawFieldLive(g, camX, t, o = {}) {
       { y: floorY(27), draw: () => allianceWall(a) },
       ...[0, 9, 18, 27].map((z, i, zs) => ({ y: floorY(z), draw: () => stanchion(a, z, zs[i - 1]) })),
     ]),
-    { y: floorY(SHIP.z1), draw: cargoShip },
+    { y: floorY(SHIP.z1), draw: () => cargoShip(live ? { blue: live.fill.blue.ship, red: live.fill.red.ship } : SHIP_FILL) },
     ...(o.robots === false ? [] : bots).map((r) => ({ y: r.y, draw: () => r.draw(r.x, r.y) })),
+    ...(live ? liveParts(live) : []),
     ...(o.ends === false ? [] : ends(o.queue, o.score)),
     ...(o.more ?? []),
     { y: FIELD.y1 + 1, draw: () => sideWall(27, o.nearGate) },
@@ -506,6 +619,33 @@ export function drawFieldLive(g, camX, t, o = {}) {
     if (hides) withAlpha(0.35, p.draw);
     else p.draw();
   }
+}
+
+/** A live match's own things: its robots, the depots as they empty, dropped pieces, and the near wall's rockets. */
+function liveParts(live) {
+  return [
+    ...live.bots,
+    ...['blue', 'red'].flatMap((a) => DEPOT_Z.map((z, i) => ({
+      y: floorY(z), draw: () => depot(a, z, Math.ceil((live.fill[a].depots?.[i] ?? 12) / 2), true),
+    }))),
+    ...(live.loose ?? []).map((p) => ({ y: p.y, draw: () => loosePiece(p) })),
+    // The near wall's rockets: faint, in front of the cargo ship but behind the robots working along its near side, so
+    // they don't hide them; what's in them on top of everything.
+    ...ROCKETS.flatMap((r) => [
+      { y: floorY(SHIP.z1) + 0.01, draw: () => rocket(r.x, r.alliance, live.fill[r.alliance].near, floorY(NEAR_ROCKET_Z), 'hull') },
+      { y: floorY(27) + 0.5, draw: () => rocket(r.x, r.alliance, live.fill[r.alliance].near, floorY(NEAR_ROCKET_Z), 'pieces') },
+    ]),
+  ];
+}
+/** A piece lying on the carpet: a hatch panel flat (an ellipse from here), or a ball. */
+function loosePiece({ x, y, piece }) {
+  if (piece === 'cargo') return cargo(Math.round(x), Math.round(y) - 3, 3);
+  rect(x - 5, y - 3, 10, 3, C.ink);
+  rect(x - 6, y - 2, 12, 1, C.ink);
+  rect(x - 4, y - 2, 8, 1, C.yel1);
+  rect(x - 5, y - 2, 1, 1, C.yel1);
+  rect(x + 4, y - 2, 1, 1, C.yel0);
+  rect(x - 1, y - 2, 2, 1, C.ink);
 }
 
 /** The queue, its sign, the scoring table and the reset cart, past the ends of the field. */

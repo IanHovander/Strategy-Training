@@ -8,7 +8,7 @@
     "start": "node server/index.js --open",
     "dev": "node --watch server/index.js",
     "online": "node server/index.js --open --online",
-    "test": "node test/smoke.mjs && node test/frc-strategy.mjs",
+    "test": "node test/smoke.mjs && node test/frc-strategy.mjs && node test/match-sim.mjs",
     "build": "node scripts/build-site.mjs",
     "site": "node scripts/build-site.mjs && node scripts/serve-site.mjs"
   },

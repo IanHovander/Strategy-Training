@@ -177,6 +177,14 @@ colour, so it can follow the new team colour or stay as a UI accent.
 | `index.html` | intro ~16; "How it's made" ~30-32 | "5026's robot", "5026's own section in the red tee" | Update. |
 | `cutscene.js`, `people.js`, `layout.js` | comments | Comments naming 5026 | Update. |
 
+### The match lab (`public/team-manager/match/`)
+
+| File | Where | What's 5026-specific | Change |
+| --- | --- | --- | --- |
+| `robots.js` | `LIST`, the first team ~119 (`team(OURS, 'ele', ...)`) | Her team's robot in the match simulation: the elevator with Level 3 stilts (the intro's hero robot), hatches on every level, about 30 a match; its number is `OURS` from `opening/teams.js` | The new team's robot: another archetype and its numbers if it isn't an elevator that climbs. The number follows `teams.js`. |
+| `lab.js` | `quarter()` ~44; `drawSheet()` ~348 | The quarterfinal presets put her robot (`OURS`) on red, with 6834 and 4471; the sprite sheet's blue robots wear `OURS` | Nothing: both follow `teams.js` `OURS`. |
+| `draw.js` | `drivers` | The drive teams at their stations, from `bleachers.js` (the blue alliance's first driver in team red, `DRIVE_SHIRTS`) | Follows `bleachers.js`. |
+
 ## The rest of the site (Game Night and Strategy Training)
 
 | File | Where | What's 5026-specific | Change |
