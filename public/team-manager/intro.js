@@ -721,9 +721,9 @@ class ChipTrack {
  * The song's level: full under the intro, then down under the title screen, where it plays on while you read the menu
  * and type your name, and where the game that follows is far quieter. It fades a couple of beats after the logo drops
  * (from titleAt + fadeAt, over fadeFor seconds); a song started at the title (skipped to, ?title, or the sound only
- * waking there) starts down. title: 0.25 of 0.9 is 11 dB down.
+ * waking there) starts down. title: 0.3 of 0.9 is about 9.5 dB down.
  */
-const LEVEL = { intro: 0.9, title: 0.25, fadeAt: 1, fadeFor: 3 };
+const LEVEL = { intro: 0.9, title: 0.3, fadeAt: 1, fadeFor: 3 };
 
 /** A recorded song: plays once up to the end of its title loop, then repeats the loop with a short crossfade. */
 class SongTrack {

@@ -429,7 +429,9 @@ the music clock, and the opening should feel like it. A first pass to time and t
 camera sit on the co-captain's face for two seconds before anyone speaks. One line a page, and no tutorial text in the
 first minute: the 45-second clock explains itself. Until Robin calls her up, the player sets the pace: every line, and
 the texts on her phone, wait for A. The call is where the hurry starts: from "5026, COME ON UP!" the words turn by
-themselves and the 45-second clock is running, ticking softly every second and louder for the last ten.
+themselves and the 45-second clock is running, ticking softly every second and louder for the last ten. The other
+scenes (the team meeting, the practice field, the van, alliance selection) still turn some of their cut scenes' lines by
+themselves; if they go into the game, their lines should wait for A the same way, wherever there's no clock running.
 
 **2. Norbert.** The handoff is his first appearance: given to her "for luck", so he arrives as a gift, not an
 interface. After that he lives in the corner of the screen as her one inventory item:
