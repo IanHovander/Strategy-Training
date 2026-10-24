@@ -1,47 +1,39 @@
 // The quarterfinal on the big screen (256x144): pictures of one moment each, as tablet.js's are for the pick.
-// quarter.js says what to draw and when; series.js has the numbers.
+// quarter.js says what to draw and when; series.js has the matches.
 //
 //   drawSeriesCard(t)                      QUARTERFINAL, best 2 of 3: the two alliances side by side, the series so far
-//   drawMatch(g, i, k, t, o)               match i on the field, k (0 to 1) of the way through what's shown of it
-//   drawMatchOver(i, t, wins)              its result over the field: RED WINS 88-74, and the series
+//   drawMatch(g, i, at, t, o)              match i on the field, `at` seconds into it (t: since it started showing)
+//   drawMatchOver(g, i, t, wins, camX)     its result over its last moment: RED WINS 100-86, and the series
 //   drawFrozen(g, t, o)                    match 3 stopped at 0:20, the field gone dark
-//   drawCall(v)                            the call: LEVEL 2 or LEVEL 3, over the frozen field
+//   drawCall(g, v)                         the call: LEVEL 2 or LEVEL 3, over the frozen field
 //   callRect(i)                            where the call's two cards are, for taps
-//   drawClimb(g, who, key, made, t)        a climber on its HAB, close up (the intro's shot): ours (red) or theirs
-//   climbTime(who, key, made)              how long that climb takes to show
-//   drawBuzzer(g, o)                       the end of match 3: the final score and the series won or lost
+//   drawEndgame(g, roll, at, camX)         match 3's last 20 seconds, played out the way the call and the dice went
+//   endgameTimes(roll)                     when each climber settles
+//   drawBuzzer(g, t, o)                    the end of match 3: the final score and the series won or lost
+//   cameraOn(match, at, num)               where the camera wants to be: on robot num, or on the action
 //
-// The field is the arena's (field.js) with the stands behind it (bleachers.js), the robots running their cycles with
-// this series' numbers on them. Blue's on the left, red's on the right, as on the scoreboard. The climb shot is the
-// intro's: the HAB from the side at twice the size, the robot lifting itself on its stilts (sprites.js).
+// Every match is the simulation's (../match/sim.js), drawn by the match lab's draw.js: the arena's field with the stands
+// behind it, the robots where the simulation puts them, each piece going into its port as the scoreboard ticks. Blue's
+// on the left, red's on the right, as on the scoreboard.
 
-import { W, H, C, screen, camera, fill, rect, text, measure, withAlpha, dither, clamp, lerp, seg, easeOut, easeIn, easeInOut } from '../pixel.js';
-import { FIELD, makeFloor, drawFieldLive } from '../field.js';
-import { drawStands, drawWalkway } from '../bleachers.js';
-import { eleBot, hab, HAB, arena, makeStands, makeCarpet, makeSky, sky } from '../sprites.js';
+import { W, H, C, screen, fill, text, measure, withAlpha, dither, clamp, lerp, seg, easeOut } from '../pixel.js';
+import { WORLD_W } from '../field.js';
+import { makeShow } from '../match/animate.js';
+import { drawMatch as drawField, cameraFor, frameAt, wx } from '../match/draw.js';
 import { drawHud } from './norbert-held.js';
 import { blinkPrompt } from './tablet.js';
 import { drawGoalLine } from './goals.js';
 import { US, OPPONENT } from './teams2.js';
-import { RED, BLUE, MATCHES, LEFT, LEAD, CALLS, THEIRS, CLIMBER, THEIR_CLIMBER } from './series.js';
+import {
+  RED, BLUE, MATCHES, LEFT, LEAD, FREEZE, CALLS, THEIRS, CLIMBER, THEIR_CLIMBER, matchOf,
+} from './series.js';
 
 /** What each robot does on the field, for the series card. */
 const ROLE = { [RED[0]]: 'HATCH', 6834: 'CARGO', 4471: 'DEFENSE', 7777: 'CARGO', 6417: 'CARGO', 7311: 'HATCH' };
-/** The numbers on field.js's four robots: the blue elevator, the red elevator, the blue arm, the red defender. */
-const FIELD_TEAMS = [THEIR_CLIMBER, CLIMBER, BLUE[0], RED[2]];
 /** A climb made, in the call's boxes: the bet log's green. */
 const MADE = '#3fd06a';
 /** A match is 2:30. */
 const MATCH_SECS = 150;
-
-let FLOOR = null, SKY = null, STANDS = null, CARPET = null;
-function art() {
-  if (FLOOR) return;
-  FLOOR = makeFloor();
-  SKY = makeSky();
-  STANDS = [makeStands(0), makeStands(1)];
-  CARPET = makeCarpet();
-}
 
 // ---- Bits shared by the screens ----
 
@@ -140,41 +132,38 @@ export function drawSeriesCard(t, wins = { red: 0, blue: 0 }) {
 
 // ---- The field ----
 
-/** The arena at camX, its robots t seconds into their cycles. score: [blue, red] on the scoring table. */
-function field(g, camX, t, score, cheer = false) {
-  art();
-  g.drawImage(FLOOR, -camX, 0);
-  drawStands(g, camX, t, null, { cheer });
-  drawWalkway(g, camX);
-  drawFieldLive(g, camX, t, { teams: FIELD_TEAMS, score });
+/** Each match made into something to draw (animate.js), once. */
+const shows = new WeakMap();
+const showOf = (match) => {
+  if (!shows.has(match)) shows.set(match, makeShow(match));
+  return shows.get(match);
+};
+/** The field at `at` seconds into a match, the camera at camX; no scoreboard (each screen draws its own). */
+const field = (g, match, at, camX, o = {}) => drawField(g, showOf(match), at, { camX, board: false, ...o });
+
+/** Where the camera wants to be at `at` seconds into a match: on robot num if given, otherwise on the action. */
+export function cameraOn(match, at, num = null) {
+  if (!num) return cameraFor(showOf(match), at);
+  const p = frameAt(showOf(match), at).robots.find((r) => r.num === num);
+  return clamp(Math.round(wx(p.x) - W / 2), 0, WORLD_W - W);
 }
-/** Where the camera is, k of the way through a match's montage: along the field and back a little. */
-const camAt = (k) => Math.round(lerp(FIELD.x0 - 36, FIELD.x1 + 36 - W, easeInOut(clamp(k, 0, 1))));
-
-/** The score as it climbs, k of the way to `to` (in steps, as points come in fives and threes). */
-const scoreAt = (to, k, seed) => Math.min(to, Math.floor(to * clamp(k, 0, 1) ** (0.9 + 0.2 * seed) / 3) * 3);
-
-/** The seconds on the clock k of the way through what's shown of match i (match 3 stops at 0:20). */
-export const clockAt = (i, k) => MATCH_SECS - (MATCH_SECS - (i === 2 ? LEFT : 0)) * clamp(k, 0, 1);
 
 /**
- * Match i, k of the way through what's shown of it (t: seconds since it started, for the slam). o.wins: the series
- * before it. The score climbs to its final (match 3: the score at 0:20), the camera runs along the field.
+ * Match i, `at` seconds into it (t: seconds since it started showing, for the slam). o: camX, wins (the series before
+ * it). Match 2's line turns red the moment 6834 dies.
  */
-export function drawMatch(g, i, k, t, o = {}) {
-  const m = MATCHES[i], at = t * 1.6 + i * 40;
-  const blue = scoreAt(m.blue, k, 0), red = scoreAt(m.red, k, 1);
-  field(g, camAt(k), at, [blue, red], false);
-  drawScoreboard(blue, red, clockAt(i, k), { label: `QUARTERFINAL - MATCH ${i + 1}`, wins: o.wins });
-  if (t > 1) caption(m.line, i === 1 && k > 0.45 ? C.red2 : C.white);
+export function drawMatch(g, i, at, t, o = {}) {
+  const m = MATCHES[i], f = field(g, matchOf(i), at, o.camX);
+  drawScoreboard(f.score.blue, f.score.red, MATCH_SECS - at, { label: `QUARTERFINAL - MATCH ${i + 1}`, wins: o.wins, late: MATCH_SECS - at <= 30 });
+  if (t > 1) caption(m.late && at >= m.lateAt ? m.late : m.line, m.late && at >= m.lateAt ? C.red2 : C.white);
   if (t < 1) slam(`MATCH ${i + 1}`, i === 2 ? 'WINNER TAKES THE SERIES' : null, t, C.yel1);
   drawHud();
 }
 
-/** Match i's result over its last frame. wins: the series after it. */
-export function drawMatchOver(g, i, t, wins) {
+/** Match i's result over its last moment. wins: the series after it. */
+export function drawMatchOver(g, i, t, wins, camX) {
   const m = MATCHES[i], ours = m.red > m.blue;
-  field(g, camAt(1), 1.6 * 4 + i * 40, [m.blue, m.red], ours);
+  field(g, matchOf(i), MATCH_SECS, camX, { cheer: ours ? 1 : 0 });
   screen();
   withAlpha(0.35, () => fill(0, 0, W, H, C.night0));
   drawScoreboard(m.blue, m.red, 0, { label: `QUARTERFINAL - MATCH ${i + 1}`, wins, late: true });
@@ -184,10 +173,10 @@ export function drawMatchOver(g, i, t, wins) {
   drawHud();
 }
 
-/** Match 3 stopped at 0:20: a flash, then the field darkening. */
+/** Match 3 stopped at 0:20: a flash, then the field darkening. o: camX, talking, glow. */
 export function drawFrozen(g, t, o = {}) {
   const m = MATCHES[2];
-  field(g, camAt(1), 1.6 * 4 + 80, [m.blue, m.red]);
+  field(g, matchOf(2), FREEZE, o.camX);
   screen();
   withAlpha(clamp(t / 0.5, 0, 1) * 0.7, () => fill(0, 0, W, H, C.night0));
   if (t < 0.08) withAlpha(0.8, () => fill(0, 0, W, H, C.white));
@@ -208,11 +197,11 @@ export function callRect(i) {
 
 /**
  * The call over the frozen field. v: { t, choice (the card the cursor's on), pressed (the card under a finger, or -1),
- * thought (her thought after a rewind, in the hint line's place), glow (Norbert's ear), wins }.
+ * thought (her thought after a rewind, in the hint line's place), glow (Norbert's ear), camX }.
  */
 export function drawCall(g, v) {
   const m = MATCHES[2];
-  field(g, camAt(1), 1.6 * 4 + 80, [m.blue, m.red]);
+  field(g, matchOf(2), FREEZE, v.camX);
   screen();
   withAlpha(0.78, () => fill(0, 0, W, H, C.night0));
   drawScoreboard(m.blue, m.red, LEFT, { label: 'QUARTERFINAL - MATCH 3', late: true });
@@ -248,85 +237,33 @@ export function drawCall(g, v) {
   drawHud({ glow: v.glow ?? 0 });
 }
 
-// ---- The climb, close up ----
-/** Seconds per beat of the intro's climb, which is in beats. */
-const SPB = 0.5;
-/**
- * Where the robot is b beats into its climb: x along the floor, lift (its body above level 1), its front and rear
- * stilts. key: 'l2' or 'l3'; made: whether it gets there. A missed Level 3: up on the stilts, the front wheels
- * over the platform's edge, then the rear stilts give and it drops back to level 1.
- */
-function climbAt(b, key, made) {
-  const top = key === 'l2' ? 5 : 14, up = key === 'l2' ? 6 : 16;
-  let x, lift, front, rear;
-  if (b < 1) [x, lift] = [lerp(50, 131, easeOut(seg(b, 0, 1))), 0];
-  else if (b < 3) [x, lift] = [131, up * easeInOut(seg(b, 1, 3))];
-  else if (!made) {
-    // It edges forward, catches, and drops.
-    if (b < 3.75) [x, lift] = [lerp(131, 138, easeInOut(seg(b, 3, 3.75))), up];
-    else if (b < 4.1) [x, lift] = [138, up];
-    else [x, lift] = [lerp(138, 124, easeOut(seg(b, 4.1, 4.6))), up * (1 - easeIn(seg(b, 4.1, 4.4)))];
-    return { x, lift, front: lift, rear: lift, dropped: b >= 4.4, working: b > 1 && b < 4.1 };
-  } else if (b < 3.75) [x, lift] = [lerp(131, 145, easeInOut(seg(b, 3, 3.75))), up];
-  else if (b < 4.5) [x, lift] = [145, lerp(up, top, seg(b, 3.75, 4.5))];
-  else if (b < 6) [x, lift] = [lerp(145, 156, easeInOut(seg(b, 4.5, 6))), top];
-  else if (b < 6.75) [x, lift] = [156, top];
-  else [x, lift] = [lerp(156, 170, easeInOut(seg(b, 6.75, 7.5))), top];
-  front = b < 3.75 ? lift : lerp(up, 0, seg(b, 3.75, 4.5));
-  rear = b < 6 ? lift : lerp(top, 0, seg(b, 6, 6.75));
-  return { x, lift, front, rear, working: (b > 1 && b < 3) || (b > 3.75 && b < 4.5) || (b > 6 && b < 6.75) };
-}
-/** Beats until the climb's settled: made (on its level), or missed (back on level 1). */
-const CLIMB_BEATS = (made) => (made ? 7.6 : 4.8);
-/** How long (seconds) the climb takes to show, and when it's clear whether it worked (from the start). */
-export const climbTime = (made) => CLIMB_BEATS(made) * SPB;
-export const verdictAt = (made) => (made ? 7.5 : 4.4) * SPB;
-
-/** Level 2's step, in front of level 3 (the two level 2 platforms are either side of it). */
-function levelTwo(x3, T) {
-  const top = -7, x = x3 - 2, w = 44;
-  rect(x - 1, top - 1, w + 2, -top - 1, C.ink);
-  rect(x, top, w, -top - 2, T[1]);
-  rect(x, top, w, 1, C.steel3);
-  rect(x, top + 1, w, 1, T[2]);
+// ---- The last 20 seconds ----
+/** When each climber settles in a played-out match 3 (its climb's points go on the board then). */
+export function endgameTimes(roll) {
+  const when = (num) => roll.match.events.find((e) => e.by === num && e.kind === 'hab' && e.t > FREEZE)?.t ?? MATCH_SECS;
+  return { ours: when(CLIMBER), theirs: when(THEIR_CLIMBER) };
 }
 
 /**
- * The climb, close up: who ('ours': 6834 on red's HAB; 'theirs': 6417 on blue's), key ('l2' or 'l3'), made, and t
- * seconds into it. o: score [blue, red] to show, and the clock.
+ * Match 3's last 20 seconds as the call and the dice played them out, `at` seconds into the match, the camera at camX
+ * (quarter.js follows 6834 to its climb, then pans over to 6417's). Under it, what each climber is doing and how it went.
  */
-export function drawClimb(g, who, key, made, t, o = {}) {
-  art();
-  const b = t / SPB, red = who === 'ours', T = red ? [C.red0, C.red1, C.red2, C.red3] : [C.blue0, C.blue1, C.blue2, C.blue3];
-  const p = climbAt(b, key, made);
-  const jit = p.working && Math.floor(t * 16) % 2 ? 0.5 : 0;
-  const settled = b >= CLIMB_BEATS(made) - 0.1;
-  const shakeY = !made && b > 4.35 && b < 4.7 ? (Math.floor(t * 30) % 2 ? 1 : -1) : 0;
-  const camX = lerp(30, 94, easeOut(seg(b, 0, 1.2)));
-  const camY = lerp(-64, key === 'l2' ? -68 : -72, easeInOut(seg(b, 1, 3)));
-  camera(camX, camY + shakeY * 0.5, 2);
-  sky(SKY, 30, t * 2);
-  arena(STANDS[Math.floor(Math.max(0, t) * 4) % 2], CARPET);
-  hab(150, { red, cheer: settled && (red ? made : made), t: t * 2, glow: settled && made ? Math.floor(t * 4) % 2 === 0 : false });
-  if (key === 'l2') levelTwo(150, T);
-  eleBot(p.x, HAB.l1, {
-    team: red ? 'red' : 'blue', num: red ? CLIMBER : THEIR_CLIMBER,
-    lift: p.lift + jit, front: p.front ? p.front + jit : 0, rear: p.rear ? p.rear + jit : 0, spin: p.x * 0.64, rsl: Math.floor(t * 2.5) % 2 === 0,
-  });
-  const [blue, redScore] = o.score ?? [MATCHES[2].blue, MATCHES[2].red];
-  drawScoreboard(blue, redScore, o.clock ?? LEFT, { label: 'QUARTERFINAL - MATCH 3', late: true });
-  const c = red ? CALLS.find((k) => k.key === key) : THEIRS;
-  const name = red ? CLIMBER : THEIR_CLIMBER;
-  if (b < 3) caption(`${name} GOES FOR ${c.name}`, red ? C.red3 : C.blue3);
-  else if (b >= verdictAt(made) / SPB) {
-    caption(made ? `${name}: ${c.name}! +${c.pts}` : `${name} SLIPS. LEVEL 1, +${c.fail}`, made === red ? C.yel2 : C.steel3);
-  }
+export function drawEndgame(g, roll, at, camX) {
+  const f = field(g, roll.match, at, camX), when = endgameTimes(roll);
+  drawScoreboard(f.score.blue, f.score.red, MATCH_SECS - at, { label: 'QUARTERFINAL - MATCH 3', late: true });
+  const ours = CALLS.find((c) => c.key === roll.key);
+  if (at < when.ours) caption(`${CLIMBER} GOES FOR ${ours.name}`, C.red3);
+  else if (at < when.ours + 1.6) {
+    caption(roll.made ? `${CLIMBER}: ${ours.name}! +${ours.pts}` : `${CLIMBER} SLIPS. LEVEL 1, +${ours.fail}`, roll.made ? C.yel2 : C.steel3);
+  } else if (at < when.theirs) caption(`${THEIR_CLIMBER} GOES FOR ${THEIRS.name}`, C.blue3);
+  else caption(roll.theirsMade ? `${THEIR_CLIMBER}: ${THEIRS.name}! +${THEIRS.pts}` : `${THEIR_CLIMBER} SLIPS. LEVEL 1, +${THEIRS.fail}`, roll.theirsMade ? C.steel3 : C.yel2);
   drawHud();
 }
 
 /** The buzzer: match 3's final score, and the series won or lost. */
-export function drawBuzzer(g, t, { red, blue, won, wins }) {
-  field(g, camAt(1), 1.6 * 4 + 80 + t, [blue, red], won);
+export function drawBuzzer(g, t, { roll, wins, camX }) {
+  const { red, blue, won } = roll;
+  field(g, roll.match, MATCH_SECS, camX, { cheer: won ? 1 : 0 });
   screen();
   withAlpha(0.35, () => fill(0, 0, W, H, C.night0));
   drawScoreboard(blue, red, 0, { label: 'QUARTERFINAL - MATCH 3', wins, late: true });
@@ -335,4 +272,3 @@ export function drawBuzzer(g, t, { red, blue, won, wins }) {
   blinkPrompt('A: BET LOG', 116, t, 1.4);
   drawHud();
 }
-

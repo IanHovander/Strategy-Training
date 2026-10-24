@@ -1,12 +1,14 @@
 // Checks for the team manager's match simulation (public/team-manager/match/): that it's deterministic, that the
 // score is only ever the sum of its events, that no robot places a piece it can't or where it can't, that defense
 // takes points off its target, that the animation's frames agree with the timeline, and that each team at the
-// opening's event scores about what its story says over many matches.
+// opening's event scores about what its story says over many matches. Also that the opening's quarterfinal, played
+// by the simulation (opening/series.js), still goes the way its story needs.
 //   node test/match-sim.mjs
 import { simulate, slotInfo, BLOCKS, MATCH, POINTS, routeBetween, planAlliance, averages } from '../public/team-manager/match/sim.js';
 import { TEAMS, EVENT, robotOf, planOf, qualMatch, targetOf, ARCHETYPES } from '../public/team-manager/match/robots.js';
 import { makeShow, frameAt } from '../public/team-manager/match/animate.js';
 import { OURS } from '../public/team-manager/opening/teams.js';
+import { matchOf, scoreAt, MATCHES, LEAD, FREEZE, CALLS, THEIRS, CLIMBER, THEIR_CLIMBER } from '../public/team-manager/opening/series.js';
 
 let failures = 0;
 const check = (cond, msg) => {
@@ -187,6 +189,28 @@ if (why.length) console.log(why.slice(0, 10).join('\n'));
   const rise = pts['6834 late'].sum / pts['6834 late'].n > pts['6834 early'].sum / pts['6834 early'].n + 12;
   check(fade && rise, "7461 fades after Friday's breakage and 6834 rises after its rebuild, as their forms say");
   check(EVENT.every((n) => ARCHETYPES[TEAMS[n].arch]), 'every team at the event is one of the archetypes');
+}
+
+// ---- The opening's quarterfinal ----
+// Its seeds and plans were chosen so the matches tell the story; a change to the robots or the simulation can undo
+// that, so check it.
+{
+  check(matchOf(0).winner === 'red', `quarterfinal match 1: 4471 on 7777, and red wins (${MATCHES[0].red}-${MATCHES[0].blue})`);
+  check(matchOf(1).winner === 'blue', `quarterfinal match 2: 6834 browns out, and blue wins (${MATCHES[1].red}-${MATCHES[1].blue})`);
+  // The lead that makes the call: Level 2 always wins (lead + 6 beats their 12), a missed Level 3 can lose (lead + 3 doesn't).
+  check(LEAD + CALLS[0].pts > THEIRS.pts && LEAD + CALLS[1].fail < THEIRS.pts, `match 3 freezes at 0:20 with red up ${LEAD}, so Level 2 is enough and a missed Level 3 isn't`);
+  const ways = [['l2', true, true], ['l2', true, false], ['l3', true, true], ['l3', true, false], ['l3', false, true], ['l3', false, false]]
+    .map(([call, made, theirsMade]) => ({ call, made, theirsMade, m: matchOf(2, { call, made, theirsMade }) }));
+  const before = (m) => JSON.stringify([m.events.filter((e) => e.t <= FREEZE), m.robots.map((r) => r.track.filter((p) => p[0] <= FREEZE))]);
+  check(ways.every((w) => before(w.m) === before(ways[0].m)), 'match 3 is the same up to the freeze, whichever way she calls and the climbs go');
+  check(ways.every((w) => w.m.events.every((e) => e.t <= FREEZE || (e.kind === 'hab' && [CLIMBER, THEIR_CLIMBER].includes(e.by)))), 'after the freeze, the only points are the two climbers\' climbs');
+  const right = ways.every(({ call, made, theirsMade, m }) => {
+    const c = CALLS.find((k) => k.key === call), f = scoreAt(m, FREEZE);
+    const red = f.red + (made ? c.pts : c.fail), blue = f.blue + (theirsMade ? THEIRS.pts : THEIRS.fail);
+    return m.score.red === red && m.score.blue === blue && (m.winner === 'red') === (red > blue);
+  });
+  check(right, 'each way the endgame goes adds up as the call screen says, every climb settling before the buzzer');
+  check(ways.filter((w) => w.call === 'l2').every((w) => w.m.winner === 'red'), 'Level 2 wins match 3 either way 6417\'s climb goes');
 }
 
 console.log(failures ? `${failures} FAILED` : 'ALL PASSED');

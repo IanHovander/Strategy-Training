@@ -55,6 +55,7 @@ export const SCENES = {
       'QF MATCH 1': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }]],
       'QF MATCH 2': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }]],
       'QF MATCH 3': [bed(0, 1.2, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.9 }]],
+      'QF: 6834 IS DEAD': [[0, 'clunk'], [0.15, 'aww']],
       'QF: RED WINS': [[0, 'horn', { dur: 1.1 }], [0.1, 'cheer', { size: 0.9 }], [0.3, 'jingle'], bed(1.4, 0.7, 1)],
       'QF: BLUE WINS': [[0, 'horn', { dur: 1.1 }], [0.2, 'aww'], [0.3, 'miss'], bed(1.4, 0.7, 1)],
       'QF: 0:20 LEFT': [[0, 'slam'], bed(0, 0.25, 0.3)],

@@ -146,7 +146,7 @@ export function drawResult3(key, won, t, { glow = 0 } = {}) {
   text(`ENDGAME CALL: ${call.name}`, W / 2, 11, { align: 'center', color: C.white });
   stampCall(good, t, 23);
   if (t > 0.5) {
-    text('20 SECONDS LEFT, UP 7, TEN TIMES OVER:', W / 2, 54, { font: 3, align: 'center', color: C.steel2 });
+    text(`20 SECONDS LEFT, UP ${LEAD}, TEN TIMES OVER:`, W / 2, 54, { font: 3, align: 'center', color: C.steel2 });
     CALLS.forEach((c, row) => {
       const y = 62 + row * 13, wins = winsOutOf10(c.key), mine = c.key === key;
       // Her call, framed.
