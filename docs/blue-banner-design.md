@@ -12,6 +12,44 @@ the parts where they fail and try again.
 
 ---
 
+## 0. Direction: the feeling we're after
+
+The built opening (two picks and the quarterfinal, section 5) plays like a quiz. Each decision is a framed choice with
+the facts that matter placed on one screen, graded on the spot with a stamp and a lesson line. The feeling to aim for
+is the first Pokémon games instead: exploring, wanting to be the very best, a story underneath, and cool tools to
+explore with. Here that means:
+
+- **Boss fights** are alliance selection and the playoffs at each event. The rewind stays here: like a gym leader,
+  you try again until your calls are excellent.
+- **Wild battles** are the qualification matches, about ten an event. Make the plan (who scores where, who defends
+  whom, whether to climb), then watch it play out on a real match simulation. No rewinds: this is where you try
+  moves and see what they do.
+- **Things stop working.** Each event changes what works (section 7), so the trick that won Event 1 fails at Event 2,
+  and you have to work out a new one.
+- **Learn by playing.** No lesson lines. Facts are just true in the world, and you find them by watching matches,
+  visiting pits and asking people. Characters react in character; they don't grade.
+- **In deeper.** Whole events (24 to 36 teams, a real schedule), not two or three handpicked cards. A thinker's
+  game is fine.
+- **Tools you earn**, like the bike: a clipboard, then the scouting app, match video, heat maps of where robots
+  score, a pick list builder, an odds calculator.
+- **The notebook is the Pokédex**: an entry for every robot, filled in from what you saw.
+- **The story underneath:** a rival strategist (another team's rookie, who started the same day and is always a step
+  ahead), Norbert's mystery and the alumni.
+- **Showing you're good**, against yourself and other people:
+  - a trainer card: a strategist rank, a badge per event, best event score, robots scouted, a qualification record;
+  - battles against friends in the Showdown (Strategy Training's multiplayer, on Game Night's big screen and phones);
+  - later, the same event with the same rolls for everyone, and scores to compare (that needs somewhere to keep
+    scores: the website has no server).
+
+**Still open:** the hook. Riley's last season, Grandma's glitter sign and an older sibling on the 2014 team were
+considered and set aside. Also open: the rival's design, whether the bet log's grades show before the alumni twist,
+and how the time loop sits with a journey that goes forward.
+
+**Being built:** the match simulation and its animation on the field (`public/team-manager/match/`), with more robot
+archetypes.
+
+---
+
 ## 1. The idea in one paragraph
 
 You're a rookie strategist stuck in a time loop. Every time your calls let the team down, you wake up in the van on
