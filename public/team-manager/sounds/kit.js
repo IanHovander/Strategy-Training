@@ -1,6 +1,7 @@
 // The game's sound kit: every sound Blue Banner's scenes make, played on the intro's chip (chip.js), so the game and the
-// intro share one palette: the same pulse waves, triangle and filtered noise, nothing sampled. No side effects: sound.js
-// makes one Kit for the page and wires it to the stage; a test can make another on an OfflineAudioContext.
+// intro share one palette: the same pulse waves, triangle and filtered noise, nothing sampled. People (a crowd talking,
+// a crowd cheering) are voices built the same way, in crowd.js. No side effects: sound.js makes one Kit for the page
+// and wires it to the stage; a test can make another on an OfflineAudioContext.
 //
 //   const kit = new Kit(chip)    chip: a chip.js Chip, started (chip.start()) before anything plays
 //   kit.play(name, t, o)         one sound from SFX (below), now or at audio time t; o: per-sound options (vol, n, dur)
@@ -8,15 +9,21 @@
 //   kit.bedLevel(k, secs)        the bed louder or quieter (1 = as written), over secs: a crowd rising, lights going down
 //   kit.setMusic(name, fade)     a light loop (MUSIC) under the walking; null fades it out
 //   kit.duck(k)                  the music's level under words (1 = full)
-//   kit.pump()                   every frame: queues the music and the bed's sprinkles (a bird, a drill) just ahead
+//   kit.pump()                   every frame: queues the music, the bed's talk and its sprinkles (a bird, a drill) just
+//                                ahead
+//   kit.prepare()                the crowds' far loops (crowd.js), made one after another in the background, so each
+//                                event's crowd is whole from the moment it's first heard
 //
 // The mix, through the chip's master gain and compressor: four buses (ui, sfx, amb, mus) so each family sits at its own
 // level. Everything is quiet on purpose: a phone speaker, someone next to you on the couch.
 
 import { renderBars, hz } from '../chip.js';
+import { Crowd, shout, echoOf, farLoop } from './crowd.js';
 
 /** Bus levels. ui: blips, A, the bubble; sfx: footsteps and stings; amb: room sound; mus: the walking loop. */
 export const MIX = { ui: 1.4, sfx: 1.5, amb: 2.7, mus: 0.4 };
+/** People (crowd.js): how loud a crowd's talk sits in its bed, and each voice in a cheer. */
+const TALK_VOL = 0.06, CHEER_VOL = 0.03;
 
 const r = (a, b) => a + Math.random() * (b - a);
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -98,29 +105,25 @@ export const SFX = {
       c.tone(t + i * 0.32, 0.5, hz(m + 12), { wave: 'p12', vol: 0.012, decay: true });
     }),
   },
-  /** A crowd cheering: a swell of bright noise and a scatter of claps. o.size 0-1. */
+  /**
+   * A crowd cheering, o.size 0-1: people yelling (crowd.js shout), a second wave of them for a big one, a scatter of
+   * claps, and under it all a soft swell of the room, in the hall's echo.
+   */
   cheer: {
     bus: 'sfx',
     play: (c, t, o, kit) => {
-      const k = o.size ?? 1, dur = 1.6 + k * 1.6;
-      c.noise(t, 0.35, { vol: 0.07 * k, type: 'bandpass', hz: 900, q: 0.6, swell: true });
-      c.noise(t + 0.35, dur, { vol: 0.07 * k, type: 'bandpass', hz: 1100, sweep: 700, q: 0.6 });
-      c.noise(t + 0.2, dur * 0.8, { vol: 0.03 * k, type: 'bandpass', hz: 2600, sweep: 1600, q: 1.2 });
+      const k = o.size ?? 1, dur = 1.6 + k * 1.6, echo = kit.echo(c.bus);
+      shout(c.ac, c.bus, t, { n: Math.round(5 + 13 * k), vol: CHEER_VOL * k, spread: 0.25 + 0.35 * k, echo });
+      if (k > 0.5) shout(c.ac, c.bus, t + 0.7, { n: Math.round(10 * k), vol: CHEER_VOL * 0.7 * k, spread: 0.8, echo });
+      c.noise(t, 0.35, { vol: 0.025 * k, type: 'bandpass', hz: 700, q: 0.7, swell: true });
+      c.noise(t + 0.35, dur, { vol: 0.025 * k, type: 'bandpass', hz: 700, sweep: 450, q: 0.7 });
       kit.claps(c, t + 0.15, dur * 0.8, Math.round(10 + 22 * k), 0.035 * k);
-      // A whoop or two, chip style: a pulse sliding up.
-      if (k > 0.6) [0.25, 0.7].forEach((d) => c.tone(t + d + r(0, 0.2), 0.3, r(500, 650), { wave: 'p12', slide: r(1000, 1300), vol: 0.012 * k }));
     },
   },
   /** Applause: claps alone. o.dur, o.n, o.vol. */
   claps: { bus: 'sfx', play: (c, t, o, kit) => kit.claps(c, t, o.dur ?? 1.5, o.n ?? 22, o.vol ?? 0.04) },
-  /** "AWWW": a falling murmur. */
-  aww: {
-    bus: 'sfx',
-    play: (c, t) => {
-      c.noise(t, 0.9, { vol: 0.05, type: 'bandpass', hz: 700, sweep: 380, q: 2 });
-      c.tone(t, 0.8, 440, { wave: 'tri', slide: 300, vol: 0.03 });
-    },
-  },
+  /** "AWWW": a room's sympathy, a dozen voices falling together. */
+  aww: { bus: 'sfx', play: (c, t, o, kit) => shout(c.ac, c.bus, t, { n: 12, vol: CHEER_VOL * 1.2, spread: 0.2, kind: 'aww', echo: kit.echo(c.bus) }) },
   /** A big moment: a quick major run up and a held chord, the intro's lead over its triangle. o.key: MIDI root. */
   fanfare: {
     bus: 'sfx',
@@ -158,8 +161,15 @@ export const SFX = {
     bus: 'sfx',
     play: (c, t) => [[74, 0], [78, 0.18], [81, 0.36], [86, 0.54]].forEach(([m, d], i) => c.tone(t + d, i === 3 ? 1 : 0.17, hz(m), { wave: 'p25', vol: 0.04, decay: i === 3 })),
   },
-  /** A clock's second, and the last ten louder. o.hi for the last few. */
-  tick: { bus: 'sfx', play: (c, t, o) => c.tone(t, 0.03, o.hi ? 2350 : 1980, { wave: 'p50', vol: o.hi ? 0.04 : 0.025 }) },
+  /** A clock's second: o.soft for the long count down to the last ten, plain for those, o.hi for the last three. */
+  tick: {
+    bus: 'sfx',
+    play: (c, t, o) => {
+      const [f, v] = o.soft ? [1660, 0.03] : o.hi ? [2350, 0.07] : [1980, 0.05];
+      c.tone(t, 0.03, f, { wave: 'p50', vol: v });
+      c.noise(t, 0.015, { vol: v * 0.8, type: 'highpass', hz: 4000 });
+    },
+  },
   /** The clock hits zero: the intro's alarm, softer. */
   timeUp: { bus: 'sfx', play: (c, t) => [0, 0.2].forEach((d) => c.tone(t + d, 0.16, d ? 988 : 1319, { wave: 'p50', vol: 0.045 })) },
   /** The clock slamming onto the screen. */
@@ -168,21 +178,36 @@ export const SFX = {
     play: (c, t) => {
       c.tone(t, 0.16, 150, { wave: 'sine', slide: 40, vol: 0.32, decay: true });
       c.noise(t, 0.18, { vol: 0.12, type: 'lowpass', hz: 1500 });
+      // A thwack for a phone's speaker, which plays nothing as low as the thump.
+      c.tone(t, 0.12, 330, { wave: 'p50', slide: 110, vol: 0.12, decay: true });
     },
   },
-  /** A phone buzzing in her hand. */
+  /**
+   * A phone buzzing in her hand, o.dur long (as long as the picture shakes): a motor's rattle, a low pulse chopped about
+   * thirty times a second. Pitched where a phone's own speaker still plays it (an 82 Hz hum was lost on one).
+   */
   buzz: {
     bus: 'sfx',
-    play: (c, t) => [0, 0.13].forEach((d) => c.tone(t + d, 0.1, 82, { wave: 'p50', vol: 0.045 })),
+    play: (c, t, o) => {
+      const d = o.dur ?? 0.3;
+      for (let k = 0; k < d; k += 0.034) c.tone(t + k, 0.026, 175, { wave: 'p50', vol: 0.08 });
+      c.noise(t, d, { vol: 0.03, type: 'bandpass', hz: 350, q: 3 });
+    },
   },
-  /** A message bubble landing. */
-  msg: { bus: 'sfx', play: (c, t) => c.tone(t, 0.08, 1568, { wave: 'p25', slide: 2093, vol: 0.03, decay: true }) },
+  /** A text arriving: a phone's two-note ping, up a fourth, each note a bell's quick decay over a triangle for body. */
+  msg: {
+    bus: 'sfx',
+    play: (c, t) => [[88, 0], [93, 0.11]].forEach(([m, d]) => {
+      c.tone(t + d, 0.35, hz(m), { wave: 'p25', vol: 0.05, decay: true });
+      c.tone(t + d, 0.4, hz(m - 12), { wave: 'tri', vol: 0.08, decay: true });
+    }),
+  },
   /** Norbert's ear glints. */
   glint: {
     bus: 'sfx',
     play: (c, t) => {
-      c.tone(t, 0.25, 3136, { wave: 'p12', vol: 0.03, decay: true });
-      c.tone(t + 0.06, 0.35, 4186, { wave: 'p12', vol: 0.025, decay: true });
+      c.tone(t, 0.25, 3136, { wave: 'p12', vol: 0.05, decay: true });
+      c.tone(t + 0.06, 0.35, 4186, { wave: 'p12', vol: 0.04, decay: true });
     },
   },
   /** A spotlight coming on: a big switch's clunk, and the lamp's hum catching. */
@@ -272,27 +297,6 @@ export const SFX = {
   },
   ratchet: { bus: 'amb', play: (c, t) => { for (let i = 0; i < 6; i++) c.noise(t + i * 0.07, 0.012, { vol: 0.02, type: 'highpass', hz: 3000 }); } },
   clatter: { bus: 'amb', play: (c, t) => [0, 0.09, 0.15].forEach((d) => c.tone(t + d, 0.05, r(700, 1100), { wave: 'p12', vol: 0.008, decay: true })) },
-  /** A crowd's swell somewhere across the hall. */
-  /** Somebody in the crowd saying something: a few quick syllables, low, rising and falling like speech. */
-  voices: {
-    bus: 'amb',
-    play: (c, t, o) => {
-      const k = o.vol ?? 1, base = r(150, 320), n = 2 + Math.floor(r(0, 4));
-      for (let i = 0, at = t; i < n; i++) {
-        const d = r(0.06, 0.14), f = base * r(0.85, 1.2);
-        c.tone(at, d, f, { wave: 'tri', slide: f * r(0.8, 1.15), vol: 0.006 * k, decay: true });
-        at += d + r(0.02, 0.08);
-      }
-    },
-  },
-  roar: {
-    bus: 'amb',
-    play: (c, t, o) => {
-      const k = o.vol ?? 1, d = r(1.6, 2.6);
-      c.noise(t, d * 0.4, { vol: 0.035 * k, type: 'bandpass', hz: 900, q: 0.7, swell: true });
-      c.noise(t + d * 0.4, d * 0.6, { vol: 0.035 * k, type: 'bandpass', hz: 900, sweep: 600, q: 0.7 });
-    },
-  },
   /** A match ending on a far field: the buzzer, low and far away. */
   farBuzzer: { bus: 'amb', play: (c, t) => c.tone(t, 0.7, 92, { wave: 'p50', vol: 0.02 }) },
   /** Far robots: a whine crossing. */
@@ -312,53 +316,44 @@ export const SFX = {
 // ---- Beds: a place's room sound ----
 // layers: { noise: true | wave: 'sine' | 'triangle', hz (a wave's pitch), type and f (the filter), q, vol, lfo: a slow
 // wobble of the level { rate, depth } (0-1 of vol), sweep: a slow drift of the filter { rate, depth } (Hz) }.
+// talk: a crowd of people talking (crowd.js Crowd: { near, far, room, wet, vol, pace, pause }).
 // sprinkle: [{ sfx, every: [min, max] seconds, vol }]. Levels were set by measuring (see sound.js's notes), not by ear.
+// At the events the people are the sound: noise on its own was heard as static, so there it's only a low hum under them.
+/** The hall's hum under a crowd: the room and the hundreds too far off to pick out, low and soft. */
+const HUM = (vol) => [
+  { noise: true, type: 'lowpass', f: 200, q: 0.5, vol: 0.03 * vol },
+  { noise: true, type: 'bandpass', f: 420, q: 0.7, vol: 0.016 * vol, lfo: { rate: 0.11, depth: 0.2 } },
+];
 export const BEDS = {
-  /** A big room full of people talking: a steady murmur (no swell in it, or it rolls like surf) and voices in it. */
+  /** A big room full of people talking: alliance selection, the opening. */
   crowd: {
-    layers: [
-      { noise: true, type: 'bandpass', f: 480, q: 1.1, vol: 0.05 },
-      { noise: true, type: 'bandpass', f: 1150, q: 1.4, vol: 0.022 },
-      { noise: true, type: 'lowpass', f: 220, q: 0.5, vol: 0.03 },
-    ],
-    sprinkle: [{ sfx: 'voices', every: [0.25, 0.9] }],
+    layers: HUM(1),
+    talk: { near: 4, far: 16, room: 2.2, wet: 0.55, vol: TALK_VOL },
   },
-  /** The pits: a quieter crowd and work going on, drills and ratchets in the next rows. */
+  /** The pits: fewer people close by, a drier room, and work going on, drills and ratchets in the next rows. */
   pits: {
-    layers: [
-      { noise: true, type: 'bandpass', f: 520, q: 1.1, vol: 0.05 },
-      { noise: true, type: 'bandpass', f: 1300, q: 1.6, vol: 0.017 },
-      { noise: true, type: 'lowpass', f: 200, q: 0.5, vol: 0.04 },
-    ],
+    layers: HUM(0.9),
+    talk: { near: 4, far: 10, room: 1.5, wet: 0.4, vol: TALK_VOL },
     sprinkle: [
       { sfx: 'drill', every: [3, 8] },
       { sfx: 'ratchet', every: [6, 14] },
       { sfx: 'clatter', every: [7, 15] },
-      { sfx: 'voices', every: [0.5, 1.6], vol: 0.7 },
     ],
   },
-  /** The arena in a match: the crowd, louder, and the robots and buzzers of the field. */
+  /** The arena in a match: more of them, further off in a bigger echo, and the robots and buzzers of the field. */
   arena: {
-    layers: [
-      { noise: true, type: 'bandpass', f: 500, q: 1, vol: 0.055 },
-      { noise: true, type: 'bandpass', f: 1250, q: 1.3, vol: 0.026 },
-      { noise: true, type: 'lowpass', f: 180, q: 0.5, vol: 0.035 },
-    ],
+    layers: HUM(1.1),
+    talk: { near: 3, far: 20, room: 2.4, wet: 0.6, vol: TALK_VOL },
     sprinkle: [
-      { sfx: 'voices', every: [0.2, 0.7] },
       { sfx: 'farRobot', every: [3, 7] },
       { sfx: 'farBuzzer', every: [25, 45] },
     ],
   },
   /** Worlds: one enormous hall, eight fields at once. */
   worlds: {
-    layers: [
-      { noise: true, type: 'bandpass', f: 460, q: 0.9, vol: 0.06 },
-      { noise: true, type: 'bandpass', f: 1200, q: 1.2, vol: 0.026 },
-      { noise: true, type: 'lowpass', f: 160, q: 0.5, vol: 0.04 },
-    ],
+    layers: HUM(1.2),
+    talk: { near: 3, far: 24, room: 3, wet: 0.7, vol: TALK_VOL },
     sprinkle: [
-      { sfx: 'voices', every: [0.15, 0.5] },
       { sfx: 'farRobot', every: [2.5, 6] },
       { sfx: 'farBuzzer', every: [14, 28] },
     ],
@@ -480,6 +475,24 @@ export class Kit {
     this.onPlay?.(name, o);
     this.on(s.bus, (c) => s.play(c, Math.max(t ?? c.now(), c.now()), o, this));
   }
+  prepare() {
+    if (!this.ready() || this.preparing) return;
+    this.preparing = Object.values(BEDS)
+      .filter((b) => b.talk)
+      .reduce((p, b) => p.then(() => farLoop(this.chip.ac, b.talk)), Promise.resolve());
+  }
+  /** The hall's echo into bus, for a cheer's voices: made once a bus. */
+  echo(bus) {
+    this.echoes ??= new Map();
+    if (!this.echoes.has(bus)) {
+      const ac = this.chip.ac, e = ac.createConvolver(), wet = ac.createGain();
+      e.buffer = echoOf(ac, 2);
+      wet.gain.value = 0.5;
+      e.connect(wet).connect(bus);
+      this.echoes.set(bus, e);
+    }
+    return this.echoes.get(bus);
+  }
   /** n claps, scattered over dur seconds from t. */
   claps(c, t, dur, n, vol) {
     for (let i = 0; i < n; i++) {
@@ -498,6 +511,7 @@ export class Kit {
       old.out.gain.setValueAtTime(old.out.gain.value, now);
       old.out.gain.linearRampToValueAtTime(0, now + fade);
       for (const n of old.nodes) n.stop(now + fade + 0.1);
+      old.talk?.stop(now + fade + 0.1);
     }
     this.bed = null;
     const def = BEDS[name];
@@ -538,7 +552,8 @@ export class Kit {
       else src.start(now);
       nodes.push(src);
     }
-    this.bed = { name, def, out, level, nodes, next: (def.sprinkle ?? []).map((s) => now + r(...s.every) * 0.6) };
+    const talk = def.talk ? new Crowd(ac, out, def.talk, this.noise) : null;
+    this.bed = { name, def, out, level, nodes, talk, next: (def.sprinkle ?? []).map((s) => now + r(...s.every) * 0.6) };
   }
   /** The bed at k times its written level, getting there over secs. */
   bedLevel(k, secs = 0.8) {
@@ -588,6 +603,7 @@ export class Kit {
     // The bed's sprinkles.
     const bed = this.bed;
     if (bed) {
+      bed.talk?.pump(now, ahead);
       (bed.def.sprinkle ?? []).forEach((s, i) => {
         if (now + ahead < bed.next[i]) return;
         const at = Math.max(bed.next[i], now);

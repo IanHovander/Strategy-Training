@@ -7,7 +7,7 @@
 //   moving   footsteps, walk and run, on the scene's floor (her walking in and out too); the whoosh as she leaves and
 //            a soft breath as the next scene fades up
 //   places   a quiet bed per scene (crowd, pits, arena, the lawn, the cafeteria, the road), with sprinkles over it
-//   stings   the place card, the PA chime, cheers, claps, spotlights, the pick accepted, the clock's last seconds
+//   stings   the place card, the PA chime, cheers, claps, spotlights, the pick accepted, the clock's seconds
 //   music    a light loop under the walking (two passes, then a rest), ducked under words; none in cut scenes
 //
 // Sound starts on the first tap, click or key (browsers block it before then), and pauses with the page. The mute
@@ -52,6 +52,7 @@ function wake() {
   if (!started && kit.ready()) {
     started = true;
     applyPlace(true);
+    kit.prepare(); // the events' crowds, in the background, after this scene's own
   }
 }
 for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
@@ -107,7 +108,7 @@ addEventListener('keydown', (e) => {
 const st = {
   scene: null, place: DEFAULT, beat: null, beatI: 0, fired: new Set(), mode: null, leaving: false,
   events: [], conv: null, page: -1, typed: 0, near: null, nearAt: 0, lastNear: null,
-  stepAt: 0, foot: false, autoFrame: null, status: null, label: null, clockFrom: null, clockTick: -1, freeAt: 0,
+  stepAt: 0, foot: false, autoFrame: null, status: null, label: null, clockTick: null, freeAt: 0,
 };
 const placeOf = (scene) => SCENES[scene?.name] ?? DEFAULT;
 
@@ -128,7 +129,7 @@ function startScene(scene, s) {
   st.conv = null;
   st.near = null;
   st.status = st.label = null;
-  st.clockFrom = null;
+  st.clockTick = null;
   st.leaving = false;
   // The stage says 'scene' before its cut scene starts, so its mode isn't set yet: a cut scene, if it has one.
   st.mode = scene.cutscene?.length ? 'cut' : 'free';
@@ -158,7 +159,6 @@ onStage((type, detail, s) => {
   }
   if (type === 'free') {
     st.freeAt = performance.now() / 1000;
-    st.clockFrom = null;
     st.leaving = false;
     if (kit.ready()) {
       kit.bedLevel(st.place.free ?? 1, 1.2);
@@ -293,35 +293,37 @@ function beatCues(s, now) {
 }
 
 /** A scene with no walking (the opening's pick): its status line and A's label say what's happening. */
-function statusCues(s, now) {
+function statusCues(s) {
   const p = st.place;
   if (s.mode === 'cut') return;
   const status = s.scene.status?.(s) ?? null, lbl = s.scene.actLabel?.(s) ?? null;
   if (status !== st.status) {
-    const was = st.status;
     st.status = status;
     for (const [t, name, o] of p.status?.[status] ?? []) cue(name, o ?? {}, chip.now() + t);
-    if (p.clock && status === p.clock.from && (was == null || was === 'REWINDING')) {
-      st.clockFrom = now;
-      st.clockTick = -1;
-    }
   } else if (lbl !== st.label && st.label != null && p.status) kit.play('cursor'); // the pick's cursor moving
   if (lbl !== st.label) {
     st.label = lbl;
     for (const [t, name, o] of p.label?.[lbl] ?? []) cue(name, o ?? {}, chip.now() + t);
   }
-  // The clock's last seconds.
-  const c = p.clock;
-  if (c && st.clockFrom != null && c.while.includes(status)) {
-    const left = c.secs - (now - st.clockFrom), sec = Math.ceil(left);
-    if (left > 0 && sec <= c.last && sec !== st.clockTick) {
-      st.clockTick = sec;
-      kit.play('tick', undefined, { hi: sec <= 3 });
-    } else if (left <= 0 && st.clockTick !== 0) {
-      st.clockTick = 0;
-      kit.play('timeUp');
-    }
+}
+
+/**
+ * A clock running down (the opening's, from Robin's call to the pick): scene.clock(s) is the seconds left, or null when
+ * it isn't running. A soft tick every second, louder for the last few, higher still for the last three, and the time
+ * running out. Not a tick as it comes up (or back, after a rewind): there's a sting for that already.
+ */
+function clockCues(s) {
+  const c = st.place.clock, left = c && s.frozen == null ? s.scene.clock?.(s) ?? null : null;
+  if (left == null) {
+    st.clockTick = null;
+    return;
   }
+  const sec = Math.max(0, Math.ceil(left)), was = st.clockTick;
+  if (sec === was) return;
+  st.clockTick = sec;
+  if (was == null) return;
+  if (sec === 0) kit.play('timeUp');
+  else kit.play('tick', undefined, sec > c.last ? { soft: true } : { hi: sec <= 3 });
 }
 
 function frame(now, s) {
@@ -350,7 +352,8 @@ function frame(now, s) {
   bubble(s, now);
   autoSteps(s, now);
   beatCues(s, now);
-  statusCues(s, now);
+  statusCues(s);
+  clockCues(s);
   kit.pump();
 }
 

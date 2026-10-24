@@ -6,7 +6,8 @@
 //   5 clash     the hit, a spin move, then a sprint to the endgame
 //   6 hab       a level 3 climb that beats the buzzer
 //   7 win       final score, the team, and the blue banner going up
-// then the title screen loops. Every frame is drawn from the music clock, so cuts land on the beat.
+// then the title screen loops, the song fading down under it (LEVEL). Every frame is drawn from the music clock, so cuts
+// land on the beat.
 // It can also play over a recorded song (songs.js): <canvas data-song="compete-to-win-3">, or ?song=... to pick
 // another (?song=chip for the chiptune). If the song file can't be loaded, it falls back to the chiptune.
 // URL options for testing: ?at=SECONDS (freeze that frame), ?title (start at the title), ?mute.
@@ -716,6 +717,14 @@ class ChipTrack {
   }
 }
 
+/**
+ * The song's level: full under the intro, then down under the title screen, where it plays on while you read the menu
+ * and type your name, and where the game that follows is far quieter. It fades a couple of beats after the logo drops
+ * (from titleAt + fadeAt, over fadeFor seconds); a song started at the title (skipped to, ?title, or the sound only
+ * waking there) starts down. title: 0.25 of 0.9 is 11 dB down.
+ */
+const LEVEL = { intro: 0.9, title: 0.25, fadeAt: 1, fadeFor: 3 };
+
 /** A recorded song: plays once up to the end of its title loop, then repeats the loop with a short crossfade. */
 class SongTrack {
   constructor(song) {
@@ -747,7 +756,14 @@ class SongTrack {
     const ac = chip.ac;
     this.t0 = ac.currentTime + 0.03 - t;
     this.out = ac.createGain();
-    this.out.gain.value = 0.9;
+    const level = this.out.gain, fade = this.t0 + this.titleAt + LEVEL.fadeAt;
+    // playFrom(titleAt) lands a frame or so short of it, hence the second's leeway.
+    if (t > this.titleAt - 1) level.value = LEVEL.title;
+    else {
+      level.setValueAtTime(LEVEL.intro, ac.currentTime);
+      level.setValueAtTime(LEVEL.intro, fade);
+      level.linearRampToValueAtTime(LEVEL.title, fade + LEVEL.fadeFor);
+    }
     this.out.connect(chip.direct);
     this.queued = Math.max(0, t); // song time up to which audio is scheduled
     this.sfxFrom = t;
@@ -790,8 +806,14 @@ class SongTrack {
   }
   stop() {
     if (!this.out) return;
-    const out = this.out;
-    out.gain.setTargetAtTime(0, chip.ac.currentTime, 0.02);
+    const out = this.out, level = out.gain, now = chip.ac.currentTime;
+    // Hold where the title fade has got to, so its ramp doesn't carry on under the fade out.
+    if (level.cancelAndHoldAtTime) level.cancelAndHoldAtTime(now);
+    else {
+      level.cancelScheduledValues(now);
+      level.setValueAtTime(level.value, now);
+    }
+    level.setTargetAtTime(0, now, 0.02);
     const old = this.playing;
     setTimeout(() => {
       for (const s of old) {

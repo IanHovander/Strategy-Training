@@ -1,5 +1,6 @@
 // The pick: where the opening hands the player the decision (docs/blue-banner-design.md, section 5, beat 1). Seed 4 is
-// on the clock: 45 seconds, big and red at the top. Under it is the scouting tablet (tablet.js): her robot pinned for
+// on the clock: 45 seconds, big and red at the top, running since Robin called her up in the cut scene (callUp).
+// After a rewind it starts again from 0:45. Under it is the scouting tablet (tablet.js): her robot pinned for
 // reference, and two teams to pick from (teams.js). 7461 shows the biggest average on the screen, 38, but it's
 // fading: 44 a match for its first six, 29 for its last four (Friday's last and Saturday's three). 6834 shows 35, but
 // it's rising: 27 for its first six, a rebuilt intake, 48 for its last four, about a tenth better than 7461 at its
@@ -32,11 +33,14 @@
 //             a tap is A (stage.js does that for a tap the scene doesn't take).
 // Off the picture (the bars beside it) a tap is A, as stage.js has it everywhere.
 //
-// scene.js wires it to the stage: startPick() when the cut scene ends, updatePick() every frame (the stick), pressPick()
-// on A, pointPick() for taps and drags, drawPickScreen() to draw, pickLabel() and pickStatus() for the phone.
+// scene.js wires it to the stage: callUp() as Robin calls her, startPick() when the cut scene ends, updatePick() every
+// frame (the stick), pressPick() on A, pointPick() for taps and drags, drawPickScreen() to draw, pickLabel() and
+// pickStatus() for the phone, pickClock() for the sound's ticks.
 //
 //   drawPick(t, left)   the tablet as the pick begins, for the cut scene's last beat: t seconds since it came up (for the
 //                       clock's slam), left the seconds on the clock
+//   callClock(since)    the seconds on the clock in the cut scene, since the call (since: the cut scene's own count of
+//                       the seconds since it, used when the call wasn't heard, as with ?at=)
 //   PICK_CLOCK          45
 
 import { clamp } from '../pixel.js';
@@ -65,6 +69,22 @@ const P = {
 };
 const nowS = () => performance.now() / 1000;
 const leftAt = (now) => PICK_CLOCK - (now - P.clock0);
+/** When Robin called her up (performance.now() seconds), which starts the clock; null before the call. */
+let calledAt = null;
+
+/** Robin calls her up: the clock starts. null: the cut scene is back before the call (Replay, or a new run). */
+export function callUp(now = nowS()) {
+  calledAt = now;
+}
+/** The seconds on the clock in the cut scene: from the call, or `since` seconds since it if it wasn't heard (?at=). */
+export function callClock(since, now = nowS()) {
+  return PICK_CLOCK - (calledAt != null ? now - calledAt : since);
+}
+/** The seconds left while the clock runs (from the call to the pick, 0 once time's up), or null when it isn't running. */
+export function pickClock(cut, now = nowS()) {
+  if (cut) return calledAt == null ? null : callClock(0, now);
+  return P.clock0 != null && (P.phase === 'browse' || P.phase === 'confirm') ? Math.max(0, leftAt(now)) : null;
+}
 const good = () => P.picked?.num === RIGHT;
 function go(phase, now) {
   P.phase = phase;
@@ -74,11 +94,12 @@ function go(phase, now) {
 }
 
 /**
- * From the top: the clock at 0:45 from now, the cursor on the first card. slam: the clock slams in (after a rewind); the
- * first time, the cut scene's last beat has already slammed it in.
+ * From the top: the clock running from the call (0:45 from now if it hasn't been made), the cursor on the first card.
+ * slam: the clock slams in at 0:45 (after a rewind); the first time, the cut scene's last beat has already slammed it in.
  */
 export function startPick(now = nowS(), { slam = false } = {}) {
-  Object.assign(P, { clock0: now, on: 0, choice: 0, picked: null, held: 0, slam: slam ? 0 : 1, drag: null, settle: null, pressed: -1 });
+  const clock0 = slam ? now : calledAt ?? now;
+  Object.assign(P, { clock0, on: 0, choice: 0, picked: null, held: 0, slam: slam ? 0 : 1, drag: null, settle: null, pressed: -1 });
   go('browse', now);
 }
 
