@@ -12,7 +12,7 @@
 //     score { blue, red }, events (the ones so far), recent (the last two seconds' worth, for "+3"s)
 //     slots { blue, red }   every slot (sim.js slotKeys) and what's in it: 0, 1, 'null' or 'pre'
 //     depots { blue: [far, near], red }   cargo left in each
-//     loose [{ x, z, piece, age }]        pieces on the carpet, and how long they've been there
+//     loose [{ x, z, piece, age, why }]   pieces on the carpet, how long they've been there, and why (sim.js drops)
 //     robots [pose]: id, num, alliance, sprite, x, z, face (+1 toward red), up, legs { front, rear } (stilt pixels
 //       showing under it), hold (what it's carrying), aim ({ slot } or { inches }, and k: how far the mechanism has
 //       gone from rest toward it), reach (0 to 1: the grabber pushed out), climbK (0 to 1 through a climb),
@@ -22,7 +22,7 @@
 //       defending (whom), spin (feet driven, for the wheels), doing (the step's kind) and step (the step itself)
 //   focusAt(show, t)    where along the field the action is (feet), for a camera that follows it
 
-import { MATCH, PLACES, HAB, HEIGHT_IN, at, slotInfo } from './sim.js';
+import { MATCH, PLACES, HAB, HEIGHT_IN, DEPOT_CARGO, at, slotInfo } from './sim.js';
 
 /** Pixels each HAB level raises a robot (field.js draws level 1 two pixels high, level 2 four, level 3 thirteen). */
 export const HAB_PX = [0, 2, 4, 13];
@@ -194,7 +194,7 @@ export function frameAt(show, t) {
     if (f.t > t) break;
     slots[f.alliance][f.slot] = f.value;
   }
-  const depots = { blue: [12, 12], red: [12, 12] };
+  const depots = { blue: [DEPOT_CARGO, DEPOT_CARGO], red: [DEPOT_CARGO, DEPOT_CARGO] };
   for (const d of m.depots) if (d.t <= t) depots[d.alliance][d.which === 'far' ? 0 : 1] = d.left;
   const loose = m.drops.filter((d) => d.t <= t).map((d) => ({ x: d.x, z: d.z, piece: d.piece, age: t - d.t, why: d.why }));
   const left = MATCH.length - t;

@@ -47,7 +47,7 @@ export const LESSON3 = 'WHEN THE SURE THING IS ENOUGH, TAKE IT.';
 
 // ---- The matches ----
 /** Each match's seed: chosen so it goes the story's way (test/match-sim.mjs checks it still does). */
-const SEEDS = [1, 8, 159];
+const SEEDS = [1, 8, 1335];
 /** 6834's battery in match 2: dead at 1:12. */
 const BROWNOUT = MATCH.length - 72;
 /** Saturday's robots: qualification match 9's form (6834 rebuilt, 7461 fading). */

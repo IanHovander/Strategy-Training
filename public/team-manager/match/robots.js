@@ -23,7 +23,8 @@ import { OURS } from '../opening/teams.js';
 import { withMods } from './sim.js';
 
 // ---- Kinds of robot ----
-// Times are [mean, spread] in seconds; speed in feet a second, between places, turns and all.
+// Times are [mean, spread] in seconds; speed in feet a second, between places, turns and all. cargo.risk: how often
+// its drivers chance a cargo in a rocket level with only one hatch panel on (sim.js); the good ones never do.
 export const ARCHETYPES = {
   ele: {
     name: 'ELEVATOR', sprite: 'ele', note: 'Two-stage elevator, hatch grabber, Level 3 stilts.',
@@ -37,7 +38,7 @@ export const ARCHETYPES = {
     name: 'CARGO ARM', sprite: 'arm', note: 'A pivoting arm with a roller intake: cargo off the floor, up to Level 2.',
     speed: 8.5, lift: 0.7, start: 1, sandstorm: 1,
     hatch: { reach: 0 },
-    cargo: { reach: 2, ship: true, floor: true, pick: [3.2, 1.1], place: [3.0, 1], acc: 0.88, grip: 0.92 },
+    cargo: { reach: 2, ship: true, floor: true, pick: [3.2, 1.1], place: [3.0, 1], acc: 0.88, grip: 0.92, risk: 0.25 },
     climb: { 1: [1, 2], 2: [0.9, 6] },
     defense: 0.4, susceptibility: 0.55, push: 0.45, breakdown: 0.03, brownout: 0.03,
   },
@@ -61,7 +62,7 @@ export const ARCHETYPES = {
     name: 'SHIP BOT', sprite: 'ship', note: 'Low, with a roller intake and a conveyor up to the cargo ship lip.',
     speed: 9, lift: 0.4, start: 1, sandstorm: 1,
     hatch: { reach: 0 },
-    cargo: { reach: 1, ship: true, floor: true, pick: [3, 1], place: [2.6, 0.9], acc: 0.9, grip: 0.93 },
+    cargo: { reach: 1, ship: true, floor: true, pick: [3, 1], place: [2.6, 0.9], acc: 0.9, grip: 0.93, risk: 0.2 },
     climb: { 1: [1, 2], 2: [0.9, 6] },
     defense: 0.4, susceptibility: 0.5, push: 0.5, breakdown: 0.03, brownout: 0.03,
   },
@@ -77,7 +78,7 @@ export const ARCHETYPES = {
     name: 'SWERVE', sprite: 'swerve', note: 'Swerve drive and a cascade elevator: both pieces, every level, fast.',
     speed: 11.5, lift: 0.35, start: 2, sandstorm: 2,
     hatch: { reach: 3, ship: true, pick: [2.4, 0.8], place: [2.3, 0.8], acc: 0.93, grip: 0.96 },
-    cargo: { reach: 3, ship: true, floor: true, pick: [2.2, 0.8], place: [2.2, 0.7], acc: 0.93, grip: 0.96 },
+    cargo: { reach: 3, ship: true, floor: true, pick: [2.2, 0.8], place: [2.2, 0.7], acc: 0.93, grip: 0.96, risk: 0 },
     climb: { 1: [1, 2], 2: [0.95, 5] },
     defense: 0.5, susceptibility: 0.6, push: 0.4, breakdown: 0.03, brownout: 0.03,
   },
@@ -85,7 +86,7 @@ export const ARCHETYPES = {
     name: 'CLIMBER', sprite: 'climber', note: 'A big arm that levers it onto Level 3; a roller and a hatch beak, low.',
     speed: 8, lift: 0.3, start: 2, sandstorm: 1,
     hatch: { reach: 1, ship: true, pick: [4.5, 1.4], place: [4, 1.2], acc: 0.85, grip: 0.9 },
-    cargo: { reach: 1, ship: true, floor: true, pick: [4, 1.3], place: [3.6, 1.1], acc: 0.85, grip: 0.9 },
+    cargo: { reach: 1, ship: true, floor: true, pick: [4, 1.3], place: [3.6, 1.1], acc: 0.85, grip: 0.9, risk: 0.2 },
     climb: { 1: [1, 2], 2: [0.95, 5], 3: [0.75, 10] },
     defense: 0.4, susceptibility: 0.5, push: 0.55, breakdown: 0.03, brownout: 0.03,
   },
@@ -137,11 +138,11 @@ const LIST = [
   team(6834, 'arm', {
     target: 27, targetLate: 48, speed: 8, start: 2,
     hatch: { reach: 2, ship: true, pick: [6.6, 2], place: [5.6, 1.7], acc: 0.82, grip: 0.88 },
-    cargo: { reach: 2, pick: [6.5, 2], place: [5, 1.5], acc: 0.8, grip: 0.8 },
+    cargo: { reach: 2, pick: [6.5, 2], place: [5, 1.5], acc: 0.8, grip: 0.8, risk: 0.4 },
     climb: { 1: [1, 2], 2: [1, 5], 3: [0.5, 12] },
     form: [{
       from: 6,
-      mods: { 'cargo.pick': [1.2, 0.4], 'cargo.place': [1.4, 0.4], 'cargo.acc': 0.96, 'cargo.grip': 0.98, 'cargo.reach': 3, 'hatch.pick': [2.3, 0.7], 'hatch.place': [2.2, 0.7], speed: 12.5 },
+      mods: { 'cargo.pick': [1.2, 0.4], 'cargo.place': [1.4, 0.4], 'cargo.acc': 0.96, 'cargo.grip': 0.98, 'cargo.reach': 3, 'cargo.risk': 0.05, 'hatch.pick': [2.3, 0.7], 'hatch.place': [2.2, 0.7], speed: 12.5 },
     }],
   }),
   // The top scorer at the event, cargo first. Light and quick, so a good defender takes a lot off it.
@@ -151,26 +152,28 @@ const LIST = [
     cargo: { pick: [1.7, 0.6], place: [1.9, 0.6], acc: 0.95 },
     climb: { 1: [1, 2], 2: [0.97, 5], 3: [0.7, 11] },
   }),
-  // Steady on the cargo ship, and goes for Level 3 (made 6 in 10).
+  // Steady on the cargo ship, and goes for Level 3 (made 6 in 10). A hatch beak low on its front puts hatch panels on
+  // the ship's front bays and the rockets' first level, so it can open its own bays once the null ones are full.
   team(6417, 'ship', {
     target: 36,
-    speed: 10.5, cargo: { pick: [1.6, 0.5], place: [1.5, 0.5], acc: 0.96 },
+    speed: 10.5, cargo: { pick: [1.6, 0.5], place: [1.5, 0.5], acc: 0.96, risk: 0 },
+    hatch: { reach: 1, ship: true, pick: [4, 1.2], place: [3.6, 1.1], acc: 0.88, grip: 0.9 },
     climb: { 1: [1, 2], 2: [0.95, 6], 3: [0.6, 13] }, start: 2,
     habits: { climb: 3 },
   }),
-  team(6038, 'climber', { target: 33, speed: 9, hatch: { pick: [3.4, 1.1], place: [3.2, 1], acc: 0.88 }, cargo: { pick: [3.2, 1], place: [3, 1], acc: 0.88 }, climb: { 1: [1, 2], 2: [0.95, 5], 3: [0.45, 11] } }),
+  team(6038, 'climber', { target: 33, speed: 9, hatch: { pick: [3.4, 1.1], place: [3.2, 1], acc: 0.88 }, cargo: { pick: [3.2, 1], place: [3, 1], acc: 0.88, risk: 0.1 }, climb: { 1: [1, 2], 2: [0.95, 5], 3: [0.45, 11] } }),
   team(6612, 'hatchlow', { target: 31, speed: 10, hatch: { reach: 2, pick: [2.3, 0.8], place: [2.3, 0.8], acc: 0.94 }, lift: 0.6, sprite: 'ele', start: 2, climb: { 1: [1, 2], 2: [0.95, 6] } }),
-  team(8248, 'arm', { target: 30, speed: 9, sandstorm: 2, cargo: { pick: [3, 1], place: [2.8, 0.9], acc: 0.9 } }),
+  team(8248, 'arm', { target: 30, speed: 9, sandstorm: 2, cargo: { pick: [3, 1], place: [2.8, 0.9], acc: 0.9, risk: 0.1 } }),
   team(9785, 'hatchlow', { target: 29, speed: 10.5, sandstorm: 2, hatch: { pick: [2.2, 0.7], place: [2.2, 0.7], acc: 0.94 }, start: 2, climb: { 1: [1, 2], 2: [0.95, 5] } }),
   // The second pick's trap: 27 a match, all of it cargo, every match much the same.
-  team(2202, 'ship', { target: 27, speed: 8.5, cargo: { pick: [3.6, 1], place: [3, 0.8], acc: 0.88, grip: 0.95 }, breakdown: 0.01, brownout: 0.01 }),
-  team(6017, 'climber', { target: 26, speed: 6.5, hatch: { pick: [6.8, 1.8], place: [6.5, 1.7], acc: 0.9 }, cargo: { pick: [6.6, 1.8], place: [6.3, 1.7], acc: 0.9 }, climb: { 1: [1, 2], 2: [0.95, 6], 3: null } }),
+  team(2202, 'ship', { target: 27, speed: 8.5, cargo: { pick: [3.6, 1], place: [3, 0.8], acc: 0.88, grip: 0.95, risk: 0.3 }, breakdown: 0.01, brownout: 0.01 }),
+  team(6017, 'climber', { target: 26, speed: 6.5, hatch: { pick: [6.8, 1.8], place: [6.5, 1.7], acc: 0.9 }, cargo: { pick: [6.6, 1.8], place: [6.3, 1.7], acc: 0.9, risk: 0.35 }, climb: { 1: [1, 2], 2: [0.95, 6], 3: null } }),
   // Hatches on the cargo ship.
   team(7311, 'hatchlow', { target: 20, speed: 7.5, hatch: { pick: [5.6, 1.6], place: [5.2, 1.5], acc: 0.82 }, habits: { where: 'ship' } }),
   // Goes for Level 3 every match and makes it two times in seven.
   team(5518, 'climber', {
     target: 20, speed: 6.5,
-    hatch: { pick: [9, 2.6], place: [8.5, 2.4], acc: 0.7 }, cargo: { pick: [8.6, 2.5], place: [8, 2.3], acc: 0.7 },
+    hatch: { pick: [9, 2.6], place: [8.5, 2.4], acc: 0.7 }, cargo: { pick: [8.6, 2.5], place: [8, 2.3], acc: 0.7, risk: 0.5 },
     climb: { 1: [1, 2], 2: [0.9, 6], 3: [2 / 7, 12] },
     habits: { climb: 3 },
   }),
@@ -182,7 +185,7 @@ const LIST = [
   // The captains and first picks the story doesn't give numbers for: strong robots, as seeds and first picks are.
   team(4000, 'swerve', { speed: 11, cargo: { pick: [2.4, 0.8] } }),
   team(2468, 'ele', { speed: 9.5, hatch: { pick: [2.8, 0.9], place: [2.8, 0.9] } }),
-  team(3000, 'climber', { speed: 9, climb: { 1: [1, 2], 2: [0.95, 5], 3: [0.8, 10] } }),
+  team(3000, 'climber', { speed: 9, cargo: { risk: 0 }, climb: { 1: [1, 2], 2: [0.95, 5], 3: [0.8, 10] } }),
   team(8086, 'arm', { speed: 9 }),
   team(5940, 'hatchlow', { speed: 9.5 }),
   team(9152, 'ship', { speed: 9 }),

@@ -1,10 +1,16 @@
 // Checks for the team manager's match simulation (public/team-manager/match/): that it's deterministic, that the
 // score is only ever the sum of its events, that no robot places a piece it can't or where it can't, that defense
 // takes points off its target, that the animation's frames agree with the timeline, and that each team at the
-// opening's event scores about what its story says over many matches. Also that the opening's quarterfinal, played
-// by the simulation (opening/series.js), still goes the way its story needs.
+// opening's event scores about what its story says over many matches. That it follows the 2019 manual where sim.js's
+// header says it does: the field before the match, the cargo ship's floors tilting at 0:15, the rocket's cargo rolling
+// to one of a level's two bays and out again with no hatch panel there, the pieces each alliance has, and the defense
+// rules. Also that the opening's quarterfinal, played by the simulation (opening/series.js), still goes the way its
+// story needs.
 //   node test/match-sim.mjs
-import { simulate, slotInfo, BLOCKS, MATCH, POINTS, routeBetween, planAlliance, averages } from '../public/team-manager/match/sim.js';
+import {
+  simulate, slotInfo, BLOCKS, MATCH, POINTS, routeBetween, planAlliance, averages, startSlots, stayOdds, cargoSide, seeded,
+  slotKeys, PRELOAD_BAYS, DEPOT_CARGO, SUPPLY, HAB_LINE, HALF,
+} from '../public/team-manager/match/sim.js';
 import { TEAMS, EVENT, robotOf, planOf, qualMatch, targetOf, ARCHETYPES } from '../public/team-manager/match/robots.js';
 import { makeShow, frameAt } from '../public/team-manager/match/animate.js';
 import { OURS } from '../public/team-manager/opening/teams.js';
@@ -29,6 +35,130 @@ const qf = (seed, defend = true) => ({
   check(JSON.stringify(a.events) !== JSON.stringify(c.events), 'another seed plays another match');
   const d = simulate({ ...qualMatch(31, 3), record: false });
   check(JSON.stringify(d.events) === JSON.stringify(a.events), 'leaving out the tracks (for speed) changes nothing that happens');
+}
+
+// ---- The 2019 manual's rules (sim.js's header has the sections) ----
+// The rocket's cargo rule, on its own.
+{
+  const s0 = startSlots(), on = { ...s0, 'hatch:f1h': 1 }, both = { ...on, 'hatch:f1a': 1 }, oneIn = { ...both, 'cargo:f1h': 1 };
+  check(stayOdds(s0, 'f', 1) === 0 && stayOdds(on, 'f', 1) === 0.5 && stayOdds(both, 'f', 1) === 1,
+    "a rocket level's cargo stays: never with no hatch panel, half the time with one, always with both");
+  check(stayOdds(oneIn, 'f', 1) === 1 && stayOdds({ ...on, 'cargo:f1h': 1 }, 'f', 1) === 0 && stayOdds({ ...oneIn, 'cargo:f1a': 1 }, 'f', 1) === 0,
+    'with one bay full, the next cargo stays only if the empty side has its hatch panel, and a full level takes no more');
+  const rand = seeded(7), sides = Array.from({ length: 2000 }, () => cargoSide(s0, 'f', 1, rand));
+  const h = sides.filter((x) => x === 'h').length;
+  check(Array.from({ length: 50 }, () => cargoSide(oneIn, 'f', 1, rand)).every((x) => x === 'a') && cargoSide({ ...s0, 'cargo:n3a': 1 }, 'n', 3, rand) === 'h',
+    'a second cargo in a level rolls to the empty side');
+  check(h > 900 && h < 1100, `a first cargo rolls to either side at random (${h} of 2000 to the home side)`);
+  const blank = startSlots();
+  check(PRELOAD_BAYS.every((b) => blank[`cargo:${b}`] === 'pre' && !blank[`hatch:${b}`]), 'a side bay nobody chose for starts with a cargo');
+  check(DEPOT_CARGO === 6 && SUPPLY.hatch === 24 && SUPPLY.cargo === 24, '6 cargo a depot, 24 hatch panels and 24 cargo an alliance');
+}
+
+// Checked in every one of the many matches below; reportRules() says how they went.
+const R = {
+  start: true, tilt: true, side: true, roll: true, where: true, stock: true, g13: true, g9: true,
+  second: 0, first: 0, firstH: 0, rolled: 0, staged: 0, why: [],
+};
+const bad = (key, msg) => {
+  R[key] = false;
+  if (R.why.length < 12) R.why.push(msg);
+};
+/** The scoring places of one alliance from its fills before t (or at t too, with `incl`). */
+function stateAt(m, a, t, incl = false) {
+  const s = {};
+  for (const f of m.fills) if (f.alliance === a && (f.t < t || (incl && f.t === t))) s[f.slot] = f.value;
+  return s;
+}
+function rules(m) {
+  for (const a of ['blue', 'red']) {
+    // The field before the match: rockets empty, a cargo in each front bay, a cargo or a null hatch panel in each side
+    // bay as the alliance chose, nothing else.
+    const at0 = stateAt(m, a, 0, true), want = startSlots(m.preload[a]);
+    for (const k of slotKeys) if ((at0[k] ?? 0) !== want[k]) bad('start', `${a} ${k} starts as ${at0[k]}`);
+    for (const k of slotKeys) {
+      const info = slotInfo(k), v = at0[k] ?? 0;
+      if (info.struct === 'rocket' && v) bad('start', `${a} rocket ${k} not empty at the start`);
+      if (info.bay?.startsWith('front') && v !== (info.piece === 'cargo' ? 'pre' : 0)) bad('start', `${a} ${k} starts as ${v}`);
+    }
+    for (const b of PRELOAD_BAYS) {
+      const h = at0[`hatch:${b}`] ?? 0, c = at0[`cargo:${b}`] ?? 0;
+      if (!((h === 'null' && !c) || (c === 'pre' && !h))) bad('start', `${a} ${b} starts with ${h} / ${c}`);
+    }
+    for (const w of ['far', 'near']) {
+      const lefts = m.depots.filter((d) => d.alliance === a && d.which === w).map((d) => d.left);
+      if (lefts.some((n, i) => n !== DEPOT_CARGO - 1 - i || n < 0)) bad('start', `${a} ${w} depot gave ${lefts.length}`);
+    }
+    // At 0:15 the floors tilt: every staged cargo without a hatch panel rolls out (and lands on the floor), the rest
+    // were held in during the sandstorm.
+    const after = stateAt(m, a, MATCH.sandstorm, true);
+    if (Object.values(after).includes('pre')) bad('tilt', `${a} staged cargo still in the ship after 0:15`);
+    for (const f of m.fills.filter((q) => q.alliance === a && q.value === 0)) {
+      R.staged++;
+      if (!m.drops.some((d) => d.why === 'rolled out' && d.alliance === a && d.slot === f.slot && d.tIn === MATCH.sandstorm && d.by === null && d.t > d.tOut && d.tOut > d.tIn)) bad('tilt', `${a} ${f.slot} rolled out unseen`);
+    }
+    for (const e of m.events.filter((q) => q.alliance === a && q.kind === 'secured')) if (e.t > MATCH.sandstorm) bad('tilt', `${a} staged cargo held in at ${e.t}`);
+    // The rocket's cargo: in by the port, to the empty bay if the other's full, out again with no hatch panel there.
+    const outcomes = [
+      ...m.fills.filter((f) => f.alliance === a && f.value === 1 && slotInfo(f.slot).port).map((f) => ({ t: f.t, slot: f.slot, stayed: true })),
+      ...m.drops.filter((d) => d.alliance === a && d.why === 'rolled out' && d.struct === 'rocket').map((d) => ({ t: d.tIn, slot: d.slot, stayed: false, d })),
+    ];
+    for (const o of outcomes) {
+      const s = stateAt(m, a, o.t), info = slotInfo(o.slot), other = `cargo:${info.port}${info.face === 'h' ? 'a' : 'h'}`;
+      if (s[o.slot]) bad('side', `${a} cargo rolled into the full bay ${o.slot}`);
+      if (s[other]) R.second++;
+      else R.first++, R.firstH += info.face === 'h';
+      // (Robots take turns within each tenth of a second, so a partner's hatch panel can land a moment either side.)
+      const hatch = `hatch:${info.port}${info.face}`;
+      if (o.stayed ? !stateAt(m, a, o.t + 0.1)[hatch] : stateAt(m, a, o.t - 0.1)[hatch]) bad('roll', `${a} ${o.slot} ${o.stayed ? 'stayed with no hatch panel' : 'rolled out past a hatch panel'}`);
+      if (!o.stayed) {
+        R.rolled++;
+        const r = m.robots.find((q) => q.num === o.d.by), step = r?.steps.find((q) => q.kind === 'place' && q.rolled && Math.abs(q.t1 - o.t) < 1e-6);
+        if (!step || step.slot !== o.slot) bad('roll', `${a} ${o.slot} rolled out with no place step`);
+        if (!((r?.robot.cargo?.risk ?? 0) > 0)) bad('roll', `${o.d.by}, which never chances it, rolled one out`);
+        if (m.events.some((e) => e.slot === o.slot && Math.abs(e.t - o.t) < 1e-6)) bad('roll', `${a} ${o.slot} scored as it rolled out`);
+        const d = o.d;
+        if (!(d.x > 0 && d.x < 54 && d.z > 0 && d.z < 27 && d.t > d.tOut && d.tOut > d.tIn && d.rocket === info.rocket && d.level === info.level && d.side === info.face)) bad('roll', `${a} ${o.slot} rolled out oddly`);
+      }
+    }
+    // Nothing scores where it can't: a hatch panel on an empty hatch, cargo behind a hatch panel (on its side, in a
+    // rocket), staged cargo only with a hatch panel going on in the sandstorm, the sandstorm bonus in the sandstorm.
+    for (const e of m.events.filter((q) => q.alliance === a)) {
+      const s = stateAt(m, a, e.t), soon = stateAt(m, a, e.t + 0.1);
+      if (e.kind === 'leave' && e.t > MATCH.sandstorm + 1e-9) bad('where', `${e.by} left the HAB for points at ${e.t}`);
+      if (e.kind === 'hatch' && (!e.slot?.startsWith('hatch:') || s[e.slot])) bad('where', `${a} hatch on ${e.slot} (${s[e.slot]})`);
+      if (e.kind === 'cargo' && (!e.slot?.startsWith('cargo:') || s[e.slot] || !soon[`hatch:${e.slot.slice(6)}`])) bad('where', `${a} cargo in ${e.slot} at ${e.t}`);
+      if (e.kind === 'secured' && (s[e.slot] !== 'pre' || !m.events.some((h) => h.kind === 'hatch' && h.t === e.t && h.slot === `hatch:${e.slot.slice(6)}`))) bad('where', `${a} ${e.slot} held in by nothing`);
+      if (e.kind === 'hab') {
+        const r = m.robots.find((q) => q.num === e.by);
+        if (!r.track.some(([, x]) => (a === 'blue' ? x : 54 - x) > HAB_LINE + HALF - 1e-6)) bad('where', `${e.by} climbed without ever leaving its HAB zone`);
+      }
+    }
+    // The pieces: never more than the alliance has, and in the sandstorm only the hatch panel in each loading station.
+    if (m.supply[a].hatch < 0 || m.supply[a].cargo < 0) bad('stock', `${a} used pieces it didn't have`);
+    const early = m.robots.filter((r) => r.alliance === a).flatMap((r) => r.steps.filter((q) => q.kind === 'pickup' && q.from === 'station' && q.t1 < MATCH.sandstorm && q.ok != null));
+    if (early.some((q) => q.piece !== 'hatch') || ['far', 'near'].some((w) => early.filter((q) => q.which === w).length > 1)) bad('stock', `${a} fed from a loading station in the sandstorm`);
+    // Defense: never touching a robot all the way inside its own HAB zone [G13]; one defender at a time [G9].
+    for (const r of m.robots.filter((q) => q.alliance === a)) {
+      for (const c of r.contacts) {
+        for (const [t, x] of r.track) if (t > c.t0 + 1e-6 && t < c.t1 - 1e-6 && (a === 'blue' ? x : 54 - x) <= HAB_LINE - HALF) bad('g13', `${r.num} touched in its HAB zone at ${t}`);
+      }
+    }
+    const def = m.robots.filter((r) => r.alliance === a).flatMap((r) => r.steps.filter((q) => q.kind === 'defend').map((q) => ({ ...q, num: r.num })));
+    for (const p of def) for (const q of def) if (p.num < q.num && Math.min(p.t1, q.t1) - Math.max(p.t0, q.t0) > 0.15) bad('g9', `${a} ${p.num} and ${q.num} both defending at ${Math.max(p.t0, q.t0)}`);
+  }
+}
+function reportRules() {
+  check(R.start, `every match starts with the rockets empty, a cargo in each front bay, a cargo or a null hatch panel in each side bay, ${DEPOT_CARGO} cargo a depot`);
+  check(R.tilt && R.staged > 0, `at 0:15 staged cargo with no hatch panel rolls out of the cargo ship onto the floor (${R.staged} times), and only sandstorm hatch panels hold it in`);
+  check(R.side && R.second > 0, `a second cargo in a rocket level goes to the empty side (${R.second} times), never into the full one`);
+  check(R.first > 100 && Math.abs(R.firstH / R.first - 0.5) < 0.1, `a first cargo in a rocket level rolls to either side (${R.firstH} of ${R.first} to the home side)`);
+  check(R.roll && R.rolled > 0, `rocket cargo with no hatch panel on its side rolls out and scores nothing (${R.rolled} times), and only robots that chance it lose one`);
+  check(R.where, 'nothing scores where it can\'t: hatch panels on empty hatches, cargo behind hatch panels, staged cargo held in only in the sandstorm');
+  check(R.stock, 'no alliance uses more than its 24 of each, and in the sandstorm a loading station has only its one hatch panel');
+  check(R.g13, 'no robot is touched with its bumpers all the way inside its own HAB zone');
+  check(R.g9, 'one robot an alliance defends at a time');
+  if (R.why.length) console.log(R.why.join('\n'));
 }
 
 // ---- Many matches: the rules hold in every one ----
@@ -72,19 +202,21 @@ for (let i = 0; i < N; i++) {
       if (info.struct === 'rocket' && info.level > (p.reach ?? 0)) placeOk = false, why.push(`${r.num} (${r.robot.arch}) ${info.piece} on rocket level ${info.level}`);
       if (info.struct === 'ship' && !p.ship) placeOk = false, why.push(`${r.num} (${r.robot.arch}) ${info.piece} on the ship`);
       if (!(p.reach > 0 || p.ship)) placeOk = false, why.push(`${r.num} (${r.robot.arch}) handled ${info.piece}`);
-      if (s.hit) pieces++;
+      if (s.hit && !s.rolled) pieces++;
     }
     piecesMax = Math.max(piecesMax, pieces);
     if (r.steps.filter((q) => q.kind === 'climb').some((q) => !r.robot.climb[q.level])) habOk = false, why.push(`${r.num} climbed a level it can't`);
     (totals[r.num] ??= []).push(r.points);
   }
-  // Cargo only goes in behind a hatch (or a null hatch), and nothing goes in twice.
+  // Cargo only goes in behind a hatch (or a null hatch), and nothing goes in twice. The one thing that leaves a bay is
+  // staged cargo with no hatch panel in front of it, rolling out of the ship at 0:15.
   for (const a of ['blue', 'red']) {
     const now = {};
     for (const f of m.fills.filter((q) => q.alliance === a)) {
-      if (now[f.slot] && f.value !== 1) twiceOk = false;
-      if (now[f.slot] === 1) twiceOk = false, why.push(`${a} ${f.slot} filled twice`);
-      if (f.slot.startsWith('cargo:') && f.t > 0 && !now[`hatch:${f.slot.slice(6)}`]) cargoOk = false, why.push(`${a} cargo in ${f.slot} with no hatch`);
+      if (f.value === 0) {
+        if (!(now[f.slot] === 'pre' && f.t === MATCH.sandstorm && !now[`hatch:${f.slot.slice(6)}`])) twiceOk = false, why.push(`${a} ${f.slot} emptied at ${f.t}`);
+      } else if (now[f.slot] && !(now[f.slot] === 'pre' && f.value === 1)) twiceOk = false, why.push(`${a} ${f.slot} filled twice`);
+      if (f.slot.startsWith('cargo:') && f.value === 1 && !now[`hatch:${f.slot.slice(6)}`]) cargoOk = false, why.push(`${a} cargo in ${f.slot} with no hatch`);
       now[f.slot] = f.value;
     }
   }
@@ -93,6 +225,7 @@ for (let i = 0; i < N; i++) {
     const up = m.events.filter((e) => e.alliance === a && e.kind === 'hab');
     if (up.filter((e) => e.pts === 12).length > 1 || up.filter((e) => e.pts === 6).length > 2) habOk = false, why.push(`${a} crowded the HAB`);
   }
+  rules(m);
 }
 const ms = (performance.now() - t0) / N;
 check(sumOk, `the score is exactly the sum of the score events, each worth what the game says (${N} matches)`);
@@ -100,10 +233,11 @@ check(rpOk, 'ranking points: 2 for a win, 1 for a tie, 1 for 15 or more HAB poin
 check(stepsOk, 'every robot does one thing at a time, from 0:00 of the match to the buzzer');
 check(wallsOk, 'no robot drives through a rocket, the cargo ship, the HAB or a wall');
 check(placeOk, 'no impossible placements: no hatch from a cargo-only robot, no level it cannot reach, no ship for a robot that cannot');
-check(cargoOk && twiceOk, 'cargo only goes in behind a hatch or a null hatch, and no port takes two pieces');
+check(cargoOk && twiceOk, 'cargo only goes in behind a hatch or a null hatch, no port takes two pieces, and only staged cargo leaves (at 0:15)');
 check(habOk, 'climbs only to levels the robot can reach, one robot on level 3 and two on level 2 an alliance');
 check(piecesMax <= 18, `a top robot places a 2019 number of pieces (at most ${piecesMax} in ${N} matches)`);
 check(ms < 40, `fast enough for hundreds of matches (${ms.toFixed(1)} ms a match)`);
+reportRules();
 if (why.length) console.log(why.slice(0, 10).join('\n'));
 
 // ---- Plans ----

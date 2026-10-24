@@ -8,43 +8,84 @@
 // near one (27), as field.js draws it (8 pixels to the foot along, floorY(z) for the depth). Every place below is
 // blue's; red's is blue's mirrored end for end.
 //
-// The game, and what's simplified:
-//   Sandstorm, 0 to 15 s: robots start on their HAB, level 1 or 2, holding a hatch panel or cargo. Driving off it
-//     (bumpers past the HAB line) is 3 points from level 1, 6 from level 2. Drivers see through cameras, so robots are a
-//     little slower and less accurate until 15 s; a robot with no camera (sandstorm 0) drives off and waits.
-//   Teleop, 15 to 150 s: cycles. A hatch panel is 2 points, cargo 3.
-//   Where: each alliance's two rockets, one on the far wall and one on the near (three levels; on each level a hatch
-//     port either side and cargo behind each), and its half of the cargo ship (8 bays: 2 on the front, 3 down each
-//     side). Cargo only stays in behind a hatch panel, so it needs one first, except in a ship bay that started with a
-//     null hatch panel. Before the match each side bay gets a null hatch panel or a cargo (the alliance's choice,
-//     `preload`); preloaded cargo counts once a hatch closes it in, so a hatch there is worth 5. The camera sees the
-//     near wall's rockets from behind, so field.js draws them see-through (live option), their pieces showing.
-//   Pieces: hatch panels from the loading stations (two per alliance, in the corners by its wall); cargo from the
-//     loading stations' chutes, or off the floor from the two depots beside the HAB (12 each) for robots with a floor
-//     intake. SIMPLIFIED: the human players never run out; a dropped piece stays where it fell.
+// The game is the 2019 game manual's (FIRST's Destination: Deep Space manual, its last version, V9 of April 2019). Its
+// section and rule numbers are in brackets. What's simplified says so.
+//   Before the match [5.1]: everything's empty but these.
+//     The cargo ship: each alliance has its own half, 8 bays [4.4]. Its two front bays (facing the alliance's wall)
+//       start with a cargo each [5.1.1 E]. Each of its six side bays starts with a cargo or a null hatch panel (bolted
+//       on, worth nothing, but it keeps cargo in) [5.1.1 F]. Each team chooses for its own two bays, the pair across
+//       the ship: station 1 the pair by the centre line, then 2, then 3 [figure 5-2]. A bay nobody chose gets a cargo.
+//       Here the alliance chooses all six together (`preload`).
+//     The rockets: empty.
+//     Each depot: 6 cargo [5.1.1 B].
+//     Each loading station: 1 hatch panel [5.1.1 A].
+//     Each robot: may hold one hatch panel or one cargo [5.1.1 C], and stands on HAB level 1 or 2 [5.1.2].
+//     The rest of the alliance's 24 hatch panels and 24 cargo: with its human players, to feed through the loading
+//       stations [5.1.1 D, H7]. They can run out.
+//   Sandstorm, 0 to 15 s [5.2]: driving off the HAB, bumpers all the way past the HAB line, is 3 points from level 1, 6
+//     from level 2 [table 5-1]. Drivers see through cameras, so robots are a little slower and less accurate until
+//     15 s. A robot with no camera (sandstorm 0) drives off and waits. Nobody crosses into the other half [G3], so no
+//     defense. The human players stay between the starting lines [H9], so the loading stations have only their one
+//     hatch panel each until 0:15.
+//   Teleop, 15 to 150 s: cycles. A hatch panel is 2 points and a cargo 3 [table 5-1]. A null hatch panel scores
+//     nothing.
+//   The cargo ship [4.4]: a bay holds one counted cargo, and keeps it only behind a hatch panel or a null one. The
+//     bays' floors hold cargo in during the sandstorm. At 0:15 they tilt, and any cargo with no hatch panel in front
+//     of it rolls out onto the floor (drops, why 'rolled out'). So the cargo staged in the ship counts (+3,
+//     `secured`) only if a hatch panel goes on in the sandstorm. A hatch panel there then is worth 5.
+//   The rockets [4.3]: two an alliance, one on the far wall and one on the near.
+//     Each has three levels. On each level there's a hatch on either angled side and a bay behind each hatch. The
+//       two bays share one port in the rocket's front face, the face toward the cargo ship. Robots put hatch panels
+//       on from beside the rocket and cargo in through the port from in front of it.
+//     Cargo in the port rolls into one of the level's two bays: either one, at random, when both are empty, and the
+//       empty one when the other's full. A ramp in each bay "directs CARGO out the HATCH" [4.3], so it stays only if
+//       a hatch panel covers that side. Which bay it rolls to is the rocket's shape (the drawings in 4.3); the manual
+//       doesn't write it down as a rule.
+//     So cargo is safe in a level with both hatch panels on (or the empty side's, when the other bay is full), even
+//       odds with one on, and never stays with none. Good teams put both hatch panels on first. Weaker ones
+//       sometimes chance it (`cargo.risk`).
+//     Cargo that rolls out scores nothing. It comes to rest on the floor beside the rocket (drops, why
+//       'rolled out').
+//   Pieces: hatch panels from the loading stations (two per alliance, in the corners by its wall). Cargo from the
+//     loading stations' chutes, or, for robots with a floor intake, off the floor at the two depots beside the HAB.
+//     A robot holds one piece at a time [G4]. SIMPLIFIED: a piece on the floor stays where it fell, and nobody picks
+//     it up.
 //   Endgame: robots head home for the HAB when the plan says (climbAt, seconds left). Level 1 is 3, level 2 is 6,
-//     level 3 is 12. One robot fits on level 3 and one on each of the two level 2 platforms. A failed climb drops back
-//     to level 1 (3). Climb points count the moment the robot settles; a robot still on its way at 0:00 gets nothing.
+//     level 3 is 12 [table 5-1]. A robot that never got all the way past its HAB line gets none of it. One robot fits
+//     on the level 3 deck and one on each of the two level 2 decks [4.5]. A failed climb drops back to level 1 (3).
+//     Climb points count the moment the robot settles; a robot still on its way at 0:00 gets nothing.
 //   Defense (from games/frc-strategy/alliance.js): a defended robot keeps 1 - (defender's ability x its
 //     susceptibility) of what it does. Here that's while they're in contact: it works keep^0.75 as fast and places
-//     keep^0.25 as accurately, which multiply to keep. Defense starts at teleop (SIMPLIFIED: no crossing in the
-//     sandstorm), and a robot in its own HAB zone in the last 30 s can't be touched. A defender that pushes harder than
-//     its target can pin it, 5 s at most, then has to back off for 3 s. Contact can brown robots out.
+//     keep^0.25 as accurately, which multiply to keep.
+//     Defense starts at teleop [G3]. A robot with its bumpers all the way inside its own HAB zone (its loading
+//       stations, its depots, its HAB) can't be touched [G13]. One robot an alliance defends at a time [G9].
+//     A defender that pushes harder than its target can pin it, 5 s at most, then has to back off for 3 s [G18].
+//       Contact can brown robots out.
 //   Breakdowns: each robot has a chance of dying for the rest of the match (breakdown) and of browning out for a few
 //     seconds; defenders break a little more often (as in alliance.js). Modifiers can force these, for a story.
-//   SIMPLIFIED: no fouls; robots only touch when one is defending the other; the ranking points are 2 for a win (1 for
-//     a tie), 1 for a complete rocket (either one) and 1 for 15 or more HAB climb points.
+//   Ranking points [table 5-1]: 2 for a win (1 for a tie), 1 for a complete rocket (either one: 6 hatch panels and 6
+//     cargo), 1 for 15 or more HAB climb points.
+//   SIMPLIFIED: no fouls; robots only touch when one is defending the other.
 //
 //   simulate({ seed, blue, red, preload, record })   one match (see below for what goes in and what comes out)
 //   planAlliance(entries)                             default plans for an alliance: who climbs where, what each scores
 //   defaultPlan(robot)                                one robot's plan on its own
 //   withMods(robot, mods)                             a robot changed for one match: { 'cargo.grip': 0.6, speed: 10 }
 //   averages(make, runs)                              many matches: each robot's average points, for scouting
+//   startSlots(preload), stayOdds(slots, rocket, level), cargoSide(slots, rocket, level, rand)
+//                                                     the field before the match, and the rocket's cargo rule
 //   routeBetween(a, b), BLOCKS, PLACES, slotKeys      the field's geometry, for the animation and the tests
 
 export const MATCH = { length: 150, sandstorm: 15, endgame: 30 };
 export const POINTS = { hatch: 2, cargo: 3, leave: [0, 3, 6], hab: [0, 3, 6, 12] };
-export const DEPOT_CARGO = 12;
+/** Cargo in each depot at the start [5.1.1 B]. */
+export const DEPOT_CARGO = 6;
+/**
+ * Each alliance's own pieces [5.1.1]: 24 hatch panels and 24 cargo, of which 1 hatch panel waits in each loading
+ * station, 6 cargo in each depot, and up to one piece in each robot; the human players have the rest. (The cargo staged
+ * in the cargo ship and the null hatch panels are on top of these.)
+ */
+export const SUPPLY = { hatch: 24, cargo: 24, staged: 1 };
 /** The simulation's tick, in seconds. Events land between ticks at their exact moment. */
 const DT = 0.1;
 const LEN = 54, MID = 27;
@@ -78,8 +119,10 @@ function timeOf([mean, sd], rand) {
 
 // ---- The field, in feet ----
 // Places are where a robot's middle stands to do something there, and which way it faces (+1 toward red's end). A robot
-// scores a rocket from beside it, facing one of its two angled faces, as the arena's robots do; the cargo ship from in
-// front of a bay, or at the front pair from the HAB side. The rockets: f on the far wall, n on the near one.
+// puts a hatch panel on a rocket from beside it, facing one of its two angled faces, as the arena's robots do (fh, fa),
+// and cargo in through its port from in front of it (fp, np). There it faces the rocket, across the field (faceZ: -1
+// toward the far wall); a picture from the side can't show that, so its face is the way it drove in. The cargo ship
+// from in front of a bay, or at the front pair from the HAB side. The rockets: f on the far wall, n on the near one.
 const BAY_X = [26, 24.125, 22.25]; // the ship's side bays, from the centre line out (field.js shipBays)
 export const PLACES = {
   station: { far: { x: 3.3, z: 1.5, face: -1 }, near: { x: 3.3, z: 25.5, face: -1 } },
@@ -87,6 +130,7 @@ export const PLACES = {
   spot: {
     fh: { x: 15.125, z: 2.6, face: 1 }, fa: { x: 22.875, z: 2.6, face: -1 },
     nh: { x: 15.125, z: 24.4, face: 1 }, na: { x: 22.875, z: 24.4, face: -1 },
+    fp: { x: 19, z: 4.4, face: 1, faceZ: -1 }, np: { x: 19, z: 22.6, face: 1, faceZ: 1 },
     front0: { x: 17.1, z: 12.4, face: 1 }, front1: { x: 17.1, z: 14.6, face: 1 },
     ...Object.fromEntries(BAY_X.flatMap((x, i) => [[`near${i}`, { x: x - 2, z: 17.7, face: 1 }], [`far${i}`, { x: x - 2, z: 9.3, face: 1 }]])),
   },
@@ -230,10 +274,12 @@ function outOfBlocks(p) {
 // A robot (robots.js has the archetypes and the teams):
 //   num, sprite                     its number and the sprite that draws it (bots.js)
 //   speed                           ft/s between places, on average (top speeds are higher; this counts the turns)
-//   hatch, cargo: { reach, ship, floor, pick: [mean, sd], place: [mean, sd], acc, grip }
+//   hatch, cargo: { reach, ship, floor, pick: [mean, sd], place: [mean, sd], acc, grip, risk }
 //     reach: the highest rocket level it can place on (0: it can't handle that piece at all); ship: whether it can
 //     score the cargo ship; floor: cargo off the floor (the depots); pick and place: seconds; acc: the chance a
-//     placement stays in; grip: the chance a pickup works (an intake that fumbles shows up here)
+//     placement goes in; grip: the chance a pickup works (an intake that fumbles shows up here); risk (cargo only, 0
+//     to 1): how often, choosing where its next cargo goes, its drivers will put it in a rocket level with only one of
+//     the two hatch panels on, where it rolls out half the time (0, the default: never)
 //   lift                            seconds for its mechanism to go up a rocket level
 //   climb: { 1: [odds, secs], 2: [...], 3: [...] }   the HAB levels it can climb
 //   start                           the highest HAB level it can drive off at the start (1 or 2)
@@ -321,9 +367,12 @@ export function planAlliance(entries) {
 
 // ---- The scoring places ----
 // Slots for an alliance, as keys: 'hatch:f2h' is the hatch port on the far rocket's level 2, on its home face (toward
-// its own end), 'cargo:n2a' the cargo behind the near rocket's level 2 away face; 'hatch:near0' the hatch on the cargo
-// ship's near side, the bay by the centre line, 'cargo:front1' the cargo in the front bay nearer you. A slot holds 0,
-// 1, 'null' (a null hatch panel) or 'pre' (preloaded cargo, not yet held in by a hatch).
+// its own end), 'cargo:n2a' the cargo bay behind the near rocket's level 2 away face; 'hatch:near0' the hatch on the
+// cargo ship's near side, the bay by the centre line, 'cargo:front1' the cargo in the front bay nearer you. A slot
+// holds 0, 1, 'null' (a null hatch panel) or 'pre' (cargo staged in a ship bay before the match, not yet held in by a
+// hatch panel: it counts once one goes on in the sandstorm, and rolls out at 0:15 if none has).
+// A rocket level's two cargo slots share its port: a robot aims at the level (its step's slot is one of the two), and
+// the bay the cargo rolls to (cargoSide) is the slot it ends up in.
 const SHIP_BAYS = ['front0', 'front1', 'near0', 'near1', 'near2', 'far0', 'far1', 'far2'];
 export const ROCKETS = ['f', 'n'];
 export const slotKeys = [
@@ -332,40 +381,107 @@ export const slotKeys = [
 ];
 /** The side bays as the preload lists them: near side from the middle out, then the far side. */
 export const PRELOAD_BAYS = ['near0', 'near1', 'near2', 'far0', 'far1', 'far2'];
-/** What a slot key means: { piece, struct ('rocket' | 'ship'), rocket ('f' | 'n'), level, face ('h' | 'a'), bay, spot }. */
+/**
+ * What a slot key means: { piece, struct ('rocket' | 'ship'), rocket ('f' | 'n'), level, face ('h' | 'a'), bay, spot }.
+ * spot: the PLACES.spot a robot works it from (a rocket's cargo: its port, 'fp' or 'np'). port: a rocket's cargo slot's
+ * level, 'f2', which both its bays go in by.
+ */
 const infos = new Map();
 export function slotInfo(key) {
   if (infos.has(key)) return infos.get(key);
   const [piece, where] = key.split(':');
   const info = where.length === 3
-    ? { piece, struct: 'rocket', rocket: where[0], level: +where[1], face: where[2], spot: `${where[0]}${where[2]}` }
+    ? { piece, struct: 'rocket', rocket: where[0], level: +where[1], face: where[2], spot: `${where[0]}${piece === 'cargo' ? 'p' : where[2]}` }
     : { piece, struct: 'ship', bay: where, level: 1, spot: where };
+  if (info.struct === 'rocket' && piece === 'cargo') info.port = where.slice(0, 2);
   infos.set(key, info);
   return info;
 }
+
+// ---- What stays in ----
+/**
+ * The chance a cargo put in a rocket level's port stays in [4.3]: it rolls to one of the two bays (cargoSide), and a
+ * bay keeps it only behind a hatch panel. 1, 0.5 or 0 (0 too when both bays are full).
+ */
+export function stayOdds(slots, rocket, level) {
+  const full = (s) => !!slots[`cargo:${rocket}${level}${s}`], on = (s) => !!slots[`hatch:${rocket}${level}${s}`];
+  if (full('h') && full('a')) return 0;
+  if (full('h')) return on('a') ? 1 : 0;
+  if (full('a')) return on('h') ? 1 : 0;
+  return (on('h') + on('a')) / 2;
+}
+/** The bay a cargo put in a rocket level's port rolls to: the empty one if the other's full, either at random if both are empty. */
+export function cargoSide(slots, rocket, level, rand) {
+  if (slots[`cargo:${rocket}${level}h`]) return 'a';
+  if (slots[`cargo:${rocket}${level}a`]) return 'h';
+  return rand() < 0.5 ? 'h' : 'a';
+}
+/** Is there room for a piece here: an empty hatch (not a null one), an empty ship bay, a rocket level with a bay free. */
+function roomFor(slots, key) {
+  const info = slotInfo(key);
+  if (info.struct === 'rocket' && info.piece === 'cargo') return !(slots[`cargo:${info.port}h`] && slots[`cargo:${info.port}a`]);
+  return !slots[key];
+}
+/** The chance a piece put here now stays and counts: a hatch panel always; cargo only with a hatch panel in front of it. */
+function oddsOf(slots, key) {
+  const info = slotInfo(key);
+  if (!roomFor(slots, key)) return 0;
+  if (info.piece === 'hatch') return 1;
+  if (info.struct === 'rocket') return stayOdds(slots, info.rocket, info.level);
+  return slots[`hatch:${info.bay}`] ? 1 : 0;
+}
+/** Somewhere this robot would put its piece: sure to stay, or (its drivers chancing it this time) likely to. */
+const usable = (a, slots, key) => {
+  const o = oddsOf(slots, key);
+  return o >= 1 || (o > 0 && a.daring);
+};
+/** The rocket cargo slot a robot aims at on a level: the empty bay, or while both are, the one behind a hatch panel. */
+function aimOf(slots, key) {
+  const info = slotInfo(key);
+  if (info.struct !== 'rocket' || info.piece !== 'cargo') return key;
+  const k = (s) => `cargo:${info.port}${s}`;
+  if (slots[k('h')]) return k('a');
+  if (slots[k('a')]) return k('h');
+  return slots[`hatch:${info.port}h`] || !slots[`hatch:${info.port}a`] ? k('h') : k('a');
+}
+/** What a reservation goes by: a rocket level's port for its cargo (both bays go in by it), the slot itself otherwise. */
+const resKey = (key) => {
+  const info = slotInfo(key);
+  return info.port ? `cargo:${info.port}` : key;
+};
 /** Inches up for each place a piece goes: rocket hatch ports and cargo, the ship's hatch port and over its lip. */
 export const HEIGHT_IN = { hatch: [19, 47, 75], cargo: [27.5, 55.5, 83.5], shipHatch: 19, shipCargo: 36, stationHatch: 19, stationCargo: 34, floor: 3 };
 const heightOf = (info) => (info.struct === 'ship' ? (info.piece === 'hatch' ? HEIGHT_IN.shipHatch : HEIGHT_IN.shipCargo) : HEIGHT_IN[info.piece][info.level - 1]);
 
-function newSlots(preload) {
+/**
+ * An alliance's scoring places before the match [5.1.1]: the rockets empty, a cargo in each of the ship's two front
+ * bays (E), and in each side bay what its team chose (F): preload, six 'null' or 'cargo' in PRELOAD_BAYS order. A bay
+ * nobody chose gets a cargo.
+ */
+export function startSlots(preload) {
   const s = Object.fromEntries(slotKeys.map((k) => [k, 0]));
+  s['cargo:front0'] = s['cargo:front1'] = 'pre';
   PRELOAD_BAYS.forEach((bay, i) => {
-    if ((preload?.[i] ?? 'null') === 'cargo') s[`cargo:${bay}`] = 'pre';
-    else s[`hatch:${bay}`] = 'null';
+    if ((preload?.[i] ?? 'cargo') === 'null') s[`hatch:${bay}`] = 'null';
+    else s[`cargo:${bay}`] = 'pre';
   });
   return s;
 }
 /**
- * The alliance's default preload. Cargo in a side bay is 5 points for a hatch later, but that bay then takes no more
- * cargo; a null hatch makes a bay ready for cargo. So: cargo for hatch robots to close in, as many as there are more
- * robots (two bays each, one fewer for each cargo robot), and null hatches everywhere else.
+ * The alliance's default choice for the side bays [5.1.1 F]. A cargo there is 5 points if a hatch panel goes on it in
+ * the sandstorm; if none does, it rolls out at 0:15 and leaves the bay empty, ready for a hatch panel (2) and then cargo
+ * (3). A null hatch panel makes the bay ready for cargo from the start, but no hatch panel can score there. So: cargo
+ * for the sandstorm's hatch panels once the front pair has theirs, or for the bays the hatch robots will want later
+ * (two for each, one fewer for each cargo robot), whichever is more, and null hatch panels everywhere else.
  */
 export function defaultPreload(entries, plans) {
   const scorers = entries.map((e, i) => ({ r: e.robot, p: plans[i] })).filter((x) => x.p.role === 'score');
   const hatchOnly = scorers.filter((x) => x.p.piece === 'hatch' || !can(x.r, 'cargo')).length;
   const cargoOnly = scorers.filter((x) => x.p.piece === 'cargo' || !can(x.r, 'hatch')).length;
   const both = scorers.length - hatchOnly - cargoOnly;
-  const n = Math.max(0, Math.min(6, 2 * hatchOnly - cargoOnly + (both > 0 && cargoOnly === 0 ? 2 : 0)));
+  const sandstorm = scorers.filter((x) => x.p.preload === 'hatch' && x.p.sandstorm && (x.r.sandstorm ?? 1) > 0 && x.r.hatch?.ship).length;
+  const later = 2 * hatchOnly - cargoOnly + (both > 0 && cargoOnly === 0 ? 2 : 0);
+  const n = Math.max(0, Math.min(6, Math.max(sandstorm - 2, later)));
   // Near side first, so the hatches that hold the cargo in are the ones the camera sees.
   const order = ['near2', 'near1', 'near0', 'far2', 'far1', 'far0'];
   return PRELOAD_BAYS.map((b) => (order.indexOf(b) < n ? 'cargo' : 'null'));
@@ -382,35 +498,48 @@ export function defaultPreload(entries, plans) {
  *   robots    six, blue's first: { id, num, alliance, slot, sprite, robot, plan, steps, track, contacts, points }
  *             steps: what it does, back to back from 0 to 150: { kind, t0, t1, ... }, kind one of
  *               'start'  on the HAB (level), 'drive' (to: what for, from, way), 'pickup' (piece, from: 'station' |
- *               'depot', which, ok), 'place' (slot, piece, hit), 'wait' (why), 'defend' (target), 'climb' (level,
- *               made, lane), 'park', 'dead' (why: 'breakdown' | 'brownout'). Every step has hold (what it carries).
+ *               'depot', which, ok), 'place' (slot, piece, hit, rolled), 'wait' (why), 'defend' (target), 'climb'
+ *               (level, made, lane), 'park', 'dead' (why: 'breakdown' | 'brownout'). Every step has hold (what it
+ *               carries). A place step's hit: the piece went in; for a rocket's cargo, slot is the bay it rolled to,
+ *               and rolled: true if it rolled straight back out (no hatch panel on that side; drops has where it went).
  *             track: [t, x, z] points to draw it from (straight lines between them)
  *             contacts: when it was defended: { t0, t1, by, pinned }
  *   events    every point: { t, alliance, pts, kind ('leave' | 'hatch' | 'cargo' | 'secured' | 'hab'), by, slot, text }
- *   fills     every change to the scoring places, at its moment: { t, alliance, slot, value } (t = 0: the preloads)
- *   drops     pieces dropped on the floor: { t, piece, x, z, by, why ('miss' | 'fumble') }
+ *   fills     every change to the scoring places, at its moment: { t, alliance, slot, value } (t = 0: the field before
+ *             the match, startSlots; value 0 at 0:15: staged cargo rolling out of a ship bay with no hatch panel)
+ *   drops     pieces on the floor: { t, piece, x, z, by, why ('miss' | 'fumble' | 'rolled out') }, t the moment it's
+ *             there. A cargo that rolled out of a bay has more, for drawing it on its way: tIn (it went in the rocket's
+ *             port; for the ship, 0:15, the floors tilting), tOut (it drops out of the hatch), alliance, slot (the bay
+ *             it rolled through), struct ('rocket' | 'ship'), rocket ('f' | 'n'), level and side ('h' | 'a'), or bay.
+ *             by is the robot that put it in (null for the cargo staged in the ship).
  *   depots    { t, alliance, which, left } each time a depot gives up a cargo
  *   log       everything worth a line, in order: { t, by, kind, text }
  *   score     { blue, red }: the sum of the events, always
  *   rp        { blue: { win, rocket, hab, total }, red }
  *   winner    'blue' | 'red' | 'tie'
+ *   supply    { blue: { hatch, cargo }, red }: what each alliance's human players had left at the buzzer
  */
 export function simulate({ seed = 1, blue, red, preload = {}, record = true }) {
   const sides = { blue, red };
   const m = {
     t: 0, now: 0, seed, agents: [], events: [], fills: [], drops: [], depots: [], log: [], record,
-    slots: {}, depot: {}, preload: {}, reserved: { blue: new Map(), red: new Map() },
+    slots: {}, depot: {}, preload: {}, reserved: { blue: new Map(), red: new Map() }, stock: {}, staged: {},
+    rand: seeded(mix(seed, 'field')),
   };
   for (const alliance of ['blue', 'red']) {
     const entries = sides[alliance].map((e) => ({ ...e, robot: e.mods ? withMods(e.robot, e.mods) : e.robot }));
     const plans = planAlliance(entries);
     const pre = preload[alliance] ?? defaultPreload(entries, plans);
     m.preload[alliance] = pre;
-    m.slots[alliance] = newSlots(pre);
+    m.slots[alliance] = startSlots(pre);
     m.depot[alliance] = { far: DEPOT_CARGO, near: DEPOT_CARGO };
     for (const [k, v] of Object.entries(m.slots[alliance])) if (v) m.fills.push({ t: 0, alliance, slot: k, value: v });
     const starts = startSpots(plans);
     entries.forEach((e, slot) => m.agents.push(makeAgent(m, alliance, slot, e.robot, plans[slot], starts[slot])));
+    // The human players' pieces: the alliance's 24 of each, less what's in the stations, the depots and the robots.
+    const held = (p) => m.agents.filter((a) => a.alliance === alliance && a.hold === p).length;
+    m.staged[alliance] = { far: SUPPLY.staged, near: SUPPLY.staged };
+    m.stock[alliance] = { hatch: SUPPLY.hatch - 2 * SUPPLY.staged - held('hatch'), cargo: SUPPLY.cargo - 2 * DEPOT_CARGO - held('cargo') };
   }
   for (const a of m.agents) a.foes = m.agents.filter((b) => b.alliance !== a.alliance);
   for (const a of m.agents) {
@@ -418,9 +547,10 @@ export function simulate({ seed = 1, blue, red, preload = {}, record = true }) {
     a.target = a.foes.find((b) => b.num === String(a.plan.defend)) ?? bestFoe(a);
   }
   // Tick through the match. Robots move in a fixed order, so it's the same every time.
-  const ticks = Math.round(MATCH.length / DT);
+  const ticks = Math.round(MATCH.length / DT), tilt = Math.round(MATCH.sandstorm / DT);
   for (let i = 0; i < ticks; i++) {
     m.t = i * DT;
+    if (i === tilt) tiltFloors(m);
     for (const a of m.agents) step(m, a, DT);
     contact(m);
     if (record) for (const a of m.agents) a.track.push([+(m.t + DT).toFixed(2), a.x, a.z]);
@@ -626,6 +756,11 @@ function sandOf(m, a) {
 }
 
 function begin(m, a, task) {
+  // At a loading station in the sandstorm with no hatch panel waiting in it: the human players can't come to it until
+  // 0:15 [H9], so it waits there for them.
+  if (task.kind === 'pickup' && task.from === 'station' && m.now < MATCH.sandstorm && !(task.piece === 'hatch' && m.staged[a.alliance][task.which] > 0)) {
+    task.work = Math.max(task.work, MATCH.sandstorm - m.now + 1);
+  }
   a.task = task;
   openStep(m, a, task.step);
   if (task.kind === 'drive') a.step.way = task.way.map((p) => [+p.x.toFixed(2), +p.z.toFixed(2)]);
@@ -652,28 +787,41 @@ function end(m, a, t) {
   if (a.queue.length) begin(m, a, a.queue.shift());
 }
 
+/**
+ * Is there a piece to take there: cargo left in the depot; at a loading station, the hatch panel waiting in it, or, once
+ * the sandstorm's over and the human players can come to it [H9], one of theirs while they have any.
+ */
+function inStock(m, al, piece, from, which) {
+  if (from === 'depot') return m.depot[al][which] > 0;
+  if (piece === 'hatch' && m.staged[al][which] > 0) return true;
+  return m.now >= MATCH.sandstorm - 1e-9 && m.stock[al][piece] > 0;
+}
+/** Take that piece (a pickup, or a fumble: then it's on the floor). */
+function take(m, al, piece, from, which) {
+  if (from === 'depot') {
+    const left = --m.depot[al][which];
+    m.depots.push({ t: +t3(m), alliance: al, which, left });
+  } else if (piece === 'hatch' && m.staged[al][which] > 0) m.staged[al][which]--;
+  else m.stock[al][piece]--;
+}
+
 function endPickup(m, a, task) {
   const p = a.robot[task.piece];
   a.src = null;
-  if (task.from === 'depot') {
-    if (m.depot[a.alliance][task.which] <= 0) {
-      a.step.ok = false;
-      a.queue = [];
-      return;
-    }
+  if (!inStock(m, a.alliance, task.piece, task.from, task.which)) {
+    a.step.ok = false;
+    a.queue = [];
+    return;
   }
   if (a.rand() < (p.grip ?? 0.95)) {
     a.hold = task.piece;
     a.step.ok = true;
-    if (task.from === 'depot') {
-      const left = --m.depot[a.alliance][task.which];
-      m.depots.push({ t: +t3(m), alliance: a.alliance, which: task.which, left });
-    }
+    take(m, a.alliance, task.piece, task.from, task.which);
   } else {
     // Fumbled: the piece gets away (it bounces off, or the human player has to feed it again). Try once more.
     a.step.ok = false;
     m.drops.push({ t: +t3(m), piece: task.piece, x: a.x + a.face * -1.2, z: a.z + (a.rand() - 0.5), by: a.num, why: 'fumble' });
-    if (task.from === 'depot') m.depot[a.alliance][task.which]--, m.depots.push({ t: +t3(m), alliance: a.alliance, which: task.which, left: m.depot[a.alliance][task.which] });
+    take(m, a.alliance, task.piece, task.from, task.which);
     say(m, a, 'fumble', `FUMBLES THE ${task.piece === 'hatch' ? 'HATCH' : 'CARGO'}`);
     a.src = { from: task.from, which: task.which };
     a.queue.unshift({ ...pickTask(m, a, task.piece, task.from, task.which), work: timeOf(p.pick, a.rand) * 0.7 });
@@ -692,23 +840,96 @@ function endPlace(m, a, task) {
   const acc = (p.acc ?? 0.85) * task.sand * (1 - guard * (1 - keep ** 0.25)) - levelHit;
   const piece = info.piece;
   a.hold = null;
-  if (!slotFree(slots, key) || a.rand() >= acc) {
+  if (!roomFor(slots, key) || a.rand() >= acc) {
     a.step.hit = false;
     m.drops.push({ t: +t3(m), piece, x: a.x + a.face * 1.6, z: a.z + 0.8 + a.rand() * 0.8, by: a.num, why: 'miss' });
     say(m, a, 'miss', `MISSES ${piece === 'hatch' ? 'A HATCH' : 'CARGO'}, ${words(info)}`);
     return;
   }
   a.step.hit = true;
-  slots[key] = 1;
+  let slot = key;
+  if (info.port) {
+    // In through the port, it rolls into one of the level's two bays [4.3], and out again unless a hatch panel covers it.
+    const side = cargoSide(slots, info.rocket, info.level, a.rand);
+    slot = `cargo:${info.port}${side}`;
+    a.step.slot = slot;
+    if (!slots[`hatch:${info.port}${side}`]) {
+      a.step.rolled = true;
+      rollOut(m, a.alliance, slot, m.now, a.rand, a.num);
+      say(m, a, 'rolled', `CARGO ROLLS OUT, ${words(info)}`);
+      return;
+    }
+  } else if (piece === 'cargo' && !slots[`hatch:${info.bay}`]) {
+    // A ship bay with no hatch panel: its floor holds the cargo in until 0:15 [4.4], and after that it rolls out.
+    if (m.now < MATCH.sandstorm) {
+      slots[slot] = 'pre';
+      m.fills.push({ t: +t3(m), alliance: a.alliance, slot, value: 'pre' });
+    } else {
+      a.step.rolled = true;
+      rollOut(m, a.alliance, slot, m.now, a.rand, a.num);
+      say(m, a, 'rolled', `CARGO ROLLS OUT, ${words(info)}`);
+    }
+    return;
+  }
+  slots[slot] = 1;
   if (m.room) m.room[a.alliance] = null;
-  m.fills.push({ t: +t3(m), alliance: a.alliance, slot: key, value: 1 });
-  score(m, a, POINTS[piece], piece, key, `${piece === 'hatch' ? 'HATCH' : 'CARGO'}, ${words(info)}`);
-  // A hatch on a bay with preloaded cargo holds that cargo in: it counts now.
+  m.fills.push({ t: +t3(m), alliance: a.alliance, slot, value: 1 });
+  score(m, a, POINTS[piece], piece, slot, `${piece === 'hatch' ? 'HATCH' : 'CARGO'}, ${words(info)}`);
+  // A hatch panel on a ship bay with cargo staged in it (only in the sandstorm: at 0:15 it rolls out) holds that cargo
+  // in: it counts now.
   const behind = `cargo:${key.split(':')[1]}`;
   if (piece === 'hatch' && slots[behind] === 'pre') {
     slots[behind] = 1;
     m.fills.push({ t: +t3(m), alliance: a.alliance, slot: behind, value: 1 });
-    score(m, a, POINTS.cargo, 'secured', behind, `PRELOADED CARGO HELD IN, ${words(info)}`);
+    score(m, a, POINTS.cargo, 'secured', behind, `STAGED CARGO HELD IN, ${words(info)}`);
+  }
+}
+
+/**
+ * A cargo rolling out of a bay with no hatch panel in front of it [4.3, 4.4]: out through the hatch, down to the floor,
+ * and a few feet on. Goes in drops with where it comes to rest and when (blue's places worked out, red's mirrored).
+ */
+function rollOut(m, alliance, slot, tIn, rand, by) {
+  const info = slotInfo(slot), side = alliance === 'blue' ? 1 : -1;
+  let x, z, d, tOut;
+  if (info.struct === 'rocket') {
+    // Out of the hatch on its angled face, which looks along the field (home or away) and a little into it; further
+    // from higher up.
+    d = 2 + 0.5 * info.level + 2 * rand();
+    x = 19 + (info.face === 'h' ? -1 : 1) * (1.4 + 0.88 * d);
+    z = 1.4 + 0.48 * d;
+    if (info.rocket === 'n') z = 27 - z;
+    tOut = tIn + 0.3 + 0.15 * info.level;
+  } else {
+    // Out of the ship's side, or out of its front toward the alliance wall.
+    d = 1 + 2 * rand();
+    if (info.bay.startsWith('front')) [x, z] = [19.1 - d, (info.bay === 'front0' ? 12.4 : 14.6) + rand() - 0.5];
+    else [x, z] = [BAY_X[+info.bay.at(-1)] + rand() - 0.5, info.bay.startsWith('near') ? 15.8 + d : 11.2 - d];
+    tOut = tIn + 0.4;
+  }
+  const p = at(side, { x, z });
+  m.drops.push({
+    t: +(tOut + 0.4 + 0.15 * d).toFixed(3), piece: 'cargo', x: +clamp(p.x, 0.6, 53.4).toFixed(2), z: +clamp(p.z, 0.6, 26.4).toFixed(2),
+    by, why: 'rolled out', tIn: +tIn.toFixed(3), tOut: +tOut.toFixed(3), alliance, slot, struct: info.struct,
+    ...(info.struct === 'rocket' ? { rocket: info.rocket, level: info.level, side: info.face } : { bay: info.bay }),
+  });
+}
+
+/** 0:15: the cargo ship's bay floors tilt [4.4], and staged cargo with no hatch panel in front of it rolls out. */
+function tiltFloors(m) {
+  m.now = MATCH.sandstorm;
+  for (const al of ['blue', 'red']) {
+    const slots = m.slots[al];
+    let n = 0;
+    for (const bay of SHIP_BAYS) {
+      if (slots[`cargo:${bay}`] !== 'pre') continue;
+      slots[`cargo:${bay}`] = 0;
+      m.fills.push({ t: MATCH.sandstorm, alliance: al, slot: `cargo:${bay}`, value: 0 });
+      rollOut(m, al, `cargo:${bay}`, MATCH.sandstorm, m.rand, null);
+      n++;
+    }
+    if (n) m.log.push({ t: MATCH.sandstorm, by: null, alliance: al, kind: 'rolled', text: `${n} CARGO ROLL${n > 1 ? '' : 'S'} OUT OF THE CARGO SHIP` });
+    if (m.room) m.room[al] = null;
   }
 }
 
@@ -730,14 +951,8 @@ function endClimb(m, a, task) {
   a.parked = true;
 }
 
-const slotFree = (slots, key) => {
-  const info = slotInfo(key), v = slots[key];
-  if (v) return false;
-  if (info.piece === 'cargo') return !!slots[`hatch:${key.split(':')[1]}`];
-  return true;
-};
 function release(m, a) {
-  if (a.goal) m.reserved[a.alliance].delete(a.goal);
+  if (a.goal) m.reserved[a.alliance].delete(resKey(a.goal));
   a.goal = null;
 }
 
@@ -762,7 +977,9 @@ function next(m, a) {
   if (plan.role === 'defend' && t < MATCH.sandstorm && !a.hold) return begin(m, a, waitTask(m, a, MATCH.sandstorm - t, 'sandstorm'));
   // Holding something: find it a place.
   if (a.hold) {
-    const key = a.goal && slotFree(m.slots[a.alliance], a.goal) && slotInfo(a.goal).piece === a.hold ? a.goal : bestSlot(m, a, a.hold, { x: a.x, z: a.z });
+    const slots = m.slots[a.alliance], kept = a.goal && slotInfo(a.goal).piece === a.hold && usable(a, slots, a.goal);
+    if (!kept && a.hold === 'cargo') dare(a);
+    const key = kept ? aimOf(slots, a.goal) : bestSlot(m, a, a.hold, { x: a.x, z: a.z });
     if (!key) return idle(m, a, a.crowded);
     reserve(m, a, key);
     const spot = at(a.side, PLACES.spot[slotInfo(key).spot]);
@@ -782,11 +999,14 @@ const dead = (a) => a.deadUntil === Infinity;
 /**
  * Nothing it can score: unless its plan says to wait (then: 'wait'), it does what drive teams do and goes to defend the
  * opponent who's scoring most, looking again every 5 seconds in case a partner's hatch has opened somewhere up. If a
- * partner's only in the way (`crowded`), it waits for it instead.
+ * partner's only in the way (`crowded`), it waits for it instead. Only one robot an alliance defends at a time [G9],
+ * so with a partner on defense it waits too.
  */
 function idle(m, a, crowded = 0) {
   if (crowded) return begin(m, a, waitTask(m, a, 1, 'a partner is there'));
-  if (m.now >= MATCH.sandstorm && (a.plan.then ?? 'defend') === 'defend') {
+  const partnerOn = m.agents.some((b) => b.alliance === a.alliance && b !== a && !dead(b) && !b.climbing
+    && (b.task?.kind === 'defend' || (b.plan.role === 'defend' && b.target)));
+  if (m.now >= MATCH.sandstorm && (a.plan.then ?? 'defend') === 'defend' && !partnerOn) {
     const target = targetOf(a);
     if (target) {
       if (a.target !== target || !a.helping) say(m, a, 'switch', `NOTHING TO SCORE. DEFENDS ${target.num}`);
@@ -807,7 +1027,12 @@ function targetOf(d) {
 function reserve(m, a, key) {
   release(m, a);
   a.goal = key;
-  m.reserved[a.alliance].set(key, a.id);
+  m.reserved[a.alliance].set(resKey(key), a.id);
+}
+/** Whether its drivers chance their next cargo where it may roll out (cargo.risk), rolled each time they choose. */
+function dare(a) {
+  const risk = a.robot.cargo?.risk ?? 0;
+  a.daring = risk > 0 && a.rand() < risk;
 }
 
 /** The pieces this robot's plan and mechanisms allow. */
@@ -816,8 +1041,9 @@ function pieces(a) {
   return ['hatch', 'cargo'].filter(ok);
 }
 /**
- * Slots this robot could place `piece` on right now: free, reachable, allowed by the plan, not a partner's. A slot right
- * beside where a partner's working is left out too (two robots don't fit), but counted in `blocked`: it'll be free soon.
+ * Slots this robot could place `piece` on right now: free, where it'll stay (or, daring, may), reachable, allowed by the
+ * plan, not a partner's. A rocket level's cargo is one place, its port (aimOf names it). A slot right beside where a
+ * partner's working is left out too (two robots don't fit), but counted in `blocked`: it'll be free soon.
  */
 function openSlots(m, a, piece) {
   const slots = m.slots[a.alliance], res = m.reserved[a.alliance], p = a.robot[piece];
@@ -826,8 +1052,9 @@ function openSlots(m, a, piece) {
   let blocked = 0;
   for (const key of slotKeys) {
     const info = slotInfo(key);
-    if (info.piece !== piece || !slotFree(slots, key)) continue;
-    if (res.has(key) && res.get(key) !== a.id) continue;
+    if (info.piece !== piece || !usable(a, slots, key) || (info.port && aimOf(slots, key) !== key)) continue;
+    const rk = resKey(key);
+    if (res.has(rk) && res.get(rk) !== a.id) continue;
     if (info.struct === 'rocket' && (info.level > (p.reach ?? 0) || info.level > (a.plan.top ?? 3))) continue;
     if (info.struct === 'ship' && !p.ship) continue;
     const s = PLACES.spot[info.spot];
@@ -842,8 +1069,9 @@ function openSlots(m, a, piece) {
   return ok;
 }
 /**
- * What a slot's worth to this robot: its points; for a hatch, the preloaded cargo it holds in, or the cargo spot it
- * opens for a partner who only does cargo (worth more the fewer such spots are open); and the plan's choice of where.
+ * What a slot's worth to this robot: its points; for a hatch, the staged cargo it holds in, or the cargo spot it opens
+ * for a partner who only does cargo (worth more the fewer such spots are open; on a rocket, cargo's only sure behind
+ * both of a level's hatch panels, so the first of the two opens little); and the plan's choice of where.
  */
 function worth(m, a, key) {
   const info = slotInfo(key), slots = m.slots[a.alliance], bay = key.split(':')[1];
@@ -853,16 +1081,24 @@ function worth(m, a, key) {
     const level = info.struct === 'rocket' ? info.level : 1;
     const takers = m.agents.filter((b) => b.alliance === a.alliance && b !== a && b.plan.role === 'score' && b.plan.piece !== 'hatch'
       && can(b.robot, 'cargo') && (info.struct === 'ship' ? b.robot.cargo.ship : (b.robot.cargo.reach ?? 0) >= level));
-    if (takers.length) v += cargoRoom(m, a.alliance) < 3 ? 2.5 : 1;
+    const pair = info.struct !== 'rocket' || !!slots[`hatch:${info.rocket}${info.level}${info.face === 'h' ? 'a' : 'h'}`];
+    if (takers.length) v += (cargoRoom(m, a.alliance) < 3 ? 2.5 : 1) * (pair ? 1 : 0.6);
+  }
+  // The cargo ship's left to a partner that can't score that piece anywhere higher, by a robot that can.
+  if (info.struct === 'ship' && (a.robot[info.piece].reach ?? 0) >= 2) {
+    const low = m.agents.some((b) => b.alliance === a.alliance && b !== a && b.plan.role === 'score' && !dead(b) && pieces(b).includes(info.piece)
+      && b.robot[info.piece].ship && (b.robot[info.piece].reach ?? 0) <= 1);
+    if (low) v *= 0.75;
   }
   const where = a.plan.where ?? 'any';
   if (where !== 'any') v *= where === info.struct ? 3 : 0.5;
   return v;
 }
-/** How many cargo spots are open on a side (hatch robots favour opening more when it's few); counted again after a fill. */
+/** How many empty cargo bays a cargo would surely stay in, on a side (hatch robots favour opening more when it's few). */
 function cargoRoom(m, al) {
   m.room ??= {};
-  if (m.room[al] == null) m.room[al] = slotKeys.filter((k) => k[0] === 'c' && slotFree(m.slots[al], k)).length;
+  const slots = m.slots[al];
+  if (m.room[al] == null) m.room[al] = slotKeys.filter((k) => k[0] === 'c' && !slots[k] && oddsOf(slots, k) >= 1).length;
   return m.room[al];
 }
 const travel = (a, p, q) => (Math.hypot(q.x - p.x, q.z - p.z) * 1.2) / a.robot.speed + 0.45;
@@ -879,23 +1115,33 @@ function bestSlot(m, a, piece, from) {
   }
   return best;
 }
-/** Where to get a piece: either loading station, or a depot for cargo with a floor intake (while it has any). */
+/**
+ * Where to get a piece: either loading station while it has one or the human players do (in the sandstorm a robot
+ * waits there for them), or a depot for cargo with a floor intake (while it has any). busy: one was left out only
+ * because a partner's at it.
+ */
 function sources(m, a, piece) {
-  const out = ['far', 'near'].map((w) => ({ from: 'station', which: w, spot: at(a.side, PLACES.station[w]) }));
+  const al = a.alliance, out = [];
+  for (const w of ['far', 'near']) {
+    if ((piece === 'hatch' && m.staged[al][w] > 0) || m.stock[al][piece] > 0) out.push({ from: 'station', which: w, spot: at(a.side, PLACES.station[w]) });
+  }
   if (piece === 'cargo' && a.robot.cargo?.floor) {
-    for (const w of ['far', 'near']) if (m.depot[a.alliance][w] > 0) out.push({ from: 'depot', which: w, spot: at(a.side, PLACES.depot[w]) });
+    for (const w of ['far', 'near']) if (m.depot[al][w] > 0) out.push({ from: 'depot', which: w, spot: at(a.side, PLACES.depot[w]) });
   }
   // A partner already at a station, or on its way there: try the other one (two robots don't fit at one).
-  const busy = (s) => m.agents.some((b) => b !== a && b.alliance === a.alliance && b.src && b.src.from === s.from && b.src.which === s.which);
-  return out.filter((s) => !busy(s));
+  const busy = (s) => m.agents.some((b) => b !== a && b.alliance === al && b.src && b.src.from === s.from && b.src.which === s.which);
+  const free = out.filter((s) => !busy(s));
+  free.busy = free.length < out.length;
+  return free;
 }
 function bestCycle(m, a) {
   let best = null, bestV = -1;
   const here = { x: a.x, z: a.z };
   a.crowded = 0;
+  if (pieces(a).includes('cargo')) dare(a);
   for (const piece of pieces(a)) {
     const srcs = sources(m, a, piece), open = openSlots(m, a, piece);
-    a.crowded += open.blocked + (open.length && !srcs.length ? 1 : 0);
+    a.crowded += open.blocked + (open.length && !srcs.length && srcs.busy ? 1 : 0);
     for (const key of open) {
       const info = slotInfo(key), spot = at(a.side, PLACES.spot[info.spot]);
       for (const s of srcs) {
@@ -988,8 +1234,9 @@ function contact(m) {
     const b = d.target;
     if (b.deadUntil === Infinity) continue;
     const near = Math.abs(b.x - d.x) < 4.3 && Math.abs(b.z - d.z) < 3.4;
-    // A robot in its own HAB zone in the last 30 seconds can't be touched.
-    const safe = MATCH.length - t <= MATCH.endgame && own(b.side, b.x) < 9.4;
+    // A robot with its bumpers all the way inside its own HAB zone (at its loading stations, its depots, its HAB) can't
+    // be touched [G13].
+    const safe = own(b.side, b.x) <= HAB_LINE - HALF + 0.05;
     if (near && !safe && t > MATCH.sandstorm) b.on.push(d);
   }
   for (const a of m.agents) {
@@ -1029,11 +1276,12 @@ function contact(m) {
 function finish(m) {
   for (const a of m.agents) {
     m.now = MATCH.length;
-    // Still on its way up at 0:00: nothing, unless it's standing on level 1 (3 points), or it never left a platform.
-    if (!a.climbed && !a.parked) {
+    // Still on its way up at 0:00: nothing, unless it's standing on level 1 (3 points). A robot that never got all the
+    // way past its HAB line gets nothing for being on it [table 5-1].
+    if (!a.climbed && !a.parked && a.crossed) {
       const x = own(a.side, a.x), onL1 = x >= HAB.l1.x0 - 0.2 && x <= HAB.l1.x1 + 1.2 && a.z > HAB.l1.z0 && a.z < HAB.l1.z1;
       const onTop = x < HAB.top.x1 && a.z > HAB.top.z0 && a.z < HAB.top.z1;
-      const level = onTop ? (a.left ? (a.z > HAB.l3.z0 && a.z < HAB.l3.z1 ? 3 : 2) : a.startLevel) : onL1 ? 1 : 0;
+      const level = onTop ? (a.z > HAB.l3.z0 && a.z < HAB.l3.z1 ? 3 : 2) : onL1 ? 1 : 0;
       if (level) score(m, a, POINTS.hab[level], 'hab', null, level === 1 ? 'ON LEVEL 1 AT THE BUZZER' : `ON LEVEL ${level} AT THE BUZZER`);
     }
     if (a.task?.kind === 'climb') a.step.made = false;
@@ -1064,7 +1312,7 @@ function result(m) {
   }));
   return {
     seed: m.seed, length: MATCH.length, robots, events: m.events, fills: m.fills, drops: m.drops, depots: m.depots, log: m.log,
-    preload: m.preload, score, parts, rp, winner,
+    preload: m.preload, score, parts, rp, winner, supply: m.stock,
   };
 }
 
