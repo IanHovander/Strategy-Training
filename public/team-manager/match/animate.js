@@ -13,6 +13,9 @@
 //     slots { blue, red }   every slot (sim.js slotKeys) and what's in it: 0, 1, 'null' or 'pre'
 //     depots { blue: [far, near], red }   cargo left in each
 //     loose [{ x, z, piece, age, why }]   pieces on the carpet, how long they've been there, and why (sim.js drops)
+//     rolling [drop + at]   cargo on its way back out of a bay with no hatch panel (sim.js drops, why 'rolled out'),
+//       from when it got to the bay (tIn) till it comes to rest (t); at: seconds since tIn
+//     blinds   how far down the sandstorm's shutters are over the driver stations: 1 till 0:15, 0 two seconds after
 //     robots [pose]: id, num, alliance, sprite, x, z, face (+1 toward red), up, legs { front, rear } (stilt pixels
 //       showing under it), hold (what it's carrying), aim ({ slot } or { inches }, and k: how far the mechanism has
 //       gone from rest toward it), reach (0 to 1: the grabber pushed out), climbK (0 to 1 through a climb),
@@ -219,13 +222,19 @@ export function frameAt(show, t) {
   const depots = { blue: [DEPOT_CARGO, DEPOT_CARGO], red: [DEPOT_CARGO, DEPOT_CARGO] };
   for (const d of m.depots) if (d.t <= t) depots[d.alliance][d.which === 'far' ? 0 : 1] = d.left;
   const loose = m.drops.filter((d) => d.t <= t).map((d) => ({ x: d.x, z: d.z, piece: d.piece, age: t - d.t, why: d.why }));
+  const rolling = m.drops.filter((d) => d.why === 'rolled out' && t >= d.tIn && t < d.t).map((d) => ({ ...d, at: t - d.tIn }));
   const left = MATCH.length - t;
   return {
     t, left, phase: t >= MATCH.length ? 'over' : t < MATCH.sandstorm ? 'sandstorm' : left <= MATCH.endgame ? 'endgame' : 'teleop',
-    score, events, recent: events.filter((e) => t - e.t < 2), slots, depots, loose,
+    score, events, recent: events.filter((e) => t - e.t < 2), slots, depots, loose, rolling, blinds: blindsAt(t),
     robots: show.robots.map((r) => poseOf(show, r, t)),
   };
 }
+
+/** Seconds the sandstorm's shutters take to roll up at 0:15 (the 2019 manual, 4.7: "over a period of ~2 seconds"). */
+const BLINDS_UP = 2;
+/** How far down the shutters over the driver stations are at t: all the way from the start, rolling up at 0:15. */
+export const blindsAt = (t) => 1 - ease((t - MATCH.sandstorm) / BLINDS_UP);
 
 /**
  * Where along the field the action is, in feet: the stretch about a screen wide (30 feet) with the most going on in it.

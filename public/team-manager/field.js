@@ -10,6 +10,8 @@
 // (bleachers.js), with the walkway between. Everything is in world pixels, drawn through pixel.js's camera.
 // For a real match (match/), drawFieldLive's live option takes the robots and every piece from outside, and adds the
 // near wall's rockets too, see-through, since the camera sees them from behind; portAt() says where each piece goes.
+// Cargo with no hatch panel to keep it in rolls back out onto the carpet, and the sandstorm's shutters over the driver
+// stations come down for the first 15 seconds.
 
 import { C, useContext, camera, screen, cam, rect, disk, text, withAlpha, rnd } from './pixel.js';
 import { eleBot, defBot, armBot, cargo, hatch, hatchFace, hatchSide, hatchFlat, hatchIcon } from './sprites.js';
@@ -147,6 +149,49 @@ function allianceWall(alliance) {
   // The bottom three feet are diamond plate, the rest clear: a line marks where the glass starts.
   rect(x, floorY(27) - 3 * FT, 6, 1, T[0]);
 }
+
+// ---- The sandstorm ----
+// Over each alliance wall, a black box holding three roller shutters, one over each player station, each 4 ft 6 in of
+// black-out cloth 5 ft 8 in wide. Just before a match they come down on the field side of the stations' clear panels,
+// so for the first 15 seconds the drivers can't see the field (their robots run on their own, or drive by camera); at
+// 0:15 they roll back up into the box over about 2 seconds, and stay up (the 2019 manual, 4.7). From here the wall is
+// edge on, and so are they: the box is a dark rail along the wall's top, and the cloth a black strip down its field
+// side, the weighted hem along its bottom edge catching the light, rising into the box as it rolls up.
+/** Feet in from the far wall: the three player stations, 5 ft 9 in shelves in the middle of the wall's 27 feet. */
+const STATIONS_Z = [4.875, 22.125];
+/** Pixels up: the wall's top (6 ft 6 in), the box on it, and how far down the cloth comes (to the 3 ft diamond plate). */
+const BLINDS = { top: 52, box: 4, down: 24 };
+const CLOTH = '#07080d', HEM = '#4b5266', BOX = '#151821';
+
+/** The cloth, `down` of the way down (0 rolled up, 1 all the way down): drawn after the HAB, which it's in front of. */
+function sandstormCloth(alliance, down) {
+  if (down <= 0) return;
+  const [z0, z1] = STATIONS_Z, hem = Math.round(BLINDS.top - (BLINDS.top - BLINDS.down) * down);
+  // Just past the wall's field side and its outline (the wall is 6 wide, its outline on FIELD.x0 for blue).
+  const x = mirrorX(alliance, FIELD.x0 + 1, 2), out = mirrorX(alliance, FIELD.x0 + 3, 1);
+  const far = Math.round(floorY(z0)), top = far - BLINDS.top, bottom = Math.round(floorY(z1)) - hem;
+  rect(x, top, 2, bottom - top, CLOTH);
+  // The hem's bar along the bottom edge, edge on, standing a pixel proud of the cloth, and its near end.
+  rect(out, far - hem, 1, bottom - far + hem + 1, HEM);
+  rect(x, bottom, 2, 1, HEM);
+}
+
+/** The box the shutters roll up into, on the wall's top rail and over the cloth (drawn after the wall). */
+function sandstormBox(alliance) {
+  const [z0, z1] = STATIONS_Z, x = mirrorX(alliance, FIELD.x0 - 2, 5);
+  const top = Math.round(floorY(z0)) - BLINDS.top - BLINDS.box, front = Math.round(floorY(z1)) - BLINDS.top - BLINDS.box;
+  rect(x - 1, top - 1, 7, front - top + BLINDS.box + 2, C.ink);
+  // Its top, lit along the far end, and its near end facing you.
+  rect(x, top, 5, front - top, BOX);
+  rect(x, top, 5, 1, C.steel1);
+  rect(x, front, 5, BLINDS.box, C.steel0);
+}
+
+/** Both walls' shutters, `down` of the way down, as things for drawFieldLive to sort in. */
+const sandstormParts = (down) => ['blue', 'red'].flatMap((a) => [
+  { y: floorY(20.3) + 0.005, draw: () => sandstormCloth(a, down) },
+  { y: floorY(27) + 0.001, draw: () => sandstormBox(a) },
+]);
 
 /** One post of the belt barrier across the back of a driver station, with the belt back to the post behind it. */
 function stanchion(alliance, z, behind) {
@@ -298,6 +343,7 @@ function shipHalf(a, fill) {
         if (c) bayBall(cx, Y.farPort);
       });
       for (const d of dropping('far')) cargo(shipBays(a)[d.i], dropY(Y.farLip, Y.farPort, d.k), 4, { bare: true });
+      for (const r of fill.out ?? []) if (r.bay.startsWith('far')) farRollOut(shipBays(a)[+r.bay.at(-1)], r);
     });
     for (let y = Y.roofNear + 1; y < Y.lip; y += 3) rect(bays, y, bw, 1, NET);
     for (let x = bays + 1; x < bays + bw; x += 3) rect(x, Y.roofNear, 1, openH, NET);
@@ -333,6 +379,20 @@ function shipHalf(a, fill) {
   shipNose(a);
 }
 
+/**
+ * A far side bay's ball rolling out at 0:15 (rollOutParts), as you glimpse it through the nets: away from you toward its
+ * hatch, then dropping out through it, out of sight.
+ */
+function farRollOut(cx, r) {
+  const port = SHIP_Y.farPort;
+  if (r.at < r.out) {
+    const k = r.at / r.out;
+    return bayBall(cx, port - Math.round(2 * k * k));
+  }
+  const s = r.at - r.out;
+  if (s < 0.3) clipped(diskRows(cx, port, 5), () => cargo(cx, Math.round(port - 1 + (GRAVITY * s * s) / 2), 4, { bare: true }));
+}
+
 /** The nose: closed in the alliance's colour (its top is under the front bays' plaque), the "19" painted on it and
  *  stripes sweeping back from the front. */
 function shipNose(a) {
@@ -351,9 +411,10 @@ function shipNose(a) {
  * nose (and, in a live match, the near wall's rocket stands in front of it), so this shows them as the drive team
  * sees them, side by side, the far bay at the front end: each one's hatch in small, empty (a ring with the dark bay
  * behind) or with its panel (white tape and yellow band, a null one with its two white strips), and the cargo in it
- * orange in the middle. front: [[cargo, hatch], [cargo, hatch]].
+ * orange in the middle. front: [[cargo, hatch], [cargo, hatch]]. out: balls rolling out at 0:15 (rollOutParts), toward
+ * the drive team and out of the bottom of the hatch.
  */
-function frontBays(a, front) {
+function frontBays(a, front, out = []) {
   const T = TEAM[a], Y = SHIP_Y, px = mirrorX(a, SHIP.x0 - 3, 23), py = Y.roofFar - 2;
   rect(px - 1, py - 1, 25, 14, C.ink);
   rect(px, py, 23, 12, '#141a2c');
@@ -370,6 +431,13 @@ function frontBays(a, front) {
       rect(cx - 2, cy - (h ? 1 : 2), 1, 1, C.org2);
     }
     if (h) hatchIcon(cx, cy, { null: h === 'null' });
+    const r = out.find((q) => q.bay === `front${i}`);
+    if (!r) return;
+    const e = Math.min(1, r.at / r.out) ** 2, s = Math.max(0, r.at - r.out);
+    clipped([[px, py + 1, 23, 11]], () => {
+      if (!s) cargo(cx, cy + Math.round(e), e > 0.5 ? 4 : 3, { bare: true });
+      else cargo(cx, Math.round(cy + 1 + (GRAVITY * s * s) / 2), 4);
+    });
   });
 }
 
@@ -550,6 +618,93 @@ function rocketWings(cx, alliance, base) {
       if (h > 6) rect(x, wb - Math.round(h * 0.4), 1, 2, T[1]);
     }
   }
+}
+
+// ---- Cargo rolling back out ----
+// A ball with no hatch panel in front of it doesn't stay in. In a rocket, the ramp it rolls down to its side carries it
+// straight on out through the open hatch [4.3]. In the cargo ship, at 0:15 the bay floors tilt and staged cargo rolls out
+// of its bay [4.4]: out of a near side bay toward you; out of a far side one away from you, glimpsed through the nets
+// before it drops out of sight behind the ship; out of a front one past the nose, toward the alliance wall. Then it drops
+// to the carpet, bounces and rolls on to where it comes to rest, and from then on it's one of the loose pieces.
+// drawFieldLive's live.rollouts has them (match/draw.js makes them from the simulation's drops), each
+// { alliance, struct ('rocket' | 'ship'), rocket ('far' | 'near'), level, face ('home' | 'away'), bay, at, out, end, to }:
+// at, seconds since it got to its bay (or the floor tilted under it); out, the moment it drops from the hatch; end, the
+// moment it comes to rest at `to` (its floor point, world pixels).
+
+/** Gravity in pixels a second squared: 32 feet, 8 pixels to the foot. */
+const GRAVITY = 32.2 * FT;
+/** How much of its speed a ball keeps, bouncing off the carpet: each bounce a quarter as high as the last. */
+const BOUNCE = 0.5;
+
+/**
+ * A ball dropped with its bottom h0 pixels up over the floor point `from`, t seconds after it dropped, coming to rest at
+ * `to` dur seconds after: it falls at the real speed (unless that would leave too little time to bounce and roll),
+ * bounces while there's time and the bounces are a pixel or more, and slows steadily along the floor to a stop. Returns
+ * its floor point (x, y), how high its bottom is (h), and whether it's touched down yet.
+ */
+function dropAndRoll(from, to, h0, t, dur) {
+  const u = 1 - (1 - Math.max(0, Math.min(1, t / dur))) ** 1.6;
+  const x = from.x + (to.x - from.x) * u, y = from.y + (to.y - from.y) * u;
+  const fall = Math.min(Math.sqrt((2 * h0) / GRAVITY), dur * 0.45), g = (2 * h0) / (fall * fall || 1);
+  if (t < fall) return { x, y, h: h0 - (g * t * t) / 2, landed: false };
+  let since = fall, v = BOUNCE * g * fall;
+  while ((v * v) / (2 * g) >= 1 && since + (2 * v) / g <= dur * 0.85) {
+    const air = (2 * v) / g, s = t - since;
+    if (s < air) return { x, y, h: v * s - (g * s * s) / 2, landed: true };
+    since += air;
+    v *= BOUNCE;
+  }
+  return { x, y, h: 0, landed: true };
+}
+
+/** A ball on its way down and along: in the air at its full size, on the carpet the loose pieces' smaller one. */
+function fallingBall(p) {
+  const r = p.landed ? 3 : 4;
+  cargo(Math.round(p.x), Math.round(p.y - r - Math.max(0, p.h)), r);
+}
+
+/**
+ * How a ball rolling out goes, as things for drawFieldLive to sort in: inside (before `out`), along to the hatch and
+ * through it, in front of or behind whatever hides it; then dropping and rolling, sorted by its floor point (never
+ * before `after`, the thing it's come out of).
+ */
+function rollOutParts(r) {
+  const k = Math.min(1, r.at / Math.max(0.01, r.out)), dropped = r.at >= r.out;
+  const fall = (from, h0, after = 0) => {
+    const p = dropAndRoll(from, r.to, h0, r.at - r.out, r.end - r.out);
+    return [{ y: Math.max(p.y, after), draw: () => fallingBall(p) }];
+  };
+  if (r.struct === 'rocket') {
+    const cx = ROCKETS.find((q) => q.alliance === r.alliance).x, homeS = r.alliance === 'blue' ? -1 : 1;
+    const s = r.face === 'home' ? homeS : -homeS, up = HATCH_UP[r.level - 1];
+    if (r.rocket === 'far') {
+      // From its bay behind the hatch out through the hole and toward you, past the edge of the hull.
+      const b = Math.round(floorY(ROCKET_Z)), after = floorY(ROCKET_Z) + 0.005, x = cx + s * FACE_X, y = b - up + 1;
+      if (dropped) return fall({ x: x + s * 6, y: b + 1 }, up - 4, after);
+      const bx = Math.round(x + s * 6 * k);
+      return [{
+        y: after,
+        draw: () => (k < 0.4 ? clipped([[x - 2, y - 6, 4, 10]], () => cargo(bx, y, 4, { bare: true })) : cargo(bx, y, 4)),
+      }];
+    }
+    // The near wall's, from behind: from in front of where its panel would be, out through the hole and away from you.
+    const b = Math.round(floorY(NEAR_ROCKET_Z)), y = b - up + 1;
+    if (dropped) return fall({ x: cx + s * (FACE_X + 6), y: b - 1 }, up - 6);
+    return [{ y: floorY(27) + 0.5, draw: () => cargo(Math.round(cx + s * (FACE_X - 4 + 10 * k)), y, 4) }];
+  }
+  const a = r.alliance, i = +r.bay.at(-1), e = k * k; // the floor tilting, the ball gathering speed
+  if (r.bay.startsWith('far')) return []; // seen only through the nets: shipHalf draws it
+  if (r.bay.startsWith('front')) {
+    // Out of the nose toward the alliance wall: hidden by the nose until it's past it, then dropping.
+    const f = Math.round(floorY(FRONT_Z[i])), w = a === 'blue' ? -1 : 1, x0 = mirrorX(a, SHIP.x0 + 5), y = f - PORT_UP + 1;
+    if (dropped) return fall({ x: x0 + w * 10, y: f }, PORT_UP - 5);
+    return [{ y: f, draw: () => cargo(Math.round(x0 + w * 10 * e), y, 4) }];
+  }
+  // A near side bay: toward you through its hatch, over the hole's bottom edge and down past the recess.
+  const Y = SHIP_Y, cx = shipBays(a)[i], after = floorY(SHIP.z1) + 0.005;
+  if (dropped) return fall({ x: cx, y: Y.floor + 1 }, 6, after);
+  const by = Math.round(Y.port + 1 + 3 * e);
+  return [{ y: after, draw: () => (e < 0.6 ? clipped(diskRows(cx, Y.port, 5), () => cargo(cx, by, 4, { bare: true })) : cargo(cx, by, 4)) }];
 }
 
 /**
@@ -739,18 +894,24 @@ export function move(x, y, dx, dy) {
  * arena's: o.teams, the numbers on the blue elevator, the red elevator, the blue arm and the red defender; o.queue, on
  * the arm and the elevator waiting on their carts; o.score, [blue, red] on the scoring table's monitors. o.nearGate:
  * { x0, x1, open } puts a gate in the near wall too, like the far wall's (open: its chain unhooked and hanging).
+ * o.sandstorm: how far down the sandstorm's shutters are over the driver stations, 0 (rolled up, the default) to 1.
  * o.live: a real match instead of the four robots running their loops (match/draw.js makes it, from match/sim.js):
- *   bots    the robots, as { y: floor line, draw() }, sorted in with everything else
- *   fill    every piece: { blue, red }, each { far, near: rockets as rocket() takes them (with roll, the balls
- *           rolling in), ship: { near, far, front } as [cargo, hatch] a bay (hatch 'null' for a null hatch panel),
- *           and drop, the balls dropping in (cargoShip), depots: [far, near] cargo left in each }
- *   loose   pieces dropped on the carpet: { x, y, piece }
+ *   bots      the robots, as { y: floor line, draw() }, sorted in with everything else
+ *   fill      every piece: { blue, red }, each { far, near: rockets as rocket() takes them (with roll, the balls
+ *             rolling in), ship: { near, far, front } as [cargo, hatch] a bay (hatch 'null' for a null hatch panel),
+ *             and drop, the balls dropping in (cargoShip), depots: [far, near] cargo left in each }
+ *   loose     pieces dropped on the carpet: { x, y, piece }
+ *   rollouts  cargo rolling back out of a bay with no hatch panel, on its way to where it ends up loose (rollOutParts)
+ *   sandstorm the shutters, as o.sandstorm, if that isn't given
  * With it, the near wall's rockets are drawn too, see-through.
  */
 export function drawFieldLive(g, camX, t, o = {}) {
   const who = o.who ?? [], camY = o.camY ?? 0, live = o.live;
   const { fill, bots } = live ? { fill: null, bots: [] } : robots(o.robots === false ? 0 : t, o.teams);
   const rocketFill = (a) => (live ? live.fill[a].far : fill[a]);
+  const shipFill = (a) => (live
+    ? { ...live.fill[a].ship, out: (live.rollouts ?? []).filter((r) => r.alliance === a && r.struct === 'ship') }
+    : SHIP_FILL[a]);
   const things = [
     { y: FIELD.y0, draw: () => sideWall(0, GATE) },
     ...ROCKETS.flatMap((r) => [
@@ -767,9 +928,10 @@ export function drawFieldLive(g, camX, t, o = {}) {
       { y: floorY(27), draw: () => allianceWall(a) },
       ...[0, 9, 18, 27].map((z, i, zs) => ({ y: floorY(z), draw: () => stanchion(a, z, zs[i - 1]) })),
     ]),
-    { y: floorY(SHIP.z1), draw: () => cargoShip(live ? { blue: live.fill.blue.ship, red: live.fill.red.ship } : SHIP_FILL) },
+    ...sandstormParts(o.sandstorm ?? live?.sandstorm ?? 0),
+    { y: floorY(SHIP.z1), draw: () => cargoShip({ blue: shipFill('blue'), red: shipFill('red') }) },
     // The front bays' plaque goes over the near wall's rockets, which stand in front of the nose.
-    ...['blue', 'red'].map((a) => ({ y: floorY(SHIP.z1) + 0.02, draw: () => frontBays(a, (live ? live.fill[a].ship : SHIP_FILL[a]).front) })),
+    ...['blue', 'red'].map((a) => ({ y: floorY(SHIP.z1) + 0.02, draw: () => frontBays(a, shipFill(a).front, shipFill(a).out) })),
     ...(o.robots === false ? [] : bots).map((r) => ({ y: r.y, draw: () => r.draw(r.x, r.y) })),
     ...(live ? liveParts(live) : []),
     ...(o.ends === false ? [] : ends(o.queue, o.score)),
@@ -787,7 +949,10 @@ export function drawFieldLive(g, camX, t, o = {}) {
   G = null;
 }
 
-/** A live match's own things: its robots, the depots as they empty, dropped pieces, and the near wall's rockets. */
+/**
+ * A live match's own things: its robots, the depots as they empty, dropped pieces, cargo rolling back out, and the near
+ * wall's rockets.
+ */
 function liveParts(live) {
   return [
     ...live.bots,
@@ -795,6 +960,7 @@ function liveParts(live) {
       y: floorY(z), draw: () => depot(a, z, live.fill[a].depots?.[i] ?? DEPOT_FULL, true),
     }))),
     ...(live.loose ?? []).map((p) => ({ y: p.y, draw: () => loosePiece(p) })),
+    ...(live.rollouts ?? []).flatMap(rollOutParts),
     // The near wall's rockets: faint, in front of the cargo ship but behind the robots working along its near side, so
     // they don't hide them; what's in them on top of everything.
     ...ROCKETS.flatMap((r) => [

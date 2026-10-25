@@ -145,6 +145,17 @@ export const SFX = {
       c.noise(t, d * 0.6, { vol: 0.02, type: 'lowpass', hz: 700 });
     },
   },
+  /**
+   * The field's three bells at 0:15, as the sandstorm ends and its shutters roll up (the 2019 manual, 4.11's audio
+   * cues): three strokes on a high bell, each with the out-of-tune overtone that makes it a bell and not a chime.
+   */
+  bells: {
+    bus: 'sfx',
+    play: (c, t) => [0, 0.26, 0.52].forEach((d) => {
+      c.tone(t + d, 0.7, hz(86), { wave: 'tri', vol: 0.07, decay: true });
+      c.tone(t + d, 0.3, hz(86) * 2.76, { wave: 'p12', vol: 0.01, decay: true });
+    }),
+  },
   /** Something going right, smaller: three notes up. */
   jingle: { bus: 'sfx', play: (c, t) => [79, 83, 86].forEach((m, i) => c.tone(t + i * 0.08, i === 2 ? 0.4 : 0.08, hz(m), { wave: 'p25', vol: 0.04, decay: i === 2 })) },
   /** Something going wrong: two notes down, low. */

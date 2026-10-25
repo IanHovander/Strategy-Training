@@ -20,6 +20,8 @@ import { ORDER, OPPONENT, statusOf } from '../opening/teams2.js';
 
 const card = (t, o) => [t, 'card', o];
 const bed = (t, to, secs = 0.8) => [t, 'bed', { to, secs }];
+/** Seconds into a quarterfinal match its clock reaches 0:15: it plays at 15 times real time (opening/quarter.js SPEED). */
+const QF_BELLS = 15 / 15;
 
 export const SCENES = {
   'THE OPENING': {
@@ -50,11 +52,13 @@ export const SCENES = {
       'PICK 2: ON THE CLOCK': [[0, 'slam']],
       // Both picks done, on to the quarterfinal: the second line's tick stamped on.
       'PICKS DONE': [[0.7, 'stamp'], [0.9, 'jingle']],
-      // The quarterfinal (opening/quarter.js): the matches loud, the freeze quiet, each climb's outcome heard.
+      // The quarterfinal (opening/quarter.js): the matches loud, the freeze quiet, each climb's outcome heard. Each
+      // match starts with the horn, and at 0:15 (a second in, as fast as they play) the field's bells ring as the
+      // sandstorm's shutters roll up.
       QUARTERFINAL: [[0, 'card'], bed(0, 0.6, 0.6)],
-      'QF MATCH 1': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }]],
-      'QF MATCH 2': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }]],
-      'QF MATCH 3': [bed(0, 1.2, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.9 }]],
+      'QF MATCH 1': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }], [QF_BELLS, 'bells']],
+      'QF MATCH 2': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }], [QF_BELLS, 'bells']],
+      'QF MATCH 3': [bed(0, 1.2, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.9 }], [QF_BELLS, 'bells']],
       'QF: 6834 IS DEAD': [[0, 'clunk'], [0.15, 'aww']],
       'QF: RED WINS': [[0, 'horn', { dur: 1.1 }], [0.1, 'cheer', { size: 0.9 }], [0.3, 'jingle'], bed(1.4, 0.7, 1)],
       'QF: BLUE WINS': [[0, 'horn', { dur: 1.1 }], [0.2, 'aww'], [0.3, 'miss'], bed(1.4, 0.7, 1)],
