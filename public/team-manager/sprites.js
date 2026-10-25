@@ -337,10 +337,32 @@ export function armBot(x, y, o = {}) {
 // ---- The 2019 field ----
 
 /**
- * The rocket, seen from the side with its scoring face on the left at x = rx.
- * o: hatches / cargo / lights: three booleans each, bottom level first.
+ * The rocket, seen from the front as the field draws it (field.js): a hatch port on each of its two angled faces and its
+ * round cargo ports up the middle, the hull 28 wide from x = rx, so its left face is where the intro's robot places a
+ * hatch panel. The intro's rocket is taller than the field's, its levels where the robot's elevator reaches.
+ * Each level holds two cargo, one behind each hatch: a ball shows through the clear panel on its side, and its top
+ * shows low in the cargo port on that side (as field.js has it).
+ * o: home / away: hatch panels on the left and the right face, three booleans each, bottom level first (hatches: the
+ *    same as home); cargo: each level's [home, away] bays (true for both); lights: the cargo ports' ring lights.
  */
 export const ROCKET_LEVELS = [-22, -50, -78];
+/** The hatch faces' middles, out from the rocket's; where a ball in a bay sits as you see it in the port. */
+const FACE_X = 11, PEEK = { dx: 5, dy: 4 };
+const PORT_DARK = '#0e1019';
+/** Each level's cargo port, above its hatch ports (at 27.5, 55.5 and 83.5 inches to their 19, 47 and 75). */
+const PORT_UP = [5, 5, 4];
+
+/** A ball of radius r at (x, y) in cargo's colours, drawn only where inside(x, y) says: seen through an opening. */
+function ballIn(x, y, r, inside) {
+  for (let j = -r; j < r; j++) {
+    for (let i = -r; i < r; i++) {
+      const px = x + i, py = y + j;
+      if ((i + 0.5) ** 2 + (j + 0.5) ** 2 > r * r || !inside(px, py)) continue;
+      rect(px, py, 1, 1, i + j < -r * 0.6 ? C.org2 : i + j > r * 0.5 ? C.org0 : C.org1);
+    }
+  }
+}
+
 export function rocket(rx, o = {}) {
   const f = frame(rx, 0, 1);
   const cone = (i) => Math.max(1, Math.round(14 * Math.sin(((i + 1) / 22) * (Math.PI / 2)) ** 0.75));
@@ -376,18 +398,30 @@ export function rocket(rx, o = {}) {
   part(f, -2, -5, 32, 1, C.steel2);
   for (let x = 0; x < 30; x += 5) part(f, x, -3, 2, 1, C.steel0);
 
+  const cx = rx + 14, home = o.home ?? o.hatches ?? [];
+  const bays = (l) => {
+    const c = o.cargo?.[l];
+    return Array.isArray(c) ? { home: !!c[0], away: !!c[1] } : { home: !!c, away: !!c };
+  };
   ROCKET_LEVELS.forEach((cy, l) => {
-    // Hatch opening on the scoring face.
-    part(f, -2, cy - 7, 4, 15, C.ink);
-    part(f, -1, cy - 6, 2, 13, C.steel0);
-    // Cargo port on the side, with its ring light.
-    const px = rx + 14, py = cy - 2;
-    disk(px, py, 6, C.ink);
-    disk(px, py, 5, o.lights?.[l] ? C.blue2 : C.steel1);
-    if (o.lights?.[l]) rect(px - 4, py - 4, 2, 1, C.blue3);
-    disk(px, py, 4, C.ink);
-    if (o.cargo?.[l]) cargo(px, py, 3);
-    if (o.hatches?.[l]) hatchPart(f, -4, cy);
+    const ball = bays(l);
+    // A hatch port on each face: the cutout dark, a ball behind it if that side's bay has one, the panel over it.
+    for (const [face, s, full] of [['home', -1, home[l]], ['away', 1, o.away?.[l]]]) {
+      const x = cx + s * FACE_X;
+      rect(x - 3, cy - 6, 6, 12, C.ink);
+      rect(x - 2, cy - 5, 4, 10, PORT_DARK);
+      if (ball[face]) ballIn(x, cy + 1, 4, (px, py) => px >= x - 2 && px < x + 2 && py >= cy - 5 && py < cy + 5);
+      if (full) hatchSide(x, cy, { dir: s });
+    }
+    // The cargo port, with its ring light, and low in it the top of a ball in each side's bay.
+    const py = cy - PORT_UP[l], lit = o.lights?.[l];
+    disk(cx, py, 6, C.ink);
+    disk(cx, py, 5, lit ? C.blue2 : C.steel1);
+    rect(cx - 4, py - 4, 2, 1, lit ? C.blue3 : C.steel2);
+    disk(cx, py, 4, PORT_DARK);
+    for (const [face, s] of [['home', -1], ['away', 1]]) {
+      if (ball[face]) ballIn(cx + s * PEEK.dx, py + PEEK.dy, 4, (px, qy) => (px - cx + 0.5) ** 2 + (qy - py + 0.5) ** 2 <= 16);
+    }
   });
 }
 

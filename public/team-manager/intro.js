@@ -230,12 +230,18 @@ function shotLogo(b, B) {
   cover(seg(b, 6.4, 8));
 }
 
+/**
+ * The rocket as the hero finds it: hatch panels on both faces of levels 1 and 2, cargo in both of level 1's bays and in
+ * the bay behind level 2's left panel (cargo only stays behind a hatch panel), level 3 empty for the hero's hatch.
+ */
+const ROCKET_FILL = { home: [1, 1, 0], away: [1, 1, 0], cargo: [[1, 1], [1, 0], 0] };
+
 function shotRocket(b, B) {
   const look = 240 * (1 - easeInOut(seg(b, 0, 4.5)));
   camera(0, -116 - look, 1);
   sky(SKY, Math.min(144, look * 0.6), B);
   arena(crowd(B), CARPET);
-  rocket(150, { hatches: [1, 1, 0], cargo: [1, 1, 0] });
+  rocket(150, ROCKET_FILL);
   const xAt = (t) => lerp(-40, 130, easeOut(seg(t, 3.4, 5.4)));
   const x = xAt(b), speed = 1 - seg(b, 3.4, 5.2);
   if (b > 3.4) {
@@ -260,7 +266,7 @@ function shotLift(b, B) {
   arena(crowd(B), CARPET);
   // The lower ports light up in turn after the hatch lands; level 3 stays steady (no light, no twinkle) into the cut.
   const lights = [b > 4.5, b > 4.75, false];
-  rocket(150, { hatches: [1, 1, placed], cargo: [1, 1, 0], lights });
+  rocket(150, { ...ROCKET_FILL, home: [1, 1, placed], lights });
   eleBot(130, 0, { e1, e2, hatch: !placed, reach, rsl: rslOn(B) });
   const port = ROCKET_LEVELS[2];
   sparks(148, port, b, 4, 12, 26, 0.9, 3);
@@ -279,7 +285,7 @@ function shotPan(b, B) {
     camera(px, -116, 1);
     sky(SKY, 0, B);
     arena(crowd(B), CARPET);
-    rocket(150, { hatches: [1, 1, 1], cargo: [1, 1, 0], lights: [1, 1, 1] });
+    rocket(150, { ...ROCKET_FILL, home: [1, 1, 1], lights: [1, 1, 1] });
     eleBot(130, 0, { e1: 1 - easeInOut(seg(b, 0.3, 1)), e2: 1 - easeInOut(seg(b, 0, 0.6)), rsl: rslOn(B) });
     const rev = b > 2.6 && Math.floor(B * 10) % 2 ? -1 : 0;
     if (b > 2.6) dust(() => 490, -2, b, 2.6, 4, 7, 1, 0.8);
