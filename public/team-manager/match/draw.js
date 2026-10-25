@@ -1,6 +1,6 @@
 // A simulated match drawn on the arena's field (field.js), with the stands behind it (bleachers.js): the robots where
-// the simulation puts them, every piece moving from a robot to its port at the moment it scores, the scoreboard ticking
-// as it does. animate.js says what's where at time t; this turns it into pixels, 256x144, in world pixels through
+// the simulation puts them, every piece moving from a robot to its port (and cargo on inside, rolling to its side of a
+// rocket or dropping into a bay) at the moment it scores, the scoreboard ticking as it does. animate.js says what's where at time t; this turns it into pixels, 256x144, in world pixels through
 // pixel.js's camera like everything else on the field.
 //
 //   liveOf(frame, o)            what drawFieldLive's live option takes: { bots, fill, loose }. o.mark: a robot's
@@ -18,6 +18,7 @@
 import { W, C, screen, fill, rect, text, measure, withAlpha, clamp } from '../pixel.js';
 import { FIELD, WORLD_W, floorY, makeFloor, drawFieldLive, portAt } from '../field.js';
 import { drawStands, drawWalkway, STANDING, drawStanding } from '../bleachers.js';
+import { cargo, hatchPart, frame as spriteFrame } from '../sprites.js';
 import { drawBot, holdAt, reachOf } from './bots.js';
 import { slotInfo, MATCH, ROCKETS, PRELOAD_BAYS } from './sim.js';
 import { frameAt, focusAt } from './animate.js';
@@ -37,20 +38,29 @@ function portOf(alliance, key) {
     ? portAt({ alliance, piece: i.piece, struct: 'rocket', rocket: i.rocket === 'f' ? 'far' : 'near', level: i.level, face: i.face === 'h' ? 'home' : 'away' })
     : portAt({ alliance, piece: i.piece, struct: 'ship', bay: i.bay });
 }
-/** Everything in the rockets, the ship and the depots, as field.js draws it. */
-function fieldFill(slots, depots) {
+/**
+ * Everything in the rockets, the ship and the depots, as field.js draws it. inside: cargo that's in at its port and not
+ * yet come to rest, [{ alliance, slot, k }]: rolling to its side of a rocket (roll), or dropping into a bay (drop).
+ */
+function fieldFill(slots, depots, inside = []) {
   const out = {};
   for (const a of ['blue', 'red']) {
     const s = slots[a], v = (k) => s[k] ?? 0;
+    const mine = inside.filter((m) => m.alliance === a).map((m) => ({ ...m, info: slotInfo(m.slot) }));
     const rocket = (r) => ({
       home: [1, 2, 3].map((l) => !!v(`hatch:${r}${l}h`)),
       away: [1, 2, 3].map((l) => !!v(`hatch:${r}${l}a`)),
       cargo: [1, 2, 3].map((l) => [!!v(`cargo:${r}${l}h`), !!v(`cargo:${r}${l}a`)]),
+      roll: mine.filter((m) => m.info.struct === 'rocket' && m.info.rocket === r)
+        .map((m) => ({ level: m.info.level, face: m.info.face === 'h' ? 'home' : 'away', k: m.k })),
     });
     const bay = (b) => [v(`cargo:${b}`) ? 1 : 0, v(`hatch:${b}`)];
     out[a] = {
       far: rocket('f'), near: rocket('n'),
-      ship: { near: [0, 1, 2].map((i) => bay(`near${i}`)), far: [0, 1, 2].map((i) => bay(`far${i}`)), front: [0, 1].map((i) => bay(`front${i}`)) },
+      ship: {
+        near: [0, 1, 2].map((i) => bay(`near${i}`)), far: [0, 1, 2].map((i) => bay(`far${i}`)), front: [0, 1].map((i) => bay(`front${i}`)),
+        drop: mine.filter((m) => m.info.struct === 'ship').map((m) => ({ bay: m.info.bay, k: m.k })),
+      },
       depots: depots[a],
     };
   }
@@ -73,9 +83,13 @@ function stateOf(p, t) {
   };
 }
 const lerp = (a, b, k) => a + (b - a) * k;
-/** A piece on its way: from the robot to its port (or, missed, to the floor), or from a station or depot to the robot. */
+/**
+ * A piece on its way: from the robot to its port (or, missed, to the floor), or from a station or depot to the robot.
+ * Once cargo is in at its port, the rocket or the ship draws the rest (fieldFill's inside), behind what hides it.
+ */
 function drawHandoff(p, st) {
   const h = p.handoff, { x, y } = toScreen(p);
+  if (h.inside != null) return;
   const hold = holdAt(p.sprite, { ...st, hold: h.piece }), at = { x: x + hold.dx, y: y + hold.dy };
   let from, to, k = h.k;
   if (h.from === 'robot') {
@@ -94,15 +108,8 @@ function drawHandoff(p, st) {
     if (!h.ok && k > 0.7) [from, to, k] = [at, h.drop ? { x: wx(h.drop.x), y: floorY(h.drop.z) - 3 } : { x: at.x - p.face * 8, y: y - 3 }, (k - 0.7) / 0.3];
   }
   const e = k * k * (3 - 2 * k), px = Math.round(lerp(from.x, to.x, e)), py = Math.round(lerp(from.y, to.y, e) - Math.sin(Math.PI * k) * 4);
-  if (h.piece === 'cargo') {
-    rect(px - 4, py - 4, 8, 8, C.ink);
-    rect(px - 3, py - 3, 6, 6, C.org1);
-    rect(px - 2, py - 2, 2, 2, C.org2);
-  } else {
-    rect(px - 2, py - 7, 5, 14, C.ink);
-    rect(px - 1, py - 6, 3, 12, C.yel1);
-    rect(px - 1, py - 6, 1, 12, C.yel2);
-  }
+  if (h.piece === 'cargo') cargo(px, py, 4);
+  else hatchPart(spriteFrame(px, 0, p.face), -2, py);
 }
 /** Sparks where two robots are shoving. */
 function sparks(a, b, t, pinned) {
@@ -143,7 +150,8 @@ export function liveOf(frame, o = {}) {
   });
   // Pieces on the floor: dropped ones land as their hand-off ends.
   const loose = frame.loose.map((d) => ({ x: Math.round(wx(d.x)), y: Math.round(floorY(d.z)), piece: d.piece }));
-  return { bots, fill: fieldFill(frame.slots, frame.depots), loose };
+  const inside = frame.robots.filter((p) => p.handoff?.inside != null).map((p) => ({ alliance: p.alliance, slot: p.handoff.to, k: p.handoff.inside }));
+  return { bots, fill: fieldFill(frame.slots, frame.depots, inside), loose };
 }
 
 // ---- The scoreboard ----

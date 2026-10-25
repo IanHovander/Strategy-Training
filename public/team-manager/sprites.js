@@ -1,4 +1,5 @@
-// The cast and the set: robots, the 2019 rocket and HAB, the crowd, people and the blue banner.
+// The cast and the set: robots, the game pieces (cargo and hatch panels), the 2019 rocket and HAB, the crowd, people and
+// the blue banner.
 // Robots are drawn from the floor up: (x, y) is the middle of the robot at the floor under its wheels.
 // World units are game pixels at camera scale 1 (about 1.5 inches each).
 
@@ -42,20 +43,155 @@ export function bumper(f, x0, w, top, cols, num) {
   }
 }
 
-/** A hatch panel (the yellow disc) seen almost edge-on, centered at height cy. */
-export function hatchPart(f, dx, cy) {
-  part(f, dx, cy - 7, 4, 15, C.ink);
-  part(f, dx - 1, cy - 5, 6, 11, C.ink);
-  part(f, dx, cy - 6, 4, 13, C.yel1);
-  part(f, dx, cy - 6, 1, 13, C.yel2);
-  part(f, dx + 3, cy - 6, 1, 13, C.yel0);
-  part(f, dx + 1, cy - 1, 2, 3, C.ink);
+// ---- The game pieces ----
+// Cargo is an orange playground ball, 13 inches across (about 9 pixels). A hatch panel is a ring of clear polycarbonate
+// 19 inches across (about 13 pixels) with a 6-inch hole in the middle: white hook-and-loop tape round its edge, a
+// yellow band printed inside that and a dark ring round the hole, and clear plastic between, so whatever is behind it
+// shows through. A null hatch panel (fixed on a cargo ship bay before the match, worth nothing) is the same with two
+// strips of white tape across it, either side of the hole. Each view is a small grid of letters, one per pixel:
+//   k ink (the outline)   w white tape   s white tape in shade   y yellow band   d yellow in shade   l yellow in light
+//   g the clear plastic (a faint sheen over what's behind)   h the dark ring round the hole   o the hole (nothing)
+// and in capitals, where a null panel's white tape goes across (otherwise the same in small letters).
+// The caller draws what's behind a panel first: the bay it closes, the cargo in it, or the robot holding it.
+/** Each letter's colour and how solid it is. */
+const PIECE = {
+  k: [C.ink, 1], w: [C.white, 1], s: [C.steel3, 1], y: [C.yel1, 1], d: [C.yel0, 1], l: [C.yel2, 1],
+  g: [C.blue3, 0.22], h: ['#2a3044', 0.4],
+};
+/** A grid as runs of one letter along each row, worked out once per grid: [an ordinary panel's, a null one's]. */
+const RUNS = new Map();
+function runsOf(rows, isNull) {
+  if (!RUNS.has(rows)) {
+    RUNS.set(rows, [false, true].map((nul) => {
+      const runs = [];
+      rows.forEach((row, j) => {
+        const at = (i) => (row[i] >= 'A' && row[i] <= 'Z' ? (nul ? 'w' : row[i].toLowerCase()) : row[i]);
+        for (let i = 0; i < row.length;) {
+          const ch = at(i);
+          let n = 1;
+          while (i + n < row.length && at(i + n) === ch) n++;
+          if (PIECE[ch]) runs.push({ i, j, n, ch });
+          i += n;
+        }
+      });
+      return runs;
+    }));
+  }
+  return RUNS.get(rows)[isNull ? 1 : 0];
+}
+function piece(rows, x0, y0, o = {}) {
+  const at = o.f ? (r, c) => part(o.f, x0 + r.i, y0 + r.j, r.n, 1, c) : (r, c) => rect(x0 + r.i, y0 + r.j, r.n, 1, c);
+  const runs = runsOf(rows, !!o.null);
+  for (const r of runs) if (PIECE[r.ch][1] === 1) at(r, PIECE[r.ch][0]);
+  // The see-through letters after, each with its transparency set once.
+  for (const ch of ['g', 'h']) withAlpha(PIECE[ch][1], () => { for (const r of runs) if (r.ch === ch) at(r, PIECE[ch][0]); });
+}
+
+/** Face on, 14 pixels across (the near side of the cargo ship), centred on the corner at (cx, cy) as disk() is. */
+const HATCH_FACE = [
+  '....kkkkkk....',
+  '...kwwwwwwk...',
+  '..kwlllllywk..',
+  '.kwlllggyyywk.',
+  'kwllgghhggyysk',
+  'kwllghoohgydsk',
+  'kwLGHooooHGDsk',
+  'kwLGHooooHGDsk',
+  'kwlyghoohgddsk',
+  'kwyygghhggddsk',
+  '.kwyyyggdddsk.',
+  '..kwydddddsk..',
+  '...kssssssk...',
+  '....kkkkkk....',
+];
+export function hatchFace(cx, cy, o = {}) {
+  piece(HATCH_FACE, cx - 7, cy - 7, o);
+}
+
+/**
+ * On a rocket's angled face, turned most of the way from you: an upright ellipse 8 pixels wide and 14 tall, centred
+ * on the corner at (cx, cy). The left face shows its lit edge on the left (dir -1, the default), the right one mirrored.
+ */
+const HATCH_SIDE = [
+  '..kkkk..',
+  '.kwwwwk.',
+  'kwllllsk',
+  'kwlggdsk',
+  'kwlggdsk',
+  'kwyhhdsk',
+  'kwyoodsk',
+  'kwyoodsk',
+  'kwyhhdsk',
+  'kwyggdsk',
+  'kwyggdsk',
+  'kwddddsk',
+  '.kssssk.',
+  '..kkkk..',
+];
+const HATCH_SIDE_R = HATCH_SIDE.map((r) => [...r].reverse().join(''));
+export function hatchSide(cx, cy, o = {}) {
+  piece(o.dir > 0 ? HATCH_SIDE_R : HATCH_SIDE, cx - 4, cy - 7, o);
+}
+
+/**
+ * Held by a robot, its face across the robot's way, so you see it almost edge-on: the white edge, a sliver of the
+ * yellow band and of the clear plastic, the robot showing through. dx is its near edge from the frame's middle, cy the
+ * middle of its height.
+ */
+const HATCH_HELD = [
+  '.kkkk.',
+  'kwwwsk',
+  'kwllsk',
+  'kwygsk',
+  'kwygsk',
+  'kwyhsk',
+  'kwyosk',
+  'kwyosk',
+  'kwyhsk',
+  'kwygsk',
+  'kwygsk',
+  'kwdgsk',
+  'kwddsk',
+  'kwsssk',
+  '.kkkk.',
+];
+export function hatchPart(f, dx, cy, o = {}) {
+  piece(HATCH_HELD, dx - 1, cy - 7, { ...o, f });
 }
 export const hatch = (x, cy) => hatchPart(frame(x, 0, 1), 0, cy);
 
-/** A cargo ball. */
-export function cargo(x, y, r = 4) {
-  disk(x, y, r + 1, C.ink);
+/** Lying flat on the carpet: from 20 degrees up, an ellipse 14 wide and 5 deep, its middle at (x, y). */
+const HATCH_FLAT = [
+  '...kkkkkkkk...',
+  '.kkwllllllwkk.',
+  'kwygghoohggdsk',
+  '.kkssddddsskk.',
+  '...kkkkkkkk...',
+];
+export function hatchFlat(x, y, o = {}) {
+  piece(HATCH_FLAT, Math.round(x) - 7, Math.round(y) - 3, o);
+}
+
+/** In small, 10 pixels across, face on, for a sign or a status display; centred on the corner at (cx, cy). */
+const HATCH_ICON = [
+  '...kkkk...',
+  '.kkwwwwkk.',
+  '.kwlllywk.',
+  'kwlggggysk',
+  'kwLGooGDsk',
+  'kwLGooGDsk',
+  'kwyggggdsk',
+  '.kwydddsk.',
+  '.kksssskk.',
+  '...kkkk...',
+];
+export function hatchIcon(cx, cy, o = {}) {
+  piece(HATCH_ICON, cx - 5, cy - 5, o);
+}
+
+/** A cargo ball. o.bare: no outline, for a ball seen through an opening or a clear panel. */
+export function cargo(x, y, r = 4, o = {}) {
+  if (!o.bare) disk(x, y, r + 1, C.ink);
   disk(x, y, r, C.org1);
   rect(x - r + 1, y - r + 2, 2, 2, C.org2);
   rect(x + r - 2, y + 1, 1, r - 2, C.org0);
