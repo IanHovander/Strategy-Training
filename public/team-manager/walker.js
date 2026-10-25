@@ -20,13 +20,13 @@ const HEADS = {
     '..khHhhhhhhhggk.',
     '.kghHhhhhhhhhggk',
     '.kghsShhhhhhhhgk',
-    '.kghssssshhhhhgk',
-    '.kghshgsssghhhgk',
-    '.kghsggsssggshgk',
-    '.kghsEEsssEEshgk',
-    '.kghesssdsssehgk',
-    '.kghsssMTMssshgk',
-    '.kghksssmssskhgk',
+    '.kghssssdhhhhhgk',
+    '.kghssssssdhhhgk',
+    '.kghssEsssEddhgk',
+    '.kghssEsssEsdhgk',
+    '.kghsssssdssdhgk',
+    '.kghssssmmssdhgk',
+    '.kghDssssssdDhgk',
     '.kgh.kssssdk.hgk',
     '.kgh..kkkkk..hgk',
     '.kgh.........hgk',
@@ -40,13 +40,13 @@ const HEADS = {
     '.khHhhhhhhhhhhk.',
     '.kgHhhhhhhhhhhgk',
     '.kghhhsShhhhhhgk',
-    '.kghhssssshhhhgk',
-    '.kghhshgsssghhk.',
-    '.kghhsggsssggsk.',
-    '.kghhsEwsssEwsk.',
-    '.kghhesssssdesk.',
-    '.kghhssssMTMsk..',
-    '.kghksssssmdk...',
+    '.kghhssssdhhhhgk',
+    '.kghhssssssdhhk.',
+    '.kghhssEsssEddk.',
+    '.kghhssEsssEsdk.',
+    '.kghhssssssdsdk.',
+    '.kghhssssmmsdk..',
+    '.kghDssssssdk...',
     '.kgh...ksssdk...',
     '.kgh....kkkkhgk.',
     '.kgh.......khgk.',
@@ -60,13 +60,13 @@ const HEADS = {
     'khHhhhhhhhhhhk..',
     'kghhhhhhhhhhsSk.',
     'kghhhhhhhhhsssk.',
-    'kghhhhhhhhsggsk.',
+    'kghhhhhhhhssssk.',
     'kghhhhhhhsssssk.',
-    'kghhhhkssssggsk.',
-    'kghhhhkdssswEsk.',
-    'kghhhhkssssssdk.',
-    'kghhhhhkssssMMk.',
-    'kghhhhhhksssmk..',
+    'kghhhhksssssEsk.',
+    'kghhhhkdssssEssk',
+    'kghhhhksssssssdk',
+    'kghhhhhksssssmk.',
+    'kghhhhhhksssdk..',
     'kghhhhhhhkssk...',
     'kghhhhhhhkkk....',
     '.kghhhhhk.......',
@@ -127,13 +127,15 @@ export function leftFacing(src, rows = {}) {
   for (const [y, row] of Object.entries(rows)) out[y] = [...row];
   return out.map((r) => r.join(''));
 }
-HEADS.sw = leftFacing(HEADS.se, { 5: 'kgSshhhhhhhhhgk.', 6: 'kgssssshhhhhhgk.', 7: '.khgsssshhhhhgk.' });
+HEADS.sw = leftFacing(HEADS.se, {
+  5: 'kgSshhhhhhhhhgk.', 6: 'kgssssshhhhhhgk.', 7: '.khgsssshhhhhgk.', 8: '.kdsEsssEddhhgk.',
+});
 HEADS.w = leftFacing(HEADS.e, { 4: '.kghhhhhhhhhhhgk', 5: '.khHhhhhhhhhhhgk', 6: '.kshhhhhhhhhhhgk' });
 HEADS.nw = leftFacing(HEADS.ne, {});
 // The head's pixel that sits on the rig's head position.
 const HEAD_X = 8, HEAD_Y = 8;
 const HEAD_PAL = {
-  k: '#0b0d17', g: '#131216', h: '#211d22', H: '#352d31', s: '#eabf91', S: '#f8d9b8', d: '#d29a6c',
+  k: '#0b0d17', g: '#131216', h: '#211d22', H: '#352d31', s: '#eabf91', S: '#f8d9b8', d: '#d29a6c', D: '#a96d47',
   E: '#3a2218', w: '#e6ddd4', e: '#ee9f8c', M: '#8f4636', T: '#f6f1ea', m: '#c97a70',
 };
 
