@@ -2,18 +2,19 @@
 // bleachers and walkway (field.js, bleachers.js), imported and not copied, so when the arena's field or robots get
 // better all eight fields do too. A division is the arena's whole world moved along the hall to ox(k) (layout.js): its
 // floor is the one makeFloor() canvas, laid down again for each; its stands are bleachers.js's, clipped to the division's
-// own span so the curtains between divisions (hall.js) can hang in the gaps; its match runs on its own clock, out of step
-// with the others, with its own team numbers on the robots and its own score up on the scoring table. Only the divisions
-// in view are drawn, never more than two at once.
+// own span so the curtains between divisions (hall.js) can hang in the gaps; its matches are real ones (matches.js), on
+// its own clock, out of step with the others, with its own team numbers on the robots and its own score up on the
+// scoring table. Only the divisions in view are drawn, never more than two at once.
 // Past Archimedes and past Newton the floor carries on: pieces of the arena's own plain concrete, cut from the same
 // floor canvas and walkway, so they change whenever the arena's floor does.
 // Walking keeps field.js's rules in each division's own frame: the walkway along the field, the open floor past its ends.
 // The ends of two neighbouring divisions meet, so between their curtains they make one aisle, 256 pixels wide.
 
 import { W, clamp } from '../pixel.js';
-import { FIELD, STATION, makeFloor, drawFieldLive, WALK_Y, OPEN_Y, EDGE, blocked } from '../field.js';
+import { FIELD, STATION, makeFloor, drawFieldLive, noseLights, WALK_Y, OPEN_Y, EDGE, blocked } from '../field.js';
 import { TIERS, drawStands, drawWalkway } from '../bleachers.js';
-import { PITCH, PAD_L, PAD_R, WALL, DIVISIONS, WORLD, ox, divisionAt, STANDS, matchState, PLAY, PASSAGE, EXIT, EXIT_SIGN, IN_SIGN } from './layout.js';
+import { liveOf } from '../match/draw.js';
+import { PITCH, PAD_L, PAD_R, WALL, DIVISIONS, WORLD, ox, divisionAt, STANDS, matchState, PASSAGE, EXIT, EXIT_SIGN, IN_SIGN } from './layout.js';
 
 const LAST = DIVISIONS.length - 1;
 /** Things standing near a division's edges (the queue sign, a cart, someone in the aisle) still get drawn this far out. */
@@ -27,6 +28,8 @@ let FLOOR = null;
 /** Once, before the first frame: the arena's floor. */
 export function setupFields() {
   FLOOR ??= makeFloor();
+  // Every division's first match played now, before the first frame, rather than as the cut scene's scan reaches it.
+  DIVISIONS.forEach((_, k) => matchState(k, 0));
 }
 
 // The pads past Archimedes and past Newton are pieces of the floor past a field's red driver station, from PLAIN to the
@@ -118,21 +121,24 @@ export function drawStandsAll(g, view, t, o = {}) {
 }
 
 /**
- * Division k's field and everything standing on it and past its ends, back to front, with its own robots, queue and
+ * Division k's field and everything standing on it and past its ends, back to front, with its own match, queue and
  * score. o.more: people and things to sort in, { y: floor line, draw() }; o.hero: her feet in world pixels, so a rocket in
- * front of her goes see-through. Between two matches, while the big screen says FINAL and the scoring table holds the
- * final score, the robots stand where the final buzzer left them, disabled, as they do on a real field: the field's
- * clock stops at the end of the match and starts again with the next.
+ * front of her goes see-through. The match is a real one (matches.js): the robots where the simulation puts them and
+ * every piece where it scored; between two, while the big screen says FINAL and the scoring table holds the final score,
+ * the field is reset, lighter than the arena does it: the robots stand disabled where the buzzer left them, the lights
+ * go green and the gates open, the robots go off and the next match's come on, the pieces are put back.
  */
 export function drawField(g, view, t, k, o = {}) {
-  const vx = Math.round(view.x), vy = Math.round(view.y), d = DIVISIONS[k], m = matchState(k, t);
+  const vx = Math.round(view.x), vy = Math.round(view.y), d = DIVISIONS[k], m = matchState(k, t), f = m.field;
   const who = [];
   if (o.hero) {
     const x = Math.round(o.hero.x) - vx;
     who.push({ x0: x - 8, x1: x + 8, y1: Math.round(o.hero.y) - vy });
   }
-  const ft = t + d.offset - (m.playing ? 0 : m.into - PLAY);
-  drawFieldLive(g, vx - ox(k), ft, { camY: vy, teams: d.teams, queue: d.queue, score: [m.blue, m.red], more: o.more ?? [], who });
+  drawFieldLive(g, vx - ox(k), t, {
+    camY: vy, live: liveOf(f.frame), queue: d.queue, score: [m.blue, m.red], farGates: f.gates ?? undefined, nearGates: f.gates ?? undefined,
+    more: [...(o.more ?? []), ...noseLights(f.lights)], who,
+  });
 }
 
 // ---- Where she can walk ----

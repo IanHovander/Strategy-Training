@@ -10,6 +10,8 @@
 // (bleachers.js), with the walkway between. Everything is in world pixels, drawn through pixel.js's camera.
 // For a real match (match/), drawFieldLive's live option takes the robots and every piece from outside, and adds the
 // near wall's rockets too, see-through, since the camera sees them from behind; portAt() says where each piece goes.
+// Between matches (arena/flow.js): the four gates in the side walls (GATES), shut or open, the queue left to the scene
+// (queue: false), the carts robots ride on (robotCart) and the rockets' nosecone lights (noseLights).
 
 import { C, useContext, camera, screen, cam, rect, disk, text, withAlpha, rnd } from './pixel.js';
 import { eleBot, defBot, armBot, cargo, hatch, hatchFace, hatchSide, hatchFlat, hatchIcon } from './sprites.js';
@@ -27,8 +29,14 @@ export const STATION = 40;
 
 const TEAM = { blue: [C.blue0, C.blue1, C.blue2, C.blue3], red: [C.red0, C.red1, C.red2, C.red3] };
 const STEEL = '#5d6580', PANEL = '#aab2c8', CARPET = '#2b2e3a', CONCRETE = '#353a4c', DARK = '#181b29';
-/** The opening in the far wall, chained off: a volunteer stands by it. */
-export const GATE = { x0: FIELD.x0 + 52, x1: FIELD.x0 + 68 };
+/**
+ * The gates in the side walls, where robots are carried on and off (the 2019 manual, section 4, Figure 4-2): four, one
+ * in each wall at each end, their middles about 9 feet in from the alliance wall, just past the HAB, and 3 feet 2
+ * inches wide open. The far wall's and the near wall's are at the same places along the field.
+ */
+export const GATES = { blue: { x0: FIELD.x0 + 60, x1: FIELD.x0 + 85 }, red: { x0: FIELD.x1 - 85, x1: FIELD.x1 - 60 } };
+/** The far wall's gate at the blue end, chained off: a volunteer stands by it. */
+export const GATE = GATES.blue;
 const WALL_H = 13; // the side walls are 20 inches of clear polycarbonate
 
 // The red end is the blue end mirrored.
@@ -108,29 +116,35 @@ function depot(alliance, z, balls, cover = false) {
 }
 
 // ---- Walls and barriers ----
-/** A side wall of clear panels on posts, at depth z, the length of the field. */
+/** A side wall of clear panels on posts, at depth z, the length of the field, with a gate (or a list of them) in it. */
 function sideWall(z, gate) {
   const y = floorY(z) - WALL_H;
-  const panels = gate ? [[FIELD.x0, gate.x0], [gate.x1, FIELD.x1]] : [[FIELD.x0, FIELD.x1]];
-  for (const [a, b] of panels) {
+  const gates = (Array.isArray(gate) ? gate : [gate]).filter(Boolean).sort((a, b) => a.x0 - b.x0);
+  const cuts = [FIELD.x0, ...gates.flatMap((q) => [q.x0, q.x1]), FIELD.x1];
+  for (let i = 0; i < cuts.length; i += 2) {
+    const [a, b] = [cuts[i], cuts[i + 1]];
     withAlpha(0.22, () => rect(a, y, b - a, WALL_H, C.blue3));
     rect(a, y, b - a, 1, C.steel3);
     rect(a, floorY(z) - 2, b - a, 2, '#3f4761');
   }
   for (let x = FIELD.x0; x <= FIELD.x1; x += 4 * FT) {
-    if (gate && x > gate.x0 - 2 && x < gate.x1 + 2) continue;
+    if (gates.some((q) => x > q.x0 - 2 && x < q.x1 + 2)) continue;
     rect(x - 1, y - 1, 2, WALL_H + 1, C.steel2);
   }
-  if (!gate) return;
-  // The gate: a gap in the panels, posts either side, and a yellow and black chain across. Open (gate.open), the chain
-  // is unhooked and hangs down the right-hand post, the rest of it lying in a heap at its foot.
+  for (const q of gates) gateIn(q, y, floorY(z));
+}
+/**
+ * A gate in a side wall whose panels' tops are at y and floor line at fy: a gap in the panels, posts either side, and a
+ * yellow and black chain across. Open (gate.open), the chain is unhooked and hangs down the right-hand post, the rest of
+ * it lying in a heap at its foot.
+ */
+function gateIn(gate, y, fy) {
   const gw = gate.x1 - gate.x0;
   for (const px of [gate.x0 - 2, gate.x1]) {
     rect(px, y - 3, 3, WALL_H + 3, C.ink);
     rect(px + 1, y - 2, 1, WALL_H + 1, C.steel3);
   }
   if (gate.open) {
-    const fy = floorY(z);
     for (let j = 4; j < fy - y - 1; j += 2) rect(gate.x1 - 1, y + j, 1, 2, (j / 2) % 2 ? C.ink : C.yel1);
     rect(gate.x1 - 2, fy - 1, 2, 1, C.yel1);
     rect(gate.x1 - 4, fy - 1, 2, 1, C.ink);
@@ -737,8 +751,10 @@ export function move(x, y, dx, dy) {
  * { y: floor line, draw() }. o.robots: false for an empty field (the hatches and cargo already scored stay);
  * o.ends: false to leave out the queue, the scoring table and the reset cart past the ends. For another field than the
  * arena's: o.teams, the numbers on the blue elevator, the red elevator, the blue arm and the red defender; o.queue, on
- * the arm and the elevator waiting on their carts; o.score, [blue, red] on the scoring table's monitors. o.nearGate:
- * { x0, x1, open } puts a gate in the near wall too, like the far wall's (open: its chain unhooked and hanging).
+ * the arm and the elevator waiting on their carts (false: no carts in the queue, for a scene that brings its own; the
+ * sign stays); o.score, [blue, red] on the scoring table's monitors. The gates (GATES) are in both walls, chained shut:
+ * o.farGates and o.nearGates, lists of { x0, x1, open } (open: its chain unhooked and hanging), say otherwise, and
+ * o.nearGate puts just that one in the near wall instead (alliance selection's, by the MC's mark).
  * o.live: a real match instead of the four robots running their loops (match/draw.js makes it, from match/sim.js):
  *   bots    the robots, as { y: floor line, draw() }, sorted in with everything else
  *   fill    every piece: { blue, red }, each { far, near: rockets as rocket() takes them (with roll, the balls
@@ -751,8 +767,9 @@ export function drawFieldLive(g, camX, t, o = {}) {
   const who = o.who ?? [], camY = o.camY ?? 0, live = o.live;
   const { fill, bots } = live ? { fill: null, bots: [] } : robots(o.robots === false ? 0 : t, o.teams);
   const rocketFill = (a) => (live ? live.fill[a].far : fill[a]);
+  const shut = [GATES.blue, GATES.red];
   const things = [
-    { y: FIELD.y0, draw: () => sideWall(0, GATE) },
+    { y: FIELD.y0, draw: () => sideWall(0, o.farGates ?? shut) },
     ...ROCKETS.flatMap((r) => [
       { y: floorY(WING.deep), span: [r.x - 34, r.x + 34], top: floorY(WING.deep) - WING.up, draw: () => rocketWings(r.x, r.alliance, floorY(WING.deep)) },
       {
@@ -774,7 +791,7 @@ export function drawFieldLive(g, camX, t, o = {}) {
     ...(live ? liveParts(live) : []),
     ...(o.ends === false ? [] : ends(o.queue, o.score)),
     ...(o.more ?? []),
-    { y: FIELD.y1 + 1, draw: () => sideWall(27, o.nearGate) },
+    { y: FIELD.y1 + 1, draw: () => sideWall(27, o.nearGates ?? o.nearGate ?? shut) },
   ];
   useContext(g);
   G = g;
@@ -812,7 +829,7 @@ function loosePiece({ x, y, piece }) {
 /** The queue, its sign, the scoring table and the reset cart, past the ends of the field. */
 function ends(queue = QUEUE.map((q) => q.num), score) {
   return [
-    ...QUEUE.map((q, i) => ({
+    ...(queue === false ? [] : QUEUE).map((q, i) => ({
       y: q.y,
       draw: () => robotCart(q.x, q.y, (x, y) => (q.bot === 'arm'
         ? armBot(x, y, { team: 'blue', num: queue[i], angle: -1.25, ball: false })
@@ -822,4 +839,39 @@ function ends(queue = QUEUE.map((q) => q.num), score) {
     { y: TABLE.y, draw: () => scoringTable(score) },
     { y: RESET.y, draw: resetCart },
   ];
+}
+
+// ---- The rockets' lights ----
+// Each rocket's nosecone has lights in it (the 2019 manual, section 4, field lighting): in a match they come on in the
+// rocket's alliance colour once it's full, six hatch panels and six cargo; once the match is over and the head referee
+// says the field is safe, every one turns green, and drive teams may go on; they go off when the field is ready for the
+// next match. Drawn over the cone's tip, the near wall's as faint as the rest of those rockets but brighter, lights
+// being lights.
+const LIT = { green: ['#1d8a3f', '#3fd06a', '#b8ffcf'], blue: [C.blue1, C.blue2, C.blue3], red: [C.red1, C.red2, C.red3] };
+/**
+ * The nosecone lights that are on, as { y, draw } (with span and top, so they go see-through with the rocket in front of
+ * someone on the walkway) for drawFieldLive's more. lights: [{ alliance, rocket: 'far' | 'near', color: 'green' |
+ * 'blue' | 'red' }].
+ */
+export function noseLights(lights) {
+  return lights.map(({ alliance, rocket, color }) => {
+    const cx = ROCKETS.find((r) => r.alliance === alliance).x, near = rocket === 'near';
+    const base = floorY(near ? NEAR_ROCKET_Z : ROCKET_Z), top = base - HULL, [lo, mid, hi] = LIT[color];
+    const draw = () => {
+      // A glow round the tip, then the tip's three rows lit, shaded on the right, a glint on the left.
+      withAlpha(0.35, () => {
+        rect(cx - coneW(0) - 1, top - CONE - 2, coneW(0) * 2 + 2, 2, mid);
+        for (let i = 0; i < 4; i++) rect(cx - coneW(i) - 2, top - CONE + i, coneW(i) * 2 + 4, 1, mid);
+      });
+      for (let i = 0; i < 3; i++) {
+        const hw = coneW(i), y = top - CONE + i;
+        rect(cx - hw, y, hw * 2, 1, mid);
+        rect(cx + hw - Math.max(1, hw >> 1), y, Math.max(1, hw >> 1), 1, lo);
+        if (hw > 3) rect(cx - hw + 2, y, 1, 1, hi);
+      }
+    };
+    return near
+      ? { y: floorY(27) + 0.6, draw: () => withAlpha(0.6, draw) }
+      : { y: base + 0.001, span: [cx - 17, cx + 17], top: top - CONE, draw };
+  });
 }

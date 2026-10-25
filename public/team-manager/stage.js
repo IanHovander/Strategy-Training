@@ -36,6 +36,8 @@
 //   act(s), actLabel(s)   A when nobody's in reach, for a scene where A does something else (the opening's pick: A
 //                         picks a card), and what the phone's A button says for it then
 //   clock(s)              the seconds left on a clock that's running, or null: not the stage's, but sound.js ticks it
+//   moment(s)             what's happening around her as she walks (the arena's matches), as a key that changes when
+//                         something new does: not the stage's either, but sound.js plays the place's cues for it
 //   pointer(type, x, y, s)
 //                         a tap or a drag on the screen, for a scene with things on it to press or drag (the opening's
 //                         tablet, the van's seats): type 'down', then 'move' and 'up' if it took the 'down'; (x, y) in

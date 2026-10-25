@@ -145,6 +145,43 @@ export const SFX = {
       c.noise(t, d * 0.6, { vol: 0.02, type: 'lowpass', hz: 700 });
     },
   },
+  // -- The field's own cues for a 2019 match (the game manual: the field management system plays them) --
+  /** The match starts: a bugle's cavalry charge, G C E G, held, then E G. */
+  charge: {
+    bus: 'sfx',
+    play: (c, t) => [[67, 0, 0.12], [72, 0.13, 0.12], [76, 0.26, 0.12], [79, 0.39, 0.36], [76, 0.8, 0.12], [79, 0.93, 0.6]].forEach(([m, d, dur]) => {
+      c.tone(t + d, dur, hz(m), { wave: 'p25', vol: 0.05, vib: dur > 0.3 });
+      c.tone(t + d, dur, hz(m - 12), { wave: 'p50', vol: 0.018 });
+    }),
+  },
+  /** The sandstorm's over: three bells. */
+  bells: {
+    bus: 'sfx',
+    play: (c, t) => [0, 0.36, 0.72].forEach((d) => {
+      c.tone(t + d, 0.9, 1318, { wave: 'tri', vol: 0.07, decay: true });
+      c.tone(t + d, 0.45, 3637, { wave: 'p12', vol: 0.012, decay: true });
+    }),
+  },
+  /** Thirty seconds left: the space station alert, a whooping alarm, twice. */
+  alert: { bus: 'sfx', play: (c, t) => [0, 0.5].forEach((d) => c.tone(t + d, 0.42, 520, { wave: 'p50', slide: 1250, vol: 0.035 })) },
+  /** Twenty seconds left: a train whistle, a chord breathing through it. */
+  whistle: {
+    bus: 'sfx',
+    play: (c, t) => {
+      [74, 77, 81].forEach((m) => c.tone(t, 1.1, hz(m), { wave: 'p50', vol: 0.022, vib: true }));
+      c.noise(t, 1.1, { vol: 0.02, type: 'bandpass', hz: 1800, q: 1.5 });
+    },
+  },
+  /** The match is over: the buzzer, low and harsh, two tones beating against each other. */
+  buzzer: {
+    bus: 'sfx',
+    play: (c, t, o) => {
+      const d = o.dur ?? 1.1;
+      c.tone(t, d, 110, { wave: 'p50', vol: 0.06 });
+      c.tone(t, d, 117, { wave: 'p25', vol: 0.04 });
+      c.noise(t, d, { vol: 0.02, type: 'lowpass', hz: 600 });
+    },
+  },
   /** Something going right, smaller: three notes up. */
   jingle: { bus: 'sfx', play: (c, t) => [79, 83, 86].forEach((m, i) => c.tone(t + i * 0.08, i === 2 ? 0.4 : 0.08, hz(m), { wave: 'p25', vol: 0.04, decay: i === 2 })) },
   /** Something going wrong: two notes down, low. */
