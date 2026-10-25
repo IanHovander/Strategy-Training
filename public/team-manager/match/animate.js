@@ -16,8 +16,9 @@
 //     robots [pose]: id, num, alliance, sprite, x, z, face (+1 toward red), up, legs { front, rear } (stilt pixels
 //       showing under it), hold (what it's carrying), aim ({ slot } or { inches }, and k: how far the mechanism has
 //       gone from rest toward it), reach (0 to 1: the grabber pushed out), climbK (0 to 1 through a climb),
-//       handoff ({ piece, from, to, k, ok, drop }: a piece on its way between the robot and a port or a station or
-//       depot; not ok, it ends on the floor at drop),
+//       handoff ({ piece, from, to, k, ok, drop, inside }: a piece on its way between the robot and a port or a
+//       station or depot; not ok, it ends on the floor at drop; inside, for cargo going in, 0 to 1 through the moment
+//       after it reaches the port, rolling down a rocket's ramp to its side or dropping into a bay, null till then),
 //       dead, deadFor, rsl (the light, on or off as it blinks), contact (who's touching it), pinned, shove (pixels),
 //       defending (whom), spin (feet driven, for the wheels), doing (the step's kind) and step (the step itself)
 //   focusAt(show, t)    where along the field the action is (feet), for a camera that follows it
@@ -30,6 +31,27 @@ export const HAB_PX = [0, 2, 4, 13];
 const HANDOFF = 0.35;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const ease = (k) => (1 - Math.cos(Math.PI * clamp(k, 0, 1))) / 2;
+
+/**
+ * Seconds cargo takes inside, once it's in at the port, before it's come to rest at the moment it scores: a rocket's
+ * ramp rolls it to the bay on one side, and a cargo ship bay's ball drops past the lip. The hand-off starts that much
+ * sooner, so the slot fills (sim.js's fill) just as the ball settles.
+ */
+const INSIDE = { rocket: 0.45, ship: 0.25 };
+function insideOf(slot) {
+  const i = slotInfo(slot);
+  return i.piece !== 'cargo' ? 0 : i.struct === 'rocket' ? INSIDE.rocket : INSIDE.ship;
+}
+/** A placing step's hand-off at t, or null before it starts: the flight (k), then for cargo the time inside. */
+function placeHandoff(s, t, drop) {
+  const inside = s.hit ? insideOf(s.slot) : 0, dur = Math.min(HANDOFF + inside, Math.max(0.05, s.t1 - s.t0));
+  const fly = (dur * HANDOFF) / (HANDOFF + inside), t0 = s.t1 - dur;
+  if (t <= t0) return null;
+  return {
+    piece: s.piece, from: 'robot', to: s.slot, k: clamp((t - t0) / fly, 0, 1), ok: !!s.hit, drop,
+    inside: inside && t > t0 + fly ? clamp((t - t0 - fly) / (dur - fly), 0, 1) : null,
+  };
+}
 
 /** The HAB's surface under a point (x seen from the robot's own wall): how many pixels up it holds a wheel. */
 export function surface(xo, z) {
@@ -136,7 +158,7 @@ function poseOf(show, r, t) {
     const rise = Math.min(1.2, (s.t1 - s.t0) * 0.45);
     p.aim = { slot: s.slot, k: ease((t - s.t0) / rise) };
     p.reach = ease((k - 0.55) / 0.3);
-    if (t > s.t1 - HANDOFF) p.handoff = { piece: s.piece, from: 'robot', to: s.slot, k: clamp((t - (s.t1 - HANDOFF)) / HANDOFF, 0, 1), ok: !!s.hit, drop: dropAt(show, r, s.t1) };
+    p.handoff = placeHandoff(s, t, dropAt(show, r, s.t1));
   } else if (s.kind === 'pickup') {
     const inches = sourceIn(s);
     p.aim = { inches, k: ease((t - s.t0) / Math.min(0.8, (s.t1 - s.t0) * 0.4)) };
