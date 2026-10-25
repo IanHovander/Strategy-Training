@@ -147,8 +147,11 @@ colour, so it can follow the new team colour or stay as a UI accent.
 
 | File | Where | What's 5026-specific | Change |
 | --- | --- | --- | --- |
-| `scene.js` | `LINES` rosa, milo ~38-45 | "YOU ARE ON 5026?", "...I'M JOINING 5026" | The new number. |
-| `scene.js`, `cutscene.js` | comments ~18-35, `QUEUE_CALL` ~77 | Comments naming 5026 | Update. |
+| `scene.js` | `LINES` rosa, milo ~76-83 | "YOU ARE ON 5026?", "...I'M JOINING 5026" | The new number. |
+| `scene.js` | `LINES` priya ~89-96 | "`OURS` IS IN MATCH 44. TELL YOUR DRIVE TEAM THE PLAN..." (the number from `OURS`) | Follows `OURS`; the line assumes it's her team's match. |
+| `schedule.js` | `STORY` 44 ~74-77; header | Match 44 puts `OURS` on blue with the plan she gives the drive team in the pits (hatches, Level 3 at 0:20), the other five numbers being the pits' call (`pits/lines.js`) | Follows `OURS`; keep the pits' call and this in step. |
+| `crew.js` | `teamLook()` ~31-38 | `OURS`'s drive team wears the team merch (`student()` in `cast.js`) | Follows `MERCH`. |
+| `scene.js`, `cutscene.js`, `schedule.js` | comments; `QUEUE_CALL` ~80 | Comments naming 5026 | Update. |
 
 ### Alliance selection (`public/team-manager/alliance-selection/`)
 

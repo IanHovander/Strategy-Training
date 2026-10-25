@@ -7,7 +7,8 @@
 //   moving   footsteps, walk and run, on the scene's floor (her walking in and out too); the whoosh as she leaves and
 //            a soft breath as the next scene fades up
 //   places   a quiet bed per scene (crowd, pits, arena, the lawn, the cafeteria, the road), with sprinkles over it
-//   stings   the place card, the PA chime, cheers, claps, spotlights, the pick accepted, the clock's seconds
+//   stings   the place card, the PA chime, cheers, claps, spotlights, the pick accepted, the clock's seconds, and the
+//            field's own cues for the matches going on in the arena while she walks (scene.moment)
 //   music    a light loop under the walking (two passes, then a rest), ducked under words; none in cut scenes
 //
 // Sound starts on the first tap, click or key (browsers block it before then), and pauses with the page. The mute
@@ -108,7 +109,7 @@ addEventListener('keydown', (e) => {
 const st = {
   scene: null, place: DEFAULT, beat: null, beatI: 0, fired: new Set(), mode: null, leaving: false,
   events: [], conv: null, page: -1, typed: 0, near: null, nearAt: 0, lastNear: null,
-  stepAt: 0, foot: false, autoFrame: null, status: null, label: null, clockTick: null, freeAt: 0,
+  stepAt: 0, foot: false, autoFrame: null, status: null, label: null, clockTick: null, freeAt: 0, moment: null,
 };
 const placeOf = (scene) => SCENES[scene?.name] ?? DEFAULT;
 
@@ -128,7 +129,7 @@ function startScene(scene, s) {
   st.fired = new Set();
   st.conv = null;
   st.near = null;
-  st.status = st.label = null;
+  st.status = st.label = st.moment = null;
   st.clockTick = null;
   st.leaving = false;
   // The stage says 'scene' before its cut scene starts, so its mode isn't set yet: a cut scene, if it has one.
@@ -308,6 +309,18 @@ function statusCues(s) {
 }
 
 /**
+ * Something happening around her while she walks (the arena's matches, going on whether she watches or not):
+ * scene.moment(s) says what, as a key like 'BUZZER#42' that changes each time something new happens, and the place's
+ * moments (cues.js), found by the part before the #, play as it changes to one. A cut scene's beats have their own cues.
+ */
+function momentCues(s) {
+  const key = s.mode === 'cut' || s.frozen != null ? null : s.scene.moment?.(s) ?? null;
+  if (key === st.moment) return;
+  st.moment = key;
+  for (const [t, name, o] of (key && st.place.moments?.[key.split('#')[0]]) || []) cue(name, o ?? {}, chip.now() + t);
+}
+
+/**
  * A clock running down (the opening's, from Robin's call to the pick): scene.clock(s) is the seconds left, or null when
  * it isn't running. A soft tick every second, louder for the last few, higher still for the last three, and the time
  * running out. Not a tick as it comes up (or back, after a rewind): there's a sting for that already.
@@ -353,6 +366,7 @@ function frame(now, s) {
   autoSteps(s, now);
   beatCues(s, now);
   statusCues(s);
+  momentCues(s);
   clockCues(s);
   kit.pump();
 }

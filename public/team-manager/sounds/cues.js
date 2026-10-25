@@ -13,6 +13,9 @@
 // status (for a scene with no walking, whose phone status line says what's going on: the opening's pick): sounds for
 // when the status line changes to that text. clock: { last } ticks the scene's clock (scene.clock(s), the seconds left
 // while it runs): softly every second, louder for the last `last`, and the time running out (sound.js clockCues).
+// moments (for a scene where things happen around her as she walks: the arena's matches): sounds for when
+// scene.moment(s) changes to a key, found by the part before its # ('BUZZER#42' plays BUZZER's), so the same thing
+// happening again plays again (sound.js momentCues).
 
 import { PHONE_TIMES } from '../opening/phone.js';
 import { HANDOFF } from '../opening/handoff.js';
@@ -125,6 +128,22 @@ export const SCENES = {
       0: [card(0.35)],
       2: [[0, 'clunk'], [0.05, 'cheer', { size: 1 }], bed(0.05, 1.3, 0.4), bed(2.4, 1, 1.5)],
       4: [[0, 'chime']],
+    },
+    // The matches going on around her (arena/flow.js), with the field's own cues as a 2019 field played them: the
+    // cavalry charge at the start, three bells as the sandstorm ends, the alert at 30 seconds left and the train whistle
+    // at 20, the buzzer at the end; and the crowd for the big moments, the final score and each alliance as the emcee
+    // introduces it.
+    moments: {
+      START: [[0, 'charge'], [0.4, 'cheer', { size: 0.6 }], bed(0.4, 1.15, 0.4), bed(2.5, 0.9, 2)],
+      TELEOP: [[0, 'bells']],
+      ENDGAME: [[0, 'alert']],
+      WHISTLE: [[0, 'whistle']],
+      BUZZER: [[0, 'buzzer'], [0.2, 'cheer', { size: 0.8 }], bed(0.2, 1.2, 0.3), bed(3, 0.9, 2)],
+      FINAL: [[0.3, 'cheer', { size: 0.45 }]],
+      CLIMB: [[0, 'clunk'], [0.05, 'cheer', { size: 0.7 }]],
+      ROCKET: [[0.05, 'cheer', { size: 0.6 }]],
+      BLUE: [[0.7, 'cheer', { size: 0.55 }], [0.9, 'claps', { dur: 2, n: 26 }]],
+      RED: [[0.7, 'cheer', { size: 0.55 }], [0.9, 'claps', { dur: 2, n: 26 }]],
     },
   },
 

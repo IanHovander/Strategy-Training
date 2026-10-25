@@ -1,15 +1,16 @@
-// The arena's cut scene: 25 seconds, plus however long the words take to read. Saturday morning at the regional, a
-// qualification match on the field. The camera opens on the red end and pans the length of the field to the blue end,
-// where the strategist comes in from the pits.
-//   B0 open          the red end fades in under the place card: the scoring table with Gus behind it, the reset cart,
-//                    the red drive teams at their station, and past them the barrier with its gap and the EXIT sign,
-//                    the way out she'll take later; the match is already on, the crowd in the stands
-//   B1 down the field an eased pan from the red end most of the way along the field, past the red rocket and the red
-//                    elevator on its hatch runs and the cargo ship, to the blue rocket
-//   B2 level 3       the pan holds on the blue rocket as the blue elevator lifts a hatch panel to level 3, the red
-//                    defender in front of it, and the crowd gets to its feet; over the speakers, the announcer
-//   B3 to the queue  the crowd settles as the pan carries on to the blue end: the defender, the arm robot at the depot,
-//                    the blue HAB and station, and past them the queue, Priya with two robots on their carts
+// The arena's cut scene: 25 seconds, plus however long the words take to read. Saturday morning at the regional, match
+// 42 on the field (schedule.js plays it). The camera opens on the red end and pans the length of the field to the blue
+// end, where the strategist comes in from the pits.
+//   B0 open          the red end fades in under the place card: the scoring table with Gus behind it and the score on
+//                    its monitors, the reset cart, the red drive teams at their station, and past them the barrier with
+//                    its gap and the EXIT sign, the way out she'll take later; the match is under way, the crowd in the
+//                    stands
+//   B1 down the field an eased pan from the red end most of the way along the field, past the red rocket, the robots at
+//                    work and the cargo ship, to the blue rocket
+//   B2 level 3       the pan holds on the blue rocket as a blue robot puts a hatch panel on its level 3, and the crowd
+//                    gets to its feet; over the speakers, the announcer
+//   B3 to the queue  the crowd settles as the pan carries on to the blue end: the blue HAB and station, and past them the
+//                    queue, Priya with match 43's six robots on their carts
 //   B4 the call      Priya turns to the queue and calls the next two matches up
 //   B5 hand over     she turns back, the film bars go, and the strategist walks in from off the left edge (scene.enter)
 //
@@ -23,7 +24,7 @@
 // took its dur) either would jump every robot on the field back or on as the next beat starts. So this file keeps the
 // arena's time itself: each beat starts it where the beat before left it, and it runs on with the beat's own time. Two
 // beats bend that, so the level 3 hatch always goes on as the words call it, however the cut scene was hurried: B2
-// always starts at HOLD_AT (or later, never earlier), the moment DAY sets up for the blue elevator to reach level 3, and
+// always starts at HOLD_AT (or later, never earlier), half a second before the hatch goes on (schedule.js SEEN_AT), and
 // if A cut B1 short the camera cuts to the hold anyway, so the robots jumping on there is hidden by the cut; and B1, a
 // continuous pan, runs the arena's time from wherever B0 left it to exactly HOLD_AT at its end, a little faster if A
 // moved B0 on early, so nothing jumps on the way. A frozen ?at= frame, ?beat=N or a replay starts a beat fresh, at
@@ -38,6 +39,7 @@ import { W, C, lerp, seg } from '../pixel.js';
 import { placeCard, bars, cover } from '../stage.js';
 import { look, tones, skinBody, SKIN, HAIR } from '../cast.js';
 import { WORLD_W, FIELD } from '../field.js';
+import { SEEN_AT, highlight } from './schedule.js';
 
 // ---- The camera ----
 // Where the pan starts, holds and ends: the red end (the right edge of the world on the right of the screen); the blue
@@ -57,20 +59,20 @@ const pan = (from, to, t, dur) => Math.round(lerp(from, to, glide(seg(t, 0, dur)
 const HURRY = [4, 3];
 
 // ---- The field's clock ----
-/**
- * The arena's time as the cut scene opens. The blue elevator's hatch runs (field.js) take fourteen seconds there and
- * back, every other one to level 3: it gets there 21 seconds into the arena's day, which with DAY at 7 is half a second
- * into B2, the pan holding on it.
- */
-const DAY = 7;
 /** The beats that bend the clock (see the header): the pan down the field, and the hold on the level 3 hatch. */
 const DOWN = 1, LEVEL3 = 2;
+/** Seconds into B2 that the hatch goes on: the pan has held a moment by then. */
+const HATCH_IN = 0.5;
 
 // ---- The words ----
 /** The announcer, over the speakers. Not on the screen, so the phone shows him. */
 const ANNOUNCER = look('announcer', { ...skinBody('deep'), shirt: tones.black, print: C.yel1 }, 'curls', { ...SKIN.deep, ...HAIR.black });
-const CALL = [
-  ['A HATCH PANEL ON LEVEL 3 OF THE BLUE', 'ROCKET! LISTEN TO THIS CROWD!'],
+/**
+ * The announcer's call, read as B2 starts: the hatch match 42 has on the blue rocket (schedule.js highlight), level 3
+ * unless the simulation found none (then whichever level it has; with none at all, the play in general).
+ */
+const callOf = (level) => [
+  level ? [`A HATCH PANEL ON LEVEL ${level} OF THE BLUE`, 'ROCKET! LISTEN TO THIS CROWD!'] : ['WHAT A CYCLE AT THE BLUE ROCKET!', 'LISTEN TO THIS CROWD!'],
   // 2019's rule: one rocket full, all six hatch panels and all six cargo, is a ranking point in a qualification match.
   ['FILL ONE ROCKET, HATCHES AND CARGO,', 'AND THAT IS A RANKING POINT!'],
 ];
@@ -113,7 +115,7 @@ export function makeCutscene(drawWorld, { PEOPLE }) {
     // B2 level 3: the pan holds, the hatch goes on, the crowd's up, and the announcer has it.
     {
       dur: 2.4,
-      say: { name: 'ANNOUNCER', look: ANNOUNCER, at: 0.6, lines: CALL },
+      say: { name: 'ANNOUNCER', look: ANNOUNCER, at: 0.6, get lines() { return callOf(highlight().level); } },
       draw(g, t, c) {
         drawWorld(g, HOLD, c.T, { cheer: CHEER * seg(t, 0.3, 1.1) });
         bars(1);
@@ -154,6 +156,8 @@ export function makeCutscene(drawWorld, { PEOPLE }) {
   // frame, begin and since the arena's time and the cut scene's own as it started, and day, elapsed and page the arena's,
   // the cut scene's and the page's times on that frame.
   const offsets = beats.map((_, i) => beats.slice(0, i).reduce((n, b) => n + b.dur, 0));
+  // The arena's time as the cut scene opens: so that, with every beat taking its dur, the hatch goes on HATCH_IN into B2.
+  const DAY = SEEN_AT - HATCH_IN - offsets[LEVEL3];
   const HOLD_AT = DAY + offsets[LEVEL3];
   let now = -1, begin = DAY, since = 0, day = null, elapsed = 0, page = 0;
   const clocked = beats.map((b, i) => ({
