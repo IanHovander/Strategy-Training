@@ -77,7 +77,7 @@ export function makeFloor() {
     for (const bx of shipBays(a)) rect(bx, floorY(SHIP.z1), 1, 1.5 * DEEP, C.tape);
     for (const z of FRONT_Z) rect(mirrorX(a, SHIP.x0 - 1.5 * FT, 1.5 * FT), floorY(z), 1.5 * FT, 1, C.tape);
     // Cargo depots beside the HAB: a low bin of balls on each side of it.
-    for (const z of DEPOT_Z) depot(a, z, 6);
+    for (const z of DEPOT_Z) depot(a, z, DEPOT_FULL);
   }
   // The queue lane past the blue end, taped out on the concrete.
   for (const y of [QUEUE_LANE.y0, QUEUE_LANE.y1]) {
@@ -88,10 +88,12 @@ export function makeFloor() {
 }
 
 /**
- * A cargo depot: the low bin at depth z, with `balls` of its six showing (each one there is two cargo, full it's twelve).
+ * A cargo depot: the low bin at depth z, with `balls` of its six showing (full, it holds six cargo: the 2019 manual, 5.1.1).
  * cover: drawn again over the floor's full one (a live match), so the carpet goes back where a ball's gone.
  */
 const DEPOT_Z = [4.6, 20.6];
+/** Cargo in a full depot (match/sim.js's DEPOT_CARGO). */
+const DEPOT_FULL = 6;
 function depot(alliance, z, balls, cover = false) {
   const x = mirrorX(alliance, FIELD.x0, 3.5 * FT);
   const top = floorY(z), bottom = floorY(z + 1.8);
@@ -790,7 +792,7 @@ function liveParts(live) {
   return [
     ...live.bots,
     ...['blue', 'red'].flatMap((a) => DEPOT_Z.map((z, i) => ({
-      y: floorY(z), draw: () => depot(a, z, Math.ceil((live.fill[a].depots?.[i] ?? 12) / 2), true),
+      y: floorY(z), draw: () => depot(a, z, live.fill[a].depots?.[i] ?? DEPOT_FULL, true),
     }))),
     ...(live.loose ?? []).map((p) => ({ y: p.y, draw: () => loosePiece(p) })),
     // The near wall's rockets: faint, in front of the cargo ship but behind the robots working along its near side, so

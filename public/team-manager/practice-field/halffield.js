@@ -361,10 +361,10 @@ function cargoShip() {
   }
   SHIP_BAYS.forEach((cx, i) => {
     const [hasCargo, hasHatch] = SHIP_FILL.near[i], port = yFloor - 12;
-    // The cargo opening, above its lip at 31 inches; a ball shows over the lip if one's in.
+    // The cargo opening, above its lip at 31 inches. A ball in the bay sits low behind its hatch (hatchFaceOn shows it
+    // through the panel), not up in the opening.
     rect(cx - 5, yFloor - 31, 10, 10, C.ink);
     rect(cx - 4, yFloor - 30, 8, 8, HOLE);
-    if (hasCargo) cargo(cx, yFloor - 24, 3);
     rect(cx - 5, yFloor - 21, 10, 1, WOOD[2]);
     if (hasHatch) hatchFaceOn(cx, port, hasCargo);
     else velcroPort(cx, port);
