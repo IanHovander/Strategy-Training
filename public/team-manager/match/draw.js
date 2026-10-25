@@ -1,10 +1,12 @@
 // A simulated match drawn on the arena's field (field.js), with the stands behind it (bleachers.js): the robots where
 // the simulation puts them, every piece moving from a robot to its port (and cargo on inside, rolling to its side of a
-// rocket or dropping into a bay) at the moment it scores, the scoreboard ticking as it does. animate.js says what's where at time t; this turns it into pixels, 256x144, in world pixels through
-// pixel.js's camera like everything else on the field.
+// rocket or dropping into a bay) at the moment it scores, the scoreboard ticking as it does; cargo with no hatch panel
+// to keep it in rolling back out onto the carpet; the sandstorm's shutters down over the driver stations until 0:15.
+// animate.js says what's where at time t; this turns it into pixels, 256x144, in world pixels through pixel.js's camera
+// like everything else on the field.
 //
-//   liveOf(frame, o)            what drawFieldLive's live option takes: { bots, fill, loose }. o.mark: a robot's
-//                               number to point out (the one the camera follows)
+//   liveOf(frame, o)            what drawFieldLive's live option takes: { bots, fill, loose, rollouts, sandstorm }.
+//                               o.mark: a robot's number to point out (the one the camera follows)
 //   drawMatch(g, show, t, o)    the whole picture: floor, stands, field, robots, the scoreboard. o: camX (world
 //                               pixels), mark, cheer (0 to 1), label (under the scoreboard), board (false: no
 //                               scoreboard). Returns the frame it drew.
@@ -151,7 +153,25 @@ export function liveOf(frame, o = {}) {
   // Pieces on the floor: dropped ones land as their hand-off ends.
   const loose = frame.loose.map((d) => ({ x: Math.round(wx(d.x)), y: Math.round(floorY(d.z)), piece: d.piece }));
   const inside = frame.robots.filter((p) => p.handoff?.inside != null).map((p) => ({ alliance: p.alliance, slot: p.handoff.to, k: p.handoff.inside }));
-  return { bots, fill: fieldFill(frame.slots, frame.depots, inside), loose };
+  return { bots, fill: fieldFill(frame.slots, frame.depots, inside), loose, rollouts: rolloutsOf(frame), sandstorm: frame.blinds };
+}
+
+/**
+ * Seconds a rocket's cargo takes to clear its open hatch once it's rolled down to its side: the ramp carries it straight
+ * on out, without stopping (the simulation's tOut leaves it longer, but only says when it's out).
+ */
+const CLEAR = 0.12;
+/**
+ * Cargo rolling back out (frame.rolling) as field.js's live.rollouts: from the moment it gets to its bay (a rocket's
+ * just after it's rolled in from the port, as a scored one does: the hand-off draws that), out through the hatch, to
+ * where the simulation has it come to rest.
+ */
+function rolloutsOf(frame) {
+  return frame.rolling.map((d) => ({
+    alliance: d.alliance, struct: d.struct,
+    ...(d.struct === 'rocket' ? { rocket: d.rocket === 'f' ? 'far' : 'near', level: d.level, face: d.side === 'h' ? 'home' : 'away' } : { bay: d.bay }),
+    at: d.at, out: d.struct === 'rocket' ? CLEAR : d.tOut - d.tIn, end: d.t - d.tIn, to: { x: wx(d.x), y: floorY(d.z) },
+  }));
 }
 
 // ---- The scoreboard ----

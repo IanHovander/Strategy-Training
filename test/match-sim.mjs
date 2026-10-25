@@ -300,6 +300,20 @@ if (why.length) console.log(why.slice(0, 10).join('\n'));
   check(start.robots.every((p) => p.up > 0), 'at the start every robot is up on its HAB');
   const t = 60, f = frameAt(show, t);
   check(f.robots.every((p) => Number.isFinite(p.x) && Number.isFinite(p.z) && (p.face === 1 || p.face === -1)), 'every robot has a place and a facing in every frame');
+  // Cargo rolling back out of a rocket or the cargo ship: on its way from its bay till it comes to rest, then loose.
+  let ways = true, rolled = 0;
+  for (let s = 1; s <= 30; s++) {
+    const q = simulate(qualMatch(s, s % 10)), qs = makeShow(q);
+    for (const d of q.drops.filter((x) => x.why === 'rolled out')) {
+      rolled++;
+      const going = (at) => frameAt(qs, at).rolling.some((r) => r.alliance === d.alliance && r.slot === d.slot && r.tIn === d.tIn);
+      const lying = (at) => frameAt(qs, at).loose.some((p) => p.x === d.x && p.z === d.z);
+      if (!going(d.tIn) || !going(d.t - 0.01) || going(d.t) || lying(d.t - 0.01) || !lying(d.t)) ways = false;
+    }
+  }
+  check(ways && rolled > 0, `cargo rolling back out is on its way from its bay till it comes to rest, then lies loose (${rolled} of them)`);
+  const blinds = [14.99, 16, 17].map((at) => frameAt(show, at).blinds);
+  check(blinds[0] === 1 && blinds[1] > 0 && blinds[1] < 1 && blinds[2] === 0, "the sandstorm's shutters are down till 0:15 and up two seconds later");
 }
 
 // ---- Calibration: each team's average near its story's ----
