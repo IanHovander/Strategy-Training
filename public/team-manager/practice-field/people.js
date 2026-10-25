@@ -20,7 +20,7 @@
 import { C, rect } from '../pixel.js';
 import { hatch } from '../sprites.js';
 import { HERO_LOOK } from '../walker.js';
-import { look, student, skinBody, SKIN, HAIR, HEADS, tones, MERCH, TEAMMATE_NAME } from '../cast.js';
+import { look, student, skinBody, SKIN, HAIR, tones, MERCH, TEAMMATE_NAME } from '../cast.js';
 import { TEAMMATE_LOOK } from '../teammate.js';
 import { drawPerson, drawWithShadow, along } from '../stage.js';
 import { SPOTS } from './layout.js';
@@ -32,19 +32,8 @@ const hoodie = (l, badge = TEAMMATE_LOOK.badge) => ({ ...l, hoodie: true, sleeve
 /** A mentor's polo in teal, a mid tone that holds against the cafeteria's dim wall and floor, and isn't the students'
  *  red. Shade, mid, lit. */
 const POLO = ['#16525a', '#1f7f86', '#47b3b0'];
-/** Jalen: the cap head, with a plainer face from the front. cast.js's cap head has slanted two-row brows over close-set
- *  eyes and a grin with teeth; in his near-black hair the brows run into his eyes and read as an X, and in any colour,
- *  at the close-ups' zoom, they squint and grimace. From the front this one has no brows (skin under the brim), the
- *  same two-pixel eyes, and the small closed smile of the other front heads. (From the side and behind, the head is
- *  cast.js's.) The seated scout has the cap head too, and the same face, the only way she's seen. */
+/** Jalen: the cap head (cast.js), in his near-black hair under a red cap. */
 const JALEN = look('pf-jalen', { ...skinBody('brown'), ...MERCH.tee }, 'cap', { ...SKIN.brown, ...HAIR.black, c: '#d3212f', C: '#ff6a55', D: '#6b0f1b' });
-const CAP_FRONT = HEADS.cap.map((row, j) => {
-  if (j === 7) return '..khsssssssshk..'; // was the brows' upper row
-  if (j === 8) return '..kssssssssssk..'; // and their lower row
-  if (j === 11) return '..ksssdMMdsssk..'; // a small smile, no teeth
-  return row;
-});
-const capFront = (l) => ({ ...l, heads: { ...l.heads, s: CAP_FRONT, se: CAP_FRONT, sw: CAP_FRONT } });
 
 /** Everyone's look, by id. The drive gait's pad is whatever they hold: the drivers' controllers and Noor's tablet. Ms.
  *  Okafor's is in her skin's tones, so it reads as her two hands together, and her stopwatch is drawn over them. */
@@ -53,7 +42,7 @@ export const LOOKS = {
   okafor: look('pf-okafor', { ...skinBody('deep'), shirt: POLO, print: '#d3212f', jeans: tones.khaki, cuff: tones.khaki, pad: skinBody('deep').skin },
     'bun', { ...SKIN.deep, ...HAIR.black }),
   teammate: TEAMMATE_LOOK,
-  jalen: capFront(JALEN),
+  jalen: JALEN,
   mei: hoodie(look('pf-mei', { ...skinBody('light'), ...MERCH.hoodie }, 'bob', { ...SKIN.light, ...HAIR.black, r: HAIR.black.h, R: HAIR.black.H })),
   ines: student(3, 'hoodie'),
   noor: look('pf-noor', { ...skinBody('tan'), ...MERCH.tee, jeans: tones.black, cuff: tones.black, pad: ['#232838', '#3f4761', '#a8d2ff'] },
@@ -70,7 +59,7 @@ export const LOOKS = {
   // The crowd's fifth student in the team tee, in safety glasses like Kai's: he's the one who goes out on the carpet
   // beside the robot every rep.
   reset: look('pf-reset', { ...skinBody('brown'), ...MERCH.tee }, 'glasses', { ...SKIN.brown, ...HAIR.chestnut, q: '#a8d2ff' }),
-  scout: { ...capFront(student(2, 'tee')), id: 'pf-scout' },
+  scout: { ...student(2, 'tee'), id: 'pf-scout' },
   hero: HERO_LOOK,
 };
 

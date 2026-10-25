@@ -53,12 +53,12 @@ const PHONES = HEADS.curls.map((row, y) => ({
   2: '.khPPPPPPpppphk.',
   3: 'khPhhhhhhhhhhphk',
   4: 'kgPhhhhhhhhhhpgk',
-  5: 'kkkksssssssskkkk',
-  6: 'kPpkshgssghskpok',
-  7: 'kPpksggssggskpok',
-  8: 'kPpksEEssEEskpok',
-  9: 'kppkessdsseskook',
-  10: 'kkkksMTTTMsskkkk',
+  5: 'kkkksssssssdkkkk',
+  6: 'kPpksssssssdkpok',
+  7: 'kPpkssEssEsdkpok',
+  8: 'kPpkssEssEsdkpok',
+  9: 'kppkssssdssdkook',
+  10: 'kkkkssmMMmsdkkkk',
 }[y] ?? row));
 const PLASTIC = { P: tones.shirtWhite[2], p: tones.shirtWhite[1], o: tones.shirtWhite[0] };
 
