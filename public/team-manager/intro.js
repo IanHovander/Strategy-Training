@@ -6,7 +6,8 @@
 //   5 clash     the hit, a spin move, then a sprint to the endgame
 //   6 hab       a level 3 climb that beats the buzzer
 //   7 win       final score, the team, and the blue banner going up
-// then the title screen loops. Every frame is drawn from the music clock, so cuts land on the beat.
+// then the title screen loops, the song fading down under it (LEVEL). Every frame is drawn from the music clock, so cuts
+// land on the beat.
 // It can also play over a recorded song (songs.js): <canvas data-song="compete-to-win-3">, or ?song=... to pick
 // another (?song=chip for the chiptune). If the song file can't be loaded, it falls back to the chiptune.
 // URL options for testing: ?at=SECONDS (freeze that frame), ?title (start at the title), ?mute.
@@ -21,6 +22,8 @@ import {
 } from './sprites.js';
 import { Chip, Player, BEAT, INTRO_BEATS } from './chip.js';
 import { SONGS } from './songs.js';
+import { beam } from './lights.js';
+import { NAME_MAX, cleanName, savedName, saveName } from './player.js';
 import { drawHero, heroIdle } from './hero.js';
 
 // The working title. Change it here; the logo is sized from the text.
@@ -136,17 +139,6 @@ function confetti(b, b0, n = 80) {
     fill(x, y, flip ? 2 : 1, flip ? 1 : 2, cols[i % cols.length]);
   }
 }
-/** A spotlight cone from (x, y), in screen space. */
-function beam(x, y, angle, spread, a, c = '#cfe0ff') {
-  withAlpha(a, () => {
-    g.fillStyle = c;
-    g.beginPath();
-    g.moveTo(x, y);
-    g.lineTo(x + Math.sin(angle - spread) * 320, y + Math.cos(angle - spread) * 320);
-    g.lineTo(x + Math.sin(angle + spread) * 320, y + Math.cos(angle + spread) * 320);
-    g.fill();
-  });
-}
 function rays(cx, cy, turn, a, c) {
   withAlpha(a, () => {
     g.fillStyle = c;
@@ -238,12 +230,18 @@ function shotLogo(b, B) {
   cover(seg(b, 6.4, 8));
 }
 
+/**
+ * The rocket as the hero finds it: hatch panels on both faces of levels 1 and 2, cargo in both of level 1's bays and in
+ * the bay behind level 2's left panel (cargo only stays behind a hatch panel), level 3 empty for the hero's hatch.
+ */
+const ROCKET_FILL = { home: [1, 1, 0], away: [1, 1, 0], cargo: [[1, 1], [1, 0], 0] };
+
 function shotRocket(b, B) {
   const look = 240 * (1 - easeInOut(seg(b, 0, 4.5)));
   camera(0, -116 - look, 1);
   sky(SKY, Math.min(144, look * 0.6), B);
   arena(crowd(B), CARPET);
-  rocket(150, { hatches: [1, 1, 0], cargo: [1, 1, 0] });
+  rocket(150, ROCKET_FILL);
   const xAt = (t) => lerp(-40, 130, easeOut(seg(t, 3.4, 5.4)));
   const x = xAt(b), speed = 1 - seg(b, 3.4, 5.2);
   if (b > 3.4) {
@@ -268,7 +266,7 @@ function shotLift(b, B) {
   arena(crowd(B), CARPET);
   // The lower ports light up in turn after the hatch lands; level 3 stays steady (no light, no twinkle) into the cut.
   const lights = [b > 4.5, b > 4.75, false];
-  rocket(150, { hatches: [1, 1, placed], cargo: [1, 1, 0], lights });
+  rocket(150, { ...ROCKET_FILL, home: [1, 1, placed], lights });
   eleBot(130, 0, { e1, e2, hatch: !placed, reach, rsl: rslOn(B) });
   const port = ROCKET_LEVELS[2];
   sparks(148, port, b, 4, 12, 26, 0.9, 3);
@@ -287,7 +285,7 @@ function shotPan(b, B) {
     camera(px, -116, 1);
     sky(SKY, 0, B);
     arena(crowd(B), CARPET);
-    rocket(150, { hatches: [1, 1, 1], cargo: [1, 1, 0], lights: [1, 1, 1] });
+    rocket(150, { ...ROCKET_FILL, home: [1, 1, 1], lights: [1, 1, 1] });
     eleBot(130, 0, { e1: 1 - easeInOut(seg(b, 0.3, 1)), e2: 1 - easeInOut(seg(b, 0, 0.6)), rsl: rslOn(B) });
     const rev = b > 2.6 && Math.floor(B * 10) % 2 ? -1 : 0;
     if (b > 2.6) dust(() => 490, -2, b, 2.6, 4, 7, 1, 0.8);
@@ -402,7 +400,7 @@ function shotHab(b, B, info) {
   const working = (b > 1 && b < 3) || (b > 3.75 && b < 4.5) || (b > 6 && b < 6.75);
   const jit = working && Math.floor(B * 16) % 2 ? 0.5 : 0;
   const done = b >= 8;
-  const camX = lerp(30, 88, easeOut(seg(b, 0, 1.2)));
+  const camX = lerp(30, 94, easeOut(seg(b, 0, 1.2)));
   const camY = lerp(-64, -72, easeInOut(seg(b, 1, 3)));
   camera(camX, camY, 2, plus(shake(b, 8, 0.5, 2), shake(b, 8.5, 0.4, 3)));
   sky(SKY, 30, B);
@@ -449,8 +447,8 @@ function shotWin(b, B) {
     const k = Math.floor(B * 3 + i * 0.37);
     if (rnd(k * 7 + i) > 0.6) sparkle(Math.round(rnd(k + i) * 140), Math.round(-80 + rnd(k * 3 + i) * 50), 1, C.white);
   }
-  beam(30, 0, 0.5 + Math.sin(B * 0.8) * 0.35, 0.09, 0.12);
-  beam(226, 0, -0.5 - Math.sin(B * 0.8 + 1) * 0.35, 0.09, 0.12);
+  beam(g, 30, 0, 0.5 + Math.sin(B * 0.8) * 0.35, 0.09, 0.12);
+  beam(g, 226, 0, -0.5 - Math.sin(B * 0.8 + 1) * 0.35, 0.09, 0.12);
   if (b > 6.4) rays(Math.round((68 - 4) * 2), Math.round((-68 - camY) * 2), B * 0.15, 0.16 * seg(b, 6.4, 7.2), C.blue2);
   if (holding) banner(46, -96 + rise, { wave: B * 2, sheen: b > 8 && b < 9.2 ? seg(b, 8, 9.2) : null });
   const team = [
@@ -564,8 +562,8 @@ function drawTitle(t, B) {
     for (let i = 0; i < 10; i++) fill(Math.round(x + i * 3), Math.round(y - i * 0.75), 1, 1, i < 3 ? C.white : C.blue3);
   }
   // Spotlights behind the logo.
-  beam(40, -10, 0.25 + Math.sin(B * 0.5) * 0.3, 0.08, 0.07);
-  beam(216, -10, -0.25 - Math.sin(B * 0.5 + 2) * 0.3, 0.08, 0.07);
+  beam(g, 40, -10, 0.25 + Math.sin(B * 0.5) * 0.3, 0.08, 0.07);
+  beam(g, 216, -10, -0.25 - Math.sin(B * 0.5 + 2) * 0.3, 0.08, 0.07);
   // Stage.
   fill(0, 132, W, 12, C.carpet0);
   fill(0, 132, W, 1, C.carpet2);
@@ -605,9 +603,8 @@ function drawTitle(t, B) {
   cover(1 - seg(t, 0, 0.6), C.white);
 }
 
-// ---- Menu (the game itself starts here later) ----
+// ---- Menu: NEW SEASON asks your name, then starts the game (play.html, every scene so far in turn) ----
 const MENU = ['NEW SEASON', 'REPLAY INTRO'];
-const DIALOG = ['KICKOFF IS COMING SOON!', 'THIS IS WHERE YOUR SEASON STARTS.'];
 function box(x, y, w, h) {
   fill(x, y, w, h, C.ink);
   fill(x + 2, y + 2, w - 4, h - 4, '#f4f6ff');
@@ -620,18 +617,63 @@ function drawMenu(now) {
   box(6, 6, 104, 40);
   MENU.forEach((label, i) => {
     text(label, 24, 15 + i * 14, { color: C.ink });
-    if (i === ui.cursor && (!ui.dialog || Math.floor(now * 2) % 2)) text('>', 14, 15 + i * 14, { color: C.ink });
+    if (i === ui.cursor && (!ui.leaving || Math.floor(now * 8) % 2)) text('>', 14, 15 + i * 14, { color: C.ink });
   });
-  if (ui.dialog) {
-    box(6, 98, 244, 40);
-    const n = Math.floor((now - ui.dialog) * 30);
-    let left = n;
-    DIALOG.forEach((line, i) => {
-      text(line, 16, 108 + i * 12, { color: C.ink, upto: Math.max(0, left) });
-      left -= line.length;
-    });
-    if (left > 0 && Math.floor(now * 2.5) % 2) text('#', 236, 126, { color: C.ink });
+}
+
+// ---- Your name ----
+// It goes on the strategist's name tag all season (player.js keeps it). Typed on the keyboard, or on a phone's own: a
+// text box no one sees takes the typing, so the phone's keyboard comes up, and the screen draws what's in it.
+const nameInput = Object.assign(document.createElement('input'), { type: 'text', maxLength: NAME_MAX, autocomplete: 'off', spellcheck: false });
+nameInput.setAttribute('aria-label', 'Your name');
+nameInput.setAttribute('autocapitalize', 'characters');
+nameInput.setAttribute('enterkeyhint', 'done');
+nameInput.style.cssText = 'position:fixed;left:50%;top:30%;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;pointer-events:none';
+document.body.append(nameInput);
+/** The name changing: a blip for a letter in, a lower one for a letter out, nothing if it didn't change. */
+function setName(name) {
+  if (name.length !== ui.name.length) chip.sfx(name.length > ui.name.length ? 'key' : 'erase');
+  ui.name = nameInput.value = name;
+}
+nameInput.addEventListener('input', () => setName(cleanName(nameInput.value)));
+const NAME_BUTTONS = { back: [52, 102, 64, 20], ok: [140, 102, 64, 20] };
+const inside = ([x, y, w, h], px, py) => px >= x && px < x + w && py >= y && py < y + h;
+
+function askName() {
+  ui.state = 'name';
+  ui.name = nameInput.value = savedName();
+  nameInput.focus();
+}
+function confirmName() {
+  const name = ui.name.trim();
+  if (!name) return chip.sfx('cursor');
+  saveName(name);
+  chip.sfx('select');
+  ui.leaving = true;
+  nameInput.blur();
+  setTimeout(() => location.assign(`./play.html?name=${encodeURIComponent(name)}`), 450);
+}
+function drawName(now) {
+  screen();
+  fill(0, 0, W, H, '#f4f6ff');
+  box(6, 6, 244, 132);
+  text('NEW SEASON', 128, 18, { align: 'center', color: C.ink });
+  text("WHAT'S YOUR NAME?", 128, 40, { align: 'center', color: C.ink });
+  // The name, in a field with a blinking cursor where the next letter goes.
+  fill(70, 56, 116, 20, C.ink);
+  fill(71, 57, 114, 18, C.white);
+  text(ui.name, 78, 62, { color: C.ink });
+  if (ui.name.length < NAME_MAX && Math.floor(now * 2.5) % 2) fill(78 + measure(ui.name) + (ui.name ? 1 : 0), 69, 5, 1, C.ink);
+  text('IT GOES ON YOUR NAME TAG ALL SEASON.', 128, 84, { font: 3, align: 'center', color: C.steel1 });
+  for (const [key, label] of [['back', 'BACK'], ['ok', 'OK']]) {
+    const [x, y, w, h] = NAME_BUTTONS[key], dim = key === 'ok' && !ui.name.trim();
+    fill(x, y, w, h, C.ink);
+    fill(x + 1, y + 1, w - 2, h - 2, dim ? '#c9cfe6' : key === 'ok' ? C.blue1 : C.white);
+    if (!dim && key === 'ok') fill(x + 1, y + 1, w - 2, 1, C.blue2);
+    const blink = key === 'ok' && ui.leaving && Math.floor(now * 8) % 2;
+    if (!blink) text(label, x + w / 2, y + 7, { align: 'center', color: key === 'ok' && !dim ? C.white : C.ink });
   }
+  text('ENTER: OK   ESC: BACK', 128, 128, { font: 3, align: 'center', color: C.steel2 });
 }
 
 function drawBoot(now) {
@@ -648,7 +690,13 @@ function drawBoot(now) {
 
 // ---- Clock, input and the loop ----
 const chip = new Chip();
-chip.muted = params.has('mute');
+// Sound off is remembered in this browser, for the game too (sound.js keeps the same setting).
+const MUTED = 'bluebanner.muted';
+try {
+  chip.muted = params.has('mute') || localStorage.getItem(MUTED) === '1';
+} catch {
+  chip.muted = params.has('mute');
+}
 
 // ---- Soundtracks. Both count time in seconds from the start of the intro. ----
 
@@ -674,6 +722,14 @@ class ChipTrack {
     this.player.pump();
   }
 }
+
+/**
+ * The song's level: full under the intro, then down under the title screen, where it plays on while you read the menu
+ * and type your name, and where the game that follows is far quieter. It fades a couple of beats after the logo drops
+ * (from titleAt + fadeAt, over fadeFor seconds); a song started at the title (skipped to, ?title, or the sound only
+ * waking there) starts down. title: 0.3 of 0.9 is about 9.5 dB down.
+ */
+const LEVEL = { intro: 0.9, title: 0.3, fadeAt: 1, fadeFor: 3 };
 
 /** A recorded song: plays once up to the end of its title loop, then repeats the loop with a short crossfade. */
 class SongTrack {
@@ -706,7 +762,14 @@ class SongTrack {
     const ac = chip.ac;
     this.t0 = ac.currentTime + 0.03 - t;
     this.out = ac.createGain();
-    this.out.gain.value = 0.9;
+    const level = this.out.gain, fade = this.t0 + this.titleAt + LEVEL.fadeAt;
+    // playFrom(titleAt) lands a frame or so short of it, hence the second's leeway.
+    if (t > this.titleAt - 1) level.value = LEVEL.title;
+    else {
+      level.setValueAtTime(LEVEL.intro, ac.currentTime);
+      level.setValueAtTime(LEVEL.intro, fade);
+      level.linearRampToValueAtTime(LEVEL.title, fade + LEVEL.fadeFor);
+    }
     this.out.connect(chip.direct);
     this.queued = Math.max(0, t); // song time up to which audio is scheduled
     this.sfxFrom = t;
@@ -749,8 +812,14 @@ class SongTrack {
   }
   stop() {
     if (!this.out) return;
-    const out = this.out;
-    out.gain.setTargetAtTime(0, chip.ac.currentTime, 0.02);
+    const out = this.out, level = out.gain, now = chip.ac.currentTime;
+    // Hold where the title fade has got to, so its ramp doesn't carry on under the fade out.
+    if (level.cancelAndHoldAtTime) level.cancelAndHoldAtTime(now);
+    else {
+      level.cancelScheduledValues(now);
+      level.setValueAtTime(level.value, now);
+    }
+    level.setTargetAtTime(0, now, 0.02);
     const old = this.playing;
     setTimeout(() => {
       for (const s of old) {
@@ -768,7 +837,7 @@ class SongTrack {
 }
 
 let track = SONG ? new SongTrack(SONG) : new ChipTrack();
-const ui = { state: 'boot', cursor: 0, dialog: 0, woke: false, pending: false };
+const ui = { state: 'boot', cursor: 0, leaving: false, woke: false, pending: false, name: '' };
 // The picture always runs on its own clock. The music joins it at the current moment as soon as the audio is
 // actually running, which on some phones is only after a later tap, or again after the phone interrupted it.
 const clock = { perf0: 0, audio: false };
@@ -798,7 +867,6 @@ function begin() {
 }
 
 function press(key) {
-  const now = perfNow();
   if (ui.state === 'boot') {
     // The tap unlocks the audio now; a song still loading starts as soon as it's ready.
     chip.start();
@@ -821,9 +889,12 @@ function press(key) {
     }
     return;
   }
-  if (ui.dialog) {
-    if (key === 'a' || key === 'b') {
-      ui.dialog = 0;
+  if (ui.leaving) return;
+  if (ui.state === 'name') {
+    if (key === 'start') confirmName();
+    else if (key === 'b') {
+      ui.state = 'menu';
+      nameInput.blur();
       chip.sfx('cursor');
     }
     return;
@@ -835,7 +906,7 @@ function press(key) {
     ui.state = 'play';
   } else if (key === 'a' || key === 'start') {
     chip.sfx('select');
-    if (ui.cursor === 0) ui.dialog = now;
+    if (ui.cursor === 0) askName();
     else {
       ui.state = 'play';
       playFrom(0);
@@ -849,6 +920,20 @@ const KEYS = {
 };
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // Typing a name: Enter and Esc are OK and BACK, and the rest goes to the name (the text box takes it when it has the
+  // focus; otherwise it's typed in here).
+  if (ui.state === 'name') {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      if (!e.repeat) press(e.key === 'Enter' ? 'start' : 'b');
+    } else if (document.activeElement !== nameInput && !ui.leaving) {
+      if (e.key === 'Backspace') setName(ui.name.slice(0, -1));
+      else if (e.key.length === 1) setName(cleanName(ui.name + e.key));
+      else return;
+      e.preventDefault();
+    }
+    return;
+  }
   if (e.code === 'KeyM') return toggleMute();
   // Named keys map to buttons; any other letter or digit counts as A. Tab, Shift and the like are left alone.
   const key = KEYS[e.code] ?? (e.key.length === 1 ? 'a' : null);
@@ -860,7 +945,13 @@ window.addEventListener('keydown', (e) => {
 canvas.addEventListener('click', (e) => {
   const r = canvas.getBoundingClientRect();
   const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
-  if (ui.state === 'menu' && !ui.dialog && x < 110 && y > 8 && y < 44) {
+  if (ui.state === 'name') {
+    if (inside(NAME_BUTTONS.ok, x, y)) press('start');
+    else if (inside(NAME_BUTTONS.back, x, y)) press('b');
+    else nameInput.focus(); // a tap anywhere else brings the phone's keyboard back up
+    return;
+  }
+  if (ui.state === 'menu' && x < 110 && y > 8 && y < 44) {
     const i = y < 26 ? 0 : 1;
     if (i !== ui.cursor) ui.cursor = i;
     return press('a');
@@ -875,6 +966,11 @@ const muteButton = document.getElementById('mute');
 const locked = () => chip.ready && !chip.running && !chip.muted;
 function toggleMute() {
   chip.setMuted(!chip.muted);
+  try {
+    localStorage.setItem(MUTED, chip.muted ? '1' : '0');
+  } catch {
+    // Storage blocked: it lasts the visit.
+  }
   muteButton?.setAttribute('aria-pressed', String(chip.muted));
 }
 muteButton?.addEventListener('click', (e) => {
@@ -887,6 +983,7 @@ function updateMuteLabel() {
   if (!muteButton) return;
   const label = chip.muted ? 'Sound off' : locked() ? 'Tap for sound' : 'Sound on';
   if (muteButton.textContent !== label) muteButton.textContent = label;
+  if (muteButton.getAttribute('aria-pressed') !== String(chip.muted)) muteButton.setAttribute('aria-pressed', String(chip.muted));
 }
 
 function render() {
@@ -903,6 +1000,7 @@ function render() {
   const t = timeNow();
   if (clock.audio) track.pump();
   if (ui.state === 'menu') return drawMenu(now);
+  if (ui.state === 'name') return drawName(now);
   if (t < 0) {
     screen();
     return fill(0, 0, W, H, C.ink);

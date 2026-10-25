@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Match Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+<style>
+  .controls { display: grid; gap: 8px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .row .label { min-width: 7ch; }
+  .controls button, .plan select, .presets button {
+    font: 9px/1.3 var(--pixel); color: var(--text); background: var(--button); border: 2px solid var(--line); border-radius: 2px;
+    padding: 8px 10px; min-height: 34px; cursor: pointer; touch-action: manipulation;
+  }
+  .controls button:hover, .presets button:hover { border-color: var(--blue); }
+  .controls button:focus-visible, .plan select:focus-visible, .presets button:focus-visible, #scrub:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .controls button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+  #play { min-width: 10ch; background: var(--red); border-color: #ff6a55; color: #fff; }
+  .chip.blue { border-color: #4a90ff; } .chip.red { border-color: #ff5b4d; }
+  #scrub { flex: 1; min-width: 160px; accent-color: var(--gold); }
+  #clock { font: 9px/1 var(--pixel); color: var(--muted); min-width: 9ch; text-align: right; }
+  #screen { cursor: grab; touch-action: pan-y; }
+  #screen.dragging { cursor: grabbing; }
+  .result { font-size: 14px; color: var(--muted); margin: 0; }
+  .result b { color: var(--text); }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .split { grid-template-columns: minmax(0, 1fr); } }
+  .log { position: relative; margin: 0; padding: 0; list-style: none; max-height: 260px; overflow: auto; font-size: 13px; line-height: 1.5; border: 2px solid var(--ink); background: var(--well); }
+  .log li { padding: 2px 8px; color: #59628e; cursor: pointer; display: grid; grid-template-columns: 4.5ch 5ch minmax(0, 1fr); gap: 8px; }
+  .log li.past { color: var(--muted); }
+  .log li.past.blue b { color: #8fbcff; } .log li.past.red b { color: #ff9b8e; }
+  .log li.now { background: #1b2350; color: var(--text); }
+  .log li.score.past span:last-child { color: var(--text); }
+  .log li:hover { background: #141c44; }
+  .log time { font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 8px/1.6 var(--pixel); color: var(--muted); font-weight: 400; }
+  td.num { font: 10px/1.6 var(--pixel); }
+  td.blue { color: #8fbcff; } td.red { color: #ff9b8e; }
+  .plan { display: grid; gap: 14px; }
+  .plan fieldset { border: 2px solid var(--line); border-radius: 4px; padding: 10px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+  .plan legend { font: 10px/1.6 var(--pixel); padding: 0 6px; }
+  .plan .blue legend { color: #8fbcff; } .plan .red legend { color: #ff9b8e; }
+  .bot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .bot select { padding: 6px; min-height: 30px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sheetwrap { overflow-x: auto; }
+  dl { margin: 0; display: grid; gap: 10px; max-width: 72ch; }
+  dt { font: 10px/1.6 var(--pixel); color: var(--gold); }
+  dd { margin: 0; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: match lab</h1>
+  <p class="intro">A real 2019 match, simulated and played out on the arena's field. Six robots, each with its own abilities and its alliance's plan for it, drive the field for two and a half minutes, and the score is only ever what you see go in: each hatch and each ball lands in its port at the moment the scoreboard ticks. Watch a robot miss, a defender shut a scorer down, an intake fumble, a climb go wrong. Change the plan below and play the same match again (the same seed is the same luck).</p>
+
+  <section class="card" aria-labelledby="watch-h">
+    <h2 id="watch-h">Watch a match</h2>
+    <div class="view"><canvas id="screen" class="screen" width="256" height="144" tabindex="0" aria-label="A simulated 2019 match on the field, blue alliance on the left, red on the right, with the scoreboard at the top"></canvas></div>
+    <div class="controls">
+      <div class="row">
+        <button type="button" id="play" aria-pressed="false">PLAY</button>
+        <span role="group" aria-label="Speed" class="row">
+          <button type="button" data-speed="1">1X</button>
+          <button type="button" data-speed="2">2X</button>
+          <button type="button" data-speed="4">4X</button>
+          <button type="button" data-speed="15" title="The whole match in ten seconds">15X</button>
+        </span>
+        <button type="button" id="seed">NEW SEED</button>
+      </div>
+      <div class="row">
+        <input id="scrub" type="range" min="0" max="150" step="0.1" value="0" aria-label="Time in the match">
+        <span id="clock">2:30</span>
+      </div>
+      <div class="row" role="group" aria-label="Camera">
+        <span class="label">CAMERA</span>
+        <button type="button" id="auto" aria-pressed="true">ACTION</button>
+        <span id="chips" class="row"></span>
+      </div>
+    </div>
+    <p class="result" id="result"></p>
+  </section>
+
+  <section class="card" aria-labelledby="plan-h">
+    <h2 id="plan-h">The plan</h2>
+    <div class="presets" role="group" aria-label="Matches">
+      <button type="button" data-preset="qual">A RANDOM QUALIFIER</button>
+      <button type="button" data-preset="qf">QUARTERFINAL: 4471 ON 7777</button>
+      <button type="button" data-preset="qf-open">QUARTERFINAL: NO DEFENSE</button>
+      <button type="button" data-preset="qf2">QF MATCH 2: 6834 BROWNS OUT</button>
+    </div>
+    <div class="plan split" id="plan"></div>
+    <p class="note">Each robot: its team, what it does (score, or defend one of theirs), which pieces, where, and the HAB level it climbs to at the end. One robot fits on level 3 and two on level 2, so the simulation steps a third down. A change plays the same match again with the same seed, from where you were.</p>
+  </section>
+
+  <section class="card" aria-labelledby="log-h">
+    <h2 id="log-h">What happened</h2>
+    <div class="split">
+      <ol class="log" id="log" aria-label="Every point, miss and breakdown, in order. Tap one to go there."></ol>
+      <table aria-label="Each robot so far">
+        <thead><tr><th>TEAM</th><th>ROBOT</th><th>PTS</th><th>PLACED</th><th>MISSED</th></tr></thead>
+        <tbody id="tally"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="sheet-h">
+    <h2 id="sheet-h">The robots</h2>
+    <p class="note">Every kind of robot the simulation knows, blue and red, in the states a match shows: resting, holding a hatch, holding cargo, reaching the cargo ship's lip, a rocket's level 2 and level 3 (each kind as high as it goes), up on its stilts or arm mid-climb, and dead after a breakdown.</p>
+    <div class="view sheetwrap"><canvas id="sheet" width="368" height="804" aria-label="A sheet of all nine robot kinds in each of their states"></canvas></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it works</h2>
+    <dl>
+      <dt>The match</dt>
+      <dd>sim.js plays the 2019 game, Deep Space, by the 2019 manual, a tenth of a second at a time. Before the match: empty rockets, a cargo in each of the cargo ship's front bays, a null hatch panel (grey) or a cargo in each side bay, 6 cargo in each depot, a hatch panel waiting at each loading station, and each robot holding a hatch panel or a cargo. The sandstorm (15 s): black shutters hang over the driver stations' windows, so robots drive off their HAB (3 points from level 1, 6 from level 2) and score by camera, a little slower and less accurate; at 0:15 the shutters roll up, the ship's bays tilt, and any cargo not behind a hatch panel rolls out. Teleop (135 s): cycles, hatch panels (2) from the loading stations and cargo (3) from the stations or the depots, onto two rockets and the cargo ship's eight bays. Cargo only stays behind a hatch panel: in the rocket it goes in by the level's port and rolls to one of the two bays (either, or the empty one), and rolls back out if that bay has no hatch panel. The endgame: home to the HAB for level 1 (3), 2 (6) or 3 (12); a missed climb drops back to level 1. Ranking points: 2 for a win, 1 for a complete rocket, 1 for 15 or more climb points.</dd>
+      <dt>Defense</dt>
+      <dd>The Showdown's rule: a defended robot keeps 1 minus (defender's ability times its susceptibility) of what it does, while they're touching: it moves and works slower and misses more. A harder pusher can pin its target for up to five seconds, then has to back off. As in the manual: no defense in the sandstorm, one defender per alliance at a time, and a robot inside its own HAB zone can't be touched. Robots with nothing left to score go and defend.</dd>
+      <dt>What's simplified</dt>
+      <dd>No fouls. Robots only touch when one is defending the other. Nobody picks a dropped piece back up off the floor. The near wall's rockets are behind the camera, so they're drawn see-through, their pieces solid.</dd>
+      <dt>The robots</dt>
+      <dd>robots.js has nine kinds and the opening's teams, each tuned so its simulated average lands near the one in the story (7461 fading after Friday, 6834's rebuilt intake), and bots.js draws them. animate.js turns the timeline into poses at any moment, and draw.js puts them on the field.</dd>
+    </dl>
+  </section>
+  <p class="foot">In this folder: sim.js (the match), robots.js (the robots and teams), animate.js (the match at any moment), bots.js (the sprites), draw.js (the picture) and lab.js (this page). From the address bar: ?seed=N, ?t=SECONDS, ?preset=qf. Keys: Space plays and pauses, the arrows step.</p>
+</div>
+<script type="module" src="./lab.js"></script>
+</body>
+</html>

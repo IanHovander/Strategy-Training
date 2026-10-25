@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Pits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: the pits</h1>
+  <p class="intro">Saturday morning at the same regional as the arena, in the hall where the teams work on their robots between matches. Some crews are hard at work on theirs; other pits stand empty with a board saying where their robot has gone. 5026's robot is getting a last fix when the pit announcer calls match 44. Watch it roll out to the queue, then walk the row from one end to the other, talking to people, and follow it out to the field. Walk, don't run: the safety advisor is watching.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div id="stage"></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it's made</h2>
+    <ul>
+      <li><b>The row:</b> eight 10-foot pits along the back of the hall at the arena's scale, 8 pixels to the foot across and 2.75 of depth, so it's a bit over three screens long and the view slides along it. Foam tiles in the pits, the arena's concrete in the aisle with the arena's dashed yellow lines on it and a couple of floor boxes, the pits' power taped down from them.</li>
+      <li><b>Pipe and drape:</b> an 8-foot back drape in the stands' dim navy with side drapes between the pits, and each team's banner hung from the pipe: its number and name in its own colours, and the panther in a hexagon on ours. Under a few banners hang small sponsor boards for made-up firms, and 7777 has a team flag.</li>
+      <li><b>The furniture:</b> plywood work tables skirted in team colours with laptops, parts bins, drills, tape, 4000's TV showing the match and 1357's bowl of buttons; rolling tool chests; battery carts with the chargers blinking; 1024's battery corner taped off in hazard tape for their runner. At one end the SPARE PARTS counter, at the other the PIT ADMIN desk, the safety glasses stand and the QUEUE sign pointing the way out.</li>
+      <li><b>The robots:</b> the intro's own robots, the elevator, the arm and the defender, on the queue's own carts, with their team numbers on the bumpers.</li>
+      <li><b>Empty pits:</b> where a robot is away, a whiteboard on an easel stands on its taped-out spot: IN QUEUE or ON FIELD and the match. It follows the arena's queue: 2468 and 1357 are queuing for match 43, the two robots in the arena's queue, and 5026 is called right after, as the queuer says.</li>
+      <li><b>People at work:</b> new poses on the same rig as everyone else: kneeling at a robot with a drill, leaning in with both hands on it or at a laptop, carrying a battery, and pushing a cart. 1024's battery runner keeps swapping batteries all morning.</li>
+      <li><b>Safety glasses on everyone:</b> they're required in the pits, so every head in the scene wears a pair: clear lenses and a light grey rim like the arena's glasses-wearer's, painted onto the same hand-drawn faces from the front, the side and three-quarters, with the eyes and smiles still showing.</li>
+      <li><b>No running:</b> the safety advisor walks the aisle up and down. Run, and she'll come over and tell you why not.</li>
+      <li><b>The cut scene:</b> a slow pan down the row, the pit announcer's call, the plan given to the drive team close up, and 5026's robot rolling out down the aisle on its cart, past the QUEUE sign at the end of the hall, while the teammate stands its IN QUEUE board up on the empty spot and takes pit duty.</li>
+      <li><b>The way in and out:</b> tall end drapes close off the row at both ends, and the aisle runs on past them. After the cut scene she comes in along it from the left, and she leaves at the right, through the opening past the end drape, framed by a steel jamb and header, with the arena's stands dim at the end of the passage and its light falling across the floor of the way out to the field. The robot goes out through it at the end of the cut scene.</li>
+    </ul>
+  </section>
+  <p class="foot">The hall is pits/set.js and the people pits/people.js, on the walker rig (walker.js) the whole game shares. The robots are sprites.js's and their carts field.js's, and the camera, the controller and the talking are stage.js.</p>
+</div>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import '../sound.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
+</body>
+</html>

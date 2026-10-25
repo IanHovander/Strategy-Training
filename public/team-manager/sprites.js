@@ -1,24 +1,28 @@
-// The cast and the set: robots, the 2019 rocket and HAB, the crowd, people and the blue banner.
+// The cast and the set: robots, the game pieces (cargo and hatch panels), the 2019 rocket and HAB, the crowd, people and
+// the blue banner.
 // Robots are drawn from the floor up: (x, y) is the middle of the robot at the floor under its wheels.
 // World units are game pixels at camera scale 1 (about 1.5 inches each).
 
 import { C, cam, rect, disk, text, measure, snap, layer, blit, withAlpha, rnd, dither, fill } from './pixel.js';
+import { walkerFrame, CELL_W, CELL_H, FOOT_X, FOOT_Y } from './walker.js';
+import { student, tones, HAIR, SKIN, hairPal, skinBody } from './cast.js';
 
 // ---- Robot parts ----
+// Shared with match/bots.js, which draws the match's other kinds of robot the same way.
 // A drawing frame: d is the facing (+1 right, -1 left) times a squash used to fake a spin.
-const frame = (x, y, d) => ({ x: snap(x), y: snap(y), d });
-function part(f, dx, dy, w, h, c) {
+export const frame = (x, y, d) => ({ x: snap(x), y: snap(y), d });
+export function part(f, dx, dy, w, h, c) {
   const a = f.x + f.d * dx, b = f.x + f.d * (dx + w);
   rect(Math.min(a, b), f.y + dy, Math.abs(b - a), h, c);
 }
-const TEAM = {
+export const TEAM = {
   blue: [C.blue0, C.blue1, C.blue2, C.blue3],
   red: [C.red0, C.red1, C.red2, C.red3],
 };
 const RING = [[-2, -2], [-1, -2], [0, -2], [1, -2], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-2, 1], [-2, 0], [-2, -1]];
 
 /** A 6px wheel centered between pixels (cx, cy); spin moves the tread marks. */
-function wheel(f, cx, cy, spin) {
+export function wheel(f, cx, cy, spin) {
   part(f, cx - 2, cy - 3, 4, 6, C.ink);
   part(f, cx - 3, cy - 2, 6, 4, C.ink);
   part(f, cx - 2, cy - 2, 4, 4, C.tire);
@@ -28,7 +32,7 @@ function wheel(f, cx, cy, spin) {
 }
 
 /** Fabric bumpers with the team number, the way every FRC robot wears them. */
-function bumper(f, x0, w, top, cols, num) {
+export function bumper(f, x0, w, top, cols, num) {
   part(f, x0 - 1, top - 1, w + 2, 9, C.ink);
   part(f, x0, top, w, 7, cols[1]);
   part(f, x0, top, w, 1, cols[2]);
@@ -39,20 +43,155 @@ function bumper(f, x0, w, top, cols, num) {
   }
 }
 
-/** A hatch panel (the yellow disc) seen almost edge-on, centered at height cy. */
-function hatchPart(f, dx, cy) {
-  part(f, dx, cy - 7, 4, 15, C.ink);
-  part(f, dx - 1, cy - 5, 6, 11, C.ink);
-  part(f, dx, cy - 6, 4, 13, C.yel1);
-  part(f, dx, cy - 6, 1, 13, C.yel2);
-  part(f, dx + 3, cy - 6, 1, 13, C.yel0);
-  part(f, dx + 1, cy - 1, 2, 3, C.ink);
+// ---- The game pieces ----
+// Cargo is an orange playground ball, 13 inches across (about 9 pixels). A hatch panel is a ring of clear polycarbonate
+// 19 inches across (about 13 pixels) with a 6-inch hole in the middle: white hook-and-loop tape round its edge, a
+// yellow band printed inside that and a dark ring round the hole, and clear plastic between, so whatever is behind it
+// shows through. A null hatch panel (fixed on a cargo ship bay before the match, worth nothing) is the same with two
+// strips of white tape across it, either side of the hole. Each view is a small grid of letters, one per pixel:
+//   k ink (the outline)   w white tape   s white tape in shade   y yellow band   d yellow in shade   l yellow in light
+//   g the clear plastic (a faint sheen over what's behind)   h the dark ring round the hole   o the hole (nothing)
+// and in capitals, where a null panel's white tape goes across (otherwise the same in small letters).
+// The caller draws what's behind a panel first: the bay it closes, the cargo in it, or the robot holding it.
+/** Each letter's colour and how solid it is. */
+const PIECE = {
+  k: [C.ink, 1], w: [C.white, 1], s: [C.steel3, 1], y: [C.yel1, 1], d: [C.yel0, 1], l: [C.yel2, 1],
+  g: [C.blue3, 0.22], h: ['#2a3044', 0.4],
+};
+/** A grid as runs of one letter along each row, worked out once per grid: [an ordinary panel's, a null one's]. */
+const RUNS = new Map();
+function runsOf(rows, isNull) {
+  if (!RUNS.has(rows)) {
+    RUNS.set(rows, [false, true].map((nul) => {
+      const runs = [];
+      rows.forEach((row, j) => {
+        const at = (i) => (row[i] >= 'A' && row[i] <= 'Z' ? (nul ? 'w' : row[i].toLowerCase()) : row[i]);
+        for (let i = 0; i < row.length;) {
+          const ch = at(i);
+          let n = 1;
+          while (i + n < row.length && at(i + n) === ch) n++;
+          if (PIECE[ch]) runs.push({ i, j, n, ch });
+          i += n;
+        }
+      });
+      return runs;
+    }));
+  }
+  return RUNS.get(rows)[isNull ? 1 : 0];
+}
+function piece(rows, x0, y0, o = {}) {
+  const at = o.f ? (r, c) => part(o.f, x0 + r.i, y0 + r.j, r.n, 1, c) : (r, c) => rect(x0 + r.i, y0 + r.j, r.n, 1, c);
+  const runs = runsOf(rows, !!o.null);
+  for (const r of runs) if (PIECE[r.ch][1] === 1) at(r, PIECE[r.ch][0]);
+  // The see-through letters after, each with its transparency set once.
+  for (const ch of ['g', 'h']) withAlpha(PIECE[ch][1], () => { for (const r of runs) if (r.ch === ch) at(r, PIECE[ch][0]); });
+}
+
+/** Face on, 14 pixels across (the near side of the cargo ship), centred on the corner at (cx, cy) as disk() is. */
+const HATCH_FACE = [
+  '....kkkkkk....',
+  '...kwwwwwwk...',
+  '..kwlllllywk..',
+  '.kwlllggyyywk.',
+  'kwllgghhggyysk',
+  'kwllghoohgydsk',
+  'kwLGHooooHGDsk',
+  'kwLGHooooHGDsk',
+  'kwlyghoohgddsk',
+  'kwyygghhggddsk',
+  '.kwyyyggdddsk.',
+  '..kwydddddsk..',
+  '...kssssssk...',
+  '....kkkkkk....',
+];
+export function hatchFace(cx, cy, o = {}) {
+  piece(HATCH_FACE, cx - 7, cy - 7, o);
+}
+
+/**
+ * On a rocket's angled face, turned most of the way from you: an upright ellipse 8 pixels wide and 14 tall, centred
+ * on the corner at (cx, cy). The left face shows its lit edge on the left (dir -1, the default), the right one mirrored.
+ */
+const HATCH_SIDE = [
+  '..kkkk..',
+  '.kwwwwk.',
+  'kwllllsk',
+  'kwlggdsk',
+  'kwlggdsk',
+  'kwyhhdsk',
+  'kwyoodsk',
+  'kwyoodsk',
+  'kwyhhdsk',
+  'kwyggdsk',
+  'kwyggdsk',
+  'kwddddsk',
+  '.kssssk.',
+  '..kkkk..',
+];
+const HATCH_SIDE_R = HATCH_SIDE.map((r) => [...r].reverse().join(''));
+export function hatchSide(cx, cy, o = {}) {
+  piece(o.dir > 0 ? HATCH_SIDE_R : HATCH_SIDE, cx - 4, cy - 7, o);
+}
+
+/**
+ * Held by a robot, its face across the robot's way, so you see it almost edge-on: the white edge, a sliver of the
+ * yellow band and of the clear plastic, the robot showing through. dx is its near edge from the frame's middle, cy the
+ * middle of its height.
+ */
+const HATCH_HELD = [
+  '.kkkk.',
+  'kwwwsk',
+  'kwllsk',
+  'kwygsk',
+  'kwygsk',
+  'kwyhsk',
+  'kwyosk',
+  'kwyosk',
+  'kwyhsk',
+  'kwygsk',
+  'kwygsk',
+  'kwdgsk',
+  'kwddsk',
+  'kwsssk',
+  '.kkkk.',
+];
+export function hatchPart(f, dx, cy, o = {}) {
+  piece(HATCH_HELD, dx - 1, cy - 7, { ...o, f });
 }
 export const hatch = (x, cy) => hatchPart(frame(x, 0, 1), 0, cy);
 
-/** A cargo ball. */
-export function cargo(x, y, r = 4) {
-  disk(x, y, r + 1, C.ink);
+/** Lying flat on the carpet: from 20 degrees up, an ellipse 14 wide and 5 deep, its middle at (x, y). */
+const HATCH_FLAT = [
+  '...kkkkkkkk...',
+  '.kkwllllllwkk.',
+  'kwygghoohggdsk',
+  '.kkssddddsskk.',
+  '...kkkkkkkk...',
+];
+export function hatchFlat(x, y, o = {}) {
+  piece(HATCH_FLAT, Math.round(x) - 7, Math.round(y) - 3, o);
+}
+
+/** In small, 10 pixels across, face on, for a sign or a status display; centred on the corner at (cx, cy). */
+const HATCH_ICON = [
+  '...kkkk...',
+  '.kkwwwwkk.',
+  '.kwlllywk.',
+  'kwlggggysk',
+  'kwLGooGDsk',
+  'kwLGooGDsk',
+  'kwyggggdsk',
+  '.kwydddsk.',
+  '.kksssskk.',
+  '...kkkk...',
+];
+export function hatchIcon(cx, cy, o = {}) {
+  piece(HATCH_ICON, cx - 5, cy - 5, o);
+}
+
+/** A cargo ball. o.bare: no outline, for a ball seen through an opening or a clear panel. */
+export function cargo(x, y, r = 4, o = {}) {
+  if (!o.bare) disk(x, y, r + 1, C.ink);
   disk(x, y, r, C.org1);
   rect(x - r + 1, y - r + 2, 2, 2, C.org2);
   rect(x + r - 2, y + 1, 1, r - 2, C.org0);
@@ -133,7 +272,7 @@ export const hatchHeight = (e1, e2) => -22 - Math.round(e1 * 28) - Math.round(e2
 
 /**
  * The defender: low, wide, all drivetrain, with hazard stripes and a red light bar for eyes.
- * o: dir (default faces left), k, spin, glint (0..1 sweeps a highlight across the light bar), num.
+ * o: dir (default faces left), k, spin, glint (0..1 sweeps a highlight across the light bar), num, team (red if not given).
  */
 export function defBot(x, y, o = {}) {
   const f = frame(x, y, (o.dir ?? -1) * (o.k ?? 1));
@@ -157,7 +296,7 @@ export function defBot(x, y, o = {}) {
   part(f, -11, -26, 2, 2, o.rsl === false ? C.org0 : C.org1);
   if (o.rsl !== false) part(f, -11, -26, 1, 1, C.org2);
   part(f, -5, -28, 1, 5, C.ink);
-  bumper(f, -18, 36, -12, TEAM.red, o.num ?? '7777');
+  bumper(f, -18, 36, -12, TEAM[o.team ?? 'red'], o.num ?? '7777');
 }
 
 /**
@@ -198,10 +337,32 @@ export function armBot(x, y, o = {}) {
 // ---- The 2019 field ----
 
 /**
- * The rocket, seen from the side with its scoring face on the left at x = rx.
- * o: hatches / cargo / lights: three booleans each, bottom level first.
+ * The rocket, seen from the front as the field draws it (field.js): a hatch port on each of its two angled faces and its
+ * round cargo ports up the middle, the hull 28 wide from x = rx, so its left face is where the intro's robot places a
+ * hatch panel. The intro's rocket is taller than the field's, its levels where the robot's elevator reaches.
+ * Each level holds two cargo, one behind each hatch: a ball shows through the clear panel on its side, and its top
+ * shows low in the cargo port on that side (as field.js has it).
+ * o: home / away: hatch panels on the left and the right face, three booleans each, bottom level first (hatches: the
+ *    same as home); cargo: each level's [home, away] bays (true for both); lights: the cargo ports' ring lights.
  */
 export const ROCKET_LEVELS = [-22, -50, -78];
+/** The hatch faces' middles, out from the rocket's; where a ball in a bay sits as you see it in the port. */
+const FACE_X = 11, PEEK = { dx: 5, dy: 4 };
+const PORT_DARK = '#0e1019';
+/** Each level's cargo port, above its hatch ports (at 27.5, 55.5 and 83.5 inches to their 19, 47 and 75). */
+const PORT_UP = [5, 5, 4];
+
+/** A ball of radius r at (x, y) in cargo's colours, drawn only where inside(x, y) says: seen through an opening. */
+function ballIn(x, y, r, inside) {
+  for (let j = -r; j < r; j++) {
+    for (let i = -r; i < r; i++) {
+      const px = x + i, py = y + j;
+      if ((i + 0.5) ** 2 + (j + 0.5) ** 2 > r * r || !inside(px, py)) continue;
+      rect(px, py, 1, 1, i + j < -r * 0.6 ? C.org2 : i + j > r * 0.5 ? C.org0 : C.org1);
+    }
+  }
+}
+
 export function rocket(rx, o = {}) {
   const f = frame(rx, 0, 1);
   const cone = (i) => Math.max(1, Math.round(14 * Math.sin(((i + 1) / 22) * (Math.PI / 2)) ** 0.75));
@@ -237,65 +398,156 @@ export function rocket(rx, o = {}) {
   part(f, -2, -5, 32, 1, C.steel2);
   for (let x = 0; x < 30; x += 5) part(f, x, -3, 2, 1, C.steel0);
 
+  const cx = rx + 14, home = o.home ?? o.hatches ?? [];
+  const bays = (l) => {
+    const c = o.cargo?.[l];
+    return Array.isArray(c) ? { home: !!c[0], away: !!c[1] } : { home: !!c, away: !!c };
+  };
   ROCKET_LEVELS.forEach((cy, l) => {
-    // Hatch opening on the scoring face.
-    part(f, -2, cy - 7, 4, 15, C.ink);
-    part(f, -1, cy - 6, 2, 13, C.steel0);
-    // Cargo port on the side, with its ring light.
-    const px = rx + 14, py = cy - 2;
-    disk(px, py, 6, C.ink);
-    disk(px, py, 5, o.lights?.[l] ? C.blue2 : C.steel1);
-    if (o.lights?.[l]) rect(px - 4, py - 4, 2, 1, C.blue3);
-    disk(px, py, 4, C.ink);
-    if (o.cargo?.[l]) cargo(px, py, 3);
-    if (o.hatches?.[l]) hatchPart(f, -4, cy);
+    const ball = bays(l);
+    // A hatch port on each face: the cutout dark, a ball behind it if that side's bay has one, the panel over it.
+    for (const [face, s, full] of [['home', -1, home[l]], ['away', 1, o.away?.[l]]]) {
+      const x = cx + s * FACE_X;
+      rect(x - 3, cy - 6, 6, 12, C.ink);
+      rect(x - 2, cy - 5, 4, 10, PORT_DARK);
+      if (ball[face]) ballIn(x, cy + 1, 4, (px, py) => px >= x - 2 && px < x + 2 && py >= cy - 5 && py < cy + 5);
+      if (full) hatchSide(x, cy, { dir: s });
+    }
+    // The cargo port, with its ring light, and low in it the top of a ball in each side's bay.
+    const py = cy - PORT_UP[l], lit = o.lights?.[l];
+    disk(cx, py, 6, C.ink);
+    disk(cx, py, 5, lit ? C.blue2 : C.steel1);
+    rect(cx - 4, py - 4, 2, 1, lit ? C.blue3 : C.steel2);
+    disk(cx, py, 4, PORT_DARK);
+    for (const [face, s] of [['home', -1], ['away', 1]]) {
+      if (ball[face]) ballIn(cx + s * PEEK.dx, py + PEEK.dy, 4, (px, qy) => (px - cx + 0.5) ** 2 + (qy - py + 0.5) ** 2 <= 16);
+    }
   });
 }
 
+// The alliance wall, seen end on from the side of the field: 6 ft 6 in tall, aluminum diamond plate up to 3 ft and clear
+// polycarbonate above. The drivers' shelf sticks out behind it at 3 ft.
+const WALL = { top: -52, plate: -24 };
+
+// The 5026 drive team, in safety glasses: two drivers in team shirts, and the coach, a mentor in the team hoodie.
+const restyle = (base, id, hair, body = {}) => ({ ...base, id, pal: { ...base.pal, ...body }, headPal: { ...base.headPal, ...hair } });
+// The far driver stands a little deeper in the shot, so their tee, jeans and glasses are each a step down their ramp
+// (the tee takes the hem's reds), and their hair is black and their skin darker against the near driver's.
+const FAR_DRIVER = restyle(student(25), '5026-driver-2', { ...HAIR.black, q: C.steel2 }, {
+  shirt: ['#6b0f1b', '#a1172a', '#d3212f'], jeans: ['#252e52', '#34416e', '#4a5b92'], cuff: ['#34416e', '#4a5b92', '#6b80b8'],
+});
+const DRIVERS = [student(4), FAR_DRIVER];
+// The coach has a darker skin than the near driver and hair a lighter grey than the crowd's, so even at the edge of
+// the shot they read as someone else, and older.
+const COACH = restyle(student(11, 'hoodie'), '5026-coach', { ...SKIN.deep, ...hairPal('#6a6a72', '#9a9aa4', '#c8c8d0') },
+  { ...skinBody('deep'), jeans: tones.khaki, cuff: tones.khaki });
+
+/** Someone on the walker's rig, feet at (x, y), scaled with the camera. */
+const rigPerson = (x, y, dir, gait, look, frame = 0) =>
+  blit({ canvas: walkerFrame(dir, gait, frame, look), w: CELL_W, h: CELL_H }, Math.round(x) - FOOT_X, Math.round(y) - FOOT_Y);
+/** A soft shadow on the floor under someone standing at (x, y). */
+const shadow = (x, y) => withAlpha(0.45, () => {
+  rect(x - 6, y - 1, 12, 2, '#05060d');
+  rect(x - 4, y - 2, 8, 3, '#05060d');
+});
+
 /**
  * The HAB at the alliance wall: level 1 runs along the floor, level 3 is the tall step at x = x3,
- * and the driver station wall stands at x3 + 40.
+ * and the alliance wall stands at x3 + 40, with the drive team behind it, facing the field.
+ * o: cheer (the drive team jumps, pumping their fists), t (beats, for the jumps), glow (the alliance light strip lights up),
+ * red (a red alliance's HAB and wall: blue otherwise).
  */
 export const HAB = { l1: -2, l3: -16, depth: 40 };
 export function hab(x3, o = {}) {
   const x0 = cam.x - 4, x1 = cam.x + 260 / cam.s;
-  // Level 1 plate.
-  rect(x0, HAB.l1 - 1, x1 - x0, 3, C.ink);
-  rect(x0, HAB.l1, x1 - x0, 2, C.steel1);
-  for (let x = Math.floor(x0 / 4) * 4; x < x1; x += 4) rect(x + ((x / 4) & 1) * 2, HAB.l1, 1, 1, C.steel2);
-  // Driver station wall behind level 3.
-  const wx = x3 + HAB.depth;
-  rect(wx, -120, 120, 120, C.ink);
-  rect(wx + 1, -119, 119, 119, C.steel0);
-  for (let i = 0; i < 3; i++) {
-    const px = wx + 4 + i * 26;
-    rect(px, -86, 22, 54, C.ink);
-    rect(px + 1, -85, 20, 52, '#16204a');
-    // A driver behind the glass, blue shirt and safety glasses.
-    const bob = o.cheer ? Math.round(Math.abs(Math.sin((o.t ?? 0) * Math.PI + i)) * -4) : 0;
-    rect(px + 6, -52 + bob, 10, 19, C.blue0);
-    rect(px + 7, -63 + bob, 8, 9, C.skin[(i + 1) % 4]);
-    rect(px + 7, -63 + bob, 8, 3, C.hair[i]);
-    rect(px + 7, -59 + bob, 8, 2, C.ink);
-    if (o.cheer) {
-      rect(px + 4, -66 + bob, 2, 14, C.blue0);
-      rect(px + 16, -66 + bob, 2, 14, C.blue0);
-    }
-    withAlpha(0.18, () => rect(px + 1, -85, 20, 52, C.blue3));
-    rect(px + 3, -82, 1, 10, C.blue3);
-    rect(px + 5, -82, 1, 4, C.blue3);
+  const wx = x3 + HAB.depth, { top, plate } = WALL;
+  // The alliance's colours: blue unless o.red.
+  const T = o.red ? [C.red0, C.red1, C.red2, C.red3] : [C.blue0, C.blue1, C.blue2, C.blue3];
+  // Past the alliance wall the field's guardrail stops: behind the drive team there's only the dark of the arena,
+  // and the carpet of their station going back from the wall.
+  rect(wx + 3, -22, x1 - wx, 22, C.stand0);
+  rect(wx + 3, -7, x1 - wx, 7, C.carpet1);
+  rect(wx + 3, -7, x1 - wx, 1, C.carpet0);
+  for (let x = wx + 3; x < x1; x += 3) rect(x, -6 + Math.floor(rnd(x) * 6), 1, 1, rnd(x + 0.5) > 0.5 ? C.carpet0 : C.carpet2);
+  // Level 1 plate, up to the wall: past it the drive team stands on their station's carpet.
+  const xw = Math.min(x1, wx);
+  rect(x0, HAB.l1 - 1, xw - x0, 3, C.ink);
+  rect(x0, HAB.l1, xw - x0, 2, C.steel1);
+  for (let x = Math.floor(x0 / 4) * 4; x < xw - 2; x += 4) rect(x + ((x / 4) & 1) * 2, HAB.l1, 1, 1, C.steel2);
+  // The drive team, facing the field, back to front: the coach a step behind, part out of the shot, and two drivers
+  // side by side at the shelf, close to the glass. The far driver stands a little nearer the wall, so from here only
+  // their hair, the front of their face and their hands show past the near driver; the rest of them is hidden behind.
+  // At the buzzer they all turn three-quarters to us, still toward the field, and jump: arms thrown up in a V at the top
+  // of each jump, pulled in as they land, each to their own beat. The frame's edge cuts off most of the coach.
+  // On the shelf, against the wall and between the two drivers, the emergency stop (a red button on a yellow box), and
+  // after the buzzer their controllers, put down on either side of it, lit along the top.
+  const sx = wx + 6;
+  const pad = (x, y) => {
+    rect(x - 1, plate - 4 + y, 6, 4, C.ink);
+    rect(x, plate - 3 + y, 4, 1, C.steel2);
+    rect(x, plate - 2 + y, 4, 1, C.steel1);
+    rect(x + 1, plate - 3 + y, 1, 1, C.red1);
+  };
+  const shelf = [
+    () => o.cheer && pad(sx + 3, -1),
+    () => {
+      rect(sx + 1, plate - 4, 4, 4, C.ink);
+      rect(sx + 2, plate - 3, 2, 2, C.yel1);
+      rect(sx + 1, plate - 5, 4, 2, C.ink);
+      rect(sx + 2, plate - 5, 2, 1, C.red1);
+    },
+    () => o.cheer && pad(sx + 5, 0),
+  ];
+  const team = [
+    { x: wx + 31, y: -2, look: COACH, jump: 0.8, coach: true },
+    { x: wx + 15, y: -1, look: DRIVERS[1], jump: Math.PI / 2, then: shelf.slice(0, 2) },
+    { x: wx + 18, y: 0, look: DRIVERS[0], jump: 0, then: shelf.slice(2) },
+  ];
+  for (const p of team) shadow(p.x, p.y);
+  for (const p of team) {
+    const up = Math.abs(Math.sin((o.t ?? 0) * Math.PI + p.jump)), high = up > 0.5;
+    // Landing, knees bent, they sink a unit lower.
+    const bob = o.cheer ? Math.max(0, Math.round(up * 4) - (high ? 0 : 1)) : 0;
+    rigPerson(p.x, p.y - bob, o.cheer ? 'sw' : 'w', o.cheer ? 'celebrate' : p.coach ? 'stand' : 'drive', p.look, high ? 0 : 1);
+    for (const draw of p.then ?? []) draw();
   }
-  // Alliance light strip.
-  rect(wx + 1, -30, 119, 3, o.glow ? C.blue2 : C.blue0);
-  rect(wx + 1, -30, 119, 1, o.glow ? C.blue3 : C.blue1);
+  // The near end of the shelf, a foot deep at 3 ft, on its bracket: in front of the drivers, like a console.
+  rect(sx, plate - 1, 10, 4, C.ink);
+  rect(sx + 1, plate, 8, 2, C.steel1);
+  rect(sx + 1, plate, 8, 1, C.steel3);
+  rect(sx, plate + 3, 5, 1, C.ink);
+  rect(sx, plate + 4, 3, 1, C.ink);
+  rect(sx, plate + 5, 1, 1, C.ink);
+  rect(sx + 1, plate + 2, 3, 1, C.steel0);
+  rect(sx + 1, plate + 3, 1, 1, C.steel0);
+  // The wall itself, end on, the way the arena draws it: a box 9 inches deep in the alliance's blues, lit along its
+  // top and its field side (down to level 3, which hides the rest), with a dark line 3 ft up where the diamond plate
+  // stops and the glass starts. Above it, the pale edge of the clear polycarbonate on the drivers' side.
+  rect(wx - 1, top - 1, 8, 1 - top, C.ink);
+  rect(wx, top, 6, -top, T[1]);
+  rect(wx, top, 1, HAB.l3 - 1 - top, T[2]);
+  rect(wx, top, 6, 1, T[3]);
+  withAlpha(0.5, () => rect(wx + 5, top + 1, 1, plate - top - 1, T[3]));
+  // The 3 ft line is the end of the alliance light strip along the top of the plate: lit, it blinks.
+  rect(wx, plate, 6, 1, o.glow ? T[3] : T[0]);
+  if (o.glow) rect(wx, plate + 1, 6, 1, T[2]);
+  // On top: the team number sign, a flat panel seen edge on (the number faces the field), and sitting on it the stack
+  // light that shows the robot is connected.
+  rect(wx + 1, top - 5, 4, 5, C.ink);
+  rect(wx + 2, top - 4, 2, 3, '#16204a');
+  rect(wx + 2, top - 4, 1, 3, T[2]);
+  rect(wx + 1, top - 8, 4, 4, C.ink);
+  rect(wx + 2, top - 7, 2, 1, T[2]);
+  rect(wx + 2, top - 7, 1, 1, T[3]);
+  rect(wx + 2, top - 6, 2, 1, C.org0);
   // Level 3 platform.
   rect(x3 - 1, HAB.l3 - 1, HAB.depth + 2, HAB.l1 - HAB.l3 + 1, C.ink);
-  rect(x3, HAB.l3, HAB.depth, HAB.l1 - HAB.l3, C.blue1);
+  rect(x3, HAB.l3, HAB.depth, HAB.l1 - HAB.l3, T[1]);
   rect(x3, HAB.l3, HAB.depth, 2, C.steel3);
   for (let x = 0; x < HAB.depth; x += 3) rect(x3 + x, HAB.l3, 1, 1, C.steel2);
-  rect(x3, HAB.l3 + 2, HAB.depth, 1, C.blue2);
-  rect(x3, HAB.l1 - 2, HAB.depth, 1, C.blue0);
-  for (let x = 4; x < HAB.depth - 2; x += 8) rect(x3 + x, HAB.l3 + 5, 4, 6, C.blue0);
+  rect(x3, HAB.l3 + 2, HAB.depth, 1, T[2]);
+  rect(x3, HAB.l1 - 2, HAB.depth, 1, T[0]);
+  for (let x = 4; x < HAB.depth - 2; x += 8) rect(x3 + x, HAB.l3 + 5, 4, 6, T[0]);
 }
 
 // ---- The arena ----

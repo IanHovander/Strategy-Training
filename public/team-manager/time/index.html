@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Time Travel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+<style>
+  .controls { display: grid; gap: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .row .label { min-width: 9ch; }
+  .controls button {
+    font: 9px/1.3 var(--pixel); color: var(--text); background: var(--button); border: 2px solid var(--line); border-radius: 2px;
+    padding: 10px 12px; min-height: 36px; cursor: pointer; touch-action: manipulation;
+  }
+  .controls button:hover { border-color: var(--blue); }
+  .controls button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .controls button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+  .controls #go { background: var(--red); border-color: #ff6a55; color: #fff; min-width: 20ch; }
+  .controls #go:hover { border-color: #fff; }
+  #screen { cursor: pointer; }
+  dl { margin: 0; display: grid; gap: 10px; max-width: 70ch; }
+  dt { font: 10px/1.6 var(--pixel); color: var(--gold); }
+  dd { margin: 0; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: time travel</h1>
+  <p class="intro">Eight ways the strategist could move through time, on the real alliance selection cut scene. The last two, Norbert's wind-up key and her scouting notebook, come from this game's own world. 7 is the short rewind for every time after the first, and 8 plays them the way the game would: the whole wind-up the first time, the short one after that. Let it play, then press the red button (or Space, or tap the picture) to rewind to "Welcome to alliance selection!" or jump forward to the end of round two. Rewinds turn counterclockwise and forward jumps clockwise. Each one looks best when she's on screen: she's the rep in the red tee.</p>
+
+  <section class="card" aria-labelledby="try-h">
+    <h2 id="try-h">Try it</h2>
+    <div class="view"><canvas id="screen" width="256" height="144" tabindex="0" aria-label="Alliance selection playing on the big screen, with Norbert the penguin in the top left corner. Press the button to travel through time."></canvas></div>
+    <div class="controls">
+      <div class="row" role="group" aria-label="Look">
+        <span class="label">LOOK</span>
+        <button type="button" data-effect="1">1 STOP</button>
+        <button type="button" data-effect="2">2 SWIRL</button>
+        <button type="button" data-effect="3">3 TAPE</button>
+        <button type="button" data-effect="4">4 ALL</button>
+        <button type="button" data-effect="5">5 WIND</button>
+        <button type="button" data-effect="6">6 NOTEBOOK</button>
+        <button type="button" data-effect="7">7 QUICK</button>
+        <button type="button" data-effect="8">8 AS IN THE GAME</button>
+      </div>
+      <div class="row" role="group" aria-label="Which way">
+        <span class="label">WAY</span>
+        <button type="button" data-dir="-1">REWIND (R)</button>
+        <button type="button" data-dir="1">FORWARD (F)</button>
+      </div>
+      <div class="row">
+        <button type="button" id="go">REWIND (SPACE)</button>
+        <button type="button" id="norbert">NORBERT (N)</button>
+        <button type="button" id="mute">SOUND ON</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="looks-h">
+    <h2 id="looks-h">The looks</h2>
+    <dl>
+      <dt>1 STOP: everything stops but you</dt>
+      <dd>A tick, and the world freezes mid-word and drains to the cold blue of stopped time. Only she keeps her colour, and she's the only one who moves: she looks right, left, then straight at you. Norbert's 26 ear lights up. Then the world runs backwards around her, leaving trails, with her still in colour, and the colour floods back where she lands.</dd>
+      <dt>2 SWIRL: the vortex</dt>
+      <dd>The picture twists into a vortex around her, like an old console's battle swirl: counterclockwise to go back, clockwise to go forward. The frames run backwards (or on) inside it, a light opens in the middle, a white flash, and it unwinds into where she lands.</dd>
+      <dt>3 TAPE: rewinding the tape</dt>
+      <dd>A tape rewinding: a clunk, torn rows rolling down the screen, the colours split, REW and the event clock counting back in the corner, the words un-typing. A clunk to stop, then STOP flashes. Funny and easy to read, but it says "video", not "time".</dd>
+      <dt>5 WIND: Norbert is clockwork</dt>
+      <dd>Everything stops. Norbert's ear lights up, he hops out of his corner onto the screen with a boing, lands with a squeak and turns his back, and a brass wind-up key pops out of it. The key turns counterclockwise one click at a time, and every click ratchets the world back a step, slow at first, then faster and faster, until it spins free and the world races back to 12:38. Forward winds it clockwise. Then the key goes back in, he turns round and hops home to the corner as the colour floods back. It's the lore made visible: the alumni's time machine is the key inside the team mascot.</dd>
+      <dt>7 QUICK: the short rewind</dt>
+      <dd>For every rewind after the first, under two seconds. A tick and the world drains to blue; a small key pops out beside Norbert in his corner (he doesn't leave it), turns counterclockwise three clicks, spins, and the world races back around her. The colour comes back and the key goes in. Forward turns it clockwise.</dd>
+      <dt>8 AS IN THE GAME</dt>
+      <dd>The first rewind gets the whole of WIND, so the player sees once, clearly, that Norbert is doing this. Every rewind after that is QUICK. Choosing it again starts the count over.</dd>
+      <dt>6 NOTEBOOK: flipping back through her notes</dt>
+      <dd>The stopped moment shrinks onto a page of her scouting notebook and becomes a pencil sketch, with her still in colour. The pages flip back through earlier moments, each sketched with its time beside pages of scouting tallies and question marks, faster and faster. She writes BACK TO 12:38 in red, and the last sketch fills the screen in colour. The notebook is the one thing that survives every loop, so time runs through it.</dd>
+      <dt>4 ALL: the effects together</dt>
+      <dd>STOP, then the vortex opens around her while she stands still, in colour, in the middle of the turning world. The light swallows the picture, a clock card spins its hands back to 12:38 while the time rolls down, and the world unwinds back into colour at the start.</dd>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it works</h2>
+    <ul>
+      <li><b>A real rewind:</b> every scene draws each frame as a pure function of time, so going back plays the actual cut scene backwards. While it plays, the lab writes down every frame's moment (beat, time and the words on screen) and draws them again last to first. The words un-type as it goes.</li>
+      <li><b>Only her:</b> each frame is drawn twice, with her and without her; the pixels that differ are her. That's how the world stops and drains of colour while she doesn't, and how she stands still in the middle of the vortex.</li>
+      <li><b>Norbert:</b> top left, 16 by 19 pixels, drawn down from the full sprite, with the voltage of the battery inside him as the team's battery tester would read it. His red 26 ear lights up as time starts to move.</li>
+      <li><b>Sound:</b> made on the spot with Web Audio: a tick and a hum when time stops, a rushing wind that rises going forward and falls going back, a tape whirr and clunk, and a chime on arrival.</li>
+      <li><b>From the address bar:</b> ?effect=1 to 8, ?dir=forward, ?auto=SECONDS to jump by itself, ?mute.</li>
+    </ul>
+  </section>
+  <p class="foot">The lab is in this folder: lab.js (playing the cut scene, recording it and the looks), warp.js (the picture effects), key.js (the wind-up key), notebook.js (the notebook) and sound.js. Norbert is ../norbert.js. It plays alliance selection's own cut scene (../alliance-selection/).</p>
+</div>
+<script type="module" src="./lab.js"></script>
+</body>
+</html>

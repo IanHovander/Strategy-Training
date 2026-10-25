@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner World Championship</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: World Championship</h1>
+  <p class="intro">Houston, and the biggest week of the season: eight division fields side by side in one hall, a match playing on every one of them. The cut scene scans the whole row in one long glide, from Archimedes at one end to Newton at the other, where 5026's robot waits in the queue. Then it's yours to walk: in through the doorway at the Archimedes end, back along the walkways in front of the stands and through the aisles between the divisions, scouting the other seven fields and talking to teams from around the world, to Newton's queue, and out through the far doorway toward Einstein.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div id="stage"></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it's made</h2>
+    <ul>
+      <li><b>Eight fields, one field:</b> every division is the arena's own field, floor, robots and bleachers, drawn by the same field.js and sprites.js as the walkabout, so when the arena's field or robots get better, all eight fields do too. Each division gets its own team numbers on the robots and the carts in its queue, its own score on the scoring table, and its own match clock, out of step with the others, so no two fields show the same moment.</li>
+      <li><b>Real matches:</b> every division's matches are played by the match simulation, the match lab's, so the robots on each field cycle, defend and climb, every piece goes in where it scores, and the big screen and the scoring table show the score that's on the field. Between two matches the field is reset, a lighter version of the arena's changeover: the robots stand disabled, the rockets' lights turn green and the gates open, the robots go off and every piece comes out, the next match's null hatch panels, cargo and robots go on, and the gates shut for the next.</li>
+      <li><b>The curtains:</b> between one division's stands and the next hangs a black pipe-and-drape curtain, lit from the upper left like everything else, with a belt barrier along its foot. On each hang the sign of the division on its right, a blue banner like the one the game is named for, and the big screen of the division on its left, over that field's own scoring table, showing its live score, the match clock (counting down the sandstorm's fifteen seconds in orange, then the rest of the match) and the qualification match number. So every aisle shows where one division ends and the next begins.</li>
+      <li><b>The scan:</b> the camera never cuts. It slows on every field, its match mid-screen, and most of all in the aisles, where one field's red end and the next one's queue share the screen; it glides on past the strategist onto Newton's field, comes to rest there, and pans back to her. A hurries it on a division at a time, sweeping on at the speed it was going rather than cutting. Each division's name comes up on the stage's own place card, the same one every scene opens with, over the stands in its top corner, once that division is in view and somewhere different in each.</li>
+      <li><b>The truss and lights:</b> up in the dark a lighting truss runs the length of the hall, with a lamp every 32 pixels. In the cut scene they come on left to right and throw the intro's flat spot cones down over the stands.</li>
+      <li><b>The crowd:</b> teams sit together at Championship, so each division's stands are cut into blocks between the aisle stairs, some a mix of people, some one team all in its shirt: teal, pink, lime, maroon, yellow, purple. Newton's first block is 5026's own section in the red tee, with families in the front row.</li>
+      <li><b>The crews:</b> drive teams at both stations of every field in their teams' shirts, a team member waiting with each robot in the queue, a queuer in orange at the queue sign and a scorekeeper at the table, and people standing about in the aisles.</li>
+      <li><b>The people to talk to:</b> a greeter just inside the doorway; the teammate and Newton's queuer by 5026's robot; a grandparent from Lagos, scouts from Monterrey and Haifa, a parent from Sao Paulo, a drive coach from Toronto, a pit crew member from Osaka and a mentor from Minneapolis in the front rows, one every ten seconds or so along the walkways; students from Istanbul, Sydney and Shenzhen in the aisles; a button trader; the info desk and a field reset volunteer. Between them: cycle times, robot inspection and the bumper rules, how the alliance-selection draft runs, alliances of four at Championship, the eight division winners meeting on Einstein, pit scouting against match scouting, why a robot that never scores can still get picked, the ranking points for a rocket and for the HAB, the sandstorm, the Rookie All-Star award, the ways a team gets to Championship, shipping a robot across an ocean, and trading buttons.</li>
+      <li><b>The hall:</b> concrete end walls, the floor carrying on past both end fields, a yellow sign pointing the way to Einstein, and two tables on the floor: one covered in buttons to trade, and the info desk.</li>
+      <li><b>The way in and out:</b> a doorway through each end wall, cut away like the practice field's side doors, the concourse's warmer light lying on the floor in front, and over each a sign like the practice field's, hung from the door frame carried up the wall's corner (its posts stand on the floor either side of the passage, a steel threshold plate between them): a red EXIT over the far one, a blue IN over the one she comes in by, where she stops at the wall's face. The cut scene ends with her setting off along Newton's walkway and a fade to black; the hall fades back in at the other end as she walks in through the left doorway, where a greeter says hello, and she leaves through the right one, TO EINSTEIN, past the info desk, which stands low on the floor so the way out is clear. Holding right (run, too) takes her the whole length of the hall and out, sliding round the barriers and onto each walkway, and showing through the alliance wall and the drive team where the walkway passes behind each field's driver stations, as she does through a rocket: about a minute and a half at a run, with someone to talk to coming up every ten seconds or so.</li>
+    </ul>
+  </section>
+  <p class="foot">The art is the 2019 game, Deep Space; the eight divisions are the Championship's since 2023 (in 2019 Houston had six). The fields are field.js, the crowd bleachers.js and the people walker.js, all shared with the arena; this scene's own modules are in the worlds folder. The controller, the camera and the talking are stage.js, shared by every scene.</p>
+</div>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import '../sound.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
+</body>
+</html>

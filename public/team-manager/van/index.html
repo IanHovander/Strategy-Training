@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f24">
+<title>Blue Banner Van</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="../stage.css">
+<style>
+  /* Nobody walks in the van: the stick only picks a seat, so the pad's inner walk ring goes (stage.js leaves out the WALK
+     and RUN labels for a scene that steers itself). */
+  #stage .ring.walk { visibility: hidden; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Blue Banner: the van</h1>
+  <p class="intro">Thursday, 6:40 in the morning, and team 5026 is on the highway to the regional in Riverton: eight in the team's passenger van with the red trailer behind. The camera runs through the van from the front bumper to the trailer, then stays with our strategist and the teammate beside her in the back row while they talk about the weekend. Nobody walks in a moving van, so afterwards the stick picks a seat instead, and everyone has something to say.</p>
+
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h">Try it</h2>
+    <div id="stage"></div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it's made</h2>
+    <ul>
+      <li><b>The cutaway:</b> the van seen from in front and above at the game's usual 20 degrees, with its roof and everything above the windows cut away. The rows of seats are stacked up the screen like the bleachers' tiers, 26 pixels apart where a real van's would be 8, so every face shows over the seat in front and all eight people are on screen at once.</li>
+      <li><b>The van:</b> white, with the door tops cut through, the sliding door's seam, a cargo well with spare red and blue bumpers stood up in it, bench seats and two buckets with an armrest console between them, the steering wheel, the dash, the hood, the grille and an IRNPNTR plate. Behind it, the team's red trailer with the panther and 5026 on its nose.</li>
+      <li><b>The road:</b> drawn once and streamed up past the van as it drives toward you: asphalt speckle, the shoulder's rumble strip, lane dashes, sealed cracks and patches, then grass, trees, a fence and the backs of road signs on the verge, and across the passing lane the median's yellow line and guardrail. Now and then a car overtakes in the passing lane, and the van rides a pixel up over a bump, the trailer a moment later.</li>
+      <li><b>The scan:</b> a whole-number zoom, in close at x3 on the grille and the plate, then x2 tilting up over the hood to the front seats and on through both rows to the trailer, holding on each, while the pretzels go over the seat to the back row.</li>
+      <li><b>Outside:</b> the van and trailer from the side at dawn, the sky in dithered bands from night blue to gold, the sun low behind them, hills and a wooded ridge sliding by slower than the road, a city sign, a car overtaking, and the exit sign as the van signals and eases over. The three people on the near side show through the windows in profile.</li>
+      <li><b>The eight:</b> all on the same rig as everyone in the arena, seated like the crowd in the stands. Mr. Adeyemi, the mentor from the arena's stands, drives with his hands on the wheel; Owen navigates on his phone and keeps turning to show the driver the map lit on its screen, arguing with the map app; Tess sleeps against her window with Zs rising; Rafi has the snacks; Kai bobs to his headphones; Bea plays a phone game and throws her arms up when she wins a level. Our strategist has the drive team's whiteboard on her lap, and it fills up as the talk goes on.</li>
+      <li><b>Two new ways to sit:</b> hands on a steering wheel, and a phone held in both hands, added to the walker rig for this scene.</li>
+      <li><b>Picking a seat:</b> push the stick up for the seats toward the back, down for the front and sideways along a row, and the bubble moves to that seat; the teammate beside her turns to her when picked. Press A to talk: the back row turn to her, Tess wakes up, Kai stops bobbing to his music, Bea finishes her level and puts her phone down, and the front seats keep their eyes on the road while the camera drops a little, so the dialog box covers the bumper instead of their hands. The phone shows whoever's talking.</li>
+    </ul>
+  </section>
+  <p class="foot">The van and the road are cabin.js and outside.js, the people people.js and the words and the camera script.js, all in this folder; scene.js puts them together. The controller, the camera and the talking are stage.js, shared by every scene.</p>
+</div>
+<script type="module">
+  import { runScene } from '../stage.js';
+  import '../sound.js';
+  import { scene } from './scene.js';
+
+  runScene(scene);
+</script>
+</body>
+</html>
