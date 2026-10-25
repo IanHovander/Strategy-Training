@@ -4,10 +4,11 @@
 // on it. The rest of this folder takes its positions from here, so the parts line up.
 //   ox(k)             where division k's own world starts: its local x 0 is world x ox(k)
 //   divisionAt(x)     which division's world a world x is in (the pads count as the first and the last)
-//   matchState(k, t)  the match on division k's field t seconds in, for its big screen and its scoring table
+//   matchState(k, t)  the match on division k's field t seconds in, for its big screen, its scoring table and the field
 
-import { clamp, rnd } from '../pixel.js';
+import { clamp } from '../pixel.js';
 import { WORLD_W } from '../field.js';
+import { divisionFrame } from './matches.js';
 
 /** One division is the arena's whole world, 784 pixels: the field and both ends. */
 export const PITCH = WORLD_W;
@@ -18,8 +19,9 @@ export const TOP = -64;
 
 // Left to right, the eight divisions of the 2026 Championship. Each field plays out of step with the others (offset:
 // seconds added to its clock) with its own robots: teams are the numbers on the blue elevator, the red elevator, the
-// blue arm and the red defender (field.js); queue, the two robots waiting on carts; qual, the match its screen starts
-// on. The numbers are made up: don't give them team names.
+// blue arm and the red defender in the match on as the hall opens (matches.js plays it, and the matches after it with
+// more of the division's numbers); queue, the two robots waiting on carts; qual, the match its screen starts on. The
+// numbers are made up: don't give them team names.
 export const DIVISIONS = [
   { name: 'ARCHIMEDES', teams: ['8214', '6431', '3092', '9175'], queue: ['4519', '7062'], offset: 0, qual: 34 },
   { name: 'CURIE', teams: ['2643', '9318', '5770', '1189'], queue: ['6824', '3357'], offset: 5.3, qual: 31 },
@@ -135,17 +137,18 @@ export const INFO_DESK = { x0: ox(HOME) + PITCH + 38, x1: ox(HOME) + PITCH + 94,
 
 // ---- The matches ----
 // Every division plays its own qualification matches, out of step with the others: two and a half minutes of play,
-// then half a minute to reset. The scores climb a few points at a time and hold at the end until the next match. The
-// clock counts down the period being played, as the audience display does: the 2019 sandstorm's first fifteen seconds
-// (from 0:15), then the two and a quarter minutes after it, straight on with no pause between (from 2:15).
+// then half a minute to reset. Each is a real match, played by the match simulation (matches.js), so the score on the
+// big screen and the scoring table is the one on the field, and holds at the end until the next match. The clock
+// counts down the period being played, as the audience display does: the 2019 sandstorm's first fifteen seconds (from
+// 0:15), then the two and a quarter minutes after it, straight on with no pause between (from 2:15).
 export const PLAY = 150, RESET = 30, SANDSTORM = 15;
-/** into: seconds since this match started (past PLAY, it's over and the field is being reset). */
+/**
+ * into: seconds since this match started (past PLAY, it's over and the field is being reset); index: which of the
+ * division's matches it is, 0 the one on as the hall opens; field: what's on the field (matches.js divisionFrame).
+ */
 export function matchState(k, t) {
   const u = Math.max(0, t + DIVISIONS[k].offset * 9 + 25), n = Math.floor(u / (PLAY + RESET)), into = u - n * (PLAY + RESET);
-  const p = Math.min(1, into / PLAY);
-  const total = (seed) => 34 + Math.floor(rnd(seed) * 48); // what an alliance ends on: 34 to 81
-  const sofar = (seed, lag) => Math.round(total(seed) * Math.min(1, Math.floor(p * 15 + lag) / 15));
-  const sandstorm = into < SANDSTORM;
+  const sandstorm = into < SANDSTORM, field = divisionFrame(k, n, into);
   return {
     qual: DIVISIONS[k].qual + n,
     // Seconds left in the period: 15 down to 1, then 135 down to 0, and 0 through the reset.
@@ -153,8 +156,10 @@ export function matchState(k, t) {
     sandstorm,
     playing: into < PLAY,
     into,
-    blue: sofar(k * 97 + n * 13 + 1, 0),
-    red: sofar(k * 131 + n * 17 + 5, 0.5),
+    index: n,
+    field,
+    blue: field.score[0],
+    red: field.score[1],
   };
 }
 /** Seconds as the match clock shows them: 2:15. */
