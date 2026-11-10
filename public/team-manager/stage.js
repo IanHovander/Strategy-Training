@@ -50,8 +50,18 @@
 //                         An arrow points the way, with label over it ('TO THE PITS'); sign: { y } moves the arrow, which
 //                         otherwise sits a little above the middle of the gap. move() has to let her get there. In
 //                         play.html leaving is on to the next scene; on the scene's own page she comes back in.
+//   exits                 more than one way out, for a place she can leave by either end (the game's arena and pits):
+//                         a list of exits like `exit`, each with side: 'left' for one on the left (once her feet are
+//                         left of its x she walks on out that way, and its arrow points left). onLeave(s, exit) is told
+//                         which she took.
 //   enter                 a path, [[x, y], ...], she walks in along as the cut scene ends, on to start: from off the left
 //                         edge, say. The stick is hers once she gets there. Not with ?x= in the address.
+//   modal(s)              a panel up over the scene while she'd otherwise be walking (the game's notebook, a list of
+//                         things to ask someone): return it, or null for none. While there's one she stands still, and
+//                         the stick, A and taps are its own: { update(dt, s), press(s), point(type, x, y, s), draw(g, t,
+//                         s) }, drawn over the scene. A conversation going on comes first: the panel waits for it.
+//   key(code, s)          a key of the scene's own (the game's notebook opens on B): return true if it took it. Not in
+//                         a cut scene.
 // A scene with no exit, in play.html, gets a NEXT SCENE button instead.
 //
 // A cut scene is a list of beats. Each is { dur, draw(g, t, c) }: draw the whole screen t seconds into the beat; c.T is
@@ -72,9 +82,9 @@
 // cut scene at that moment, words typed as far as they'd be with no waiting (for screenshots); ?beat=N starts the cut
 // scene at beat N; ?play skips it; ?x=..&y=..&dir=.. start her somewhere else.
 //
-// runScene(scene, { layout: 'full', root, onLeave, exitLabel, nextLabel, params }) is the game itself (play.html): the
-// screen fills the window and the stick is a dot in a dashed ring in the bottom right corner (WASD or the arrow keys on a
-// keyboard).
+// runScene(scene, { layout: 'full', root, onLeave, exitLabel, nextLabel, params, fade }) is the game itself (play.html):
+// the screen fills the window and the stick is a dot in a dashed ring in the bottom right corner (WASD or the arrow keys
+// on a keyboard). fade: false starts without the fade up from black, for one screen following straight on another.
 //
 // Every spot on the screen can be tapped (or clicked), on either layout. A tap goes first to the scene's pointer(), if it
 // takes it; then, while she's free to walk: on someone, she walks over and talks to them; on the way out's arrow, she
@@ -235,7 +245,7 @@ export function onStage(fn) {
 
 /** Put a scene on the page and run it. Returns its state (also window.stage). */
 export function runScene(scene, opts = {}) {
-  const { layout = 'phone', onLeave = null, exitLabel, nextLabel = 'NEXT SCENE', params = new URLSearchParams(location.search) } = opts;
+  const { layout = 'phone', onLeave = null, exitLabel, nextLabel = 'NEXT SCENE', params = new URLSearchParams(location.search), fade = true } = opts;
   const full = layout === 'full';
   const root = opts.root ?? document.getElementById('stage');
   root.innerHTML = full ? fullMarkup(scene, nextLabel) : markup(scene);
@@ -283,7 +293,7 @@ export function runScene(scene, opts = {}) {
     scene, mode: 'free', me: { x: start.x, y: start.y, dir: start.dir, gait: 'stand', dist: 0 }, look,
     near: null, talk: null, cut: null, view: { x: 0, y: 0 }, player: null, frozen: num('at'),
     // auto: a walk she's taking by herself (in, or out), mode 'auto'. fadeIn: when the picture began fading in.
-    auto: null, fadeIn: full && num('at') == null ? performance.now() / 1000 : null,
+    auto: null, fadeIn: full && fade && num('at') == null ? performance.now() / 1000 : null,
     stick() {
       // The phone's stick wins; otherwise the keyboard.
       if (!input.x && !input.y && input.keys.size) {
@@ -296,6 +306,11 @@ export function runScene(scene, opts = {}) {
   };
   window.stage = s;
   const emit = (type, detail) => listeners.forEach((fn) => fn(type, detail, s));
+  /** The ways out: the scene's list, or its one on the right. */
+  const exits = scene.exits ?? (scene.exit ? [scene.exit] : []);
+  const leftward = (e) => e.side === 'left';
+  /** The panel up over the scene, if there is one (and no conversation in front of it). */
+  const modal = () => (s.mode === 'free' && !s.talk ? scene.modal?.(s) ?? null : null);
   scene.setup?.(s);
   emit('scene', { scene, full });
 
@@ -344,12 +359,13 @@ export function runScene(scene, opts = {}) {
     }
     if (t >= a.dur + a.hold) a.done(now);
   }
-  /** Out she goes, on past the right edge of the picture with the camera held still (or a few steps, at most), and the
-   * screen fades. */
-  function leave() {
+  /** Out she goes by exit e, on past the edge of the picture with the camera held still (or a few steps, at most), and
+   * the screen fades. */
+  function leave(e) {
     const me = s.me, gait = me.gait === 'run' ? 'run' : 'walk';
-    const x = me.x + clamp(s.view.x + W + 20 - me.x, 16, 48);
+    const x = leftward(e) ? me.x - clamp(me.x - (s.view.x - 20), 16, 48) : me.x + clamp(s.view.x + W + 20 - me.x, 16, 48);
     s.goal = null;
+    s.took = e;
     walkBy([[me.x, me.y], [x, me.y]], gait, left, { hold: 0.15, out: true });
     emit('leave');
   }
@@ -363,7 +379,7 @@ export function runScene(scene, opts = {}) {
     emit('gone');
     if (onLeave) {
       s.stop();
-      onLeave(s);
+      onLeave(s, s.took ?? null);
       return;
     }
     s.fadeIn = now;
@@ -487,16 +503,24 @@ export function runScene(scene, opts = {}) {
     };
   }
   function freeFrame(now, dt) {
-    const e = scene.exit;
+    const over = modal();
     if (s.mode === 'auto') {
       autoStep(now);
+      if (stopped) return;
+    } else if (over) {
+      // A panel's up: she stands where she is, and the stick is the panel's.
+      s.goal = null;
+      if (STRIDE[s.me.gait]) s.me.gait = 'stand';
+      over.update?.(dt, s);
       if (stopped) return;
     } else {
       if (scene.update) scene.update(dt, s);
       else walk(dt);
-      if (e && !s.talk && s.me.x >= e.x && s.me.y >= e.y0 && s.me.y <= e.y1) leave();
+      if (stopped) return;
+      const out = !s.talk && exits.find((e) => (leftward(e) ? s.me.x <= e.x : s.me.x >= e.x) && s.me.y >= e.y0 && s.me.y <= e.y1);
+      if (out) leave(out);
     }
-    s.near = s.talk || s.mode === 'auto' ? null : scene.reach ? scene.reach(s) : closest();
+    s.near = s.talk || s.mode === 'auto' || over ? null : scene.reach ? scene.reach(s) : closest();
     // Walked over to someone tapped: once they're the one in reach, she talks to them.
     if (s.goal?.person && s.near === s.goal.person) {
       s.goal = null;
@@ -509,16 +533,27 @@ export function runScene(scene, opts = {}) {
     g.globalAlpha = 1;
     scene.draw(g, view, now, s);
     g.globalAlpha = 1;
-    if (e && s.mode === 'free' && !s.talk) drawExit(e, view, now);
+    if (s.mode === 'free' && !s.talk && !over) for (const e of exits) drawExit(e, view, now);
     if (s.near && !s.talk) {
       if (scene.prompt) scene.prompt(g, view, s.near, now);
       else drawBubble(g, s.near.x - view.x + 11, s.near.y - view.y - 50, now);
+    }
+    // The panel, as it is now (the scene's update or draw may just have opened or closed it).
+    const panel = modal();
+    if (panel) {
+      useContext(g);
+      screen();
+      g.globalAlpha = 1;
+      panel.draw(g, now, s);
+      g.globalAlpha = 1;
     }
     if (s.talk) drawDialog(g, s.talk, now);
   }
   /** The way out: an arrow nudging right, white on an ink outline like the bubbles, with where it goes over it. Neither
    * is drawn over her: it's an overlay, drawn after the scene, so it would sit on her face (she's found it by then). */
   function drawExit(e, view, now) {
+    e.at = null;
+    if (leftward(e)) return drawExitLeft(e, view, now);
     // Just past the right edge, it waits at the edge, whole, pointing on: the way out is that way.
     const at = Math.round(e.x - view.x) - 3;
     if (at < -4 || at > W + 60) return;
@@ -536,10 +571,30 @@ export function runScene(scene, opts = {}) {
     arrow(C.ink, 1);
     arrow(C.white, 0);
     const label = exitLabel ?? e.label;
-    s.exitAt = { x0: x - (label ? measure(label, { font: 3 }) : 10) - 4, x1: x + 6, y0: y - 16, y1: y + 8 };
+    e.at = { x0: x - (label ? measure(label, { font: 3 }) : 10) - 4, x1: x + 6, y0: y - 16, y1: y + 8 };
     if (label && !onHer(x - measure(label, { font: 3 }) - 1, x + 2, y - 14, y - 6)) {
       text(label, x + 1, y - 13, { font: 3, color: C.white, outline: C.ink, align: 'right' });
     }
+  }
+  /** The same for a way out on the left: the arrow the other way round, waiting at the left edge. */
+  function drawExitLeft(e, view, now) {
+    const at = Math.round(e.x - view.x) + 3;
+    if (at > W + 4 || at < -60) return;
+    const x = Math.max(at, 5) - (Math.floor(now * 2.5) % 2);
+    const y = Math.round((e.sign?.y ?? (e.y0 + e.y1) / 2 - 24) - view.y);
+    const hx = Math.round(s.me.x - view.x), hy = Math.round(s.me.y - view.y);
+    const onHer = (x0, x1, y0, y1) => hx + 12 > x0 && hx - 12 < x1 && hy - 48 < y1 && hy + 2 > y0;
+    if (onHer(x - 3, x + 10, y - 6, y + 6)) return;
+    screen();
+    const arrow = (c, o) => {
+      fill(x + 4 - o, y - 1 - o, 6 + 2 * o, 3 + 2 * o, c);
+      for (let i = 0; i < 5; i++) fill(x + 3 - i - o, y - 4 + i - o, 1 + 2 * o, 9 - 2 * i + 2 * o, c);
+    };
+    arrow(C.ink, 1);
+    arrow(C.white, 0);
+    const label = e.label, lw = label ? measure(label, { font: 3 }) : 10;
+    e.at = { x0: x - 6, x1: x + lw + 4, y0: y - 16, y1: y + 8 };
+    if (label && !onHer(x - 2, x + lw + 1, y - 14, y - 6)) text(label, x - 1, y - 13, { font: 3, color: C.white, outline: C.ink });
   }
 
   // ---- A, and skipping ----
@@ -564,6 +619,8 @@ export function runScene(scene, opts = {}) {
         scene.onTalked?.(s, p);
         emit('talked', { person: p });
       }
+    } else if (modal()) {
+      modal().press?.(s);
     } else if (s.near) {
       const p = s.near, at = scene.faceTo?.(p) ?? p;
       if (!scene.update) s.me.dir = dirToward(at.x - s.me.x, (at.y - s.me.y) / DEPTH);
@@ -599,10 +656,11 @@ export function runScene(scene, opts = {}) {
   function tap(x, y) {
     if (x < 0 || x >= W || y < 0 || y >= H) return pressA();
     if (s.mode !== 'free' || s.talk || scene.update) return pressA();
-    const wx = x + s.view.x, wy = y + s.view.y, e = scene.exit, out = s.exitAt;
+    const wx = x + s.view.x, wy = y + s.view.y;
     const p = personAt(wx, wy);
     if (p) return s.near === p ? pressA() : goTo(p.x, p.y, p);
-    if (e && out && x >= out.x0 && x <= out.x1 && y >= out.y0 && y <= out.y1) return goTo(e.x + 6, clamp(s.me.y, e.y0 + 1, e.y1 - 1));
+    const e = exits.find((q) => q.at && x >= q.at.x0 && x <= q.at.x1 && y >= q.at.y0 && y <= q.at.y1);
+    if (e) return goTo(leftward(e) ? e.x - 6 : e.x + 6, clamp(s.me.y, e.y0 + 1, e.y1 - 1));
     goTo(wx, wy);
   }
 
@@ -649,9 +707,9 @@ export function runScene(scene, opts = {}) {
   /** The game's layout has no phone: the stick shows while she's yours to steer, SKIP in a cut scene, NEXT SCENE (where
    * there's no way out) while she's free. */
   function drawHud() {
-    set('hud', s.mode === 'free' && s.talk ? 'talk' : s.mode, (v) => (box.dataset.mode = v));
+    set('hud', s.mode === 'free' && (s.talk || modal()) ? 'talk' : s.mode, (v) => (box.dataset.mode = v));
     set('skip', s.mode === 'cut', (v) => ($('.skip').hidden = !v));
-    set('next', s.mode === 'free' && !!onLeave && !scene.exit, (v) => ($('.next').hidden = !v));
+    set('next', s.mode === 'free' && !!onLeave && !exits.length, (v) => ($('.next').hidden = !v));
   }
 
   // ---- The clock ----
@@ -706,24 +764,29 @@ export function runScene(scene, opts = {}) {
     const r = tv.getBoundingClientRect();
     return [Math.floor(((e.clientX - r.left) / r.width) * W), Math.floor(((e.clientY - r.top) / r.height) * H)];
   };
-  let held = null; // the pointer the scene took on 'down'
+  let held = null, heldBy = null; // the pointer taken on 'down', and whose it is: the scene's, or a panel's
   surface.addEventListener('pointerdown', (e) => {
     if (e.button > 0 || e.target.closest('.stick, button')) return;
     const [x, y] = toScreen(e);
     emit('tap', { x, y });
-    if (scene.pointer?.('down', x, y, s)) {
+    const over = modal();
+    // A panel's up: the tap is the panel's, and one it doesn't take does nothing.
+    const taker = over ? (over.point?.('down', x, y, s) ? (t, px, py) => over.point(t, px, py, s) : null)
+      : scene.pointer?.('down', x, y, s) ? (t, px, py) => scene.pointer(t, px, py, s) : null;
+    if (taker) {
       held = e.pointerId;
+      heldBy = taker;
       surface.setPointerCapture(e.pointerId);
-    } else tap(x, y);
+    } else if (!over) tap(x, y);
     e.preventDefault();
   }, on);
   surface.addEventListener('pointermove', (e) => {
-    if (e.pointerId === held) scene.pointer('move', ...toScreen(e), s);
+    if (e.pointerId === held) heldBy('move', ...toScreen(e));
   }, on);
   for (const type of ['pointerup', 'pointercancel']) surface.addEventListener(type, (e) => {
     if (e.pointerId !== held) return;
     held = null;
-    scene.pointer(type === 'pointerup' ? 'up' : 'cancel', ...toScreen(e), s);
+    heldBy(type === 'pointerup' ? 'up' : 'cancel', ...toScreen(e));
   }, on);
 
   // The stick: the knob (the dot) follows the finger inside the ring, a little way out to walk, all the way to run.
@@ -780,6 +843,10 @@ export function runScene(scene, opts = {}) {
   };
   addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (s.mode !== 'cut' && !e.repeat && scene.key?.(e.code, s)) {
+      e.preventDefault();
+      return;
+    }
     if ((e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') && !e.repeat && e.target.tagName !== 'BUTTON') {
       pressA();
       e.preventDefault();
