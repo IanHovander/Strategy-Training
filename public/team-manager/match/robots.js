@@ -147,7 +147,7 @@ const LIST = [
   }),
   // The top scorer at the event, cargo first. Light and quick, so a good defender takes a lot off it.
   team(7777, 'swerve', {
-    target: 48, speed: 12, susceptibility: 0.85,
+    target: 48, speed: 12, susceptibility: 0.95,
     hatch: { pick: [2.4, 0.8], place: [2.2, 0.7] },
     cargo: { pick: [1.7, 0.6], place: [1.9, 0.6], acc: 0.95 },
     climb: { 1: [1, 2], 2: [0.97, 5], 3: [0.7, 11] },
@@ -177,21 +177,30 @@ const LIST = [
     climb: { 1: [1, 2], 2: [0.9, 6], 3: [2 / 7, 12] },
     habits: { climb: 3 },
   }),
-  // Defense. Quick and hard to push: its own points are few because it spends its matches on someone else's.
+  // Defense, and nothing but: quick and hard to push, with a hatch on velcro for the sandstorm and not much of a
+  // scorer after it. Its own points are few because it spends its matches on someone else's, and it's worth far more
+  // there than cycling: on a robot that gives way easily it takes more off them than any third robot adds.
   team(4471, 'def', {
-    target: 14, speed: 12, start: 2, sandstorm: 2, defense: 0.9, susceptibility: 0.2, push: 0.85,
-    hatch: { place: [3.5, 1], acc: 0.9 }, habits: { role: 'defend' },
+    target: 14, speed: 13, start: 2, sandstorm: 2, defense: 0.97, susceptibility: 0.2, push: 0.85,
+    hatch: { pick: [7.5, 2], place: [6.5, 1.8], acc: 0.75 }, habits: { role: 'defend' },
   }),
   // The captains and first picks the story doesn't give numbers for: strong robots, as seeds and first picks are.
-  team(4000, 'swerve', { speed: 11, cargo: { pick: [2.4, 0.8] } }),
+  // Each has something about it that an average doesn't say, for whoever watches: 4000 is as light as 7777; 3000's
+  // climber arm slips till they re-rig it at Friday lunch, and hardly ever after; 1357 reaches Level 3 with cargo but
+  // chances it where it rolls out; 8812 drops off the field about one match in five; 9152's battery sags when it's
+  // pushed; and 7040 is a wall, the only other one at the event.
+  team(4000, 'swerve', { speed: 11, susceptibility: 0.75, cargo: { pick: [2.4, 0.8] } }),
   team(2468, 'ele', { speed: 9.5, hatch: { pick: [2.8, 0.9], place: [2.8, 0.9] } }),
-  team(3000, 'climber', { speed: 9, cargo: { risk: 0 }, climb: { 1: [1, 2], 2: [0.95, 5], 3: [0.8, 10] } }),
+  team(3000, 'climber', {
+    speed: 9, cargo: { risk: 0 }, climb: { 1: [1, 2], 2: [0.95, 5], 3: [0.45, 11] },
+    form: [{ from: 4, mods: { 'climb.3': [0.9, 9], 'cargo.pick': [3.2, 1], 'cargo.place': [3, 1] } }],
+  }),
   team(8086, 'arm', { speed: 9 }),
-  team(5940, 'hatchlow', { speed: 9.5 }),
-  team(9152, 'ship', { speed: 9 }),
-  team(1357, 'arm', { speed: 9.5, cargo: { reach: 3 }, sprite: 'arm' }),
-  team(8812, 'ele', { speed: 9 }),
-  team(7040, 'wedge', { speed: 10 }),
+  team(5940, 'hatchlow', { speed: 9.5, susceptibility: 0.7 }),
+  team(9152, 'ship', { speed: 9, brownout: 0.3 }),
+  team(1357, 'arm', { speed: 9.5, cargo: { reach: 3, risk: 0.55 }, sprite: 'arm' }),
+  team(8812, 'ele', { speed: 9, breakdown: 0.18 }),
+  team(7040, 'wedge', { speed: 11.5, defense: 0.9 }),
   // Two rookies, so the schedule comes out even.
   team(9201, 'kitbot'),
   team(9240, 'kitbot', { sandstorm: 1, hatch: { pick: [6, 2], place: [5.5, 1.8], acc: 0.75 } }),

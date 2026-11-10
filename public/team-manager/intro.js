@@ -23,7 +23,7 @@ import {
 import { Chip, Player, BEAT, INTRO_BEATS } from './chip.js';
 import { SONGS } from './songs.js';
 import { beam } from './lights.js';
-import { NAME_MAX, cleanName, savedName, saveName } from './player.js';
+import { NAME_MAX, cleanName, savedName, saveName, hasSave } from './player.js';
 import { drawHero, heroIdle } from './hero.js';
 
 // The working title. Change it here; the logo is sized from the text.
@@ -603,8 +603,9 @@ function drawTitle(t, B) {
   cover(1 - seg(t, 0, 0.6), C.white);
 }
 
-// ---- Menu: NEW SEASON asks your name, then starts the game (play.html, every scene so far in turn) ----
-const MENU = ['NEW SEASON', 'REPLAY INTRO'];
+// ---- Menu: NEW SEASON asks your name, then starts the game (play.html); CONTINUE, if there's a season saved in this
+// browser, carries on with it ----
+const MENU = hasSave() ? ['CONTINUE', 'NEW SEASON', 'REPLAY INTRO'] : ['NEW SEASON', 'REPLAY INTRO'];
 function box(x, y, w, h) {
   fill(x, y, w, h, C.ink);
   fill(x + 2, y + 2, w - 4, h - 4, '#f4f6ff');
@@ -614,7 +615,7 @@ function box(x, y, w, h) {
 function drawMenu(now) {
   screen();
   fill(0, 0, W, H, '#f4f6ff');
-  box(6, 6, 104, 40);
+  box(6, 6, 104, 12 + MENU.length * 14);
   MENU.forEach((label, i) => {
     text(label, 24, 15 + i * 14, { color: C.ink });
     if (i === ui.cursor && (!ui.leaving || Math.floor(now * 8) % 2)) text('>', 14, 15 + i * 14, { color: C.ink });
@@ -651,7 +652,7 @@ function confirmName() {
   chip.sfx('select');
   ui.leaving = true;
   nameInput.blur();
-  setTimeout(() => location.assign(`./play.html?name=${encodeURIComponent(name)}`), 450);
+  setTimeout(() => location.assign(`./play.html?new&name=${encodeURIComponent(name)}`), 450);
 }
 function drawName(now) {
   screen();
@@ -906,8 +907,11 @@ function press(key) {
     ui.state = 'play';
   } else if (key === 'a' || key === 'start') {
     chip.sfx('select');
-    if (ui.cursor === 0) askName();
-    else {
+    if (MENU[ui.cursor] === 'NEW SEASON') askName();
+    else if (MENU[ui.cursor] === 'CONTINUE') {
+      ui.leaving = true;
+      setTimeout(() => location.assign('./play.html'), 450);
+    } else {
       ui.state = 'play';
       playFrom(0);
     }
@@ -951,8 +955,8 @@ canvas.addEventListener('click', (e) => {
     else nameInput.focus(); // a tap anywhere else brings the phone's keyboard back up
     return;
   }
-  if (ui.state === 'menu' && x < 110 && y > 8 && y < 44) {
-    const i = y < 26 ? 0 : 1;
+  if (ui.state === 'menu' && x < 110 && y > 8 && y < 16 + MENU.length * 14) {
+    const i = Math.max(0, Math.min(MENU.length - 1, Math.floor((y - 12) / 14)));
     if (i !== ui.cursor) ui.cursor = i;
     return press('a');
   }

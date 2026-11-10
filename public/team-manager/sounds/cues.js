@@ -19,12 +19,9 @@
 
 import { PHONE_TIMES } from '../opening/phone.js';
 import { HANDOFF } from '../opening/handoff.js';
-import { ORDER, OPPONENT, statusOf } from '../opening/teams2.js';
 
 const card = (t, o) => [t, 'card', o];
 const bed = (t, to, secs = 0.8) => [t, 'bed', { to, secs }];
-/** Seconds into a quarterfinal match its clock reaches 0:15: it plays at 15 times real time (opening/quarter.js SPEED). */
-const QF_BELLS = 15 / 15;
 
 export const SCENES = {
   'THE OPENING': {
@@ -37,49 +34,7 @@ export const SCENES = {
       cocaptain: [bed(0, 0.3, 1), [0, 'music', 'moment']], // the arena goes dark close on them; a soft swell
       handoff: [[HANDOFF.glint[0] + 0.1, 'glint']],
       call: [[0, 'music', null], bed(0, 1, 0.4), [0.3, 'cheer', { size: 0.8 }]],
-      pick: [[0, 'slam'], bed(0, 0.45, 0.3)],
     },
-    status: {
-      'PICKED': [[0, 'fanfare'], [0.1, 'cheer', { size: 0.7 }]],
-      'BET LOG': [[0, 'stamp']],
-      'REWINDING': [[0, 'rewind']],
-      'TO BE CONTINUED': [[0.1, 'continued']],
-      // The second pick (opening/second.js). The goal card slides in as Riley sets the goal.
-      'THE PLAN': [[0.15, 'card']],
-      // Each pick while she waits: the PA chime as Robin calls it, and the TAKEN stamp coming down on its tile a second
-      // later; alliance 5's picks, the quarterfinal's other side, get a cheer from their end of the stands.
-      ...Object.fromEntries(ORDER.map((p) => [statusOf(p), [
-        [0, 'chime'], [1, 'click'], ...(p.alliance === OPPONENT ? [[1, 'cheer', { size: 0.45 }]] : []),
-      ]])),
-      // Her turn: the clock slams in, as at the first pick.
-      'PICK 2: ON THE CLOCK': [[0, 'slam']],
-      // Both picks done, on to the quarterfinal: the second line's tick stamped on.
-      'PICKS DONE': [[0.7, 'stamp'], [0.9, 'jingle']],
-      // The quarterfinal (opening/quarter.js): the matches loud, the freeze quiet, each climb's outcome heard. Each
-      // match starts with the horn, and at 0:15 (a second in, as fast as they play) the field's bells ring as the
-      // sandstorm's shutters roll up.
-      QUARTERFINAL: [[0, 'card'], bed(0, 0.6, 0.6)],
-      'QF MATCH 1': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }], [QF_BELLS, 'bells']],
-      'QF MATCH 2': [bed(0, 1.1, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.7 }], [QF_BELLS, 'bells']],
-      'QF MATCH 3': [bed(0, 1.2, 0.4), [0.05, 'horn'], [0.2, 'cheer', { size: 0.9 }], [QF_BELLS, 'bells']],
-      'QF: 6834 IS DEAD': [[0, 'clunk'], [0.15, 'aww']],
-      'QF: RED WINS': [[0, 'horn', { dur: 1.1 }], [0.1, 'cheer', { size: 0.9 }], [0.3, 'jingle'], bed(1.4, 0.7, 1)],
-      'QF: BLUE WINS': [[0, 'horn', { dur: 1.1 }], [0.2, 'aww'], [0.3, 'miss'], bed(1.4, 0.7, 1)],
-      'QF: 0:20 LEFT': [[0, 'slam'], bed(0, 0.25, 0.3)],
-      'QF: YOUR CALL': [bed(0, 0.5, 1.5)],
-      'QF: 6834 CLIMBS': [bed(0, 1, 0.4), [0.5, 'robot', { dur: 1.2 }], [2.6, 'robot', { dur: 0.6, vol: 0.8 }]],
-      'QF: 6834 MADE IT': [[0, 'clunk'], [0.05, 'cheer', { size: 1 }]],
-      'QF: 6834 MISSED': [[0, 'clunk'], [0.15, 'aww']],
-      'QF: 6417 CLIMBS': [[0.5, 'robot', { dur: 1.2, vol: 0.7 }], [2.6, 'robot', { dur: 0.6, vol: 0.6 }]],
-      'QF: 6417 MADE IT': [[0, 'clunk'], [0.1, 'aww']],
-      'QF: 6417 MISSED': [[0, 'clunk'], [0.1, 'cheer', { size: 0.8 }]],
-      'QF: WE WIN THE SERIES': [[0, 'horn', { dur: 1.2 }], [0.1, 'cheer', { size: 1 }], [0.3, 'fanfare'], bed(1.5, 0.7, 1.5)],
-      'QF: KNOCKED OUT': [[0, 'horn', { dur: 1.2 }], [0.2, 'aww'], [0.4, 'miss'], bed(1.5, 0.5, 1.5)],
-    },
-    // The bet log's verdict, from what A says on it: CONTINUE for the right pick, REWIND for the wrong one. CLOSE: the
-    // goal card opened from its pill in the second pick's header.
-    label: { CONTINUE: [[0.25, 'jingle']], REWIND: [[0.25, 'miss']], CLOSE: [[0, 'card', { soft: true }]] },
-    clock: { last: 10 },
   },
 
   'TEAM MEETING': {
@@ -171,6 +126,52 @@ export const SCENES = {
       applause: [bed(0, 1.3, 1), [0.2, 'cheer', { size: 1 }], [0.6, 'claps', { dur: 2.6, n: 40, vol: 0.04 }]],
       out: [bed(0, 1, 2)],
     },
+    // The game's own selection (game/draft.js), on the tablet: the PA chime for every pick, the clock slamming in on
+    // her turn and ticking down, the cheer when someone says yes.
+    status: {
+      ...Object.fromEntries([1, 2].flatMap((r) => [1, 2, 3, 4, 5, 6, 7, 8].map((a) => [`ROUND ${r}: ALLIANCE ${a} PICKS`, [[0, 'chime'], [0.15, 'click']]]))),
+      'ON THE CLOCK': [[0, 'slam']],
+      PICKED: [[0, 'fanfare'], [0.1, 'cheer', { size: 0.7 }]],
+      INVITED: [[0, 'spot', { vol: 1.2 }], [0.1, 'cheer', { size: 0.5 }]],
+      DECLINED: [[0, 'miss'], [0.1, 'aww']],
+      'ALLIANCES SET': [[0.2, 'cheer', { size: 0.9 }], [0.3, 'jingle']],
+    },
+    clock: { last: 10 },
+  },
+
+  // ---- The game's screens (game/): each by its name, and what its status line sounds like ----
+  'THE PLAN': { bed: 'arena', surface: null, music: null, cut: 1, free: 0.5, enter: [[0, 'card', { soft: true }]] },
+  ...Object.fromEntries(['THE MATCH', 'QUARTERFINAL', 'SEMIFINAL', 'FINAL'].map((name) => [name, {
+    bed: 'arena', surface: null, music: null, cut: 1, free: 1,
+    status: {
+      // A series card has the round's name for its status: the card's own sound.
+      [name]: [[0, 'card']],
+      'MATCH ON': [bed(0, 1.1, 0.4), [0.05, 'charge'], [0.3, 'cheer', { size: 0.6 }], [1.25, 'bells']],
+      'THE CALL': [[0, 'slam'], [0.05, 'alert'], bed(0, 0.3, 0.3)],
+      ENDGAME: [bed(0, 1.1, 0.4), [0.4, 'robot', { dur: 1.4 }], [3, 'whistle']],
+      'MATCH WON': [[0, 'buzzer'], [0.15, 'cheer', { size: 1 }], [0.35, 'jingle'], bed(1.5, 0.7, 1.5)],
+      'MATCH LOST': [[0, 'buzzer'], [0.25, 'aww'], bed(1.5, 0.6, 1.5)],
+      'MATCH TIED': [[0, 'buzzer'], [0.2, 'cheer', { size: 0.4 }]],
+      'MATCH OVER': [[0, 'buzzer'], [0.2, 'cheer', { size: 0.6 }], [0.6, 'stamp']],
+    },
+  }])),
+  'THE PLAYOFFS': { bed: 'crowd', surface: null, music: null, cut: 1, free: 0.7, enter: [[0, 'card'], [0.3, 'cheer', { size: 0.4 }]] },
+  AFTER: { bed: 'crowd', surface: null, music: 'moment', cut: 0.35, free: 0.3, beats: { 6: [[0.3, 'glint'], [0.9, 'click'], [1.3, 'click']] } },
+  'AFTER THE PLAYOFFS': { bed: 'crowd', surface: null, music: 'moment', cut: 1, free: 0.3, status: { 'NORBERT IS GLOWING': [[0.6, 'glint']] } },
+  'WINDING BACK': {
+    bed: null, surface: null, music: null, cut: 1, free: 1,
+    status: {
+      'TIME STOPS': [[0, 'slam']],
+      'WINDING BACK': [[0, 'rewind'], ...[0, 0.34, 0.6, 0.8, 0.95, 1.07, 1.17, 1.25, 1.32, 1.38, 1.43, 1.47].map((t) => [0.1 + t, 'click'])],
+      'THURSDAY 6:40 AM': [[0.4, 'continued']],
+      'SATURDAY 12:38 PM': [[0.4, 'continued']],
+    },
+  },
+  FRIDAY: { bed: 'arena', surface: null, music: null, cut: 1, free: 0.5, enter: [[0.1, 'card']] },
+  SATURDAY: { bed: 'arena', surface: null, music: null, cut: 1, free: 0.5, enter: [[0.1, 'card']] },
+  'THE REGIONAL': {
+    bed: 'crowd', surface: null, music: 'day', cut: 1, free: 0.5,
+    status: { 'THE REGIONAL': [[0.2, 'jingle']], 'BLUE BANNER': [[0.2, 'fanfare'], [0.3, 'cheer', { size: 1 }]] },
   },
 
   WORLDS: {

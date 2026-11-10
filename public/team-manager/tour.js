@@ -1,7 +1,8 @@
-// The game so far, start to finish: every scene one after another, the way they'll run. NEW SEASON on the title screen
-// comes here. Each scene opens on its cut scene, then she's yours to walk about, coming in on the left, until she
-// leaves on the right and the next cut scene starts; where there's no way out (the van), NEXT SCENE moves on. After the
-// last, a card, then back to the title.
+// The scene tour (tour.html): every place built for the game, one after another, each opening on its own cut scene and
+// then hers to walk about in, coming in on the left and leaving on the right for the next; where there's no way out
+// (the van), NEXT SCENE moves on. These are the scenes as they were first built, with their own filler stories. The
+// game itself is play.html (game/main.js), which uses some of them as its places. After the last, a card, then back
+// to the title.
 //
 // From the address bar: ?scene=pits starts at that scene (the address keeps up as you go, so reloading starts the scene
 // you're in over), and stage.js's own options (?at, ?beat, ?play, ?x, ?y, ?dir) apply to the first scene. On a keyboard,
@@ -11,7 +12,7 @@ import { runScene } from './stage.js';
 import './sound.js'; // the sound: it listens to the stage, and puts its mute button in the corner
 
 /** The season in order: each is a folder with a scene.js that exports `scene`. */
-const SCENES = ['opening', 'team-meeting', 'practice-field', 'van', 'pits', 'arena', 'alliance-selection', 'worlds'];
+const SCENES = ['team-meeting', 'practice-field', 'van', 'pits', 'arena', 'alliance-selection', 'worlds'];
 const load = (id) => import(`./${id}/scene.js`);
 
 /** After the last scene: the season so far, and back to the title. */
@@ -27,8 +28,8 @@ const END = {
     fill(0, 0, W, H, C.night0);
     dither(0, 96, W, 6, C.night0, C.night1);
     fill(0, 102, W, H - 102, C.night1);
-    text("THAT'S THE SEASON SO FAR", 128, 50, { align: 'center', color: C.white, outline: C.ink });
-    text('MORE OF IT IS ON THE WAY.', 128, 68, { font: 3, align: 'center', color: C.blue3 });
+    text("THAT'S EVERY SCENE SO FAR", 128, 50, { align: 'center', color: C.white, outline: C.ink });
+    text('THE GAME ITSELF STARTS FROM THE TITLE: NEW SEASON.', 128, 68, { font: 3, align: 'center', color: C.blue3 });
     if (t % 1 < 0.65) text('BACK TO THE TITLE: TOP RIGHT', 128, 118, { font: 3, align: 'center', color: C.steel2 });
   },
 };

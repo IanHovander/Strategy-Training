@@ -206,6 +206,11 @@ function drawWorld(g, camX, T, o = {}) {
 }
 
 const cutscene = makeCutscene(drawWorld, { PEOPLE });
+/**
+ * For the game (game/hub.js), where the arena is a place she comes back to all weekend: say: false leaves the
+ * announcer's words off the screen (they call this page's own matches, 42 and on, not the event's).
+ */
+export const SETTINGS = { say: true };
 /** Seconds to add to the page's clock while walking, so the field carries on from the cut scene (see above). */
 let ahead = 0;
 /**
@@ -261,7 +266,7 @@ export const scene = {
     const camX = view.x, x = Math.round(s.me.x) - camX, y = Math.round(s.me.y);
     drawWorld(g, camX, t + ahead, {
       talkingTo: seated(s.talk?.person), who: [{ x0: x - 8, x1: x + 8, y1: y }], more: [s.player],
-      say: s.talk ? false : y > 104 ? 'top' : 'bottom',
+      say: s.talk || !SETTINGS.say ? false : y > 104 ? 'top' : 'bottom',
     });
   },
 };

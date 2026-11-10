@@ -1,7 +1,7 @@
 // The cold open of Blue Banner: the first minute of the game, cut shot by shot to the design's list (docs/blue-banner-
 // design.md, section 5, "Building the opening"). Until Robin calls her up it goes at the player's pace: the words, and
 // her phone once both texts are in, wait for A. From the call on it's in a hurry: the words turn by themselves, and the
-// 45-second clock is running from the moment Robin says it (pick.js). Saturday,
+// 45-second clock is running from the moment Robin says it. Saturday,
 // 12:38 PM, alliance selection, and 5026 is seed 4: an alliance captain, with a pick to make and nobody to make it.
 // It opens in the dark with the crowd's noise rising (a line of sound across the black that grows from a murmur to a
 // roar), then her phone, full screen, in her hand: the senior strategist's typing dots, and "SICK. CAN'T COME." and
@@ -22,8 +22,8 @@
 //
 // It's built like the intro and alliance selection's cut scene (stage.js): hard cuts between shots, whole-number 2x
 // close-ups for the people talking (a 1x view drawn into a 256x144 canvas of its own, a 128x72 window of it copied up
-// crisp), film bars throughout (the pick, a screen of the game's own, has none), and every frame a pure function of
-// time. The arena is alliance selection's own (its set, its reps, MC Robin, its layout, its lights). Seeds 1 to 3 and 5
+// crisp), film bars throughout, and every frame a pure function of time. What follows it is the game's (game/cold.js):
+// the pick, on the scouting tablet. The arena is alliance selection's own (its set, its reps, MC Robin, its layout, its lights). Seeds 1 to 3 and 5
 // to 8 stand at their signs along the arc; everyone else waits on the floor in front of the field in its knots, as in
 // alliance selection, and Riley has taken her aside, onto the open floor right of the gate. The house lights are
 // down: every captain stands in their sign's spotlight, and sign 4's is lit with nobody in it, waiting for her. In the
@@ -51,7 +51,9 @@ import { COCAPTAIN_LOOK, COCAPTAIN_NAME } from './cocaptain.js';
 import { drawHeldNorbert, heldAt, heldShows, drawHud } from './norbert-held.js';
 import { drawPhone, PHONE_TIMES } from './phone.js';
 import { drawHandoff, HANDOFF } from './handoff.js';
-import { drawPick, PICK_CLOCK, callClock } from './pick.js';
+
+/** The pick clock, as the audience display shows it starting: 45 seconds (the game's draft screen runs it on). */
+const PICK_CLOCK = 45;
 
 // ---- Who's where ----
 /** The eight captains by seed, left to right along the line; 5026 is the fourth, its sign empty till she gets there. */
@@ -278,7 +280,7 @@ function drawCard(t) {
 }
 
 /**
- * The beats (stage.js): black, phone, card, wide, cocaptain, yourList, takeHim, handoff, okay, call, pick.
+ * The beats (stage.js): black, phone, card, wide, cocaptain, yourList, takeHim, handoff, okay, call.
  */
 export function makeCutscene() {
   makeSetLayers();
@@ -414,9 +416,9 @@ export function makeCutscene() {
     say: robinSays([['5026, COME ON UP!']], 0, { auto: true }),
   });
 
-  // 11. pick: a hard cut to the pick, the clock slamming in, still running from the call (pick.js), and on as the cut
-  // scene hands over (scene.js).
-  beats.push({ name: 'pick', dur: 0.8, draw: (g, t, c) => drawPick(t, callClock(c.T - call.at)) });
+  // Then a hard cut to the pick itself: the scouting tablet, the clock slamming in (game/draft.js), which the game
+  // (game/cold.js) puts on as this ends.
+  void call;
 
   // When each beat starts (for ?at=), and how long it all takes at the automatic pace.
   let T = 0, A = 0;

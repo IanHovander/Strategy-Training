@@ -27,3 +27,13 @@ export function saveName(name) {
     // Storage blocked (a private window, say): the address carries it into the game instead.
   }
 }
+
+/** Where the season's save lives in this browser (game/state.js writes it), and whether there's one to carry on from. */
+export const SAVE_KEY = 'bluebanner.save.2';
+export function hasSave() {
+  try {
+    return !!localStorage.getItem(SAVE_KEY);
+  } catch {
+    return false;
+  }
+}

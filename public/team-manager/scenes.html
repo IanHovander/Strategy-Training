@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f24">
-<title>Blue Banner Scenes</title>
+<title>Blue Banner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
@@ -24,11 +24,19 @@
 </head>
 <body>
 <div class="page">
-  <h1>Blue Banner: scenes</h1>
-  <p class="intro">Every place in the season so far, in story order. Each one opens on a cut scene, then hands you the strategist to walk around and talk to people. On its own page, the phone beside the big screen steers her; Play the season runs them all in turn, full screen.</p>
+  <h1>Blue Banner</h1>
+  <p class="intro">A game about being a rookie strategist at a robotics regional. It plays from the title screen to the end of the first event: thrown in at alliance selection with one page of numbers, wound back to Thursday by the team's clockwork penguin, then three days to walk the pits, watch robots, plan your own matches and fill a notebook, before alliance selection and the playoffs come round again.</p>
   <div class="grid">
-    <a href="./" class="all"><section class="card"><h2>Play the season</h2><p>Everything in turn, full screen, the way it will run: the opening sizzle reel and the title screen, then NEW SEASON starts the scenes in story order. Each opens on its cut scene; then walk about and talk to people, coming in on the left, and leave on the right for the next one (the van has a NEXT SCENE button). Hold your phone sideways: tap anywhere for A, steer with the dot in the bottom right corner. On a computer: WASD or the arrow keys, Shift to run, Space for A.</p></section></a>
-    <a href="./opening/"><section class="card"><h2>The opening</h2><p>Saturday, 12:38 PM, alliance selection. The senior strategist texts in sick, and down on the floor with the team reps the co-captain hands her the pick list, and Norbert for luck. MC Robin calls her up, and the 45-second clock starts over the scouting tablet: two teams, one thing to notice, and a rewind if she gets it wrong.</p></section></a>
+    <a href="./" class="all"><section class="card"><h2>Play the game</h2><p>The opening reel and the title screen, then NEW SEASON (or CONTINUE, if you've played before on this device). Hold your phone sideways: tap what you want to press, tap the floor to walk there, tap someone to talk to them; the dot in the bottom right corner steers. On a computer: WASD or the arrow keys, Shift to run, Space for A, B for the notebook, M for the sound.</p></section></a>
+    <a href="./play.html?new"><section class="card"><h2>The opening</h2><p>Saturday, 12:38 PM. The senior strategist is out sick, the co-captain hands her the pick list and Norbert, and she's on the clock: every team that's left on the tablet, 45 seconds, and whoever she invites, she's got. Then the playoffs with that alliance, for real.</p></section></a>
+    <a href="./play.html?at=thursday"><section class="card"><h2>Thursday: the pits</h2><p>All 24 pits in one long hall. Every team will tell you what their robot does, how it's running and who impressed them. Some of it's true.</p></section></a>
+    <a href="./play.html?at=quals"><section class="card"><h2>Friday: qualification</h2><p>Ten rounds. Before each of her matches: the stands, to watch a robot, or the pits. Then the plan for her own alliance, the match on the field, and the call at 0:30. (Starts at round 1; add &amp;round=6 to the address for Friday's last.)</p></section></a>
+    <a href="./play.html?at=boss"><section class="card"><h2>Saturday: the boss fight</h2><p>Alliance selection with the event's real rankings and whatever's in the notebook, then the playoffs, best two of three. Starts with an event played on the drive coach's plans and a notebook half filled in.</p></section></a>
+  </div>
+  <h2 class="labs">The places, as they were first built</h2>
+  <p class="intro">Each opens on its own cut scene, then hands you the strategist to walk around and talk to people; on its own page, the phone beside the big screen steers her. Their stories are filler from before the game: the game uses the van, the arena and alliance selection's arena as its own places.</p>
+  <div class="grid">
+    <a href="./tour.html"><section class="card"><h2>The scene tour</h2><p>All of these in turn, full screen, coming in on the left of each and leaving on the right.</p></section></a>
     <a href="./team-meeting/"><section class="card"><h2>Team meeting</h2><p>The whole team in a circle on the back lawn, in team merch, the shop door rolled up behind them. One co-captain gives the shout-outs, the other the updates on what's coming, then Iron Panthers on three.</p></section></a>
     <a href="./practice-field/"><section class="card"><h2>Practice field</h2><p>Half a 2019 field built from plywood on carpet in the school cafeteria, late sun pouring through the tall windows, the drive team running timed hatch cycles while a mentor calls the times.</p></section></a>
     <a href="./van/"><section class="card"><h2>The van</h2><p>Eight in the van at dawn, towing the trailer: the mentor driving, a student navigating, two rows of three. The camera scans the cabin front to back and the strategist and the teammate talk; then you pick a seat to talk to anyone.</p></section></a>
@@ -42,7 +50,7 @@
     <a href="./match/"><section class="card"><h2>Match lab</h2><p>A real 2019 match, simulated and played out on the arena's field: six robots cycling, defending, breaking down and climbing, every point going in on the field as the scoreboard ticks. Set the plan, play it at any speed, scrub back and forth, and see every kind of robot.</p></section></a>
     <a href="./time/"><section class="card"><h2>Time travel lab</h2><p>Eight ways the strategist could move through time, on the real alliance selection cut scene, to choose the rewind the game uses.</p></section></a>
   </div>
-  <p class="foot">To skip the intro, <a href="./play.html">play.html</a> starts straight at the first scene (and <a href="./play.html?scene=pits">play.html?scene=pits</a> at any of them). Characters: <a href="./hero.html">the strategist</a> and <a href="./teammate.html">the teammate</a>. The scenes share stage.js (the controller, the camera, talking and the cut scene clock) and cast.js (how everyone else is put together).</p>
+  <p class="foot">Characters: <a href="./hero.html">the strategist</a> and <a href="./teammate.html">the teammate</a>. The game is in game/ (main.js tells the season from top to bottom); everything runs on stage.js (the controller, the camera, talking and the cut scene clock), and every match anywhere is played by match/sim.js. The design notes are in docs/blue-banner-design.md.</p>
 </div>
 </body>
 </html>
