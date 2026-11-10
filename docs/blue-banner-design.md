@@ -1,8 +1,11 @@
 # Blue Banner: story and game design
 
-**Status:** design notes from a brainstorm, not built yet. The team-manager scenes on the `claude/focused-fermi-2ntxyb`
-branch are proofs that the engine can do this (pixel scenes, walking and talking, cutscenes, an alliance selection
-set piece). Their story and dialogue are filler; don't treat them as canon.
+**Status:** the first event is built and plays from the title screen to the end of its boss fight
+(`public/team-manager/game/`, run by `play.html`). Section 11 says what's there and how it works, and section 12 lists
+the lessons and where each one lives in it. Sections 1 to 10 are the design notes it grew from: where they and the
+game differ, the game follows section 0, the direction, and section 11 says so. The scenes beside `game/` (the team
+meeting, the practice field, the old pits, Worlds) are the earlier proofs of the engine; their story and dialogue are
+filler, not canon.
 
 **Fixed so far:** there's one main character, a new member of the strategy team; the game trains scouting and match
 strategy; it starts in the 2019 season (Deep Space), though any season would work.
@@ -45,8 +48,8 @@ explore with. Here that means:
 considered and set aside. Also open: the rival's design, whether the bet log's grades show before the alumni twist,
 and how the time loop sits with a journey that goes forward.
 
-**Being built:** the match simulation and its animation on the field (`public/team-manager/match/`), with more robot
-archetypes.
+**Built:** the first event, to this direction (section 11). **Next:** the things section 11 lists as not there yet,
+then Event 2, where what worked stops working (section 7).
 
 ---
 
@@ -194,6 +197,13 @@ wishes out loud they'd known it, and then Norbert answers. Wanting comes first, 
 
 ## 5. The opening, in detail
 
+> **As built, the opening is freer than this section.** The first version was built to the beats below and played
+> like a quiz: two cards, one right answer, a stamp, and a rewind until she got it. It's been rebuilt (section 11):
+> the same cut scene, then a real alliance selection with every team on the tablet and a real playoff with whoever
+> she picked. Nothing grades her and nothing rewinds; the gift jump to Thursday comes whatever happened. The beats
+> below are kept for the thinking in them (what makes a failure fair, why the first jump is a reward) and for the
+> parts that aren't built yet (the van's timer, the "?" entries with faces).
+
 ### What the opening has to do
 
 - **Be a fair fight, not a trick.** Save "you thought you won but you didn't" for Event 2, once the player trusts the
@@ -253,7 +263,8 @@ fading (or rising) while its average stands still is just as real a scouting mis
 on the card. (A second version had 7461 sit dead on Saturday, its boxes left blank and skipped by the average; it was
 too easy to miss, and the trend reads more clearly.)
 
-The tablet is built in `public/team-manager/opening/` (`pick.js`, `tablet.js`, `teams.js`).
+(The two-card tablet was built to this and has been replaced: section 11. The page it showed is now the whole event's,
+`game/cold-data.js`.)
 
 ### Beat 1b: the second pick
 
@@ -313,8 +324,7 @@ the picks before hers were never hers. Norbert's ear glows, and she thinks *"...
 pick ticks the card's second line (✓ ✓ ○): PICKS DONE, and A goes on to the quarterfinal, best 2 of 3 against
 alliance 5 (beat 2).
 
-It's built in the same folder (`second.js`, `board.js`, `goals.js`, `verdict.js`, `teams2.js`); `?pick2` in the
-address starts there, and `?pick2=turn` at her turn.
+(Built to this, and replaced: section 11. The second pick is now just her second pick, with whoever's left.)
 
 ### Beat 2: the quarterfinal endgame call
 
@@ -329,7 +339,8 @@ Everything pushes toward Level 3: the crowd chants, the partner's driver says "W
 number than 6. That's the trap, and it's the Learn lesson *When the sure thing is enough, take it*. A wrong call
 rewinds **only to the frozen moment**, not to selection: the pick was right, so it stays.
 
-**As built** (`quarter.js`, `match.js`, `series.js`, and the bet log in `verdict.js`): the series against alliance 5,
+**As first built** (and since replaced by the playoffs of section 11, where every match is still the simulation's
+but nothing is chosen for the story): the series against alliance 5,
 best 2 of 3, with alliance 4 (hers) as red, the higher seed. Every match is the match simulation's
 (`public/team-manager/match/`), so what's on the field is what scores. The story chooses each alliance's plan and
 each match's seed, and `test/match-sim.mjs` checks the matches still go its way.
@@ -358,7 +369,6 @@ each match's seed, and `test/match-sim.mjs` checks the matches still go its way.
 - **The end:** the goal card with all three ticked, and TO BE CONTINUED: the semifinal against alliance 1 (beat 3),
   with the bet log's PICK 1, PICK 2 and ENDGAME ticked.
 
-`?qf` in the address starts at the series card, and `?qf=call` at the frozen moment.
 
 ### Beat 3: the semifinal, played fair
 
@@ -694,3 +704,128 @@ strategy, and it gives the boss fight the human drafting feel that makes the Sho
 - **Thresholds.** How close to the best option counts as a good call (within 5 points? 10?), and the Championship
   banner odds with perfect calls.
 - **Names.** The game's title, the Society's name, the team number.
+
+---
+
+## 11. What's built: the first event
+
+The game runs from the title screen to the end of the first event's boss fight: about forty minutes the first time
+through. `game/main.js` tells it from top to bottom. What follows is what's there, and the handful of rules that make
+it a game.
+
+### The shape
+
+| Part | What happens | Whose it is |
+| --- | --- | --- |
+| The opening reel and title | As before. NEW SEASON asks her name; CONTINUE carries on a save. | — |
+| **The opening**, Saturday 12:38 PM | The cut scene as it was: the text, Riley, the list, Norbert, Robin's call. Then alliance selection **for real**: the senior strategist's page on the tablet, every team that's left, 45 seconds a pick. Then the playoffs with whoever she got. | Hers. She can invite anyone, a captain below her included (7777 says no). The picks stand. The first playoff match is on the drive coach's plan, so the first thing she's asked is the climb call at 0:30; from the second match the plan is hers too. |
+| After | Wherever it ended, Riley and her on the floor. "I had one page and 45 seconds." "If I had the whole weekend again..." Norbert's key turns. | The wish comes first, then the gift (section 4). |
+| **Thursday** | The van: everyone has something true to say about the weekend. Then the pits at load-in. | Hers: who to sit by, which pits to visit. |
+| **Friday and Saturday morning** | Ten rounds of qualification. Each round: the arena or the pits, as she likes, for as long as the round's time lasts; then her own match. | Hers: who to watch, who to ask, the plan for her alliance, the call at 0:30. Nothing can be taken back. |
+| **The boss fight**, Saturday 12:38 PM again | Alliance selection with the event's real rankings and her own notebook on the tablet; then the playoffs, best two of three, as far as she gets. | Hers. If she seeded in the top eight (or moved up), both picks. If another captain picked her first, that captain hands her the second pick. If she's out and Norbert has the charge, she can wind back to selection, or let it stand. |
+| The end | The event on a card: record, seed, alliance, how far it went and how far it went on one page, robots watched, field notes found. | — |
+
+### The rules that make it a game
+
+- **Every match is the simulation's** (`match/sim.js`), in the opening, the qualification rounds and the playoffs.
+  The event (`game/event.js`) is 24 teams, a schedule and dice from a seed. The robots are what they are
+  (`match/robots.js`); nothing is chosen to make a point. The other 30 matches are played whether she watches or not.
+- **Time is the thing she hasn't got.** A round gives her three pips. Watching a match from the stands takes two and
+  writes down the robot she kept her eyes on (two robots from Friday lunch, when her teammate sits with her: the
+  first tool earned). Asking a pit takes one. Her own matches give her a line on all six robots, because she was down
+  there. So by Saturday the notebook has about a quarter of the event in it, and which quarter was up to her.
+- **The plan** (`plan.js`): each of her alliance's three robots scores anywhere, keeps to the rockets, keeps to the
+  cargo ship, or spends the match on one of the other side's robots (one defender at a time: G9). A robot that
+  handles both pieces can be kept to one. Each starts on its own drive team's habit, so A straight through is a plan.
+- **The call** (`watch.js`): every match of hers stops at 0:30. Each robot parks, climbs to Level 2 or tries Level 3,
+  and beside each choice is what she knows: for her own robot, its practice record; for anyone else, only what she's
+  seen it make. The match is the same up to 0:30 whatever she calls (`event.js` sees that nobody heads home earlier),
+  so it's a real call, and the last thirty seconds play out as she made it.
+- **The notebook** (`book.js`) is the Pokédex: a tile a team; a page a team with the event's public numbers (rank,
+  record), then WHAT I'VE SEEN (its ten matches, a number in each she watched, a dotted box for each she didn't) and,
+  apart and in pencil, WHAT THEY SAY. A star puts a robot on her list.
+- **The pits** (`pitrow.js`, `pit-words.js`): 24 pits, a robot on a cart in each, so its kind is plain before
+  anyone speaks. Three questions: what does it do, how's it running, seen anyone good. A team is straight, proud or
+  modest about itself, and what it says is made from the robot as it is that day. What it says about other robots
+  comes from the matches it's really played.
+- **Field notes** (`state.js` `NOTES`) are how a lesson is recorded without being taught. Each is something true at
+  this event, found when what's in her notebook shows it, and written in her hand with the numbers she saw: *7461:
+  42, 41 and 47 early on. 38, 30 and 29 since. Something broke.* Thirteen to find. The ones she hasn't found sit in
+  the notebook as questions. Nobody says what to do about any of them.
+- **Norbert's battery** is the retry. Every field note charges it a tenth of a volt; winding back to alliance
+  selection costs three tenths and needs 12.3. So what she found out is what buys another go at the boss, and with
+  nothing found there's no rewind at all. The notebook comes back with her; the dice don't.
+- **The other captains** pick by their own eyes (`event.js` `eyeOf`): most by the average, some by the last few
+  matches, a couple for fit. 7777's scout, Juno, misses nothing: she's the rival, and her alliance is usually the
+  one to beat. A captain who's invited can say no.
+- **One thing is scripted:** 6834's battery strap, which lets go in its alliance's second quarterfinal match unless
+  someone tells its pit crew on Saturday. Whoever has 6834 has that coming. Telling them is hers to do or not.
+
+### Where it differs from sections 1 to 10, and why
+
+- **No bet log, no stamps, no lesson lines.** Section 0 asked for it; the field notes take their place.
+- **The rewind isn't forced and isn't free.** Bad calls don't reset anything. The one long jump is the gift after the
+  opening; after that a rewind is a choice she pays for with what she's found.
+- **The opening's picks aren't a puzzle with an answer.** The page still has everything on it (7461's last four,
+  6834's, the match 4471 held 7777 to 22), and a sharp player can still read it in 45 seconds. Most won't, and the
+  playoffs that follow are with the alliance they built.
+- **The hook** (section 0, still open) is, for now, Riley: it's her last season, and the team has never made a final.
+
+### Not there yet
+
+- The van's timer and its 25 questions (section 5, beat 4): the van is a short ride with seven people to talk to.
+- Scouts she assigns, the pick list builder beyond a star, match video, heat maps, an odds calculator.
+- Other alliances planning against her from what they've scouted (they plan from the whole event's numbers).
+- The practice field and the team meeting as places in the loop; the alumni, beyond Dani's one line and Sam's.
+- A walk-in to alliance selection's arena for the boss fight: it's on the tablet, as in the opening.
+- Event 2.
+
+### Trying it
+
+`npm run site`, then `/team-manager/` (or the preview artifact). From the address bar, `play.html?at=thursday`,
+`?at=quals&round=6`, `?at=boss` and `?at=end` start a season part of the way in, its earlier matches played on the
+drive coach's plans; `?seed=N` fixes the schedule and dice; `?new` starts over. `test/blue-banner-game.mjs` plays
+whole events in Node and checks, among other things, that what the field notes say is true.
+
+---
+
+## 12. The lessons, and where they live
+
+Gathered from Strategy Training's own lesson (`games/frc-strategy/lesson1-*.js`: "Winning isn't the same as scoring
+more"), its Showdown, and the strategy most FRC teams teach their scouts. The rule for putting one in the game: make
+it **true in the world**, give the player a **way to see it**, and let a **field note** record that they did. The
+last column is the tempting wrong answer the world lets them try.
+
+### In the first event
+
+| Lesson | What's true in the world | Where she meets it | Field note | The tempting wrong answer |
+| --- | --- | --- | --- | --- |
+| Look at where a robot's going, not its average | 7461's intake breaks in its seventh match (44 a match, then 29); 6834 rebuilds its own the same afternoon (27, then 48). 3000 re-rigs its climber at Friday lunch. | The opening's page (the last four boxes). Watching either before and after. Their pits on Friday afternoon: 7461's crew round the intake saying it's fine; 6834 swapping theirs. | FADING, ON THE RISE | The biggest number on the page. Most captains take it. |
+| Write down what robots do, not what teams say | Pits are straight, proud or modest. 5518 says Level 3 every match and makes about three in ten. 4471 says it mostly gets in the way. | Any pit, then the stands. The notebook keeps the two apart. | WHAT THEY SAY | Filling the notebook from the pits, which costs half the time. |
+| One match is a sample | Robots that haven't changed still swing fifteen points match to match. | Watching the same robot twice. Her own ten matches. | ONE MATCH | A pick list made from one great match each. |
+| Averages don't add up; roles do | Cargo only stays in behind a hatch panel, and the bays run out. Three cargo robots score about 80 together and 115 apart. A cargo robot beside two hatch robots scores more than it does anywhere else. | Her own matches: the schedule gives her alliances that fit and alliances that don't. A robot sitting still for a minute is hard to miss. | NOWHERE LEFT TO SCORE | Picking the three biggest scorers. |
+| Defense pays when it takes more than it costs | 4471 on 7777 takes about 21 off it and gives up 7. A cargo arm on 7777 takes 4 and gives up 13. | The plan: she can put any robot on anyone, and see. Pits that were sat on say so. | THE WALL, DEFENSE COSTS | Defense as a thing weak robots do; or as a thing everyone should do. |
+| Pick the target that gives way | The same wall takes 3 off 6417. Light, fast robots (7777, 4000) give way; heavy ones don't. | The same, against different robots. | (in DEFENSE COSTS) | Defending their best robot whoever it is. |
+| Robots break, and some break often | 8812 drops off the field about one match in five; 9152 browns out when pushed; anyone can die once. | Watching; pits that are straight about it; a pit with someone kneeling at the cart. | ROBOTS BREAK | A robot's good matches. In a best of three, one dead match is usually the series. |
+| When the sure thing is enough, take it | Level 2 is nearly certain; Level 3 is 12 points at the robot's own odds, and a slip is 3. | The call at 0:30, with the lead on the screen. | THE SURE THING | Level 3, because 12 is more than 6. |
+| Behind, the safe plan is the long shot | The same numbers, from the other side. | The call at 0:30 when she's down. | NOTHING TO LOSE | Level 2, because it never misses. |
+| The objective decides: ranking points, not wins, seed you | 2 for a win, 1 for a whole rocket, 1 for 15 on the HAB. Two Level 2s and a park are 15 without anyone gambling. Rockets-only plans fill a rocket about twice as often. | The plan (ROCKETS ONLY), the call (the HAB sum is on the screen), the rankings page, the mentor. | A LOSS THAT PAYS, A WHOLE ROCKET | Playing every match to win it. |
+| Who'll be gone by your pick | Captains above her take who they want; Juno takes the robot that's best now. A captain can refuse. | Alliance selection, twice. A starred robot going before her pick. | GONE BY OUR PICK | A list one name long. |
+| Pick for the matchup, not the list | Her quarterfinal opponent is on the tablet while she picks, and round two comes back up the order. | Her second pick. | — | The biggest number left. |
+| Ask about change and about others | A pit's "how's it running" changes by the day; "seen anyone good" is where the sleepers are named, by the teams they beat. | The pits' three questions. | — | "What does your robot do?", the one question every pit rounds up. |
+| Gracious professionalism | 6834's strap will go in the playoffs. She can tell them, even if they might be on the other side. | 6834's pit on Saturday. | — | — |
+
+### For later events (not in the game yet)
+
+| Lesson (Strategy Training's words where it has them) | An event that could hold it |
+| --- | --- |
+| "Favorite: cut risk. Underdog: add risk." as a whole event's shape | Event 2, seeded low: the consistent pick that won Event 1 can't beat the top alliance. Then the Championship as favorite. |
+| "A plan the other side can predict gets its worst-case number." Mixing plans when they adapt | An event where the other alliances scout her: their coaches plan from her last three matches. |
+| "Links hurt 'at least one' goals and help 'all of them' goals": shared causes | Two climbers that both need the same platform; two robots fed by one loading station; an alliance that all browns out on the same carpet seam. |
+| "A small sample gives a range, not a number." The add-one rule | The odds calculator, as a tool earned: it shows a range that narrows as she watches more. |
+| "A rate is only as good as the conditions it was measured in." | Robots whose numbers came from undefended matches, in an event where everyone defends. |
+| "Know which assumption flips your decision." | A plan screen that says which one thing would change the call, once she's found enough notes. |
+| "Judge the decision by its odds." | The alumni's bet log (section 4), after the twist: by then she's earned being graded. |
+| A series against a team that breaks down vs. one that's just unlucky | The playoffs at Event 2: a shared failure across a series isn't a fresh lottery each match. |
+| Scouting your own alliance: what your drive team can really do | The practice field anchor: what they practise is a call too. |
+| Robot design as strategy: "do three things at ten out of ten, not five at six" | Kickoff, the last anchor. |

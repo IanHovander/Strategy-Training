@@ -70,14 +70,25 @@ colour, so it can follow the new team colour or stay as a UI accent.
 | `cutscene.js` | takeHim ~307 | Norbert the mascot handed over: "AND TAKE HIM. HE'S BEEN TO EVERY EVENT SINCE 2014." 2014 is the year 5026 started | The new mascot or lucky charm, and the year the new team started. |
 | `norbert-held.js` | `ROWS`, `PAL` ~23-43; `drawHud()` ~68 | Norbert drawn 12x14 for someone to hold, with his 26 ear; the corner with Norbert and his voltage | Redraw as the new mascot (with `norbert.js`). |
 | `handoff.js` | header; the glint ~109 | The 26 ear glinting as he's handed over | Follows `norbert.js`; reword. |
-| `index.html` | intro and "The shots"; "How it's made" | Norbert, "SINCE 2014", "5026, COME ON UP!", "the team's red hoodie with the panther badge", the 26 ear | Update. |
-| `teams.js` | `OURS` ~20 | '5026' on the scouting tablet: her robot's pinned row and "5026 RESPECTFULLY INVITES TEAM ..." | The new number. The other teams (7461, 6834) are made up; keep them made up. |
-| `tablet.js` | `pinned()` ~145-150 | Her robot's row: a team-red stripe (`C.red1`) and YOUR ROBOT in pale red (`C.red3`) | The team colour, or keep as a UI accent. |
-| `pick.js` | `drawPickScreen()` ~130-151 | Norbert's 26 ear glowing in the corner as the pick rewinds (`drawHud({ glow })`), and pulsing on a wrong pick's bet log | Follows `norbert.js` and `norbert-held.js`. |
-| `teams2.js` | `SEEDS` ~37, `BASE` | The second pick: her team as seed 4 on the alliance board (from `teams.js` `OURS`), and her robot's average in the matchup sums | Follows `teams.js`; keep `SEEDS` the same as `cutscene.js`'s. The other teams are made up; keep them made up. |
-| `second.js` | `paAt()`; `BRIEF_LINES` | Robin's "ALLIANCE 4, 5026, YOU'RE UP!" (from `SEEDS`); Riley's dark red name tag (`C.red0`) and hers (`C.red1`) | Follows `teams2.js`; the tags as in `cutscene.js`. |
-| `board.js` | `board()` ~110-127 | Her alliance's row on the dashboard in team red (`C.red0`, `C.red1`, `C.red3`), tagged US | The team colour, or keep as a UI accent (alliance 4 is the red alliance in the quarterfinal either way). |
-| `second.js`, `verdict.js` | `drawSecond()` (rewind, result); `drawResult2()`, `drawEnd()` | Norbert's 26 ear glowing as the second pick rewinds, and in the corner | Follows `norbert.js` and `norbert-held.js`. |
+| `teams.js` | `OURS` ~20 | '5026': her team's number for the match simulation, the opening and the game (`game/event.js` re-exports it) | The new number. The other teams (7461, 6834) are made up; keep them made up. |
+
+### The game (`public/team-manager/game/`)
+
+The game's own files take the number from `OURS` and the co-captain, the mascot and her tee from the shared places
+above, so most of it follows. What's written out:
+
+| File | Where | What's 5026-specific | Change |
+| --- | --- | --- | --- |
+| `event.js` | `NAMES` | `[OURS]: 'IRON PANTHERS'`, the team's name on its pit banner and in the notebook | The new name. The other 23 teams' names and numbers are made up; keep them made up. |
+| `cold-data.js` | `SEEDS`; `PAGE[OURS]` | Her team as seed 4 in the opening (the cut scene's own order), and its line on the senior strategist's page: "US. HATCHES, EVERY LEVEL." | Keep `SEEDS` the same as `opening/cutscene.js`'s; reword the line if the new robot isn't a hatch robot. |
+| `cold.js` | `react()`, `ENDED`, the epilogue | Riley's lines after each pick and after the playoffs ("IT'S MY LAST SEASON"); her dark red name tag (`C.red0`) and the strategist's (`C.red1`) | Reword for the new team's people; the tags as in `cutscene.js`. |
+| `van.js` | `LINES` | What everyone in the van says: the robot ("HATCHES ARE OUR THING. ALL THREE LEVELS", Level 3 six in ten), "5026 HAS NEVER BEEN ONE" (a captain), Riley and Norbert | The new robot's abilities (keep them true to `match/robots.js`) and the new team's history. |
+| `hub.js` | `linesFor()` | Rosa ("YOU ARE ON 5026? MY KID BUILT THAT ELEVATOR"), Milo ("I'M JOINING 5026"), Juno ("SEE YOU SATURDAY, 5026"), Dani and Norbert | The new number, robot and mascot. |
+| `pit-words.js` | `TONES`, `rileyLines()` | The team's pit in team red (`tones.shirtRed`); Riley minding it, and Norbert never leaving her bag | The team colour (follows `cast.js`), and the new people. |
+| `pitrow.js` | `lookOf()`, `pitHall()` | Riley (`COCAPTAIN_LOOK`) at the front of the team's own pit, where every other pit has someone to ask | Follows `cocaptain.js`. |
+| `plan.js`, `watch.js` | the robot's own row | "OUR ROBOT", "HATCHES, ANY LEVEL"; her robot's climb as its drive team knows it ("MAKES 6 IN 10") | The new robot's line; the odds follow `match/robots.js`. |
+| `hud.js`, `wind.js`, `book.js` | `corner()`; the whole of `wind.js`; the notebook's header | Norbert in the corner with his voltage, Norbert winding time back with the key in his back, "NORBERT 12.4V" | Follows `norbert.js`; a team with another mascot needs another clockwork. |
+| `ending.js` | `trainerCard()` | The strategist's portrait in the 5026 tee (`hero.js`), her red name tag | Follows `hero.js`. |
 
 ### Team meeting (`public/team-manager/team-meeting/`)
 
@@ -185,7 +196,7 @@ colour, so it can follow the new team colour or stay as a UI accent.
 | File | Where | What's 5026-specific | Change |
 | --- | --- | --- | --- |
 | `robots.js` | `LIST`, the first team ~119 (`team(OURS, 'ele', ...)`) | Her team's robot in the match simulation: the elevator with Level 3 stilts (the intro's hero robot), hatches on every level, about 30 a match; its number is `OURS` from `opening/teams.js` | The new team's robot: another archetype and its numbers if it isn't an elevator that climbs. The number follows `teams.js`. |
-| `lab.js` | `quarter()` ~44; `drawSheet()` ~348 | The quarterfinal presets put her robot (`OURS`) on red, with 6834 and 4471; the sprite sheet's blue robots wear `OURS` | Nothing: both follow `teams.js` `OURS`. |
+| `lab.js` | `quarter()` ~44; `drawSheet()` ~348 | The playoff presets put her robot (`OURS`) on red, with 6834 and 4471; the sprite sheet's blue robots wear `OURS` | Nothing: both follow `teams.js` `OURS`. |
 | `draw.js` | `drivers` | The drive teams at their stations, from `bleachers.js` (the blue alliance's first driver in team red, `DRIVE_SHIRTS`) | Follows `bleachers.js`. |
 
 ## The rest of the site (Game Night and Strategy Training)

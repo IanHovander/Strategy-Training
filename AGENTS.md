@@ -29,6 +29,12 @@ tunnel), and `npm start` (Node, same Wi-Fi only).
   the day of an event.
 - **`public/js/config.js` contains a shared relay (TURN) login that is public on purpose.** Copies of this project
   are welcome to use it. Leave it unchanged, so a replacement arrives by syncing (docs, section 2).
+- **Blue Banner** is the single-player game in `public/team-manager/` (design: `docs/blue-banner-design.md`). The game
+  itself is `game/` (`main.js` tells the season from top to bottom; `play.html` runs it); the folders beside it are
+  its places and labs, all on `stage.js`. Every match anywhere is played by `match/sim.js`, and the event is
+  `game/event.js`: nothing in it is scripted to teach, so if you change a robot or a rule, `test/blue-banner-game.mjs`
+  says whether the things there are to find out are still true. Nothing in the game grades the player: characters
+  react in character, and field notes are what she saw, with the numbers.
 - **Team-specific content goes in `TEAM-SPECIFIC.md`.** The project features FRC team 5026, the Iron Panthers, and
   other teams should be able to make it theirs. Whenever you add or move anything specific to 5026 (the number, the
   name, the panther logo, the red team colours, merch, the mascot, real team members, chants, lines that assume it's
