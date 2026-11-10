@@ -18,7 +18,6 @@ import { walk } from './run.js';
 import { corner } from './hud.js';
 import { OURS } from './event.js';
 
-const me = (...lines) => ({ name: HERO_NAME, tag: C.red1, lines });
 /** What everyone says from their seat. Each knows something true about the weekend ahead. */
 const LINES = {
   teammate: [
@@ -59,10 +58,13 @@ export async function vanRide(st) {
   for (const p of van.people) if (LINES[p.id]) p.lines = LINES[p.id];
   const view = { x: 0, y: FRAME.all.y };
   const cabin = (g) => van.draw(g, view, performance.now() / 1000, { talk: null });
-  const shot = (g, t, extra) => {
+  // Every beat is the same shot: the cabin, the film bars (barsAt(t) of the way down), anything over it (the place
+  // card, the fade from black), and Norbert in his corner. shot() makes a beat's draw(g, t); the stage also hands a
+  // draw the beat's timing, which isn't ours to call, so nothing here takes a third argument.
+  const shot = (over = null, barsAt = () => 1) => (g, t) => {
     cabin(g);
-    bars(1);
-    extra?.(t);
+    bars(barsAt(t));
+    over?.(t);
     corner(st);
   };
   const mate = (lines) => ({ name: TEAMMATE_NAME, look: TEAMMATE_LOOK, lines });
@@ -71,13 +73,14 @@ export async function vanRide(st) {
     ...van,
     name: 'THE VAN',
     cutscene: [
-      { dur: 1.2, draw: (g, t) => shot(g, t, () => { placeCard(t, 'THE VAN', 'THURSDAY 6:40 AM'); cover(1 - t / 0.6); }) },
-      { dur: 0.6, draw: (g, t) => shot(g, t, () => placeCard(t + 1.2, 'THE VAN', 'THURSDAY 6:40 AM')), say: hers([['...THE VAN?'], ["IT'S THURSDAY. IT'S THURSDAY AGAIN."]]) },
-      { dur: 0.4, draw: shot, say: mate([['YOU OKAY? YOU JUMPED. AND SINCE WHEN', 'DOES RILEY LET ANYONE HOLD NORBERT?']]) },
-      { dur: 0.4, draw: shot, say: hers([[`${SENDER}'S OUT SICK ALL WEEKEND. RIGHT?`]]) },
-      { dur: 0.4, draw: shot, say: mate([['THE TEXT ONLY JUST CAME. HOW DID YOU...', "FINE. YES. SO THE NOTEBOOK'S YOURS."]]) },
-      { dur: 0.4, draw: shot, say: hers([['THREE DAYS THIS TIME. NOT 45 SECONDS.'], ["I'M GOING TO WATCH EVERY ROBOT I CAN."]]) },
-      { dur: 0.5, draw: (g, t) => shot(g, t, () => bars(1 - t / 0.5)) },
+      { dur: 1.2, draw: shot((t) => { placeCard(t, 'THE VAN', 'THURSDAY 6:40 AM'); cover(1 - t / 0.6); }) },
+      { dur: 0.6, draw: shot((t) => placeCard(t + 1.2, 'THE VAN', 'THURSDAY 6:40 AM')), say: hers([['...THE VAN?'], ["IT'S THURSDAY. IT'S THURSDAY AGAIN."]]) },
+      { dur: 0.4, draw: shot(), say: mate([['YOU OKAY? YOU JUMPED. AND SINCE WHEN', 'DOES RILEY LET ANYONE HOLD NORBERT?']]) },
+      { dur: 0.4, draw: shot(), say: hers([[`${SENDER}'S OUT SICK ALL WEEKEND. RIGHT?`]]) },
+      { dur: 0.4, draw: shot(), say: mate([['THE TEXT ONLY JUST CAME. HOW DID YOU...', "FINE. YES. SO THE NOTEBOOK'S YOURS."]]) },
+      { dur: 0.4, draw: shot(), say: hers([['THREE DAYS THIS TIME. NOT 45 SECONDS.'], ["I'M GOING TO WATCH EVERY ROBOT I CAN."]]) },
+      // The bars lift, and she's free to pick a seat.
+      { dur: 0.5, draw: shot(null, (t) => 1 - t / 0.5) },
     ],
     draw(g, v, t, s) {
       van.draw(g, v, t, s);
@@ -85,5 +88,4 @@ export async function vanRide(st) {
     },
   };
   await walk(scene, { nextLabel: 'ARRIVE' });
-  void me;
 }

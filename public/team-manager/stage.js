@@ -716,6 +716,9 @@ export function runScene(scene, opts = {}) {
   let last = performance.now() / 1000, stopped = false, raf = 0;
   function frame() {
     if (stopped) return;
+    // The next frame is asked for first, so a scene that throws while it draws costs that frame and not the game: the
+    // clock keeps going and A still turns the page. (The error still reaches the console, and the test drivers.)
+    raf = requestAnimationFrame(frame);
     const now = performance.now() / 1000, dt = Math.min(0.05, now - last);
     last = now;
     if (s.frozen != null && s.frozen < offsets.at(-1) + (beats.at(-1)?.dur ?? 0)) {
@@ -728,7 +731,6 @@ export function runScene(scene, opts = {}) {
     shade(now);
     if (full) drawHud();
     else drawPhone();
-    raf = requestAnimationFrame(frame);
   }
   s.stop = () => {
     stopped = true;
