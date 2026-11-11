@@ -67,7 +67,7 @@ export const chargeDue = (st) => !st.flags?.charged && st.loop >= 1 && notesFoun
 /**
  * Where the marker goes now. where: 'pits' or 'arena'. One target or none, in this order:
  *   Thursday, in the pits   pit: the circled robot's, until she's had its hello (while she has time to ask it anything);
- *                           exit: the way out to Friday, once her time's gone
+ *                           then exit: the way out to Friday, for whenever she's done (her time's hers to spend)
  *   Friday's first rounds   book: Norbert, once there's a robot she's seen in the notebook that it hasn't shown her yet
  *   round 1, in the arena   dani: the stands, for the circled robot's match, if it's in another match, she hasn't seen
  *                           it and she has the time; otherwise priya: her own match
@@ -79,7 +79,7 @@ export function guide(st, where) {
   if (st.phase === 'thursday') {
     if (where !== 'pits') return null;
     if (st.time > 0 && !st.book.pit[T]) return { to: 'pit', num: T, label: T };
-    return st.time <= 0 ? { to: 'exit', label: 'TO THE FIELD: FRIDAY' } : null;
+    return { to: 'exit', label: 'TO THE FIELD: FRIDAY' };
   }
   if (st.phase !== 'quals' || st.round > 1) return null;
   if (inkDue(st)) return { to: 'book', label: '' };

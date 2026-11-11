@@ -55,8 +55,10 @@ export function paper(x, y, w, h) {
  * Norbert's corner and stops short of the top right (SKIP and the sound button live there).
  */
 export function eventChip(st, head) {
-  const n = st.timeMax ?? 3, w = measure(head, { font: 3 }) + 8 + n * 6 + 24;
-  const x = 50, y = 2;
+  const n = st.timeMax ?? 3, width = (h) => measure(h, { font: 3 }) + 8 + n * 6 + 24;
+  // It ends by x 221, short of the sound button (a long one, Saturday's, drops its WE PLAY to fit).
+  if (50 + width(head) > 221) head = head.replace(': WE PLAY ', ': ');
+  const w = width(head), x = 50, y = 2;
   screen();
   fill(x - 1, y - 1, w + 2, 11, C.ink);
   fill(x, y, w, 9, C.night1);

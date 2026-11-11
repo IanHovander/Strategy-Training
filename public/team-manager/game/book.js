@@ -356,7 +356,7 @@ export class Book {
 function tile(r, num, sum, s, ink = 1, ringed = false) {
   const dy = s.down ? 1 : 0, has = sum.n > 0 && ink >= 1, ours = num === OURS;
   fill(r.x, r.y + dy, r.w, r.h, s.on ? C.yel2 : has ? '#e4dcc3' : sum.n && ink > 0 ? '#ece4cc' : PAPER.page);
-  if (has || ours || ink > 0.5) frame(r.x, r.y + dy, r.w, r.h, s.on ? RED : PAPER.ink);
+  if (has || ours || (sum.n > 0 && ink > 0.5)) frame(r.x, r.y + dy, r.w, r.h, s.on ? RED : PAPER.ink);
   else dotted(r.x, r.y + dy, r.w, r.h, s.on ? RED : PAPER.pencil);
   text(num, r.x + 3, r.y + 3 + dy, { font: 3, color: ours ? RED : PAPER.ink });
   if (sum.star) text('*', r.x + (ringed ? 23 : 20), r.y + 2 + dy, { font: 3, color: RED });

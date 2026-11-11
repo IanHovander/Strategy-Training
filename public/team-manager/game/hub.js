@@ -181,7 +181,11 @@ export function arenaHub(st, { from = 'pits' } = {}) {
     people: Object.values(mine), over: null,
     reach: (s) => {
       const p = arena.reach(s);
-      return p ? mine[p.id] : null;
+      if (p) return mine[p.id];
+      // While the guided start points at Priya, she's in reach from the end of the walkway above her too: walking left
+      // along it, the next step past her is out to the pits.
+      if (hub.mark?.to === 'priya' && Math.abs(s.me.x - mine.priya.x) < 16 && s.me.y > 54 && s.me.y < 92) return mine.priya;
+      return null;
     },
     pointer(type, x, y, s) {
       if (type !== 'down') return false;
@@ -198,8 +202,9 @@ export function arenaHub(st, { from = 'pits' } = {}) {
     /** A tap on the guided start's marker: over to Dani or Priya (the way round anyone in the way), or the notebook. */
     follow(s, g) {
       if (g.to === 'book') return hub.openBook();
-      // Already beside them, the stage talks to them straight away (a goal whose person is in reach).
-      const p = g.to === 'dani' ? mine.dani : mine.priya, way = s.near === p ? [[s.me.x, s.me.y]] : wayTo(hub, s, p);
+      // Already beside them, the stage talks to them straight away: a goal whose person is in reach (with a spot left
+      // in it, so the stage's walk doesn't drop it before it looks who's in reach).
+      const p = g.to === 'dani' ? mine.dani : mine.priya, way = s.near === p ? [[s.me.x, s.me.y], [s.me.x, s.me.y]] : wayTo(hub, s, p);
       const [first, ...rest] = way?.length ? way : [g.to === 'dani' ? [daniX - 14, 62] : [p.x + 14, p.y]];
       s.goal = { x: first[0], y: first[1], person: p, spots: rest, best: Infinity, since: performance.now() / 1000 };
       return null;

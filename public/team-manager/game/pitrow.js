@@ -235,7 +235,8 @@ export function pitHall(st, { from = 'left' } = {}) {
       const now = performance.now() / 1000;
       if (g.to === 'pit') {
         const p = people[ROW.indexOf(g.num)];
-        s.goal = { x: p.x, y: 124, person: p, spots: [], best: Infinity, since: now };
+        // The spot again as a stop of its own, so a goal she's already at lasts till the stage sees she's in reach.
+        s.goal = { x: p.x, y: 124, person: p, spots: [[p.x, 124]], best: Infinity, since: now };
       } else if (g.to === 'exit') {
         s.goal = { x: HALL.w - 6, y: Math.max(AISLE.y0 + 1, Math.min(AISLE.y1 - 1, s.me.y)), person: null, spots: [], best: Infinity, since: now };
       } else if (g.to === 'book') scene.openBook();
@@ -257,7 +258,7 @@ export function pitHall(st, { from = 'left' } = {}) {
       folk.sort((a, b) => a.y - b.y).forEach((f) => f.draw());
       // What's over the picture: where she is in the event, Norbert, any new field note.
       const m = thursday ? null : ourMatch(st, Math.min(st.round, ROUNDS - 1));
-      eventChip(st, thursday ? 'THURSDAY: MATCHES START TOMORROW' : `${st.round < FRIDAY ? 'FRIDAY' : 'SATURDAY'} ${st.round + 1} OF ${ROUNDS}: WE PLAY Q${m.q}, ${sideOf(m).toUpperCase()}`);
+      eventChip(st, thursday ? 'THURSDAY: MATCHES TOMORROW' : `${st.round < FRIDAY ? 'FRIDAY' : 'SATURDAY'} ${st.round + 1} OF ${ROUNDS}: WE PLAY Q${m.q}, ${sideOf(m).toUpperCase()}`);
       // The guided start's marker, while she's walking about: one at a time, and only while there's somewhere to point.
       const free = s.mode === 'free' && !s.talk && !scene.modal(), gd = free ? guide(st, 'pits') : null;
       scene.mark = gd;
