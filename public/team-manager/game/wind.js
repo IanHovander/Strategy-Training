@@ -7,7 +7,11 @@
 // The look is the lab's, rebuilt small: this screen draws whatever was on the stage as it starts (bg, a picture of the
 // moment she left), then him and the key (../norbert.js, ../time/key.js) and a card of the day and time ticking back.
 //
-//   new Wind({ st, bg(g), stops: ['SATURDAY 3:10 PM', ..., 'THURSDAY 6:40 AM'], last })   done() once it's Thursday
+// It costs him. With volts: [from, to], his reading stays where his corner was while he's out, and runs down a tenth at
+// a time as the key turns (12.4V to 12.0V, going back to Thursday), each step flashing; he comes home on the last card
+// with what's left.
+//
+//   new Wind({ st, bg(g), stops: ['SATURDAY 3:10 PM', ..., 'THURSDAY 6:40 AM'], last, volts })   done() once it's Thursday
 
 import { W, H, C, screen, fill, text, withAlpha, clamp, lerp, seg, easeOut, easeIn, stepped } from '../pixel.js';
 import { drawNorbertBig, BIG_W, BIG_H } from '../norbert.js';
@@ -72,6 +76,12 @@ export class Wind extends Screen {
         fill(W / 2 - 61, 7, 122, 13, last != null && t - last < 0.07 ? C.yel1 : C.night2);
         text(spinning ? o.stops.at(-1) : stop, W / 2, 10, { align: 'center', color: C.white });
       }
+      // His reading, left behind in the empty corner, running down a tenth at a time on the clicks.
+      if (o.volts) {
+        const [from, to] = o.volts, steps = this.steps(), done = steps.filter((c) => t >= c).length;
+        const v = spinning ? to : from - 0.1 * done, lit = steps.some((c) => t >= c && t - c < 0.15);
+        text(`${v.toFixed(1)}V`, 21, 4, { font: 3, color: lit ? C.yel2 : C.steel2, outline: C.ink });
+      }
       if (t >= T.flash) withAlpha(easeIn(seg(t, T.flash, T.card)), () => fill(0, 0, W, H, C.white));
       return;
     }
@@ -81,6 +91,11 @@ export class Wind extends Screen {
     text(o.stops.at(-1), W / 2, 56, { scale: 2, align: 'center', color: C.white });
     if (t > T.card + 0.6) text(o.last ?? 'TWO DAYS EARLIER', W / 2, 78, { align: 'center', color: C.yel1 });
     withAlpha(a, () => fill(0, 0, W, H, C.white));
-    corner(o.st, { glow: clamp(1 - (t - T.card) / 1.2, 0, 1) });
+    corner(o.st, { glow: clamp(1 - (t - T.card) / 1.2, 0, 1), volts: o.volts?.[1] ?? null });
+  }
+  /** When the reading drops a tenth: n steps spread over the twelve clicks, the last on the last. */
+  steps() {
+    const [from, to] = this.o.volts, n = Math.min(CLICKS.length, Math.round((from - to) / 0.1));
+    return Array.from({ length: Math.max(0, n) }, (_, k) => CLICKS[Math.round((CLICKS.length * (k + 1)) / n) - 1]);
   }
 }

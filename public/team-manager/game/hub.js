@@ -12,18 +12,25 @@
 // the mentor on where the team's ranked, the scorekeeper on the round's results, Juno from 7777 on how far behind
 // she is. Norbert's corner (or B) is the notebook.
 //
+// In round 1 the guided start (guide.js) points the way round once: Dani's seat for the match of the robot she circled
+// in the van (the picker opens on it), Norbert once it's in the notebook, Priya for her own match. A tap on the marker
+// walks her over. After that, it's hers.
+//
 //   arenaHub(st, { from })   the place, for run.js walk(). It leaves with { to: 'pits' }, { to: 'watch', q, focus }
 //                            or { to: 'match' }.
 
 import { W, C, screen, fill, text } from '../pixel.js';
+import { conversation } from '../talk.js';
+import { HERO_NAME } from '../cast.js';
 import { scene as arena, SETTINGS } from '../arena/scene.js';
-import { approach } from '../arena/approach.js';
+import { approach, wayTo } from '../arena/approach.js';
 import { FIELD } from '../field.js';
 import { Menu, box, button, inRect } from './ui.js';
-import { corner, CORNER, drawToasts, eventChip } from './hud.js';
+import { corner, CORNER, drawToasts, eventChip, pointer, edgePointer } from './hud.js';
 import { Book } from './book.js';
 import { OURS, ROUNDS, FRIDAY, TEAMS, sideOf } from './event.js';
-import { ourMatch, playRound, worldOf, tableOf, summary, seenOf } from './state.js';
+import { ourMatch, playRound, worldOf, tableOf, summary, seenOf, save } from './state.js';
+import { guide, chargeDue, CHARGE, DANI_FIRST, priyaPage } from './guide.js';
 
 /** From this round on her teammate sits with her: two robots a match. (Friday lunch: after the fourth round.) */
 export const TWO_FROM = 4;
@@ -56,11 +63,15 @@ class Choice {
   }
 }
 
-/** Which match, and which robot: the round's other matches as rows of numbers to press. */
+/**
+ * Which match, and which robot: the round's other matches as rows of numbers to press. pre: { q, num }, a robot for the
+ * cursor to start on (the guided start's), and once it's picked, the cursor goes to WATCH.
+ */
 class Picker {
-  constructor(st, done) {
-    Object.assign(this, { st, done, m: new Menu(), picked: [], q: null });
+  constructor(st, done, pre = null) {
+    Object.assign(this, { st, done, m: new Menu(), picked: [], q: null, pre });
     this.two = st.round >= TWO_FROM;
+    if (pre) this.m.on = `r-${pre.q}-${pre.num}`;
   }
   update(dt, s) {
     this.m.stick(s.stick(), performance.now() / 1000);
@@ -86,6 +97,7 @@ class Picker {
     else {
       this.picked.push(num);
       if (this.picked.length > (this.two ? 2 : 1)) this.picked.shift();
+      if (this.pre?.num === num) this.m.on = 'go';
     }
   }
   draw(g, now) {
@@ -121,14 +133,13 @@ class Picker {
 
 /** What everyone has to say, as the event stands. Anyone not here says what they say in the arena. */
 function linesFor(st, id) {
-  const r = Math.min(st.round, ROUNDS - 1), m = ourMatch(st, r), side = sideOf(m), mates = m[side].filter((n) => n !== OURS);
+  const r = Math.min(st.round, ROUNDS - 1), m = ourMatch(st, r);
   const t = tableOf(st).find((x) => x.num === OURS), watched = TEAMS.filter((n) => n !== OURS && seenOf(st, n).length).length;
   switch (id) {
     case 'priya':
-      return [[`${OURS}: YOU'RE IN Q${m.q}, ON ${side.toUpperCase()},`, `WITH ${mates[0]} AND ${mates[1]}.`], ['TELL YOUR DRIVE TEAM THE PLAN WHEN', "YOU'RE READY. THEY'RE WAITING ON YOU."]];
+      return [priyaPage(m)];
     case 'dani':
-      return [...(st.flags.metDani ? [] : [['IS THAT NORBERT? HE PICKED YOU, THEN.'], ["DON'T LOOK AT ME LIKE THAT. SIT."]]),
-        [`ROUND ${r + 1}. THREE MATCHES BEFORE YOURS.`, 'BEST SEAT IN THE HOUSE. WHO IS IT?']];
+      return st.flags.metDani ? [[`ROUND ${r + 1}. THREE MATCHES BEFORE YOURS.`, 'BEST SEAT IN THE HOUSE. WHO IS IT?']] : DANI_FIRST;
     case 'juno':
       return [[`YOU'VE WATCHED ${watched} OF 23 ROBOTS.`, "I'VE GOT ALL OF THEM IN HERE. TWICE."], watched >= 15 ? ["...THAT'S MORE THAN I THOUGHT.", 'SEE YOU SATURDAY, 5026.'] : ['SEE YOU SATURDAY, 5026. IF YOU', 'GET THAT FAR.']];
     case 'adeyemi':
@@ -174,22 +185,38 @@ export function arenaHub(st, { from = 'pits' } = {}) {
     },
     pointer(type, x, y, s) {
       if (type !== 'down') return false;
+      if (s.mode === 'free' && !s.talk && !hub.over && hub.mark && inRect(hub.markAt, x, y)) {
+        hub.follow(s, hub.mark);
+        return true;
+      }
       if (s.mode === 'free' && !s.talk && inRect(CORNER, x, y)) {
         hub.openBook();
         return true;
       }
       return approach(hub, s, x, y);
     },
+    /** A tap on the guided start's marker: over to Dani or Priya (the way round anyone in the way), or the notebook. */
+    follow(s, g) {
+      if (g.to === 'book') return hub.openBook();
+      // Already beside them, the stage talks to them straight away (a goal whose person is in reach).
+      const p = g.to === 'dani' ? mine.dani : mine.priya, way = s.near === p ? [[s.me.x, s.me.y]] : wayTo(hub, s, p);
+      const [first, ...rest] = way?.length ? way : [g.to === 'dani' ? [daniX - 14, 62] : [p.x + 14, p.y]];
+      s.goal = { x: first[0], y: first[1], person: p, spots: rest, best: Infinity, since: performance.now() / 1000 };
+      return null;
+    },
     onTalked(s, p) {
+      // A line she says to herself has nobody to have talked to.
+      if (!p) return;
       if (p.id === 'dani') {
         st.flags.metDani = true;
         if (st.time < 2) {
           hub.over = new Choice(["THERE ISN'T TIME FOR A WHOLE MATCH.", "YOUR OWN'S NEARLY UP."], [{ label: 'OKAY', act: () => (hub.over = null) }]);
         } else {
+          const g = guide(st, 'arena');
           hub.over = new Picker(st, (pick) => {
             hub.over = null;
             if (pick) hub.leave({ to: 'watch', ...pick });
-          });
+          }, g?.to === 'dani' ? { q: g.q, num: g.num } : null);
         }
       } else if (p.id === 'priya') {
         const m = ourMatch(st, st.round);
@@ -225,11 +252,30 @@ export function arenaHub(st, { from = 'pits' } = {}) {
         fill(sx - 18, 50, 37, 7, C.yel1);
         text('SCOUTING', sx - 15, 51, { font: 3, color: C.ink });
       }
-      if (st.time <= 0 && !s.talk && !hub.over && px > -20 && px < W + 20 && Math.floor(t * 2) % 2) {
+      // The guided start's marker, while she's walking about: one at a time (it stands in for YOUR MATCH while it's up).
+      const free = s.mode === 'free' && !s.talk && !hub.over, gd = free ? guide(st, 'arena') : null;
+      if (!gd && st.time <= 0 && !s.talk && !hub.over && px > -20 && px < W + 20 && Math.floor(t * 2) % 2) {
         text('YOUR MATCH', px, Math.round(mine.priya.y - view.y) - 58, { font: 3, align: 'center', color: C.yel2, outline: C.ink });
       }
       eventChip(st, `${day} ${st.round + 1} OF ${ROUNDS}: WE PLAY Q${m.q}, ${sideOf(m).toUpperCase()}`);
-      corner(st, { glow: drawToasts(t), hint: true });
+      corner(st, { glow: drawToasts(t), hint: true, blink: gd?.to === 'book' });
+      hub.mark = gd;
+      hub.markAt = null;
+      if (gd?.to === 'dani') {
+        hub.markAt = sx >= 8 && sx <= W - 8 ? pointer(sx, 60, 'up', t, gd.label) : edgePointer(sx < 0 ? 'left' : 'right', 66, t, gd.label);
+      } else if (gd?.to === 'priya') {
+        const py = Math.round(mine.priya.y - view.y);
+        hub.markAt = px >= 4 && px <= W - 40 ? pointer(px + 10, py - 40, 'left', t, gd.label) : edgePointer(px < 0 ? 'left' : 'right', 80, t, gd.label);
+      } else if (gd?.to === 'book') hub.markAt = pointer(12, 23, 'up', t);
+      // The season's first field note: once it's in, she says what it means to her, a moment after she's free.
+      if (free && chargeDue(st)) {
+        hub.dueAt ??= t;
+        if (t - hub.dueAt >= 1.2) {
+          s.talk = conversation(HERO_NAME, [CHARGE], t, { tag: C.red1 });
+          st.flags.charged = true;
+          save(st);
+        }
+      } else hub.dueAt = null;
     },
   };
   return hub;

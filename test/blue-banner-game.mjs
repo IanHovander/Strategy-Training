@@ -7,11 +7,16 @@
 //   node test/blue-banner-game.mjs
 import {
   TEAMS, OURS, ROUNDS, makeSchedule, playMatch, recordOf, standings, entryOf, habPoints, makeDraft, fieldStats, saysYes,
-  coachPlans, playSeries, QUARTERS, eyeOf, usualChoice, planFrom,
+  coachPlans, playSeries, QUARTERS, eyeOf, usualChoice, planFrom, oursIn, sideOf,
 } from '../public/team-manager/game/event.js';
 import { newSave, worldOf, playRound, playTo, replan, observe, summary, discover, tableOf, ourMatch, NOTES, voltsOf, canWind } from '../public/team-manager/game/state.js';
 import { PAGE, RANKING, TAKEN, pageStats, pageInfo } from '../public/team-manager/game/cold-data.js';
 import { robotOf } from '../public/team-manager/match/robots.js';
+import {
+  suggest, firstMatch, guide, inkDue, chargeDue, fridayLines, WORDS, ENDED, afterPage, LAST, WISH, CALL, vanCut, CHOOSE,
+  resolve, MATE, DANI_FIRST, priyaPage, CHARGE,
+} from '../public/team-manager/game/guide.js';
+import { SENDER } from '../public/team-manager/opening/phone.js';
 
 let failures = 0;
 const check = (cond, msg) => {
@@ -214,6 +219,158 @@ const table = standings(played), stats = fieldStats(records);
   st.winds = 1;
   check(charged && !canWind(st), 'three field notes are one wind back, and winding spends them');
   check(NOTES.every((n) => n.title.length <= 24 && n.ask.length <= 48), 'every field note has a name and a question that fit the notebook');
+}
+
+// ---- The guided start ----
+// From the van to her first match the game walks her once round the loop (game/guide.js), with as little to read as it
+// can: whoever she circles in the van plays on Friday morning, the markers point the right way and then stop, the
+// words fit their boxes, and the reading stays short, so it can't creep back.
+{
+  const COLD = { picks: ['7461', '6017'], reached: 'qf', alliance: [OURS, '7461', '6017'], out: ['7777', '6834', '4471'] };
+  const thursday = (seed = 5, cold = COLD) => {
+    const st = newSave({ seed });
+    Object.assign(st, { loop: 1, phase: 'thursday', round: 0, time: 5, timeMax: 5, cold });
+    return st;
+  };
+  const said = (cold) => suggest(thursday(5, cold)).map((x) => `${x.num} ${x.word}`).join(', ');
+  check(said(COLD) === '7461 MY PICK, 7777 BEAT US, 6834 REBUILT', `the van's notebook suggests her own Saturday: ${said(COLD)}`);
+  const won = said({ picks: ['6834', '4471'], reached: 'won', alliance: [OURS, '6834', '4471'], out: null });
+  const sf = said({ picks: ['2202', '9201'], reached: 'sf', alliance: [OURS, '2202', '9201'], out: ['4000', '6612', '8086'] });
+  const none = said({ picks: [], reached: 'qf', alliance: [OURS, '1357', '8812'], out: ['7777', '6834', '4471'] });
+  check(won === '6834 MY PICK, 4000 TOP SEED, 5518 LEVEL 3' && sf === '2202 MY PICK, 4000 BEAT US, 6834 REBUILT' && none === '7777 BEAT US, 6834 REBUILT',
+    `and whatever her Saturday was: ${won} / ${sf} / ${none}`);
+  let fair = true;
+  for (let i = 0; i < 300; i++) {
+    const others = TEAMS.filter((n) => n !== OURS).sort((a, b) => ((Number(a) * (i + 7)) % 97) - ((Number(b) * (i + 7)) % 97));
+    const cold = { picks: others.slice(0, i % 3), reached: i % 5 ? 'qf' : 'won', alliance: [OURS, ...others.slice(0, 2)], out: i % 5 ? others.slice(2, 5) : null };
+    const marks = suggest(thursday(5, cold)), nums = marks.map((x) => x.num);
+    if (marks.length < 2 || marks.length > 3 || new Set(nums).size !== nums.length || nums.includes(OURS) || !marks.every((x) => WORDS.includes(x.word) && x.word.length <= 8)) fair = false;
+  }
+  check(fair, 'two or three suggestions, all different, never our own robot, each with one of the words that fit a tile');
+
+  // Whoever she circles plays on Friday morning, and the card says when.
+  let card = true;
+  for (let seed = 1; seed <= 40; seed++) {
+    for (const T of TEAMS.filter((n) => n !== OURS)) {
+      const st = thursday(seed);
+      st.book.circled = T;
+      const f = firstMatch(st, 0), round = worldOf(st).rounds[0], m = round.find((x) => x.q === f?.q), ours = oursIn(round);
+      const want = m === ours ? (sideOf(m, T) === sideOf(m) ? 'with' : 'against') : null, [line] = fridayLines(st);
+      if (!m || ![...m.blue, ...m.red].includes(T) || f.ourQ !== ours.q || f.with !== want) card = false;
+      else if (!line.startsWith(`${T} PLAYS `) || !line.includes(`Q${f.with ? f.ourQ : f.q}.`) || (f.with === 'against') !== line.includes('AGAINST')) card = false;
+    }
+  }
+  check(card, 'whoever she circles plays in round 1, and the FRIDAY card names the match, and whether it is hers');
+
+  // The words fit: a page is two lines of 38 in the dialog's capitals; a label, the small letters, no comma or question.
+  const BIG = /^[A-Z0-9 !?.,:\-+'\/>#&]*$/, SMALL = /^[A-Z0-9 !.\-+'\/:&]*$/;
+  const page = (p) => Array.isArray(p) && p.length >= 1 && p.length <= 2 && p.every((l) => l.length <= 38 && BIG.test(l));
+  const pages = [...Object.values(ENDED), afterPage(null), LAST, WISH, CALL, ...vanCut(SENDER), MATE, ...DANI_FIRST, CHARGE, resolve(OURS), ...TEAMS.flatMap((n) => [afterPage(n), resolve(n)])];
+  for (let seed = 1; seed <= 60; seed++) for (const round of makeSchedule(seed * 10 + 1)) pages.push(priyaPage(oursIn(round)));
+  check(pages.every(page), `every page of the guided start fits the dialog box (${pages.length} checked)`);
+  const labels = [CHOOSE.count(0), CHOOSE.count(23), CHOOSE.prompt, ...WORDS];
+  for (let seed = 1; seed <= 60; seed++) {
+    for (const T of TEAMS.filter((n) => n !== OURS)) {
+      const st = thursday(seed);
+      st.book.circled = T;
+      labels.push(...fridayLines(st), guide(st, 'pits').label);
+      st.time = 0;
+      labels.push(guide(st, 'pits').label);
+      Object.assign(st, { phase: 'quals', round: 0, time: 3 });
+      labels.push(guide(st, 'arena').label);
+      st.time = 1;
+      labels.push(guide(st, 'arena').label);
+    }
+  }
+  check(BIG.test(CHOOSE.question) && CHOOSE.question.length <= 30 && labels.every((l) => SMALL.test(l) && l.length <= 56),
+    `every label of the guided start fits its line in the small letters (${new Set(labels).size} different)`);
+
+  // The reading stays short. From the last buzzer to the circle: AFTER's five pages, the van's two and the choice.
+  const words = (ls) => ls.join(' ').split(/\s+/).filter((w) => /[A-Z0-9]/.test(w)).length;
+  const most = Math.max(...Object.entries(ENDED).map(([how, end]) => {
+    const cold = { ...COLD, reached: how, out: how === 'won' ? null : COLD.out };
+    const read = [end, afterPage(cold.picks[0]), LAST, WISH, CALL, ...vanCut(SENDER)];
+    const look = [CHOOSE.question, CHOOSE.count(0), CHOOSE.prompt, ...suggest(thursday(5, cold)).map((x) => x.word)];
+    return read.length <= 7 ? words(read.flat()) + words(look) : Infinity;
+  }));
+  check(most <= 90, `from the last buzzer to her choice in the van: 7 pages and at most 90 words (${most})`);
+  check([resolve('7461'), MATE].length === 2 && DANI_FIRST.length === 2 && fridayLines(thursday()).length === 2,
+    "then her resolve and the teammate's answer, two pages; Dani's first meeting, two; the FRIDAY card, two lines; Priya, one page");
+
+  // The marker points the right way, one thing at a time, and lets go.
+  const st = thursday();
+  const at = (where) => guide(st, where)?.to ?? null;
+  check(at('pits') === 'pit' && guide(st, 'pits').num === '7461' && at('arena') === null, "Thursday: the marker is on the circled robot's pit (her first pick, before she's circled anything)");
+  st.book.pit['7461'] = true;
+  const free = at('pits');
+  st.time = 0;
+  check(free === null && at('pits') === 'exit', "once she's had its hello, nothing; once her time's gone, the way out to Friday");
+  Object.assign(st, { phase: 'quals', round: 0, time: 3 });
+  const r0 = guide(st, 'arena'), f0 = firstMatch(st, 0);
+  check(r0?.to === 'dani' && r0.q === f0.q && r0.label === `Q${f0.q}: 7461` && at('pits') === null, `Friday's first round: the stands, for its match (${r0?.label})`);
+  playRound(st, 0);
+  observe(st, f0.q, ['7461'], 'watch');
+  st.time = 1;
+  check(at('arena') === 'book' && at('pits') === 'book' && inkDue(st), 'once she has watched it, Norbert: the notebook, wherever she is');
+  st.flags.inked = true;
+  check(at('arena') === 'priya' && guide(st, 'arena').label === `Q${f0.ourQ}: OUR MATCH` && !inkDue(st), 'once the notebook has shown it to her, Priya, for her own match');
+  const skip = thursday();
+  Object.assign(skip, { phase: 'quals', round: 0, time: 1 });
+  skip.book.circled = '7461';
+  check(guide(skip, 'arena')?.to === 'priya', 'with no time to watch a match, Priya straight away');
+  const mate = thursday();
+  Object.assign(mate, { phase: 'quals', round: 0, time: 3 });
+  mate.book.circled = '7777';
+  check(guide(mate, 'arena')?.to === 'priya' && guide(mate, 'arena').label === `Q${firstMatch(mate, 0).ourQ}: 7777 AND US`, 'a robot that plays in her own match: Priya, and the label says so');
+  st.round = 1;
+  const r1 = at('arena');
+  st.flags.inked = false;
+  check(r1 === null && at('arena') === 'book', "round 2: nothing, unless there's something in the notebook it hasn't shown her yet");
+  st.round = 2;
+  check(at('arena') === null && at('pits') === null && !inkDue(st), 'from round 3, nothing at all');
+  st.round = 0;
+  st.flags.noGuide = true;
+  check(at('arena') === null && at('pits') === null, '?guide=off: no markers anywhere');
+  st.phase = 'selection';
+  st.flags.noGuide = false;
+  check(!inkDue(st) && at('arena') === null, 'and none at the boss fight');
+
+  // Her line at the first field note, once; Norbert's battery, drained by the wind back to where Thursday starts.
+  const ch = thursday();
+  const before = chargeDue(ch);
+  ch.book.notes.rp = { text: [] };
+  const due = chargeDue(ch);
+  ch.flags.charged = true;
+  check(!before && due && !chargeDue(ch), 'her line at the first field note is due once a note is found, and only once');
+  const open = newSave({ seed: 5 });
+  check(voltsOf(open) === 12.4 && Math.abs(voltsOf({ ...open, loop: 1 }) - 12) < 1e-9, 'the wind back drains Norbert from 12.4V to 12.0V, where Thursday starts');
+
+  // The loop she's walked round once can pay: a field note from it in most seasons. Her first match on the drive
+  // coach's plans, the circled 7461 watched first if it's in another match; then her second match.
+  let by0 = 0, by1 = 0;
+  const callOf = (m, r, res) => {
+    const side = sideOf(m), them = side === 'blue' ? 'red' : 'blue', team = m[side];
+    const climbs = team.map((n) => recordOf(res, n)).filter((x) => x.climb && !x.climb.park).map((x) => ({ num: x.num, level: x.climb.level, made: x.climb.made }));
+    return { tag: `Q${m.q}`, lead: 0, climbs, margin: res.score[side] - res.score[them], could3: team.some((n) => robotOf(n, { match: r }).climb?.[3]), rp: res.rp[side], hab: habPoints(res, side) };
+  };
+  for (let seed = 1; seed <= 40; seed++) {
+    const s = thursday(seed);
+    Object.assign(s, { phase: 'quals', round: 0, time: 3 });
+    let when = null;
+    for (let r = 0; r < 2 && when == null; r++) {
+      s.round = r;
+      const round = playRound(s, r), tm = round.find((x) => [...x.blue, ...x.red].includes('7461'));
+      if (r === 0 && !sideOf(tm)) observe(s, tm.q, ['7461'], 'watch');
+      if (discover(s).length) when = r;
+      if (when != null) break;
+      const m = ourMatch(s, r), res = replan(s, m.q, Object.fromEntries(m[sideOf(m)].map((n) => [n, planFrom(usualChoice(n))])));
+      observe(s, m.q, [...m.blue, ...m.red], 'ours');
+      if (discover(s, { call: callOf(m, r, res) }).length) when = r;
+    }
+    if (when === 0) by0++;
+    if (when != null) by1++;
+  }
+  check(by0 >= 18 && by1 >= 32, `the guided first round turns up a field note in most seasons: ${Math.round((by0 / 40) * 100)}% by its end, ${Math.round((by1 / 40) * 100)}% by the end of the second`);
 }
 
 console.log(failures ? `${failures} FAILED` : 'ALL PASSED');

@@ -1,91 +1,103 @@
-// Thursday, 6:40 AM, again: the van. It's the van scene's own cabin (../van/scene.js) and its own people in their
-// seats, with words of the game's: she's just come back from Saturday, Norbert's in her lap, and the first thing she
-// learns is that the senior strategist is out all weekend, so the notebook's hers from the start this time. Then the
-// stick picks a seat, as it does there, and everyone has something true to say about the event ahead: how seeding
-// works, what her own robot can do, what a pit will tell her and what it won't. Nobody says what to do with it.
+// Thursday, 6:40 AM, again: the van. It's the van scene's own cabin (../van/scene.js) with its people in their seats,
+// and it's short. She's just come back from Saturday with Norbert in her lap, and she knows what's coming: the senior
+// strategist is out sick all weekend, so the notebook's hers from the start this time. Then the notebook is open in her
+// hands on 23 blank tiles, and her own pencil asks who she watches first. Three tiles carry a word from her Saturday (the
+// robot she picked, the one that beat her, something the page said), but any tile will do, and nothing says whether
+// it's a good one. She circles one, and that's the weekend started: it's the robot the guided start follows (guide.js).
 //
-//   vanRide(st)   the ride; ARRIVE (top right) gets out at the event
+//   vanRide(st)   the ride: two pages, the choice (st.book.circled), her resolve and the teammate's answer, and out
 
-import { C } from '../pixel.js';
+import { C, seg } from '../pixel.js';
 import { bars, placeCard, cover } from '../stage.js';
+import { conversation } from '../talk.js';
 import { HERO_LOOK } from '../walker.js';
 import { HERO_NAME, TEAMMATE_NAME } from '../cast.js';
 import { TEAMMATE_LOOK } from '../teammate.js';
 import { scene as van } from '../van/scene.js';
 import { FRAME } from '../van/layout.js';
 import { SENDER } from '../opening/phone.js';
-import { walk } from './run.js';
+import { show, Screen } from './run.js';
+import { Book } from './book.js';
 import { corner } from './hud.js';
-import { OURS } from './event.js';
+import { save } from './state.js';
+import { vanCut, suggest, resolve, MATE } from './guide.js';
 
-/** What everyone says from their seat. Each knows something true about the weekend ahead. */
-const LINES = {
-  teammate: [
-    ['TEN QUALIFICATION MATCHES. 23 OTHER', "ROBOTS. YOU CAN'T WATCH THEM ALL."],
-    ["SO DON'T TRY. WATCH THE ONES YOU'D", 'WANT BESIDE US ON SATURDAY.'],
-    ["I'LL SIT WITH YOU FROM FRIDAY LUNCH.", 'TWO PAIRS OF EYES: TWO ROBOTS A MATCH.'],
-  ],
-  bea: [
-    ['A PIT WILL TELL YOU THEIR ROBOT DOES', 'EVERYTHING. EVERY PIT. EVERY YEAR.'],
-    ['WATCH IT DO THE THING. THEN WRITE', 'IT DOWN. IN THAT ORDER.'],
-  ],
-  kai: [
-    ['TELL ME THE PLAN BEFORE A MATCH AND', "I'LL DRIVE IT. ANY PLAN."],
-    ['HATCHES ARE OUR THING. ALL THREE', "LEVELS. WE DON'T TOUCH CARGO."],
-    ['THE CLIMB? LEVEL 2 I NEVER MISS.', 'LEVEL 3 IS SIX IN TEN. ON A GOOD DAY.'],
-  ],
-  adeyemi: [
-    ["WINS DON'T SEED YOU. RANKING POINTS", 'DO. TWO FOR A WIN.'],
-    ['ONE MORE FOR FILLING A WHOLE ROCKET.', 'ONE MORE FOR 15 POINTS OF CLIMBING.'],
-    ['THE TOP EIGHT PICK THEIR ALLIANCES', `ON SATURDAY. ${OURS} HAS NEVER BEEN ONE.`],
-  ],
-  owen: [
-    ['THE PIT MAP SAYS 24 TEAMS, ONE LONG', 'ROW. WE ARE SEVENTH FROM THE DOOR.'],
-    ['THE APP ALSO SAYS TURN LEFT. THERE', 'IS NO LEFT. THERE IS A COW.'],
-  ],
-  rafi: [
-    ['FUN FACT. CARGO ONLY STAYS IN A BAY', 'WITH A HATCH PANEL IN FRONT OF IT.'],
-    ['NO PANEL, IT ROLLS RIGHT BACK OUT.', 'I WATCHED US LEARN THAT IN WEEK ONE.'],
-    ['PRETZEL?'],
-  ],
-  tess: [
-    ['MMF. FIVE MORE MINUTES.'],
-    ['EVERY ROBOT BREAKS ON FRIDAY. THE', 'GOOD PITS FIX IT BY SATURDAY.'],
-  ],
-};
+/** Seconds: the van fading out to the pits once the last page is read. */
+const OUT = 0.6;
+
+/**
+ * It's a screen, not a place: there's no seat to pick and no way out but through the choice. SKIP ends the pages, and
+ * the notebook still comes.
+ */
+class Ride extends Screen {
+  constructor(st) {
+    super('THE VAN');
+    this.st = st;
+    this.label = 'In the van on Thursday morning, her teammate beside her: then her scouting notebook, open on its blank pages, and who she watches first';
+    const view = { x: 0, y: FRAME.all.y };
+    this.cabin = (g) => van.draw(g, view, performance.now() / 1000, { talk: null });
+    // Every beat is the same shot: the cabin, the film bars, anything over it (the place card, the fade from black), and
+    // Norbert in his corner. The stage hands a beat's draw its timing too, which isn't ours to call, so it takes two.
+    const shot = (over = null) => (g, t) => {
+      this.cabin(g);
+      bars(1);
+      over?.(t);
+      corner(st);
+    };
+    const [hers, mates] = vanCut(SENDER);
+    this.cutscene = [
+      { dur: 1.2, draw: shot((t) => { placeCard(t, 'THE VAN', 'THURSDAY 6:40 AM'); cover(1 - t / 0.6); }) },
+      { dur: 0.6, draw: shot((t) => placeCard(t + 1.2, 'THE VAN', 'THURSDAY 6:40 AM')), say: { name: HERO_NAME, look: HERO_LOOK, lines: [hers], tag: C.red1 } },
+      { dur: 0.4, draw: shot(), say: { name: TEAMMATE_NAME, look: TEAMMATE_LOOK, lines: [mates] } },
+    ];
+    this.circledAt = null;
+    this.talking = false;
+    this.outAt = null;
+  }
+  status() {
+    return this.circledAt != null && performance.now() / 1000 - this.circledAt < 1 ? 'CIRCLED' : 'IN THE VAN';
+  }
+  /** The pages are read (or skipped): her notebook, unless she's already chosen (a reload after circling). */
+  start(s) {
+    const st = this.st;
+    if (st.book.circled) return this.resolve(s);
+    this.open(new Book(st, {
+      choose: {
+        marks: suggest(st),
+        pick: (num) => {
+          st.book.circled = num;
+          save(st);
+          this.circledAt = performance.now() / 1000;
+        },
+        done: () => {
+          this.over = null;
+          this.resolve(s);
+        },
+      },
+    }));
+  }
+  /** Her resolve, with the robot in it, and the teammate's where and when. */
+  resolve(s) {
+    const num = this.st.book.circled;
+    s.talk = conversation(HERO_NAME, [
+      { name: HERO_NAME, lines: resolve(num), tag: C.red1 },
+      { name: TEAMMATE_NAME, lines: MATE },
+    ], performance.now() / 1000);
+    this.talking = true;
+  }
+  tick(dt, s, now) {
+    if (!this.talking || s.talk) return;
+    this.outAt ??= now;
+    if (now - this.outAt >= OUT) this.done();
+  }
+  paint(g, t, s, now) {
+    this.cabin(g);
+    bars(1);
+    corner(this.st);
+    if (this.outAt != null) cover(seg(now - this.outAt, 0, OUT));
+  }
+}
 
 export async function vanRide(st) {
-  for (const p of van.people) if (LINES[p.id]) p.lines = LINES[p.id];
-  const view = { x: 0, y: FRAME.all.y };
-  const cabin = (g) => van.draw(g, view, performance.now() / 1000, { talk: null });
-  // Every beat is the same shot: the cabin, the film bars (barsAt(t) of the way down), anything over it (the place
-  // card, the fade from black), and Norbert in his corner. shot() makes a beat's draw(g, t); the stage also hands a
-  // draw the beat's timing, which isn't ours to call, so nothing here takes a third argument.
-  const shot = (over = null, barsAt = () => 1) => (g, t) => {
-    cabin(g);
-    bars(barsAt(t));
-    over?.(t);
-    corner(st);
-  };
-  const mate = (lines) => ({ name: TEAMMATE_NAME, look: TEAMMATE_LOOK, lines });
-  const hers = (lines) => ({ name: HERO_NAME, look: HERO_LOOK, lines, tag: C.red1 });
-  const scene = {
-    ...van,
-    name: 'THE VAN',
-    cutscene: [
-      { dur: 1.2, draw: shot((t) => { placeCard(t, 'THE VAN', 'THURSDAY 6:40 AM'); cover(1 - t / 0.6); }) },
-      { dur: 0.6, draw: shot((t) => placeCard(t + 1.2, 'THE VAN', 'THURSDAY 6:40 AM')), say: hers([['...THE VAN?'], ["IT'S THURSDAY. IT'S THURSDAY AGAIN."]]) },
-      { dur: 0.4, draw: shot(), say: mate([['YOU OKAY? YOU JUMPED. AND SINCE WHEN', 'DOES RILEY LET ANYONE HOLD NORBERT?']]) },
-      { dur: 0.4, draw: shot(), say: hers([[`${SENDER}'S OUT SICK ALL WEEKEND. RIGHT?`]]) },
-      { dur: 0.4, draw: shot(), say: mate([['THE TEXT ONLY JUST CAME. HOW DID YOU...', "FINE. YES. SO THE NOTEBOOK'S YOURS."]]) },
-      { dur: 0.4, draw: shot(), say: hers([['THREE DAYS THIS TIME. NOT 45 SECONDS.'], ["I'M GOING TO WATCH EVERY ROBOT I CAN."]]) },
-      // The bars lift, and she's free to pick a seat.
-      { dur: 0.5, draw: shot(null, (t) => 1 - t / 0.5) },
-    ],
-    draw(g, v, t, s) {
-      van.draw(g, v, t, s);
-      corner(st);
-    },
-  };
-  await walk(scene, { nextLabel: 'ARRIVE' });
+  await show(new Ride(st));
 }

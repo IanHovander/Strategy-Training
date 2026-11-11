@@ -16,7 +16,7 @@ import { Card, night } from './cards.js';
 import { box, button } from './ui.js';
 import { corner } from './hud.js';
 import { OURS, TEAMS } from './event.js';
-import { tableOf, seenOf, notesFound, NOTES, voltsText } from './state.js';
+import { tableOf, seenOf, notesFound, NOTES, voltsText, voltsOf } from './state.js';
 
 export const REACHED = { qf: 'OUT IN THE QUARTERFINAL', sf: 'OUT IN THE SEMIFINAL', f: 'FINALIST', won: 'REGIONAL WINNER' };
 
@@ -44,7 +44,8 @@ export class Verdict extends Screen {
       button(stand, 'LET IT STAND', this.m.item('stand', stand, () => t > 1 && this.done('stand')), { t });
       text('EITHER WAY, THE SEASON GOES ON.', W / 2, 120, { font: 3, align: 'center', color: C.steel2 });
     }
-    corner(st, { glow: 0.5 + 0.5 * Math.sin(now * 5) });
+    // His reading as the words above give it, whatever slips are still to come in.
+    corner(st, { glow: 0.5 + 0.5 * Math.sin(now * 5), volts: voltsOf(st) });
   }
 }
 

@@ -165,10 +165,10 @@ export function answer(st, num, k) {
   return [does, (n, r) => running(st, n, r), (n) => seen(st, n)][k](num, robot);
 }
 
-/** Riley, in her own pit: where the team stands, as the rankings have it. */
+/** Riley, in her own pit: where the team stands, as the rankings have it (once there are rankings), and Norbert. */
 export function rileyLines(st) {
   const t = tableOf(st).find((x) => x.num === OURS);
   const where = t?.played ? [[`WE'RE ${t.rank} OF 24. ${t.w} WON, ${t.l} LOST,`, `${t.rp} RANKING POINTS.`], [t.rank <= 8 ? 'TOP EIGHT. IF IT STAYS LIKE THIS,' : 'THE TOP EIGHT PICK ON SATURDAY.', t.rank <= 8 ? 'WE PICK ON SATURDAY.' : "WE'VE NEVER BEEN ONE OF THEM."]]
-    : [["LOAD-IN'S DONE. ROBOT'S THROUGH", 'INSPECTION. MATCHES START TOMORROW.']];
+    : [];
   return [...where, ['HOW HAVE YOU GOT NORBERT? HE NEVER', 'LEAVES MY BAG.'], ['...KEEP HIM. HE LIKES YOU. GO AND', "LOOK AT ROBOTS. I'LL MIND THE PIT."]];
 }

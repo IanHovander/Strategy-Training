@@ -65,11 +65,14 @@ export const SCENES = {
 
   'THE VAN': {
     bed: 'road', surface: null, music: 'day', cut: 1, free: 0.9,
+    // 12 and 13 are the van lab's cinematic (../van/script.js); the game's van has three beats.
     beats: {
       0: [card(0.2)],
       12: [[0.3, 'signal', { n: 10 }]],
       13: [[0, 'signal', { n: 4 }]],
     },
+    // The game's van (game/van.js): her pencil going round the robot she's chosen.
+    status: { CIRCLED: [[0, 'select'], [0.05, 'scrape']] },
   },
 
   'THE PITS': {
@@ -156,7 +159,8 @@ export const SCENES = {
     },
   }])),
   'THE PLAYOFFS': { bed: 'crowd', surface: null, music: null, cut: 1, free: 0.7, enter: [[0, 'card'], [0.3, 'cheer', { size: 0.4 }]] },
-  AFTER: { bed: 'crowd', surface: null, music: 'moment', cut: 0.35, free: 0.3, beats: { 6: [[0.3, 'glint'], [0.9, 'click'], [1.3, 'click']] } },
+  // His ear lighting, on the wordless beat (cold.js names it).
+  AFTER: { bed: 'crowd', surface: null, music: 'moment', cut: 0.35, free: 0.3, beats: { glow: [[0.3, 'glint'], [0.9, 'click'], [1.3, 'click']] } },
   'AFTER THE PLAYOFFS': { bed: 'crowd', surface: null, music: 'moment', cut: 1, free: 0.3, status: { 'NORBERT IS GLOWING': [[0.6, 'glint']] } },
   'WINDING BACK': {
     bed: null, surface: null, music: null, cut: 1, free: 1,

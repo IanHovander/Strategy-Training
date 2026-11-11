@@ -6,13 +6,15 @@
 //   the playoffs   her alliance against whoever the bracket gives it (playoffs.js), every match the simulation's.
 //                  The first one's on the drive coach's plan, so the first thing she's asked is the call at 0:30; from
 //                  the second match the plan's hers too. Lose a series and it's over. Win, and it goes on.
-//   after          wherever it ended, Riley and her on the floor. She had one page and 45 seconds, and there were things
-//                  on that page she didn't know how to read. She says so. Norbert answers.
+//   after          wherever it ended, Riley and her on the floor, a page each: how far they got, and that she picked a
+//                  robot she'd never seen play. Norbert answers, and winds it all back to Thursday: his reading runs down
+//                  as he does it, 12.4V to 12.0V.
 //
 // Nobody tells her whether a pick was good. The matches do, a little; mostly they leave her with questions, which is
 // what the next three days are for.
 //
-//   coldOpen(st)   the whole of it; leaves the save on Thursday morning, loop 1
+//   coldOpen(st)   the whole of it; leaves the save on Thursday morning, loop 1. Coming back to a save that closed
+//                  after the playoffs (st.cold is set), it starts at after.
 
 import { C, W } from '../pixel.js';
 import { cover } from '../stage.js';
@@ -28,7 +30,8 @@ import { playoffs } from './playoffs.js';
 import { makeDraft, OURS } from './event.js';
 import { RANKING, TAKEN, pageInfo, pageStats, avgOf } from './cold-data.js';
 import { corner } from './hud.js';
-import { save } from './state.js';
+import { save, voltsOf } from './state.js';
+import { ENDED, afterPage, LAST, WISH, CALL } from './guide.js';
 
 /** How much time she has on Thursday for the pits, in conversations (state.js time). */
 export const THURSDAY_TIME = 5;
@@ -48,53 +51,47 @@ function react(num, n) {
 
 const riley = (lines) => ({ name: COCAPTAIN_NAME, look: COCAPTAIN_LOOK, lines, tag: C.red0 });
 const her = (lines) => ({ name: HERO_NAME, look: HERO_LOOK, lines, tag: C.red1 });
-/** How it ended, in Riley's words. */
-const ENDED = {
-  qf: [['OUT IN THE QUARTERFINAL.'], ['STILL. FIRST TIME WE EVER PICKED OUR', 'OWN ALLIANCE. YOU DID THAT.']],
-  sf: [['THE SEMIFINAL. WE HAD NEVER WON A', 'PLAYOFF SERIES BEFORE TODAY.'], ['YOU DID THAT.']],
-  f: [['A FINAL. AN ACTUAL FINAL.'], ["WE'VE NEVER EVEN STOOD NEXT TO ONE.", 'YOU DID THAT.']],
-  won: [['WE WON. WE WON THE WHOLE EVENT.'], ["I DON'T KNOW HOW. I DON'T THINK", 'YOU DO EITHER.']],
-};
 
 export async function coldOpen(st) {
   const beats = makeCutscene();
-  // The cut scene: it ends as Robin calls her up, and the tablet comes straight in after it.
-  await show({ name: 'THE OPENING', label: "The opening of Blue Banner: her phone, alliance selection in the arena, the co-captain handing her the pick list and Norbert", cutscene: beats, start() { this.done(); }, draw() {} });
+  if (!st.cold) {
+    // The cut scene: it ends as Robin calls her up, and the tablet comes straight in after it.
+    await show({ name: 'THE OPENING', label: "The opening of Blue Banner: her phone, alliance selection in the arena, the co-captain handing her the pick list and Norbert", cutscene: beats, start() { this.done(); }, draw() {} });
 
-  // The picks.
-  const stats = pageStats(), draft = makeDraft(RANKING, { stats });
-  for (const n of TAKEN) draft.pick(n);
-  const sel = await show(new Draft({
-    st, draft, stats, info: pageInfo, lists: [{ name: `${SENDER}'S PAGE: BY AVERAGE`, by: avgOf }], react, used: 2,
-  }), { fade: false });
+    // The picks.
+    const stats = pageStats(), draft = makeDraft(RANKING, { stats });
+    for (const n of TAKEN) draft.pick(n);
+    const sel = await show(new Draft({
+      st, draft, stats, info: pageInfo, lists: [{ name: `${SENDER}'S PAGE: BY AVERAGE`, by: avgOf }], react, used: 2,
+    }), { fade: false });
 
-  // The playoffs, with whoever she's got.
-  const res = await playoffs(st, { alliances: sel.alliances, stats, seed: st.seed * 3 + 1, guided: true });
-  st.cold = { picks: sel.mine, reached: res.reached, alliance: sel.alliances[sel.ours].teams, out: res.out?.teams ?? null };
-  save(st);
+    // The playoffs, with whoever she's got.
+    const res = await playoffs(st, { alliances: sel.alliances, stats, seed: st.seed * 3 + 1, guided: true });
+    st.cold = { picks: sel.mine, reached: res.reached, alliance: sel.alliances[sel.ours].teams, out: res.out?.teams ?? null };
+    save(st);
+  }
 
   // After: the two of them, close, as at the handoff; and Norbert.
   const okay = beats.find((b) => b.name === 'okay');
   const shot = (g) => okay.draw(g, 1, { T: 0, k: 1 });
   const says = (say) => ({ dur: 0.4, draw: shot, say });
-  const [p1, p2] = sel.mine;
   await show({
     name: 'AFTER', label: 'Riley and the strategist on the arena floor after the playoffs, Norbert in her arms',
     cutscene: [
       { dur: 0.9, draw: (g, t) => { shot(g); cover(1 - t / 0.7); } },
-      ...ENDED[res.reached].map((lines) => says(riley([lines]))),
-      says(her([['I HAD ONE PAGE AND 45 SECONDS.'], ["AND I DIDN'T KNOW WHAT I WAS", 'LOOKING AT.']])),
-      says(her([p1 ? [`WHY ${p1}? WHY ${p2 ?? 'ANY OF THEM'}? I PICKED`, 'NUMBERS. I NEVER SAW ONE ROBOT PLAY.'] : ['I NEVER SAW ONE OF THOSE ROBOTS PLAY.', 'NOT ONE.']])),
-      says(riley([["IT'S MY LAST SEASON. YOU'VE GOT THREE", "MORE. YOU'LL WORK IT OUT."]])),
-      says(her([['IF I HAD THE WHOLE WEEKEND AGAIN...']])),
-      // A beat with nothing said: his ear lights, and something inside him clicks.
-      { dur: 1.9, hold: 1.9, draw: (g, t) => { shot(g); corner(st, { glow: t > 0.3 ? 0.5 + 0.5 * Math.sin(t * 9) : 0 }); } },
-      says(her([['...NORBERT?']])),
+      says(riley([ENDED[st.cold.reached] ?? ENDED.qf])),
+      says(her([afterPage(st.cold.picks?.[0])])),
+      says(riley([LAST])),
+      says(her([WISH])),
+      // A beat with nothing said: his ear lights, and something inside him clicks (sounds/cues.js keys it by name).
+      { name: 'glow', dur: 1.9, hold: 1.9, draw: (g, t) => { shot(g); corner(st, { glow: t > 0.3 ? 0.5 + 0.5 * Math.sin(t * 9) : 0 }); } },
+      says(her([CALL])),
     ],
     start() { this.done(); }, draw() {},
   });
+  // Winding back costs him: his reading runs down in his empty corner as the key turns, to what he has on Thursday.
   await show(new Wind({
-    st, bg: shot, last: 'TWO DAYS EARLIER',
+    st, bg: shot, last: 'TWO DAYS EARLIER', volts: [voltsOf(st), voltsOf({ ...st, loop: 1 })],
     stops: ['SATURDAY 3:10 PM', 'SATURDAY 12:38 PM', 'SATURDAY 9:00 AM', 'FRIDAY 4:30 PM', 'FRIDAY 8:30 AM', 'THURSDAY 2:00 PM', 'THURSDAY 6:40 AM'],
   }), { fade: false });
   Object.assign(st, { loop: 1, phase: 'van', round: 0, time: THURSDAY_TIME });

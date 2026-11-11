@@ -8,24 +8,29 @@
 // It's the arena's hall and floor (the drape and concrete of ../pits/set.js, drawn simply): the row is as long as the
 // event is big, and the way out to the field is at the right end, where the arena's light comes in.
 //
+// On Thursday the guided start (guide.js) points her at the pit of the robot she circled in the van, until she's had its
+// hello, and at the way out once her time's gone; on Friday morning, at Norbert, once there's something new in the
+// notebook. A tap on the marker takes her there.
+//
 //   pitHall(st, { from })   the place, for run.js walk(): from 'arena' she comes in at the right end, otherwise at the
 //                           left. It leaves by its way out ({ to: 'arena' }).
 
 import { W, H, C, camera, screen, rect, fill, text, measure, rnd } from '../pixel.js';
 import { drawWithShadow } from '../stage.js';
 import { conversation } from '../talk.js';
-import { stranger } from '../cast.js';
+import { stranger, HERO_NAME } from '../cast.js';
 import { goggles } from '../pits/people.js';
 import { robotCart } from '../field.js';
 import { drawBot } from '../match/bots.js';
 import { TEAMS as ROBOTS } from '../match/robots.js';
 import { COCAPTAIN_LOOK, COCAPTAIN_NAME } from '../opening/cocaptain.js';
 import { Menu, box, button, inRect } from './ui.js';
-import { corner, CORNER, drawToasts, eventChip, toast } from './hud.js';
+import { corner, CORNER, drawToasts, eventChip, toast, pointer, edgePointer } from './hud.js';
 import { Book } from './book.js';
 import { OURS, TEAMS, NAMES, ROUNDS, FRIDAY, sideOf } from './event.js';
 import { hear, visit, discover, save, ourMatch } from './state.js';
 import { QUESTIONS, answer, greeting, busy, toneOf, printOf, rileyLines } from './pit-words.js';
+import { guide, chargeDue, CHARGE } from './guide.js';
 
 const PIT_W = 56, LEFT = 44;
 const ROW = [...TEAMS].sort((a, b) => Number(a) - Number(b));
@@ -167,10 +172,11 @@ export function pitHall(st, { from = 'left' } = {}) {
     exits: [{ x: HALL.w - 12, y0: AISLE.y0, y1: AISLE.y1 + 2, label: thursday ? 'TO THE FIELD: FRIDAY' : 'TO THE FIELD', sign: { y: 122 }, to: 'arena' }],
     people, asking: null, spent: new Set(), asked: new Set(), book: null,
     move: (x, y, dx, dy) => [Math.max(8, Math.min(HALL.w - 2, x + dx)), Math.max(AISLE.y0, Math.min(AISLE.y1, y + dy))],
-    // After the hello, the questions; our own pit just talks.
+    // After the hello, the questions; our own pit just talks. (A line she says to herself has nobody to have talked to.)
     onTalked(s, p) {
-      if (p.num === OURS || scene.asking) return;
+      if (!p || p.num === OURS || scene.asking) return;
       visit(st, p.num);
+      save(st);
       scene.asking = p;
       scene.menu.m.on = 'q0';
     },
@@ -213,11 +219,26 @@ export function pitHall(st, { from = 'left' } = {}) {
       scene.book.close = () => (scene.book = null);
     },
     pointer(type, x, y, s) {
-      if (type === 'down' && s.mode === 'free' && !s.talk && inRect(CORNER, x, y)) {
+      if (type !== 'down' || s.mode !== 'free' || s.talk) return false;
+      if (scene.mark && inRect(scene.markAt, x, y)) {
+        scene.follow(s, scene.mark);
+        return true;
+      }
+      if (inRect(CORNER, x, y)) {
         scene.openBook();
         return true;
       }
       return false;
+    },
+    /** A tap on the guided start's marker: over to the pit (and its hello), out to Friday, or the notebook. */
+    follow(s, g) {
+      const now = performance.now() / 1000;
+      if (g.to === 'pit') {
+        const p = people[ROW.indexOf(g.num)];
+        s.goal = { x: p.x, y: 124, person: p, spots: [], best: Infinity, since: now };
+      } else if (g.to === 'exit') {
+        s.goal = { x: HALL.w - 6, y: Math.max(AISLE.y0 + 1, Math.min(AISLE.y1 - 1, s.me.y)), person: null, spots: [], best: Infinity, since: now };
+      } else if (g.to === 'book') scene.openBook();
     },
     draw(g, view, t, s) {
       hall(view, t);
@@ -237,7 +258,28 @@ export function pitHall(st, { from = 'left' } = {}) {
       // What's over the picture: where she is in the event, Norbert, any new field note.
       const m = thursday ? null : ourMatch(st, Math.min(st.round, ROUNDS - 1));
       eventChip(st, thursday ? 'THURSDAY: MATCHES START TOMORROW' : `${st.round < FRIDAY ? 'FRIDAY' : 'SATURDAY'} ${st.round + 1} OF ${ROUNDS}: WE PLAY Q${m.q}, ${sideOf(m).toUpperCase()}`);
-      corner(st, { glow: drawToasts(t), hint: true });
+      // The guided start's marker, while she's walking about: one at a time, and only while there's somewhere to point.
+      const free = s.mode === 'free' && !s.talk && !scene.modal(), gd = free ? guide(st, 'pits') : null;
+      scene.mark = gd;
+      scene.markAt = null;
+      corner(st, { glow: drawToasts(t), hint: true, blink: gd?.to === 'book' });
+      if (gd?.to === 'pit') {
+        const sx = Math.round(pitX(ROW.indexOf(gd.num)) + 28 - view.x);
+        // Over its banner; off the picture, at the edge at the same height, up in the dark over the pits.
+        scene.markAt = sx >= 6 && sx <= W - 6 ? pointer(sx, 29, 'down', t) : edgePointer(sx < 0 ? 'left' : 'right', 24, t, gd.label);
+      } else if (gd?.to === 'exit') {
+        // Far off, the marker, where the way out's own arrow will be; near, that arrow.
+        if (HALL.w - 12 - view.x > W + 60) scene.markAt = edgePointer('right', 122, t, gd.label);
+      } else if (gd?.to === 'book') scene.markAt = pointer(12, 23, 'up', t);
+      // The season's first field note: once it's in, she says what it means to her, a moment after she's free.
+      if (free && chargeDue(st)) {
+        scene.dueAt ??= t;
+        if (t - scene.dueAt >= 1.2) {
+          s.talk = conversation(HERO_NAME, [CHARGE], t, { tag: C.red1 });
+          st.flags.charged = true;
+          save(st);
+        }
+      } else scene.dueAt = null;
       void box;
       void button;
     },

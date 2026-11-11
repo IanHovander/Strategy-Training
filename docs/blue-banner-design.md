@@ -719,9 +719,9 @@ it a game.
 | --- | --- | --- |
 | The opening reel and title | As before. NEW SEASON asks her name; CONTINUE carries on a save. | — |
 | **The opening**, Saturday 12:38 PM | The cut scene as it was: the text, Riley, the list, Norbert, Robin's call. Then alliance selection **for real**: the senior strategist's page on the tablet, every team that's left, 45 seconds a pick. Then the playoffs with whoever she got. | Hers. She can invite anyone, a captain below her included (7777 says no). The picks stand. The first playoff match is on the drive coach's plan, so the first thing she's asked is the climb call at 0:30; from the second match the plan is hers too. |
-| After | Wherever it ended, Riley and her on the floor. "I had one page and 45 seconds." "If I had the whole weekend again..." Norbert's key turns. | The wish comes first, then the gift (section 4). |
-| **Thursday** | The van: everyone has something true to say about the weekend. Then the pits at load-in. | Hers: who to sit by, which pits to visit. |
-| **Friday and Saturday morning** | Ten rounds of qualification. Each round: the arena or the pits, as she likes, for as long as the round's time lasts; then her own match. | Hers: who to watch, who to ask, the plan for her alliance, the call at 0:30. Nothing can be taken back. |
+| After | Wherever it ended, Riley and her on the floor, five pages: how far they got, "I picked 7461 without ever seeing it play", Riley's last season, "If I had the whole weekend again...". Norbert's key turns, and his reading runs down from 12.4V to 12.0V as it does. | The wish comes first, then the gift (section 4). |
+| **Thursday** | The van: two pages, then her notebook open in her hands on 23 blank tiles, asking WHO DO I WATCH FIRST? She circles one, and says so. Then the pits at load-in, with a marker on that robot's pit. | Hers: which robot first (three tiles carry a word from her Saturday, but any will do), which pits to visit. |
+| **Friday and Saturday morning** | Ten rounds of qualification. Each round: the arena or the pits, as she likes, for as long as the round's time lasts; then her own match. Round 1 is guided once (the stands for the robot she circled, the notebook, her match), then she's let go. | Hers: who to watch, who to ask, the plan for her alliance, the call at 0:30. Nothing can be taken back. |
 | **The boss fight**, Saturday 12:38 PM again | Alliance selection with the event's real rankings and her own notebook on the tablet; then the playoffs, best two of three, as far as she gets. | Hers. If she seeded in the top eight (or moved up), both picks. If another captain picked her first, that captain hands her the second pick. If she's out and Norbert has the charge, she can wind back to selection, or let it stand. |
 | The end | The event on a card: record, seed, alliance, how far it went and how far it went on one page, robots watched, field notes found. | — |
 
@@ -741,6 +741,17 @@ it a game.
   and beside each choice is what she knows: for her own robot, its practice record; for anyone else, only what she's
   seen it make. The match is the same up to 0:30 whatever she calls (`event.js` sees that nobody heads home earlier),
   so it's a real call, and the last thirty seconds play out as she made it.
+- **The guided start** (`guide.js`): from the van to her first match, the game walks her once round the loop it's
+  about, then lets go. The robot she circles in the van (`st.book.circled`, a red pencil ring, not a star: it stays off
+  her pick list) is the thread. One yellow marker at a time (`hud.js` `pointer`, `edgePointer`) points at its pit on
+  Thursday, the stands for its match in round 1 (Dani's picker opens on it), Norbert once it's in the notebook (the
+  first time the notebook opens, the tiles she's seen ink in), then Priya for her own match. A tap on a marker walks
+  her there. Each one ends when she's done that thing or walked past it; there are none after her first match, but the
+  notebook's, and none at all after her second. Which marker shows is worked out from the save every frame, so a reload
+  can't leave one stuck. Nothing is forced and nothing is graded: the only things she has to do are read and circle.
+  At the season's first field note, his reading rises (+0.1V) and she says the one line that makes the quest hers:
+  "FIND OUT ENOUGH, AND MAYBE HE CAN TAKE ME BACK AGAIN." It's true (below). From the last buzzer of the opening to the
+  let-go, she reads about 210 words; the van alone used to be 270. `test/blue-banner-game.mjs` holds the budget.
 - **The notebook** (`book.js`) is the Pokédex: a tile a team; a page a team with the event's public numbers (rank,
   record), then WHAT I'VE SEEN (its ten matches, a number in each she watched, a dotted box for each she didn't) and,
   apart and in pencil, WHAT THEY SAY. A star puts a robot on her list.
@@ -752,9 +763,11 @@ it a game.
   this event, found when what's in her notebook shows it, and written in her hand with the numbers she saw: *7461:
   42, 41 and 47 early on. 38, 30 and 29 since. Something broke.* Thirteen to find. The ones she hasn't found sit in
   the notebook as questions. Nobody says what to do about any of them.
-- **Norbert's battery** is the retry. Every field note charges it a tenth of a volt; winding back to alliance
-  selection costs three tenths and needs 12.3. So what she found out is what buys another go at the boss, and with
-  nothing found there's no rewind at all. The notebook comes back with her; the dice don't.
+- **Norbert's battery** is the retry. Every field note charges it a tenth of a volt (his reading goes up as the note's
+  slip comes in, +0.1V rising off it); winding back to alliance selection costs three tenths and needs 12.3, and every
+  wind shows what it costs, his reading running down as the key turns. The first wind takes him from 12.4V to 12.0V. So
+  what she found out is what buys another go at the boss, and with nothing found there's no rewind at all. The notebook
+  comes back with her; the dice don't.
 - **The other captains** pick by their own eyes (`event.js` `eyeOf`): most by the average, some by the last few
   matches, a couple for fit. 7777's scout, Juno, misses nothing: she's the rival, and her alliance is usually the
   one to beat. A captain who's invited can say no.
@@ -773,7 +786,9 @@ it a game.
 
 ### Not there yet
 
-- The van's timer and its 25 questions (section 5, beat 4): the van is a short ride with seven people to talk to.
+- The van's timer and its 25 questions (section 5, beat 4): the van is a short ride and one choice. The facts its
+  people used to say (ranking points, the cargo rule, the climb odds) are where playing finds them: Mr. Adeyemi in
+  the stands, the plan screen, the call, the matches themselves.
 - Scouts she assigns, the pick list builder beyond a star, match video, heat maps, an odds calculator.
 - Other alliances planning against her from what they've scouted (they plan from the whole event's numbers).
 - The practice field and the team meeting as places in the loop; the alumni, beyond Dani's one line and Sam's.
@@ -782,9 +797,10 @@ it a game.
 
 ### Trying it
 
-`npm run site`, then `/team-manager/` (or the preview artifact). From the address bar, `play.html?at=thursday`,
-`?at=quals&round=6`, `?at=boss` and `?at=end` start a season part of the way in, its earlier matches played on the
-drive coach's plans; `?seed=N` fixes the schedule and dice; `?new` starts over. `test/blue-banner-game.mjs` plays
+`npm run site`, then `/team-manager/` (or the preview artifact). From the address bar, `play.html?at=after` (with
+`&reached=sf`, `f` or `won` for the other endings), `?at=van`, `?at=thursday`, `?at=quals&round=6`, `?at=boss` and
+`?at=end` start a season part of the way in, its earlier matches played on the drive coach's plans; `?seed=N` fixes
+the schedule and dice; `?new` starts over; `&guide=off` plays a new season without the guided start's markers. `test/blue-banner-game.mjs` plays
 whole events in Node and checks, among other things, that what the field notes say is true.
 
 ---
@@ -801,7 +817,7 @@ last column is the tempting wrong answer the world lets them try.
 | Lesson | What's true in the world | Where she meets it | Field note | The tempting wrong answer |
 | --- | --- | --- | --- | --- |
 | Look at where a robot's going, not its average | 7461's intake breaks in its seventh match (44 a match, then 29); 6834 rebuilds its own the same afternoon (27, then 48). 3000 re-rigs its climber at Friday lunch. | The opening's page (the last four boxes). Watching either before and after. Their pits on Friday afternoon: 7461's crew round the intake saying it's fine; 6834 swapping theirs. | FADING, ON THE RISE | The biggest number on the page. Most captains take it. |
-| Write down what robots do, not what teams say | Pits are straight, proud or modest. 5518 says Level 3 every match and makes about three in ten. 4471 says it mostly gets in the way. | Any pit, then the stands. The notebook keeps the two apart. | WHAT THEY SAY | Filling the notebook from the pits, which costs half the time. |
+| Write down what robots do, not what teams say | Pits are straight, proud or modest. 5518 says Level 3 every match and makes about three in ten. 4471 says it mostly gets in the way. | Any pit, then the stands. The notebook keeps the two apart. The guided start does it once, in that order: her circled robot's pit on Thursday, then the stands on Friday. | WHAT THEY SAY | Filling the notebook from the pits, which costs half the time. |
 | One match is a sample | Robots that haven't changed still swing fifteen points match to match. | Watching the same robot twice. Her own ten matches. | ONE MATCH | A pick list made from one great match each. |
 | Averages don't add up; roles do | Cargo only stays in behind a hatch panel, and the bays run out. Three cargo robots score about 80 together and 115 apart. A cargo robot beside two hatch robots scores more than it does anywhere else. | Her own matches: the schedule gives her alliances that fit and alliances that don't. A robot sitting still for a minute is hard to miss. | NOWHERE LEFT TO SCORE | Picking the three biggest scorers. |
 | Defense pays when it takes more than it costs | 4471 on 7777 takes about 21 off it and gives up 7. A cargo arm on 7777 takes 4 and gives up 13. | The plan: she can put any robot on anyone, and see. Pits that were sat on say so. | THE WALL, DEFENSE COSTS | Defense as a thing weak robots do; or as a thing everyone should do. |

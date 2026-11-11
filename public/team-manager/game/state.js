@@ -33,7 +33,7 @@ export function newSave({ seed = 1 + Math.floor(Math.random() * 90000), name = '
   return {
     v: 2, seed, name, loop: 0, phase: 'cold', round: 0, time: 0, own: {}, playoff: null, draft: null,
     cold: null, flags: {}, winds: 0,
-    book: { seen: {}, heard: {}, pit: {}, stars: [], notes: {}, threads: [] },
+    book: { seen: {}, heard: {}, pit: {}, stars: [], notes: {}, threads: [], circled: null },
   };
 }
 export function load() {
