@@ -17,7 +17,7 @@
 //   box, frame, dotted, shade, button, chip      panels and what goes on them
 //   tick, cross, arrow, pips                     small marks
 //   strip(scores, x, y, o)                       a robot's matches as a row of boxes, blank ones dotted
-//   wrap(str, n), clockText(secs), plural(n, w)  words
+//   wrap(str, n), wrapTo(str, px), clockText(secs), plural(n, w)  words
 
 import { W, H, C, screen, fill, text, measure, withAlpha, clamp } from '../pixel.js';
 
@@ -157,6 +157,19 @@ export function wrap(str, n = 38) {
   let line = '';
   for (const word of String(str).split(' ')) {
     if (line && (line + ' ' + word).length > n) {
+      lines.push(line);
+      line = word;
+    } else line = line ? `${line} ${word}` : word;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+/** A line broken at the spaces to fit px pixels as drawn (o: the font, as measure() takes it). */
+export function wrapTo(str, px, o = { font: 3 }) {
+  const lines = [];
+  let line = '';
+  for (const word of String(str).split(' ')) {
+    if (line && measure(`${line} ${word}`, o) > px) {
       lines.push(line);
       line = word;
     } else line = line ? `${line} ${word}` : word;

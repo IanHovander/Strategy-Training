@@ -167,7 +167,8 @@ const CLEAR = 0.12;
  * where the simulation has it come to rest.
  */
 function rolloutsOf(frame) {
-  return frame.rolling.map((d) => ({
+  // A frame made by hand between matches (the arena's changeover, the hall's) has nothing rolling.
+  return (frame.rolling ?? []).map((d) => ({
     alliance: d.alliance, struct: d.struct,
     ...(d.struct === 'rocket' ? { rocket: d.rocket === 'f' ? 'far' : 'near', level: d.level, face: d.side === 'h' ? 'home' : 'away' } : { bay: d.bay }),
     at: d.at, out: d.struct === 'rocket' ? CLEAR : d.tOut - d.tIn, end: d.t - d.tIn, to: { x: wx(d.x), y: floorY(d.z) },

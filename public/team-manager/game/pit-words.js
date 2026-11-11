@@ -47,6 +47,8 @@ export const greeting = (num) => HELLO[voiceOf(num)](num);
 
 // ---- What does it do? ----
 const LEVELS = ['', 'LOW', 'UP TO LEVEL 2', 'EVERY LEVEL'];
+/** How each proud team finishes its boast: the claim is the same kind, the people aren't. */
+const BRAG = { 7777: 'NOBODY HERE IS QUICKER.', 5518: 'ASK ANYONE.', 4000: 'EVERYONE KNOWS IT.', 9152: 'BEST IN THE BUILDING.' };
 function does(num, robot) {
   const v = voiceOf(num), can = piecesOf(robot), top = Math.max(robot.hatch?.reach ?? 0, robot.cargo?.reach ?? 0);
   const wall = (robot.defense ?? 0) >= 0.7, best = climbsFor(robot)[0];
@@ -57,7 +59,7 @@ function does(num, robot) {
     note = 'SAYS: MOSTLY WE GET IN THE WAY.';
   } else if (v === 'proud') {
     const up = LEVELS[Math.min(3, Math.max(2, top + 1))];
-    say = `${what}, ${up}, AND FAST. FASTER THAN ANYONE HERE.`;
+    say = `${what}, ${up}, AND FAST. ${BRAG[num] ?? 'FASTER THAN ANYONE HERE.'}`;
     note = `SAYS: ${what}, ${up}, FAST.`;
   } else if (v === 'modest') {
     say = `${what === 'HATCHES AND CARGO' ? 'A BIT OF BOTH' : `A FEW ${what === 'CARGO' ? 'CARGO' : 'HATCHES'}`}. ${top <= 1 ? 'LOW ONLY.' : 'IT REACHES HIGHER THAN IT USED TO.'} NOTHING FANCY.`;

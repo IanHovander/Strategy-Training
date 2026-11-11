@@ -134,7 +134,7 @@ export const MATE = ['ITS PIT IS IN THE HALL. ASK THEM', 'ABOUT IT TODAY. IT PLA
 /** Dani, the first time she sits down in the front row (two pages; after that, the round's one). */
 export const DANI_FIRST = [
   ['IS THAT NORBERT? HE PICKED YOU, THEN.', "DON'T LOOK AT ME LIKE THAT. SIT."],
-  ['THREE MATCHES BEFORE YOURS. BEST', 'SEAT IN THE HOUSE. WHO IS IT?'],
+  ['THREE OTHER MATCHES THIS ROUND. BEST', 'SEAT IN THE HOUSE. WHO IS IT?'],
 ];
 /** Priya, at the queue, every round: her match, and who's waiting. m: her match (event.js). */
 export function priyaPage(m) {

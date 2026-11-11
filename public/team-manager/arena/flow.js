@@ -419,7 +419,7 @@ function turn(res, plan, t) {
     ...plan.off.filter((o) => t < o.lifted).map((o) => o.r),
     ...plan.on.filter((o) => t >= o.placed).map((o) => ({ ...o.r, rsl: true })),
   ];
-  res.frame = { t: 0, robots, slots, depots, loose, score: s };
+  res.frame = { t: 0, robots, slots, depots, loose, rolling: [], score: s };
 
   // Lights and gates.
   if (t < AT.safe) res.lights = rocketLights(end.slots);

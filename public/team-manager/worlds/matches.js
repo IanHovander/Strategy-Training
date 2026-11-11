@@ -140,7 +140,7 @@ function reset(k, n, m, s) {
     ...end.robots.filter((_, i) => s < A.off + i * A.offEvery),
     ...next.robots.filter((_, i) => s >= A.on + i * A.onEvery).map((r) => ({ ...r, rsl: true })),
   ];
-  const frame = { t: 0, robots, slots, depots, loose: s >= A.loose ? [] : end.loose, score: m.result.score };
+  const frame = { t: 0, robots, slots, depots, loose: s >= A.loose ? [] : end.loose, rolling: [], score: m.result.score };
   const open = s >= A.open && s < A.shut;
   const gates = [{ ...GATES.blue, open }, { ...GATES.red, open }];
   const lights = s < A.safe ? lit(end.slots) : s < A.shut ? ['blue', 'red'].flatMap((a) => ['far', 'near'].map((rocket) => ({ alliance: a, rocket, color: 'green' }))) : [];

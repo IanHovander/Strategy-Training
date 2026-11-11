@@ -20,13 +20,15 @@
 //
 //   new Book(st, { choose: { marks, pick, done } })
 //                 the van: the notebook in her hands on its blank tiles, and her own pencil asking who she watches
-//                 first. marks: the tiles her Saturday suggests ([{ num, word }]). Any tile will do; A circles it in red
-//                 pencil (pick(num)), and the page slides away (done()). It can't be closed or skipped.
+//                 first. marks: the tiles her Saturday suggests ([{ num, word }]). Any tile will do; A circles the one
+//                 the cursor's on in red pencil (pick(num)), and the page slides away (done()). A finger picks a tile
+//                 and then circles it (a second tap on it, or on CIRCLE under the tiles), so a tap just to look at one
+//                 doesn't choose it. It can't be closed or skipped.
 //   the ink-in    the first time it opens on Friday with a robot she's watched in it: it opens on ROBOTS, and the tiles
 //                 of the robots she's seen fill in one by one as the count runs up, the cursor on the one she circled.
 
 import { W, H, C, screen, fill, text, measure, withAlpha, seg, easeIn } from '../pixel.js';
-import { Menu, frame, dotted, button, arrow, blink, GOOD0 } from './ui.js';
+import { Menu, frame, dotted, button, arrow, wrapTo, GOOD0 } from './ui.js';
 import { PAPER } from './hud.js';
 import { TEAMS, NAMES, KIND, OURS, ROUNDS, FRIDAY } from './event.js';
 import { summary, seenOf, tableOf, star, NOTES, voltsText, notesFound, save } from './state.js';
@@ -70,7 +72,10 @@ export class Book {
     this.m.press();
   }
   point(type, x, y) {
+    // In the van, the tile a finger lets go on is picked; it's circled only if it was already the one picked.
+    this.tapping = type === 'up';
     this.m.point(type, x, y);
+    this.tapping = false;
     return true;
   }
   key(code) {
@@ -172,7 +177,7 @@ export class Book {
     const ready = t >= WAIT && !this.circled;
     ORDER.forEach((num, i) => {
       const r = tileAt(i), ours = num === OURS;
-      const s = ours ? { on: false, down: false } : m.item(`t-${num}`, r, () => ready && this.circle(num, now), { pad: 1 });
+      const s = ours ? { on: false, down: false } : m.item(`t-${num}`, r, () => ready && this.choice(num, now), { pad: 1 });
       // Once she's chosen, the cursor's gone: what's left is the ring.
       tile(r, num, summary(st, num), this.circled ? { on: false, down: false } : s, 1);
       const word = marks.get(num);
@@ -183,12 +188,34 @@ export class Book {
       }
       if (this.circled?.num === num) ring(r, seg(since, 0, RING));
     });
-    if (ready) blink(CHOOSE.prompt, 131, t, { font: 3, from: WAIT });
+    // Under the tiles, what A does now, with the robot the cursor's on: a button for a finger, too.
+    const on = m.on?.startsWith('t-') ? m.on.slice(2) : null;
+    if (ready && on) {
+      const label = `${CHOOSE.prompt} ${on}`, bw = measure(label, { font: 3 }) + 14;
+      const br = { x: Math.round(W / 2 - bw / 2), y: 125, w: bw, h: 13 };
+      const bs = m.item('circle', br, () => this.circle(on, now), { quiet: true, pad: 2 });
+      fill(br.x - 1, br.y - 1 + (bs.down ? 1 : 0), br.w + 2, br.h + 2, C.ink);
+      fill(br.x, br.y + (bs.down ? 1 : 0), br.w, br.h, bs.down ? C.yel0 : C.night2);
+      frame(br.x, br.y + (bs.down ? 1 : 0), br.w, br.h, (t - WAIT) % 0.9 < 0.6 ? C.yel1 : C.yel2);
+      text(label, br.x + 7, br.y + 4 + (bs.down ? 1 : 0), { font: 3, color: C.yel2 });
+    }
     g.restore();
     m.end();
   }
+  /**
+   * A on a tile circles it. A finger's first tap on a tile only picks it (the cursor goes there, and CIRCLE under the
+   * tiles names it); a tap on the tile that's picked circles it.
+   */
+  choice(num, now) {
+    if (this.tapping && this.picked !== num) {
+      this.picked = num;
+      return;
+    }
+    this.circle(num, now);
+  }
   /** She's chosen: the ring goes round it, and it's hers. */
   circle(num, now) {
+    if (this.circled) return;
     this.circled = { num, at: now };
     this.choose.pick(num);
   }
@@ -243,7 +270,7 @@ export class Book {
       if (sum.walls) bits.push(`ON DEFENSE IN ${sum.walls}`);
       if (bits.length) line(`${bits.join('.  ')}.`);
       const last = seenOf(st, num).at(-1);
-      for (const l of recordLines(last).slice(0, 3)) line(l, l.startsWith('Q') ? GOOD0 : PAPER.ink);
+      for (const l of recordLines(last).slice(0, 3)) for (const part of wrapTo(l, 228)) line(part, l.startsWith('Q') ? GOOD0 : PAPER.ink);
     }
     // What they say: in pencil, apart.
     if (sum.heard.length) {

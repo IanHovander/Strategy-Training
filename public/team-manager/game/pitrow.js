@@ -25,7 +25,7 @@ import { drawBot } from '../match/bots.js';
 import { TEAMS as ROBOTS } from '../match/robots.js';
 import { COCAPTAIN_LOOK, COCAPTAIN_NAME } from '../opening/cocaptain.js';
 import { Menu, box, button, inRect } from './ui.js';
-import { corner, CORNER, drawToasts, eventChip, toast, pointer, edgePointer } from './hud.js';
+import { corner, CORNER, drawToasts, eventChip, toast, pointer, edgePointer, cornerMark } from './hud.js';
 import { Book } from './book.js';
 import { OURS, TEAMS, NAMES, ROUNDS, FRIDAY, sideOf } from './event.js';
 import { hear, visit, discover, save, ourMatch } from './state.js';
@@ -270,7 +270,7 @@ export function pitHall(st, { from = 'left' } = {}) {
       } else if (gd?.to === 'exit') {
         // Far off, the marker, where the way out's own arrow will be; near, that arrow.
         if (HALL.w - 12 - view.x > W + 60) scene.markAt = edgePointer('right', 122, t, gd.label);
-      } else if (gd?.to === 'book') scene.markAt = pointer(12, 23, 'up', t);
+      } else if (gd?.to === 'book') scene.markAt = cornerMark(t);
       // The season's first field note: once it's in, she says what it means to her, a moment after she's free.
       if (free && chargeDue(st)) {
         scene.dueAt ??= t;

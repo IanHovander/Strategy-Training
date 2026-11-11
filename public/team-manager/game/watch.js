@@ -32,7 +32,7 @@ import { makeShow, frameAt } from '../match/animate.js';
 import { drawMatch, drawScoreboard, cameraFor, wx } from '../match/draw.js';
 import { MATCH, POINTS } from '../match/sim.js';
 import { Screen } from './run.js';
-import { box, frame as outline, blink, shade, GOOD, GOOD0 } from './ui.js';
+import { box, frame as outline, blink, shade, wrapTo, GOOD, GOOD0 } from './ui.js';
 import { corner, drawToasts, paper, PAPER } from './hud.js';
 import { KIND, OURS, habPoints, climbsFor, recordOf } from './event.js';
 import { summary, robotAt } from './state.js';
@@ -308,12 +308,15 @@ export class Watch extends Screen {
     }
     if (o.focus && t > 0.5) {
       // Her line on the robot she watched, and the first of her teammate's on theirs.
-      const lines = recordLines({ q: o.q, ...recordOf(r, o.focus) });
-      if (o.also) lines.push(...recordLines({ q: o.q, ...recordOf(r, o.also) }).slice(0, 2).map((l, i) => (i ? l : `TEAMMATE: ${l}`)));
-      const h = 14 + lines.length * 8;
-      paper(34, 60, 188, h);
-      text('IN THE NOTEBOOK', 46, 63, { font: 3, color: PAPER.pencil });
-      lines.forEach((l, i) => text(l, 46, 72 + i * 8, { font: 3, color: i && !l.startsWith('TEAMMATE') ? PAPER.ink : '#a1172a' }));
+      const said = recordLines({ q: o.q, ...recordOf(r, o.focus) });
+      if (o.also) said.push(...recordLines({ q: o.q, ...recordOf(r, o.also) }).slice(0, 2).map((l, i) => (i ? l : `TEAMMATE: ${l}`)));
+      // Each line in red if it's a robot's first, and kept inside the slip (a long one goes on to the next).
+      const lines = said.flatMap((l, i) => wrapTo(l, 172).map((part) => ({ part, red: !i || l.startsWith('TEAMMATE') })));
+      // A long one (two robots, a line or two wrapped) sits closer and higher, clear of A: CONTINUE.
+      const step = lines.length > 7 ? 7 : 8, h = 14 + lines.length * step, y = Math.min(60, 122 - h);
+      paper(34, y, 188, h);
+      text('IN THE NOTEBOOK', 46, y + 3, { font: 3, color: PAPER.pencil });
+      lines.forEach((l, i) => text(l.part, 46, y + 12 + i * step, { font: 3, color: l.red ? '#a1172a' : PAPER.ink }));
     }
     blink('A: CONTINUE', 128, t, { from: 1.1 });
   }

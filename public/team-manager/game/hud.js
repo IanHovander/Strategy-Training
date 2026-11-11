@@ -8,9 +8,10 @@
 //   CORNER                           where he is, for a tap
 //   toast(notes), drawToasts(now)    field notes just found, queued and shown one after another; toasting() while any is up
 //   paper(x, y, w, h)                a slip of the notebook's paper, for anything written in her hand
-//   pointer(x, y, dir, now, label), edgePointer(side, y, now, label)
+//   pointer(x, y, dir, now, label), edgePointer(side, y, now, label), cornerMark(now)
 //                                    the guided start's marker (guide.js): a yellow arrow at something, or at the edge of
-//                                    the picture on the side it's off; each returns where a tap on it lands
+//                                    the picture on the side it's off, or a frame round Norbert; each returns where a tap
+//                                    on it lands
 
 import { W, C, screen, fill, text, measure, clamp, easeOut, seg } from '../pixel.js';
 import { drawNorbert } from '../norbert.js';
@@ -103,25 +104,32 @@ export function drawToasts(now) {
 
 // ---- The guided start's marker ----
 // One at a time (guide.js says where): a yellow arrow with an ink outline, bobbing at the rate the ways out nudge, and a
-// few words beside it at most (a number and a match). Each returns the rectangle a tap on it lands in, a little bigger
-// than it's drawn, for a finger.
+// few words beside it at most (a number and a match), on an ink tag so they read over anything. Each returns the
+// rectangle a tap on it lands in, a little bigger than it's drawn, for a finger.
 const BOB = (now) => Math.floor(now * 2.5) % 2;
 const hit = (x0, y0, x1, y1) => {
   const w = Math.max(16, x1 - x0), h = Math.max(16, y1 - y0);
   return { x: Math.round((x0 + x1) / 2 - w / 2), y: Math.round((y0 + y1) / 2 - h / 2), w, h };
 };
+/** A marker's words on their ink tag, top left at (x, y); returns its right edge. */
+function tag(label, x, y) {
+  const w = measure(label, { font: 3 });
+  fill(x - 2, y - 2, w + 4, 9, C.ink);
+  text(label, x, y, { font: 3, color: C.yel2 });
+  return x + w + 2;
+}
 /**
- * An arrow with its tip at (x, y), pointing dir ('down', 'up', 'left' or 'right'): a 7-wide head on a 3-wide stem, 7
+ * An arrow with its tip at (x, y), pointing dir ('down', 'up', 'left' or 'right'): a 9-wide head on a 3-wide stem, 8
  * long. The label goes on the far side from the tip.
  */
 export function pointer(x, y, dir, now, label = '') {
   screen();
   const b = BOB(now), d = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] }[dir];
-  // Back from the tip along the arrow: the head (rows of 1, 3, 5, 7 across it), then the stem.
+  // Back from the tip along the arrow: the head (rows of 1, 3, 5, 7 and 9 across it), then the stem.
   const tx = x - d[0] * b, ty = y - d[1] * b;
   const cells = [];
-  for (let i = 0; i < 4; i++) for (let j = -i; j <= i; j++) cells.push([i, j]);
-  for (let i = 4; i < 7; i++) for (let j = -1; j <= 1; j++) cells.push([i, j]);
+  for (let i = 0; i < 5; i++) for (let j = -i; j <= i; j++) cells.push([i, j]);
+  for (let i = 5; i < 8; i++) for (let j = -1; j <= 1; j++) cells.push([i, j]);
   const at = ([i, j]) => [tx - d[0] * i + (d[0] ? 0 : j), ty - d[1] * i + (d[1] ? 0 : j)];
   for (const c of cells) {
     const [px, py] = at(c);
@@ -129,18 +137,17 @@ export function pointer(x, y, dir, now, label = '') {
   }
   for (const c of cells) {
     const [px, py] = at(c);
-    fill(px, py, 1, 1, c[0] < 4 ? C.yel1 : C.yel2);
+    fill(px, py, 1, 1, c[0] < 5 ? C.yel1 : C.yel2);
   }
-  let x0 = Math.min(tx, tx - d[0] * 6) - 3, x1 = Math.max(tx, tx - d[0] * 6) + 4;
-  let y0 = Math.min(ty, ty - d[1] * 6) - 3, y1 = Math.max(ty, ty - d[1] * 6) + 4;
+  let x0 = Math.min(tx, tx - d[0] * 7) - 5, x1 = Math.max(tx, tx - d[0] * 7) + 6;
+  let y0 = Math.min(ty, ty - d[1] * 7) - 5, y1 = Math.max(ty, ty - d[1] * 7) + 6;
   if (label) {
     const w = measure(label, { font: 3 });
-    // Beyond the stem's end, centred on the arrow (or, for one pointing across, beside it).
-    const lx = d[0] ? (d[0] < 0 ? tx + 9 : tx - 9 - w) : Math.round(tx - w / 2);
-    const ly = d[1] ? (d[1] > 0 ? ty - 15 : ty + 10) : ty - 2;
-    const cx = clamp(lx, 2, W - 2 - w);
-    text(label, cx, ly, { font: 3, color: C.yel2, outline: C.ink });
-    [x0, x1, y0, y1] = [Math.min(x0, cx - 1), Math.max(x1, cx + w + 1), Math.min(y0, ly - 1), Math.max(y1, ly + 6)];
+    // Beyond the stem's end, centred on the arrow (or, for one pointing across, beside it); never off the picture.
+    const lx = Math.max(3, Math.min(W - 3 - w, d[0] ? (d[0] < 0 ? tx + 11 : tx - 11 - w) : Math.round(tx - w / 2)));
+    const ly = d[1] ? (d[1] > 0 ? ty - 17 : ty + 11) : ty - 2;
+    const right = tag(label, lx, ly);
+    [x0, x1, y0, y1] = [Math.min(x0, lx - 2), Math.max(x1, right), Math.min(y0, ly - 2), Math.max(y1, ly + 7)];
   }
   return hit(x0, y0, x1, y1);
 }
@@ -164,9 +171,23 @@ export function edgePointer(side, y, now, label = '') {
   arrow(C.yel1, 0);
   let x0 = right ? x - 10 : x - 2, x1 = right ? x + 2 : x + 11;
   if (label) {
-    const w = measure(label, { font: 3 }), lx = right ? x - 12 - w : x + 13;
-    text(label, lx, y - 2, { font: 3, color: C.yel2, outline: C.ink });
-    [x0, x1] = right ? [lx - 1, x1] : [x0, lx + w + 1];
+    const w = measure(label, { font: 3 }), lx = right ? x - 14 - w : x + 15;
+    tag(label, lx, y - 2);
+    [x0, x1] = right ? [lx - 2, x1] : [x0, lx + w + 2];
   }
-  return hit(x0, y - 6, x1, y + 6);
+  return hit(x0, y - 7, x1, y + 7);
+}
+/**
+ * The marker on Norbert himself (the notebook): a yellow frame round his corner, blinking, over the picture's own top
+ * left. It's where a tap opens the notebook anyway.
+ */
+export function cornerMark(now) {
+  screen();
+  // Just inside the event chip on the right (it starts at x 49) and under his feet (he's 19 high, from y 2).
+  const c = BOB(now) ? C.yel1 : C.yel2, w = CORNER.w, h = CORNER.h + 1;
+  fill(w - 1, 0, 4, h + 3, C.ink);
+  fill(0, h - 1, w + 3, 4, C.ink);
+  fill(w, 0, 2, h + 2, c);
+  fill(0, h, w + 2, 2, c);
+  return { x: 0, y: 0, w: w + 4, h: h + 4 };
 }

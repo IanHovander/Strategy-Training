@@ -26,7 +26,7 @@ import { scene as arena, SETTINGS } from '../arena/scene.js';
 import { approach, wayTo } from '../arena/approach.js';
 import { FIELD } from '../field.js';
 import { Menu, box, button, inRect } from './ui.js';
-import { corner, CORNER, drawToasts, eventChip, pointer, edgePointer } from './hud.js';
+import { corner, CORNER, drawToasts, eventChip, pointer, edgePointer, cornerMark } from './hud.js';
 import { Book } from './book.js';
 import { OURS, ROUNDS, FRIDAY, TEAMS, sideOf } from './event.js';
 import { ourMatch, playRound, worldOf, tableOf, summary, seenOf, save } from './state.js';
@@ -139,7 +139,7 @@ function linesFor(st, id) {
     case 'priya':
       return [priyaPage(m)];
     case 'dani':
-      return st.flags.metDani ? [[`ROUND ${r + 1}. THREE MATCHES BEFORE YOURS.`, 'BEST SEAT IN THE HOUSE. WHO IS IT?']] : DANI_FIRST;
+      return st.flags.metDani ? [[`ROUND ${r + 1}. THREE OTHER MATCHES.`, 'BEST SEAT IN THE HOUSE. WHO IS IT?']] : DANI_FIRST;
     case 'juno':
       return [[`YOU'VE WATCHED ${watched} OF 23 ROBOTS.`, "I'VE GOT ALL OF THEM IN HERE. TWICE."], watched >= 15 ? ["...THAT'S MORE THAN I THOUGHT.", 'SEE YOU SATURDAY, 5026.'] : ['SEE YOU SATURDAY, 5026. IF YOU', 'GET THAT FAR.']];
     case 'adeyemi':
@@ -265,8 +265,9 @@ export function arenaHub(st, { from = 'pits' } = {}) {
         hub.markAt = sx >= 8 && sx <= W - 8 ? pointer(sx, 60, 'up', t, gd.label) : edgePointer(sx < 0 ? 'left' : 'right', 66, t, gd.label);
       } else if (gd?.to === 'priya') {
         const py = Math.round(mine.priya.y - view.y);
-        hub.markAt = px >= 4 && px <= W - 40 ? pointer(px + 10, py - 40, 'left', t, gd.label) : edgePointer(px < 0 ? 'left' : 'right', 80, t, gd.label);
-      } else if (gd?.to === 'book') hub.markAt = pointer(12, 23, 'up', t);
+        // Off the picture, low on the left edge: well clear of the way out to the pits, which is that way too.
+        hub.markAt = px >= 4 && px <= W - 40 ? pointer(px + 10, py - 40, 'left', t, gd.label) : edgePointer(px < 0 ? 'left' : 'right', 96, t, gd.label);
+      } else if (gd?.to === 'book') hub.markAt = cornerMark(t);
       // The season's first field note: once it's in, she says what it means to her, a moment after she's free.
       if (free && chargeDue(st)) {
         hub.dueAt ??= t;

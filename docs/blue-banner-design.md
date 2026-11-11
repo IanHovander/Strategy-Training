@@ -743,10 +743,12 @@ it a game.
   so it's a real call, and the last thirty seconds play out as she made it.
 - **The guided start** (`guide.js`): from the van to her first match, the game walks her once round the loop it's
   about, then lets go. The robot she circles in the van (`st.book.circled`, a red pencil ring, not a star: it stays off
-  her pick list) is the thread. One yellow marker at a time (`hud.js` `pointer`, `edgePointer`) points at its pit on
-  Thursday, the stands for its match in round 1 (Dani's picker opens on it), Norbert once it's in the notebook (the
-  first time the notebook opens, the tiles she's seen ink in), then Priya for her own match. A tap on a marker walks
-  her there. Each one ends when she's done that thing or walked past it; there are none after her first match, but the
+  her pick list) is the thread: A circles the tile the cursor's on; a finger picks a tile, then circles it with a
+  second tap or the CIRCLE button under the tiles, so a tap just to look doesn't choose. One yellow marker at a time
+  (`hud.js` `pointer`, `edgePointer`, `cornerMark`; its words on an ink tag) points at its pit on Thursday, the stands
+  for its match in round 1 (Dani's picker opens on it), Norbert once it's in the notebook (a frame round his corner;
+  the first time the notebook opens, the tiles she's seen ink in), then Priya for her own match. A tap on a marker
+  walks her there. Each one ends when she's done that thing or walked past it; there are none after her first match, but the
   notebook's, and none at all after her second. Which marker shows is worked out from the save every frame, so a reload
   can't leave one stuck. Nothing is forced and nothing is graded: the only things she has to do are read and circle.
   At the season's first field note, his reading rises (+0.1V) and she says the one line that makes the quest hers:
